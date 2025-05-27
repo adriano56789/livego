@@ -1,0 +1,1516 @@
+
+<!DOCTYPE html><html lang="pt-BR"><head><script src="/cascade-browser-integration.js"></script>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Grid Design Wizard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #f9fafb;
+            min-height: 100vh;
+        }
+
+        /* Estilo para os links dos cards de perfil */
+        .profile-card-link {
+            display: block;
+            text-decoration: none;
+            color: inherit;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Top Navigation */
+        .top-nav {
+            background: #1f2937;
+            padding: 12px 16px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            height: 56px; /* Altura fixa para a barra de navegação */
+        }
+
+        .nav-content {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .nav-left {
+            flex: 1;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .nav-scroll-container {
+            display: flex;
+            align-items: center;
+            height: 100%;
+            width: 100%;
+            overflow-x: auto;
+            overflow-y: hidden;
+            -webkit-overflow-scrolling: touch; /* Suporte para iOS */
+            scrollbar-width: none; /* Esconde a barra de rolagem no Firefox */
+            -ms-overflow-style: none; /* Esconde a barra de rolagem no IE/Edge */
+        }
+        
+        .nav-scroll-container::-webkit-scrollbar {
+            display: none; /* Esconde a barra de rolagem no Chrome/Safari */
+        }
+        
+        .nav-buttons {
+            display: flex;
+            align-items: center;
+            gap: 24px;
+            padding: 0 16px 8px 0; /* Adiciona espaço para o scroll */
+        }
+
+        .nav-title {
+            font-size: 20px;
+            font-weight: bold;
+            color: #111827;
+            border-bottom: 2px solid #111827;
+            padding-bottom: 4px;
+            white-space: nowrap;
+            margin-right: 16px;
+            flex-shrink: 0;
+        }
+
+        .nav-button {
+            background: none;
+            border: none;
+            color: #6b7280;
+            font-weight: 500;
+            cursor: pointer;
+            transition: color 0.2s;
+            white-space: nowrap;
+            padding: 8px 12px;
+            flex-shrink: 0;
+        }
+
+        .nav-button:hover {
+            color: #111827;
+        }
+
+        .nav-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .icon-button {
+            background: none;
+            border: none;
+            padding: 8px;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+
+        .icon-button:hover {
+            background-color: #f3f4f6;
+        }
+
+        /* Main Content */
+        .main-content {
+            padding: 88px 16px 96px; /* Aumentado o padding-top para 88px (56px da barra + 32px de espaço) */
+            margin-top: 0;
+        }
+
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+            max-width: 448px;
+            margin: 0 auto;
+        }
+
+        /* Profile Cards */
+        .profile-card {
+            position: relative;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            transform: scale(1);
+        }
+
+        .profile-card:hover {
+            transform: scale(1.05);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+
+        .card-image-container {
+            position: relative;
+            height: 192px;
+            overflow: hidden;
+        }
+
+        .card-image {
+            width: 100%;
+            height: 100%;
+            -o-object-fit: cover;
+               object-fit: cover;
+            transition: transform 0.3s ease;
+        }
+
+        .profile-card:hover .card-image {
+            transform: scale(1.1);
+        }
+
+        .image-overlay {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(to top, rgba(0, 0, 0, 0.7), transparent, transparent);
+        }
+
+        .online-indicator {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            width: 12px;
+            height: 12px;
+            background-color: #10b981;
+            border-radius: 50%;
+            border: 2px solid white;
+        }
+
+        .special-indicators {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            display: flex;
+            gap: 4px;
+            font-size: 18px;
+        }
+
+        .card-content {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 16px;
+            color: white;
+        }
+
+        .card-name {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 4px;
+            display: -webkit-box;
+            -webkit-line-clamp: 1;
+            -webkit-box-orient: vertical;
+            display: -moz-box;
+            -moz-line-clamp: 1;
+            -moz-box-orient: vertical;
+            line-clamp: 1;
+            overflow: hidden;
+        }
+
+        .card-info {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .card-location, .card-stats {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .card-stats {
+            font-weight: 500;
+        }
+
+        /* Bottom Navigation */
+        .bottom-nav {
+            background: white;
+            border-top: 1px solid #e5e7eb;
+            padding: 8px 16px;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 50;
+        }
+
+        .nav-tabs {
+            display: flex;
+            align-items: center;
+            justify-content: space-around;
+            max-width: 448px;
+            margin: 0 auto;
+        }
+
+        .nav-tab {
+            background: none;
+            border: none;
+            padding: 12px;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: #9ca3af;
+        }
+
+        .nav-tab.active {
+            background-color: #fce7f3;
+            color: #db2777;
+        }
+
+        .nav-tab.purple {
+            background-color: #f3e8ff;
+            color: #7c3aed;
+        }
+
+        .nav-tab:hover:not(.active) {
+            color: #6b7280;
+        }
+
+        /* Icons */
+        .icon {
+            width: 24px;
+            height: 24px;
+            stroke: currentColor;
+            fill: none;
+            stroke-width: 2;
+        }
+
+        .icon-sm {
+            width: 14px;
+            height: 14px;
+        }
+
+        .icon-lg {
+            width: 22px;
+            height: 22px;
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 100;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            animation: fadeIn 0.3s ease;
+        }
+
+        .modal.show {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: #1f2937;
+            color: white;
+            border-radius: 12px;
+            padding: 24px;
+            width: 90%;
+            max-width: 400px;
+            border: 1px solid #374151;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideIn {
+            from { transform: translateY(-20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .modal-title {
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            color: #9ca3af;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 4px;
+            transition: color 0.2s;
+        }
+
+        .close-btn:hover {
+            color: white;
+        }
+
+        .preview-card {
+            background: #374151;
+            border-radius: 8px;
+            padding: 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .preview-icon {
+            width: 64px;
+            height: 64px;
+            background: #3b82f6;
+            border-radius: 8px;
+            display: flex;
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.profile-card-link {
+    display: block;
+    text-decoration: none;
+    color: inherit;
+    width: 100%;
+    height: 100%;
+}
+
+.form-label {
+    display: block;
+    font-size: 14px;
+    font-weight: 500;
+    margin-bottom: 8px;
+}
+            background: #374151;
+            border: 1px solid #4b5563;
+            border-radius: 8px;
+            color: white;
+            font-size: 14px;
+        }
+
+        .form-input::-moz-placeholder {
+            color: #9ca3af;
+        }
+
+        .form-input::placeholder {
+            color: #9ca3af;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #8b5cf6;
+            box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2);
+        }
+
+        .category-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .category-btn {
+            padding: 8px 16px;
+            border-radius: 20px;
+            border: none;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: #4b5563;
+            color: #d1d5db;
+        }
+
+        .category-btn:hover {
+            background: #6b7280;
+        }
+
+        .category-btn.active {
+            background: #8b5cf6;
+            color: white;
+        }
+
+        .settings-group {
+            margin-bottom: 24px;
+        }
+
+        .setting-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+        }
+
+        .setting-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+        }
+
+        .toggle-switch {
+            width: 48px;
+            height: 24px;
+            background: #4b5563;
+            border-radius: 12px;
+            position: relative;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .toggle-switch.active {
+            background: #8b5cf6;
+        }
+
+        .toggle-knob {
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 50%;
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            transition: transform 0.2s;
+        }
+
+        .toggle-switch.active .toggle-knob {
+            transform: translateX(24px);
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 12px;
+            padding-top: 16px;
+            border-top: 1px solid #374151;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+            font-size: 14px;
+        }
+
+        .btn-secondary {
+            background: transparent;
+            border: 1px solid #4b5563;
+            color: #d1d5db;
+        }
+
+        .btn-secondary:hover {
+            background: #374151;
+        }
+
+        .btn-primary {
+            background: linear-gradient(to right, #8b5cf6, #3b82f6);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(to right, #7c3aed, #2563eb);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Live Stream Camera Styles */
+        .live-stream-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            z-index: 200;
+            display: none;
+        }
+
+        .live-stream-container.active {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .live-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+        }
+
+        .live-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .live-indicator {
+            background: #ef4444;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .viewer-count {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 14px;
+        }
+
+        .live-video {
+            flex: 1;
+            width: 100%;
+            -o-object-fit: cover;
+               object-fit: cover;
+        }
+
+        .live-controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.8);
+        }
+
+        .control-btn {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .control-btn.mic {
+            background: #10b981;
+        }
+
+        .control-btn.mic.muted {
+            background: #ef4444;
+        }
+
+        .control-btn.camera {
+            background: #3b82f6;
+        }
+
+        .control-btn.camera.off {
+            background: #ef4444;
+        }
+
+        .control-btn.end {
+            background: #ef4444;
+        }
+
+        .control-btn:hover {
+            transform: scale(1.1);
+        }
+    </style>
+  <script type="module" crossorigin="" src="/assets/index-B5Qt9EMX.js"></script>
+
+<style>
+	#lovable-badge {
+		position: fixed;
+		bottom: 10px;
+		right: 10px;
+		width: 141px;
+		padding: 5px 13px;	
+		background-color: #000;
+		color: #fff;
+		font-size: 12px;
+		border-radius: 5px;
+		font-family: sans-serif;
+		display: flex;
+		align-items: center;
+		gap: 4px;
+		z-index: 1000000;
+	}
+</style>
+<meta name="twitter:image" content="https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/414bc378-c4b6-4bcd-bd18-019b916f6538/id-preview-796470c7--d427b5e6-faf2-4648-a6e3-1904977b40f2.lovable.app-1748146391965.png"/></head>
+<body>
+    <!-- Search Bar (inicialmente oculta) -->
+    <div id="search-bar" style="display: none; padding: 10px; background: #1f2937; position: fixed; top: 0; left: 0; right: 0; z-index: 1000;">
+        <div style="display: flex; align-items: center; max-width: 600px; margin: 0 auto;">
+            <input type="text" id="search-input" placeholder="Pesquisar..." style="flex: 1; padding: 10px; border-radius: 20px; border: none; background: #374151; color: white; outline: none;">
+            <button id="close-search" style="background: none; border: none; color: white; margin-left: 10px; cursor: pointer;">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    <!-- Top Navigation -->
+    <nav class="top-nav">
+        <div class="nav-content">
+            <div class="nav-left">
+                <div class="nav-scroll-container">
+                    <h1 class="nav-title">Seguidos</h1>
+                    <div class="nav-buttons">
+                        <button class="nav-button">recomendaçao</button>
+                        <button class="nav-button">Popular</button>
+                        <button class="nav-button">Festa</button>
+                        <button class="nav-button">Perto</button>
+                        <button class="nav-button">Brasil</button>
+                        <button class="nav-button">Atualizado</button>
+                        <button class="nav-button" style="color: #48638d;"></button>
+                    </div>
+                </div>
+            </div>
+            <div class="nav-right">
+                <div class="home-button-container" id="home-button-container">
+                    <button class="icon-button" id="home-button">
+                        <svg class="icon-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                            <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                        </svg>
+                    </button>
+                    <!-- Modal de Tela Cheia -->
+                    <div id="fullscreen-modal" class="fullscreen-modal">
+                        <div class="modal-content">
+                            <button id="close-fullscreen-modal" class="close-btn">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M18 6L6 18M6 6l12 12"></path>
+                                </svg>
+                            </button>
+                            <div class="modal-body">
+                                <!-- Conteúdo do modal será inserido aqui dinamicamente -->
+                                <h2>Bem-vindo à Tela Cheia</h2>
+                                <p>Este é um exemplo de conteúdo em tela cheia.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <button class="icon-button" id="search-button">
+                    <svg class="icon-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16z"></path>
+                        <path d="m21 21-4.35-4.35"></path>
+                    </svg>
+                </button>
+                <button class="icon-button" style="color: #eab308;">
+                    <svg class="icon-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path>
+                        <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="grid-container" id="profiles-grid">
+            <!-- Profile cards will be generated by JavaScript -->
+        </div>
+    </main>
+
+    <!-- Bottom Navigation -->
+    <nav class="bottom-nav">
+        <div class="nav-tabs">
+            <button class="nav-tab purple" data-tab="audio">
+                <svg class="icon" viewBox="0 0 24 24">
+                    <path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z"></path>
+                    <path d="M21 21c-3 0-7-1-7-8V5c0-1.25.756-2.017 2-2h4c1.25 0 2 .75 2 1.972V11c0 1.25-.75 2-2 2-1 0-1 0-1 1v1c0 1 1 2 2 2s1 .008 1 1.031V20c0 1 0 1-1 1z"></path>
+                </svg>
+            </button>
+            <button class="nav-tab" data-tab="edit">
+                <svg class="icon" viewBox="0 0 24 24">
+                    <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"></path>
+                    <path d="m15 5 4 4"></path>
+                </svg>
+            </button>
+            <button class="nav-tab active" data-tab="home" id="home-tab">
+                <svg class="icon" viewBox="0 0 24 24">
+                    <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                    <polyline points="9,22 9,12 15,12 15,22"></polyline>
+                </svg>
+            </button>
+            <button class="nav-tab" data-tab="chat">
+                <svg class="icon" viewBox="0 0 24 24">
+                    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="9" cy="7" r="4"></circle>
+                    <path d="m22 21-3-3 3-3"></path>
+                    <path d="M16 3h5v5"></path>
+                </svg>
+            </button>
+            <button class="nav-tab" data-tab="smile">
+                <svg class="icon" viewBox="0 0 24 24">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <path d="m9 9 3 3 3-3"></path>
+                </svg>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Live Stream Setup Modal -->
+    <div id="live-setup-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Configurar Transmissão</h2>
+                <button class="close-btn" onclick="closeLiveSetup()">
+                    <svg class="icon" viewBox="0 0 24 24">
+                        <path d="m18 6-12 12"></path>
+                        <path d="m6 6 12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            
+            <div class="preview-card">
+                <div class="preview-icon">
+                    <svg class="icon" style="width: 32px; height: 32px; color: white;" viewBox="0 0 24 24">
+                        <path d="m22 8-6 4 6 4V8Z"></path>
+                        <rect width="14" height="12" x="2" y="6" rx="2" ry="2"></rect>
+                    </svg>
+                </div>
+                <div>
+                    <h3 style="font-weight: 600; margin-bottom: 4px;">Acabei de chegar aqui</h3>
+                    <p style="font-size: 14px; color: #9ca3af;">Selecione sua tag ao vivo →</p>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="streamer-name">Seu Nome</label>
+                <input type="text" id="streamer-name" placeholder="Digite seu nome" required=""/>
+            </div>
+            <div class="form-group">
+                <label for="stream-title">Título da Transmissão</label>
+                <input type="text" id="stream-title" placeholder="Dê um título à sua transmissão" required=""/>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Categoria</label>
+                <div class="category-buttons" id="category-buttons">
+                    <button class="category-btn active" data-category="VIVER">VIVER</button>
+                    <button class="category-btn" data-category="Festa">Festa</button>
+                    <button class="category-btn" data-category="Bate-papo">Bate-papo</button>
+                    <button class="category-btn" data-category="Música">Música</button>
+                    <button class="category-btn" data-category="Gaming">Gaming</button>
+                </div>
+            </div>
+
+            <div class="settings-group">
+                <div class="setting-item">
+                    <div class="setting-label">
+                        <svg class="icon" style="width: 16px; height: 16px;" viewBox="0 0 24 24">
+                            <rect width="18" height="11" x="3" y="11" rx="2" ry="2"></rect>
+                            <circle cx="12" cy="5" r="2"></circle>
+                            <path d="m12 7.5-4 5.5h8l-4-5.5Z"></path>
+                        </svg>
+                        <span>Transmissão privada</span>
+                    </div>
+                    <div class="toggle-switch" id="private-toggle">
+                        <div class="toggle-knob"></div>
+                    </div>
+                </div>
+                
+                <div class="setting-item">
+                    <div class="setting-label">
+                        <svg class="icon" style="width: 16px; height: 16px;" viewBox="0 0 24 24">
+                            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="9" cy="7" r="4"></circle>
+                            <path d="m22 11 3 3-3 3"></path>
+                            <path d="M16 3h5v5"></path>
+                        </svg>
+                        <span>Permitir comentários</span>
+                    </div>
+                    <div class="toggle-switch active" id="comments-toggle">
+                        <div class="toggle-knob"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeLiveSetup()">Cancelar</button>
+                <button class="btn btn-primary" id="start-stream-btn" onclick="startLiveStream()">VÁ AO VIVO</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Live Stream Camera -->
+    <div id="live-stream-container" class="live-stream-container">
+        <div class="live-header">
+            <div class="live-info">
+                <span class="live-indicator">AO VIVO</span>
+                <div class="viewer-count">
+                    <svg class="icon" style="width: 16px; height: 16px;" viewBox="0 0 24 24">
+                        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="9" cy="7" r="4"></circle>
+                        <path d="m22 11 3 3-3 3"></path>
+                        <path d="M16 3h5v5"></path>
+                    </svg>
+                    <span id="viewer-count">0</span>
+                </div>
+            </div>
+            <button class="close-btn" onclick="endLiveStream()">
+                <svg class="icon" viewBox="0 0 24 24">
+                    <path d="m18 6-12 12"></path>
+                    <path d="m6 6 12 12"></path>
+                </svg>
+            </button>
+        </div>
+        
+        <video id="live-video" class="live-video" autoplay="" muted="" playsinline=""></video>
+        
+        <div class="live-controls">
+            <button class="control-btn mic" id="mic-btn" onclick="toggleMic()">
+                <svg class="icon" viewBox="0 0 24 24">
+                    <path d="m12 1 0 22"></path>
+                    <path d="M2 7h20"></path>
+                </svg>
+            </button>
+            
+            <button class="control-btn camera" id="camera-btn" onclick="toggleCamera()">
+                <svg class="icon" viewBox="0 0 24 24">
+                    <path d="m22 8-6 4 6 4V8Z"></path>
+                    <rect width="14" height="12" x="2" y="6" rx="2" ry="2"></rect>
+                </svg>
+            </button>
+            
+            <button class="control-btn end" onclick="endLiveStream()">
+                <svg class="icon" viewBox="0 0 24 24">
+                    <path d="m18 6-12 12"></path>
+                    <path d="m6 6 12 12"></path>
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Função para mostrar/ocultar a barra de pesquisa
+        document.addEventListener('DOMContentLoaded', function() {
+            const searchButton = document.getElementById('search-button');
+            const searchBar = document.getElementById('search-bar');
+            const closeSearch = document.getElementById('close-search');
+            const searchInput = document.getElementById('search-input');
+
+            searchButton.addEventListener('click', function() {
+                searchBar.style.display = 'block';
+                searchInput.focus();
+            });
+
+            closeSearch.addEventListener('click', function() {
+                searchBar.style.display = 'none';
+            });
+
+            // Fechar a barra de pesquisa ao pressionar ESC
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    searchBar.style.display = 'none';
+                }
+            });
+
+            // Buscar ao pressionar Enter
+            searchInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    const query = encodeURIComponent(searchInput.value.trim());
+                    if (query) {
+                        window.open(`https://www.google.com/search?q=${query}`, '_blank');
+                        searchInput.value = '';
+                        searchBar.style.display = 'none';
+                    }
+                }
+            });
+        });
+
+        // Profile data
+        const profilesData = [
+            {
+                id: 1,
+                name: "1 foto 📸 1 vídeo",
+                location: "Brasil",
+                stats: 150,
+                image: "https://images.unsplash.com/photo-1494790108755-2616b612b1ab?w=400&h=400&fit=crop&crop=face",
+                isOnline: true,
+                hasSpecial: true,
+            },
+            {
+                id: 2,
+                name: "PV CASAL 2 ❤️",
+                location: "Brasil",
+                stats: 258,
+                image: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=400&h=400&fit=crop&crop=face",
+                isOnline: true,
+            },
+            {
+                id: 3,
+                name: "Casual Style",
+                location: "Brasil",
+                stats: 172,
+                image: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400&h=400&fit=crop&crop=face",
+            },
+            {
+                id: 4,
+                name: "Grupo tele 📱 Help 3...",
+                location: "Brasil",
+                stats: 291,
+                image: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&h=400&fit=crop&crop=face",
+                isOnline: true,
+            },
+            {
+                id: 5,
+                name: "Promoção chamada...",
+                location: "Brasil",
+                stats: 615,
+                image: "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=400&h=400&fit=crop&crop=face",
+            },
+            {
+                id: 6,
+                name: "Priv grupal 🧡",
+                location: "Peru",
+                stats: 423,
+                image: "https://images.unsplash.com/photo-1506863530036-1efeddceb993?w=400&h=400&fit=crop&crop=face",
+                isOnline: true,
+            },
+            {
+                id: 7,
+                name: "Beach Vibes",
+                location: "Brasil",
+                stats: 187,
+                image: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=400&h=400&fit=crop&crop=face",
+            },
+            {
+                id: 8,
+                name: "Sweet Girl",
+                location: "Brasil",
+                stats: 334,
+                image: "https://images.unsplash.com/photo-1520813792240-56fc4a3765a7?w=400&h=400&fit=crop&crop=face",
+                isOnline: true,
+            },
+        ];
+
+        // Stream configuration
+        let streamConfig = {
+            title: '',
+            category: 'VIVER',
+            isPrivate: false,
+            allowComments: true
+        };
+
+        // Live stream state
+        let mediaStream = null;
+        let isLiveStreaming = false;
+        let isMicOn = true;
+        let isCameraOn = true;
+
+        // Generate profile cards
+        function createProfileCard(profile) {
+            // Cada perfil aponta para uma página diferente (index4.html, index5.html, etc.)
+            const streamPage = `index${3 + profile.id}.html`;
+            return `
+                <a href="${streamPage}" class="profile-card-link">
+                    <div class="profile-card" data-id="${profile.id}">
+                    <div class="card-image-container">
+                        <img src="${profile.image}" alt="${profile.name}" class="card-image">
+                        <div class="image-overlay"></div>
+                        
+                        ${profile.isOnline ? '<div class="online-indicator"></div>' : ''}
+                        
+                        ${profile.hasSpecial ? '<div class="special-indicators"><span>❤️</span><span>🎥</span></div>' : ''}
+                        
+                        <div class="card-content">
+                            <h3 class="card-name">${profile.name}</h3>
+                            <div class="card-info">
+                                <div class="card-location">
+                                    <svg class="icon-sm" viewBox="0 0 24 24">
+                                        <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path>
+                                        <circle cx="12" cy="10" r="3"></circle>
+                                    </svg>
+                                    <span>${profile.location}</span>
+                                </div>
+                                <div class="card-stats">
+                                    <svg class="icon-sm" viewBox="0 0 24 24">
+                                        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+                                        <circle cx="9" cy="7" r="4"></circle>
+                                        <path d="M22 11l-3-3 3-3"></path>
+                                        <path d="M16 3h5v5"></path>
+                                    </svg>
+                                    <span>${profile.stats}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                </a>
+            `;
+        }
+
+        // Initialize the grid
+        function initializeGrid() {
+            const gridContainer = document.getElementById('profiles-grid');
+            gridContainer.innerHTML = profilesData.map(createProfileCard).join('');
+        }
+
+        // Handle bottom navigation
+        function initializeNavigation() {
+            const navTabs = document.querySelectorAll('.nav-tab');
+            
+            navTabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    // Handle home tab special functionality
+                    if (tab.dataset.tab === 'home') {
+                        openLiveSetup();
+                        return;
+                    }
+                    
+                    // Remove active class from all tabs
+                    navTabs.forEach(t => t.classList.remove('active'));
+                    
+                    // Add active class to clicked tab (except for the purple one)
+                    if (!tab.classList.contains('purple')) {
+                        tab.classList.add('active');
+                    }
+                    
+                    console.log(`Navegando para: ${tab.dataset.tab}`);
+                });
+            });
+        }
+
+        // Handle profile card clicks
+        function initializeProfileCards() {
+            document.addEventListener('click', (e) => {
+                const profileCard = e.target.closest('.profile-card');
+                if (profileCard) {
+                    const profileId = profileCard.dataset.id;
+                    const profile = profilesData.find(p => p.id == profileId);
+                    console.log(`Perfil clicado:`, profile);
+                }
+            });
+        }
+
+        // Live stream setup functions
+        function openLiveSetup() {
+            document.getElementById('live-setup-modal').classList.add('show');
+        }
+
+        function closeLiveSetup() {
+            document.getElementById('live-setup-modal').classList.remove('show');
+        }
+
+        // Category selection
+        function initializeCategoryButtons() {
+            const categoryButtons = document.querySelectorAll('.category-btn');
+            categoryButtons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    categoryButtons.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    streamConfig.category = btn.dataset.category;
+                });
+            });
+        }
+
+        // Toggle switches
+        function initializeToggles() {
+            const privateToggle = document.getElementById('private-toggle');
+            const commentsToggle = document.getElementById('comments-toggle');
+
+            privateToggle.addEventListener('click', () => {
+                privateToggle.classList.toggle('active');
+                streamConfig.isPrivate = privateToggle.classList.contains('active');
+            });
+
+            commentsToggle.addEventListener('click', () => {
+                commentsToggle.classList.toggle('active');
+                streamConfig.allowComments = commentsToggle.classList.contains('active');
+            });
+        }
+
+        // Stream title input
+        function initializeStreamTitle() {
+            const titleInput = document.getElementById('stream-title');
+            const startBtn = document.getElementById('start-stream-btn');
+
+            titleInput.addEventListener('input', () => {
+                streamConfig.title = titleInput.value.trim();
+                startBtn.disabled = !streamConfig.title;
+            });
+        }
+
+        // Iniciar transmissão ao vivo
+        async function startLiveStream() {
+            const streamerName = document.getElementById('streamer-name').value.trim();
+            const streamTitle = document.getElementById('stream-title').value.trim();
+            
+            if (!streamerName) {
+                alert('Por favor, digite seu nome');
+                return false;
+            }
+            
+            if (!streamTitle) {
+                alert('Por favor, digite um título para a transmissão');
+                return false;
+            }
+            
+            // Codifica os parâmetros para a URL
+            const encodedName = encodeURIComponent(streamerName);
+            const encodedTitle = encodeURIComponent(streamTitle);
+            
+            // Redireciona para index4.html com os parâmetros
+            window.location.href = `index4.html?name=${encodedName}&title=${encodedTitle}`;
+            return false;
+            
+            try {
+                // Tenta acessar a câmera e o microfone
+                mediaStream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: 'user' },
+                    audio: true
+                }).catch(error => {
+                    console.error('Erro ao acessar dispositivos:', error);
+                    throw error;
+                });
+
+                // Configura o elemento de vídeo
+                const videoElement = document.getElementById('live-video');
+                if (videoElement) {
+                    videoElement.srcObject = mediaStream;
+                }
+
+                // Fecha o modal de configuração e mostra a transmissão
+                closeLiveSetup();
+                const liveContainer = document.getElementById('live-stream-container');
+                if (liveContainer) {
+                    liveContainer.classList.add('active');
+                }
+                
+                isLiveStreaming = true;
+                
+                // Simula contagem de visualizadores
+                simulateViewerCount();
+                
+                console.log('Transmissão iniciada:', streamConfig);
+                
+            } catch (error) {
+                console.error('Erro ao acessar câmera/microfone:', error);
+                alert('Não foi possível acessar a câmera/microfone. Verifique as permissões do navegador.');
+            }
+        }
+
+        // End live stream
+        function endLiveStream() {
+            if (mediaStream) {
+                mediaStream.getTracks().forEach(track => track.stop());
+                mediaStream = null;
+            }
+            
+            document.getElementById('live-stream-container').classList.remove('active');
+            isLiveStreaming = false;
+            
+            console.log('Transmissão encerrada');
+        }
+
+        // Toggle microphone
+        function toggleMic() {
+            if (mediaStream) {
+                const audioTrack = mediaStream.getAudioTracks()[0];
+                if (audioTrack) {
+                    audioTrack.enabled = !audioTrack.enabled;
+                    isMicOn = audioTrack.enabled;
+                    
+                    const micBtn = document.getElementById('mic-btn');
+                    if (isMicOn) {
+                        micBtn.classList.remove('muted');
+                    } else {
+                        micBtn.classList.add('muted');
+                    }
+                }
+            }
+        }
+
+        // Toggle camera
+        function toggleCamera() {
+            if (mediaStream) {
+                const videoTrack = mediaStream.getVideoTracks()[0];
+                if (videoTrack) {
+                    videoTrack.enabled = !videoTrack.enabled;
+                    isCameraOn = videoTrack.enabled;
+                    
+                    const cameraBtn = document.getElementById('camera-btn');
+                    if (isCameraOn) {
+                        cameraBtn.classList.remove('off');
+                    } else {
+                        cameraBtn.classList.add('off');
+                    }
+                }
+            }
+        }
+
+        // Simulate viewer count
+        function simulateViewerCount() {
+            let viewerCount = 0;
+            const viewerCountElement = document.getElementById('viewer-count');
+            
+            const interval = setInterval(() => {
+                if (!isLiveStreaming) {
+                    clearInterval(interval);
+                    return;
+                }
+                
+                // Simulate viewer count changes
+                const change = Math.floor(Math.random() * 3) - 1; // -1, 0, or 1
+                viewerCount = Math.max(0, viewerCount + change);
+                viewerCountElement.textContent = viewerCount;
+            }, 2000);
+        }
+
+        // Initialize everything when DOM is loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeGrid();
+            initializeNavigation();
+            initializeProfileCards();
+            initializeCategoryButtons();
+            initializeToggles();
+            initializeStreamTitle();
+        });
+    </script>
+    <!-- IMPORTANT: DO NOT REMOVE THIS SCRIPT TAG OR THIS VERY COMMENT! -->
+    <script src="https://cdn.gpteng.co/gptengineer.js" type="module"></script>
+
+<a id="lovable-badge" target="_blank" href="https://lovable.dev/projects/d427b5e6-faf2-4648-a6e3-1904977b40f2?utm_source=gpt-engineer-badge">
+	<span style="color: #A1A1AA;">Edit with</span> <svg width="60" height="12" viewBox="0 0 116 22" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M109.108 21.115C107.649 21.115 106.381 20.8369 105.306 20.2807C104.23 19.7154 103.391 18.8675 102.789 17.7369C102.196 16.6063 101.9 15.2068 101.9 13.5382C101.9 11.9518 102.21 10.5841 102.83 9.4353C103.45 8.27736 104.307 7.3975 105.401 6.79574C106.495 6.19398 107.74 5.89309 109.135 5.89309C110.475 5.89309 111.665 6.18486 112.705 6.76839C113.744 7.35192 114.551 8.19986 115.125 9.31221C115.709 10.4246 116.001 11.7557 116.001 13.3057C116.001 13.8619 115.996 14.3041 115.987 14.6324H105.087V11.7603H113.347L111.788 12.2937C111.788 11.546 111.679 10.9215 111.46 10.42C111.25 9.90941 110.94 9.52647 110.53 9.27118C110.12 9.01588 109.623 8.88824 109.039 8.88824C108.428 8.88824 107.89 9.03868 107.425 9.33956C106.97 9.63133 106.614 10.069 106.359 10.6525C106.112 11.236 105.989 11.9381 105.989 12.7587V14.1674C105.989 15.0062 106.117 15.7174 106.372 16.3009C106.628 16.8844 106.992 17.3266 107.466 17.6275C107.941 17.9193 108.501 18.0651 109.149 18.0651C109.86 18.0651 110.448 17.8828 110.913 17.5181C111.378 17.1443 111.67 16.62 111.788 15.9453H115.932C115.805 17.0029 115.444 17.9193 114.852 18.6943C114.268 19.4693 113.489 20.0665 112.513 20.4859C111.537 20.9053 110.402 21.115 109.108 21.115Z" fill="#FCFBF8"></path>
+<path d="M96.5167 1.1061H100.661V20.7181H96.5167V1.1061Z" fill="#FCFBF8"></path>
+<path d="M89.4649 21.1148C88.6808 21.1148 87.9788 20.978 87.3588 20.7045C86.7479 20.4309 86.2282 20.0207 85.7996 19.4736C85.3711 18.9174 85.052 18.2336 84.8423 17.4221L85.2799 17.5452V20.7182H81.177V6.28948H85.321V9.51713L84.856 9.59919C85.0657 8.82419 85.3848 8.16316 85.8133 7.6161C86.251 7.05992 86.7844 6.63595 87.4135 6.34419C88.0426 6.04331 88.7492 5.89287 89.5333 5.89287C90.7095 5.89287 91.7307 6.19831 92.5968 6.80919C93.463 7.42007 94.1286 8.29992 94.5936 9.44875C95.0586 10.5885 95.2911 11.9424 95.2911 13.5107C95.2911 15.0698 95.054 16.4237 94.5799 17.5726C94.1058 18.7123 93.4265 19.5876 92.5421 20.1984C91.6668 20.8093 90.6411 21.1148 89.4649 21.1148ZM88.1794 17.9555C88.7994 17.9555 89.3191 17.7732 89.7385 17.4084C90.167 17.0437 90.4861 16.5286 90.6958 15.863C90.9146 15.1974 91.0241 14.4133 91.0241 13.5107C91.0241 12.608 90.9146 11.8239 90.6958 11.1583C90.4861 10.4927 90.167 9.97757 89.7385 9.61286C89.3191 9.23904 88.7994 9.05213 88.1794 9.05213C87.5685 9.05213 87.0442 9.23904 86.6066 9.61286C86.178 9.97757 85.8544 10.4973 85.6355 11.172C85.4167 11.8376 85.3073 12.6171 85.3073 13.5107C85.3073 14.4133 85.4167 15.1974 85.6355 15.863C85.8544 16.5286 86.178 17.0437 86.6066 17.4084C87.0442 17.7732 87.5685 17.9555 88.1794 17.9555ZM81.177 1.1061H85.321V6.28948H81.177V1.1061Z" fill="#FCFBF8"></path>
+<path d="M70.7749 21.115C69.8723 21.115 69.0608 20.9372 68.3405 20.5816C67.6293 20.226 67.0686 19.72 66.6583 19.0635C66.2571 18.3979 66.0565 17.6229 66.0565 16.7385C66.0565 15.3891 66.4531 14.3588 67.2464 13.6476C68.0396 12.9274 69.1839 12.4578 70.6792 12.239L73.182 11.8834C73.6834 11.8104 74.08 11.7193 74.3718 11.6099C74.6636 11.5004 74.8778 11.3546 75.0146 11.1722C75.1514 10.9807 75.2197 10.7391 75.2197 10.4474C75.2197 10.1465 75.1377 9.87294 74.9736 9.62677C74.8186 9.37147 74.5815 9.17088 74.2624 9.025C73.9524 8.87 73.574 8.7925 73.1272 8.7925C72.4161 8.7925 71.8462 8.97941 71.4177 9.35324C70.9892 9.71794 70.7567 10.2194 70.7202 10.8576H66.4395C66.4759 9.89118 66.7677 9.03412 67.3148 8.28647C67.8709 7.52971 68.6414 6.94162 69.6261 6.52221C70.6108 6.1028 71.7505 5.89309 73.0452 5.89309C74.4037 5.89309 75.5525 6.11648 76.4917 6.56324C77.4308 7.00089 78.1374 7.63 78.6115 8.45059C79.0947 9.27118 79.3364 10.2513 79.3364 11.391V17.4087C79.3364 18.056 79.382 18.6578 79.4731 19.214C79.5734 19.761 79.7147 20.1075 79.8971 20.2534V20.7184H75.589C75.4887 20.3263 75.4112 19.8841 75.3565 19.3918C75.3018 18.8994 75.2699 18.3797 75.2608 17.8326L75.9309 17.5454C75.7577 18.1928 75.4386 18.79 74.9736 19.3371C74.5177 19.875 73.9296 20.3081 73.2093 20.6363C72.4981 20.9554 71.6867 21.115 70.7749 21.115ZM72.3067 18.0788C72.8902 18.0788 73.4053 17.9512 73.8521 17.6959C74.2989 17.4315 74.6408 17.0668 74.8778 16.6018C75.124 16.1368 75.2471 15.6079 75.2471 15.0153V13.1279L75.589 13.3194C75.3702 13.6112 75.0967 13.8346 74.7684 13.9896C74.4493 14.1446 74.0162 14.2768 73.4692 14.3862L72.4161 14.5913C71.714 14.7281 71.1852 14.9378 70.8296 15.2204C70.4831 15.5031 70.3099 15.8997 70.3099 16.4103C70.3099 16.9209 70.4968 17.3266 70.8706 17.6275C71.2445 17.9284 71.7231 18.0788 72.3067 18.0788Z" fill="#FCFBF8"></path>
+<path d="M51.962 6.28958H56.3659L60.1542 18.6668H58.8276L62.4656 6.28958H66.7463L61.7544 20.7182H57.1454L51.962 6.28958Z" fill="#FCFBF8"></path>
+<path d="M45.4846 21.115C44.0531 21.115 42.7949 20.805 41.7099 20.185C40.634 19.565 39.7997 18.6806 39.2071 17.5318C38.6236 16.3829 38.3318 15.0381 38.3318 13.4972C38.3318 11.9563 38.6236 10.616 39.2071 9.47633C39.7997 8.3275 40.634 7.44309 41.7099 6.82309C42.7949 6.20309 44.0531 5.89309 45.4846 5.89309C46.916 5.89309 48.1697 6.20309 49.2456 6.82309C50.3215 7.44309 51.1512 8.3275 51.7347 9.47633C52.3274 10.616 52.6237 11.9563 52.6237 13.4972C52.6237 15.0381 52.3274 16.3829 51.7347 17.5318C51.1512 18.6806 50.3215 19.565 49.2456 20.185C48.1697 20.805 46.916 21.115 45.4846 21.115ZM45.4846 17.9421C46.0863 17.9421 46.6015 17.7779 47.03 17.4497C47.4585 17.1123 47.7868 16.6154 48.0147 15.959C48.2427 15.2934 48.3566 14.4728 48.3566 13.4972C48.3566 12.0475 48.1059 10.9488 47.6044 10.2012C47.103 9.44441 46.3963 9.06603 45.4846 9.06603C44.8828 9.06603 44.3631 9.23471 43.9255 9.57206C43.4969 9.9003 43.1687 10.3972 42.9408 11.0628C42.7128 11.7193 42.5988 12.5307 42.5988 13.4972C42.5988 14.4637 42.7128 15.2797 42.9408 15.9453C43.1687 16.6109 43.4969 17.1123 43.9255 17.4497C44.3631 17.7779 44.8828 17.9421 45.4846 17.9421Z" fill="#FCFBF8"></path>
+<path d="M26.2195 1.10631H30.514V17.6623L29.7481 16.7734C29.7481 16.7734 31.8751 16.7734 35.534 16.7734C39.1928 16.7734 38.6925 20.7184 38.6925 20.7184H26.2195V1.10631Z" fill="#FCFBF8"></path>
+<mask id="mask0_19703_15608" style="mask-type:alpha" maskUnits="userSpaceOnUse" x="0" y="0" width="20" height="21">
+<path fill-rule="evenodd" clip-rule="evenodd" d="M5.90405 0.885124C9.16477 0.885124 11.8081 3.53543 11.8081 6.80474V9.05456H13.773C17.0337 9.05456 19.677 11.7049 19.677 14.9742C19.677 18.2435 17.0337 20.8938 13.773 20.8938H0V6.80474C0 3.53543 2.64333 0.885124 5.90405 0.885124Z" fill="url(#paint0_linear_19703_15608)"></path>
+</mask>
+<g mask="url(#mask0_19703_15608)">
+<g filter="url(#filter0_f_19703_15608)">
+<circle cx="8.63157" cy="11.5658" r="13.3199" fill="#4B73FF"></circle>
+</g>
+<g filter="url(#filter1_f_19703_15608)">
+<ellipse cx="10.0949" cy="4.25612" rx="17.0591" ry="13.3199" fill="#FF66F4"></ellipse>
+</g>
+<g filter="url(#filter2_f_19703_15608)">
+<ellipse cx="12.8775" cy="1.74957" rx="13.3199" ry="11.6977" fill="#FF0105"></ellipse>
+</g>
+<g filter="url(#filter3_f_19703_15608)">
+<circle cx="10.3319" cy="4.25254" r="8.01052" fill="#FE7B02"></circle>
+</g>
+</g>
+<defs>
+<filter id="filter0_f_19703_15608" x="-10.6577" y="-7.72354" width="38.5786" height="38.5786" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+<feFlood flood-opacity="0" result="BackgroundImageFix"></feFlood>
+<feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape"></feBlend>
+<feGaussianBlur stdDeviation="2.98472" result="effect1_foregroundBlur_19703_15608"></feGaussianBlur>
+</filter>
+<filter id="filter1_f_19703_15608" x="-12.9337" y="-15.0332" width="46.057" height="38.5786" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+<feFlood flood-opacity="0" result="BackgroundImageFix"></feFlood>
+<feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape"></feBlend>
+<feGaussianBlur stdDeviation="2.98472" result="effect1_foregroundBlur_19703_15608"></feGaussianBlur>
+</filter>
+<filter id="filter2_f_19703_15608" x="-6.41182" y="-15.9176" width="38.5786" height="35.3342" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+<feFlood flood-opacity="0" result="BackgroundImageFix"></feFlood>
+<feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape"></feBlend>
+<feGaussianBlur stdDeviation="2.98472" result="effect1_foregroundBlur_19703_15608"></feGaussianBlur>
+</filter>
+<filter id="filter3_f_19703_15608" x="-3.64803" y="-9.72742" width="27.9599" height="27.9599" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+<feFlood flood-opacity="0" result="BackgroundImageFix"></feFlood>
+<feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape"></feBlend>
+<feGaussianBlur stdDeviation="2.98472" result="effect1_foregroundBlur_19703_15608"></feGaussianBlur>
+</filter>
+<linearGradient id="paint0_linear_19703_15608" x1="6.62168" y1="4.40129" x2="12.6165" y2="20.8863" gradientUnits="userSpaceOnUse">
+<stop offset="0.025" stop-color="#FF8E63"></stop>
+<stop offset="0.56" stop-color="#FF7EB0"></stop>
+<stop offset="0.95" stop-color="#4B73FF"></stop>
+</linearGradient>
+</defs>
+</svg>
+
+
+	<button id="lovable-badge-close" style="position: absolute; top: -2px; right: 5px; cursor: pointer; font-size: 14px; color: #A1A1AA;">×</button>
+</a>
+<script>
+	// Don't show the lovable-badge if the page is in an iframe or if it's being rendered by puppeteer (screenshot service)
+	if (window.self !== window.top || navigator.userAgent.includes('puppeteer')) {
+		// the page is in an iframe
+		var badge = document.getElementById('lovable-badge');
+		if (badge) {
+			badge.style.display = 'none';
+		}
+	}
+
+	// Add click event listener to close button
+	var closeButton = document.getElementById('lovable-badge-close');
+	if (closeButton) {
+		closeButton.addEventListener('click', function(event) {
+			event.preventDefault();
+			event.stopPropagation();
+			var badge = document.getElementById('lovable-badge');
+			if (badge) {
+				badge.style.display = 'none';
+			}
+		});
+	}
+</script>
+<script defer="" src="https://static.cloudflareinsights.com/beacon.min.js/vcd15cbe7772f49c399c6a5babf22c1241717689176015" integrity="sha512-ZpsOmlRQV6y907TI0dKBHq9Md29nnaEIPlkf84rnaERnq6zvWvPUqr2ft8M1aS28oN72PdrCzSjY4U6VaAw1EQ==" data-cf-beacon="{&#34;rayId&#34;:&#34;945248fc3e58a51f&#34;,&#34;serverTiming&#34;:{&#34;name&#34;:{&#34;cfExtPri&#34;:true,&#34;cfEdge&#34;:true,&#34;cfOrigin&#34;:true,&#34;cfL4&#34;:true,&#34;cfSpeedBrain&#34;:true,&#34;cfCacheStatus&#34;:true}},&#34;version&#34;:&#34;2025.4.0-1-g37f21b1&#34;,&#34;token&#34;:&#34;dc79be98a7d9454985898a9490bd0402&#34;}" crossorigin="anonymous"></script>
+
+
+
+    <script>
+        // Função para abrir o modal de tela cheia
+        function openFullscreenModal(content) {
+            const modal = document.getElementById('fullscreen-modal');
+            const modalBody = modal.querySelector('.modal-body');
+            
+            // Define o conteúdo do modal se fornecido
+            if (content) {
+                modalBody.innerHTML = content;
+            }
+            
+            // Exibe o modal
+            modal.classList.add('active');
+            document.body.style.overflow = 'hidden'; // Impede a rolagem da página
+        }
+
+        // Função para fechar o modal
+        function closeFullscreenModal() {
+            const modal = document.getElementById('fullscreen-modal');
+            modal.classList.remove('active');
+            document.body.style.overflow = ''; // Restaura a rolagem da página
+        }
+
+        // Adiciona o evento de clique no botão de casa
+        document.addEventListener('DOMContentLoaded', () => {
+            const homeButton = document.getElementById('home-button');
+            if (homeButton) {
+                homeButton.addEventListener('click', (e) => {
+                    e.stopPropagation(); // Previne a propagação do evento
+                    openFullscreenModal('<h2>Bem-vindo à Página Inicial</h2><p>Conteúdo da página inicial será exibido aqui.</p>');
+                });
+            }
+
+            const closeButton = document.getElementById('close-fullscreen-modal');
+            if (closeButton) {
+                closeButton.addEventListener('click', closeFullscreenModal);
+            }
+
+            // Fecha o modal ao pressionar a tecla ESC
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    closeFullscreenModal();
+                }
+            });
+
+            // Fecha o modal ao clicar fora do conteúdo
+            const modal = document.getElementById('fullscreen-modal');
+            if (modal) {
+                modal.addEventListener('click', (e) => {
+                    if (e.target === modal) {
+                        closeFullscreenModal();
+                    }
+                });
+            }
+        });
+    </script>
+
+    <style>
+        /* Estilos para o modal de tela cheia */
+        .home-button-container {
+            position: relative;
+            display: inline-block;
+        }
+
+        .fullscreen-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.9);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            overflow: auto;
+            padding: 20px;
+        }
+
+        .fullscreen-modal.active {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            opacity: 1;
+        }
+
+        .fullscreen-modal .modal-content {
+            background: #1f2937;
+            border-radius: 12px;
+            padding: 2rem;
+            max-width: 90%;
+            max-height: 90%;
+            width: 600px;
+            position: relative;
+            overflow-y: auto;
+            color: white;
+        }
+
+        .fullscreen-modal .close-btn {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: none;
+            border: none;
+            color: #9ca3af;
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 4px;
+            transition: color 0.2s, background-color 0.2s;
+        }
+
+        .fullscreen-modal .close-btn:hover {
+            color: white;
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .fullscreen-modal .modal-body {
+            padding: 1rem 0;
+        }
+
+        .fullscreen-modal h2 {
+            margin-top: 0;
+            color: white;
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .fullscreen-modal p {
+            margin: 0.5rem 0;
+            color: #d1d5db;
+            line-height: 1.5;
+        }
+    </style>
+    </body>
+</html>

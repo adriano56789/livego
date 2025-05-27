@@ -1,0 +1,34 @@
+<%- include('layout', { subject: 'Bem-vindo(a) ao ' + appName + '!' }) %>
+
+<div class="email-body">
+  <p>Olá <strong><%= name %></strong>,</p>
+  
+  <p>Seja muito bem-vindo(a) ao <strong><%= appName %></strong>! Estamos muito felizes em tê-lo(a) conosco.</p>
+  
+  <p>Sua conta foi criada com sucesso e já está pronta para uso. Aqui estão algumas coisas que você pode fazer agora:</p>
+  
+  <ul style="margin: 20px 0; padding-left: 20px;">
+    <li style="margin-bottom: 10px;">Complete seu perfil adicionando uma foto e uma biografia</li>
+    <li style="margin-bottom: 10px;">Explore as transmissões ao vivo disponíveis</li>
+    <li style="margin-bottom: 10px;">Siga seus streamers favoritos para receber notificações</li>
+    <li>Comece sua própria transmissão e compartilhe seu conteúdo</li>
+  </ul>
+  
+  <div style="text-align: center; margin: 30px 0;">
+    <a href="<%= appUrl %>/dashboard" class="btn" target="_blank" style="background-color: #6366f1; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block;">
+      Acessar Minha Conta
+    </a>
+  </div>
+  
+  <p>Se você tiver alguma dúvida ou precisar de ajuda, não hesite em entrar em contato com nossa equipe de suporte.</p>
+  
+  <p>Divirta-se explorando nossa plataforma!</p>
+  
+  <p>Atenciosamente,<br>Equipe <strong><%= appName %></strong></p>
+  
+  <div style="background-color: #f8fafc; border-left: 4px solid #6366f1; padding: 15px; margin: 20px 0; border-radius: 0 6px 6px 0;">
+    <p style="margin: 0; font-size: 14px; color: #4b5563;">
+      <strong>Dica:</strong> Siga-nos em nossas redes sociais para ficar por dentro das novidades e atualizações!
+    </p>
+  </div>
+</div>

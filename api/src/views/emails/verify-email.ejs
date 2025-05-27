@@ -1,0 +1,27 @@
+<%- include('layout', { subject: 'Verifique seu endereço de e-mail' }) %>
+
+<div class="email-body">
+  <p>Olá <strong><%= name %></strong>,</p>
+  
+  <p>Obrigado por se cadastrar no <strong><%= appName %></strong>! Estamos felizes em tê-lo(a) conosco.</p>
+  
+  <p>Para começar a usar sua conta, precisamos verificar seu endereço de e-mail. Por favor, clique no botão abaixo para confirmar que este é o seu e-mail correto:</p>
+  
+  <div style="text-align: center; margin: 30px 0;">
+    <a href="<%= verificationUrl %>" class="btn" target="_blank" style="background-color: #6366f1; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block;">
+      Verificar E-mail
+    </a>
+  </div>
+  
+  <p>Se o botão acima não funcionar, copie e cole o seguinte link no seu navegador:</p>
+  
+  <div style="background-color: #f3f4f6; padding: 12px; border-radius: 6px; word-break: break-all; margin: 15px 0; font-size: 14px; color: #4b5563;">
+    <%= verificationUrl %>
+  </div>
+  
+  <p>Este link de verificação expirará em <strong>24 horas</strong> por motivos de segurança.</p>
+  
+  <p>Se você não criou uma conta no <strong><%= appName %></strong>, pode ignorar este e-mail com segurança.</p>
+  
+  <p>Atenciosamente,<br>Equipe <strong><%= appName %></strong></p>
+</div>

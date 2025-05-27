@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LiveGo - Plataforma de Streaming ao Vivo</title>
+    <meta name="description" content="Assista e transmita conteúdo ao vivo na plataforma LiveGo. Conecte-se com seus streamers favoritos e descubra novas transmissões.">
+    <link rel="stylesheet" href="/css/styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Cabeçalho -->
+        <header class="app-header">
+            <div class="header-container">
+                <div class="logo">
+                    <a href="/" class="logo-link">
+                        <i class="fas fa-tv logo-icon"></i>
+                        <span class="logo-text">LiveGo</span>
+                    </a>
+                </div>
+                
+                <div class="search-bar">
+                    <input type="text" id="search-input" placeholder="Buscar canais, categorias...">
+                    <button class="search-button">
+                        <i class="fas fa-search"></i>
+                    </button>
+                </div>
+
+                <nav class="main-nav">
+                    <a href="/" class="nav-link active">
+                        <i class="fas fa-home"></i>
+                        <span>Início</span>
+                    </a>
+                    <a href="/streams" class="nav-link">
+                        <i class="fas fa-play-circle"></i>
+                        <span>Ao Vivo</span>
+                    </a>
+                    <a href="/categories" class="nav-link">
+                        <i class="fas fa-th-large"></i>
+                        <span>Categorias</span>
+                    </a>
+            </nav>
+        </header>
+
+        <!-- Conteúdo Principal -->
+        <main class="main-content">
+            <!-- Destaques -->
+            <section class="featured-section">
+                <div class="section-header">
+                    <h2>Destaques</h2>
+                    <a href="/streams" class="see-all">Ver todos</a>
+                </div>
+                <div class="featured-stream">
+                    <div class="featured-thumbnail">
+                        <img src="/img/featured-stream.jpg" alt="Stream em destaque">
+                        <div class="featured-overlay">
+                            <div class="stream-info">
+                                <h3>Transmissão em Destaque</h3>
+                                <p class="streamer">Streamer Profissional</p>
+                                <div class="stream-stats">
+                                    <span class="viewers">
+                                        <i class="fas fa-user"></i> 2.5K
+                                    </span>
+                                    <span class="category">Jogos</span>
+                                </div>
+                                <button class="btn btn-primary watch-now">
+                                    <i class="fas fa-play"></i> Assistir Agora
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Categorias Populares -->
+            <section class="categories-section">
+                <div class="section-header">
+                    <h2>Categorias Populares</h2>
+                    <a href="/categories" class="see-all">Ver todas</a>
+                </div>
+                <div class="categories-grid">
+                    <a href="/category/games" class="category-card">
+                        <div class="category-icon">
+                            <i class="fas fa-gamepad"></i>
+                        </div>
+                        <h3>Jogos</h3>
+                        <p>1.2K transmissões</p>
+                    </a>
+                    <a href="/category/irl" class="category-card">
+                        <div class="category-icon">
+                            <i class="fas fa-user"></i>
+                        </div>
+                        <h3>IRL</h3>
+                        <p>856 transmissões</p>
+                    </a>
+                    <a href="/category/music" class="category-card">
+                        <div class="category-icon">
+                            <i class="fas fa-music"></i>
+                        </div>
+                        <h3>Música</h3>
+                        <p>723 transmissões</p>
+                    </a>
+                    <a href="/category/education" class="category-card">
+                        <div class="category-icon">
+                            <i class="fas fa-graduation-cap"></i>
+                        </div>
+                        <h3>Educação</h3>
+                        <p>512 transmissões</p>
+                    </a>
+                </div>
+            </section>
+
+            <!-- Canais ao Vivo -->
+            <section class="live-channels">
+                <div class="section-header">
+                    <h2>Canais ao Vivo</h2>
+                    <a href="/streams" class="see-all">Ver todos</a>
+                </div>
+                <div class="streams-grid" id="live-streams">
+                    <!-- Streams ao vivo serão carregados aqui via JavaScript -->
+                <div class="stream-card">
+                    <div class="stream-thumbnail">
+                            <img src="/img/stream1.jpg" alt="Stream ao vivo">
+                        <span class="live-badge">AO VIVO</span>
+                            <span class="viewer-count">
+                                <i class="fas fa-user"></i> 1.2K
+                            </span>
+                        </div>
+                        <div class="stream-info">
+                            <div class="streamer-avatar">
+                                <img src="/img/avatar1.jpg" alt="Streamer">
+                            </div>
+                            <div class="stream-details">
+                                <h3>Jogando o novo jogo</h3>
+                                <p class="streamer">StreamerPro</p>
+                                <p class="category">Just Chatting</p>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Mais cards de stream serão adicionados dinamicamente -->
+                </div>
+            </section>
+
+            <!-- Canais Recomendados -->
+            <section class="recommended-channels">
+                <div class="section-header">
+                    <h2>Canais Recomendados</h2>
+                </div>
+                <div class="channels-grid">
+                    <div class="channel-card">
+                        <div class="channel-avatar">
+                            <img src="/img/avatar2.jpg" alt="Canal">
+                            <span class="live-indicator"></span>
+                        </div>
+                        <div class="channel-info">
+                            <h4>GameMaster</h4>
+                            <p>Jogos</p>
+                            <span class="follower-count">
+                                <i class="fas fa-users"></i> 45.2K
+                            </span>
+                        </div>
+                        <button class="btn btn-sm btn-follow">Seguir</button>
+                    </div>
+                    <!-- Mais cards de canais serão adicionados dinamicamente -->
+                </div>
+            </section>
+        </main>
+
+        <!-- Rodapé -->
+        <footer class="app-footer">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>LiveGo</h3>
+                    <p>Sua plataforma de streaming ao vivo favorita. Conecte-se com criadores de conteúdo de todo o mundo.</p>
+                    <div class="social-links">
+                        <a href="#" class="social-link"><i class="fab fa-twitter"></i></a>
+                        <a href="#" class="social-link"><i class="fab fa-instagram"></i></a>
+                        <a href="#" class="social-link"><i class="fab fa-discord"></i></a>
+                        <a href="#" class="social-link"><i class="fab fa-youtube"></i></a>
+                    </div>
+                </div>
+                <div class="footer-section">
+                    <h4>Navegação</h4>
+                    <ul>
+                        <li><a href="/">Início</a></li>
+                        <li><a href="/streams">Ao Vivo</a></li>
+                        <li><a href="/categories">Categorias</a></li>
+                        <li><a href="/about">Sobre Nós</a></li>
+                        <li><a href="/contact">Contato</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Legal</h4>
+                    <ul>
+                        <li><a href="/terms">Termos de Uso</a></li>
+                        <li><a href="/privacy">Política de Privacidade</a></li>
+                        <li><a href="/cookies">Política de Cookies</a></li>
+                        <li><a href="/guidelines">Diretrizes da Comunidade</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Recursos</h4>
+                    <ul>
+                        <li><a href="/blog">Blog</a></li>
+                        <li><a href="/help">Ajuda</a></li>
+                        <li><a href="/developers">API para Desenvolvedores</a></li>
+                        <li><a href="/partners">Parceiros</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2025 LiveGo. Todos os direitos reservados.</p>
+                <div class="footer-links">
+                    <a href="/sitemap">Mapa do Site</a>
+                    <a href="/status">Status do Serviço</a>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Scripts -->
+    <script src="/js/main.js"></script>
+    <script>
+        // Aqui será adicionado o JavaScript para carregar dinamicamente os streams e interações
+        document.addEventListener('DOMContentLoaded', function() {
+            // Código para carregar streams ao vivo via API
+            console.log('Página carregada. Conectando à API...');
+            
+            // Exemplo de função para carregar streams
+            async function loadLiveStreams() {
+                try {
+                    // Substitua pela chamada real à sua API
+                    // const response = await fetch('/api/streams/live');
+                    // const data = await response.json();
+                    
+                    // Simulação de dados
+                    const mockStreams = [
+                        {
+                            id: 1,
+                            title: 'Jogando o novo jogo',
+                            streamer: 'StreamerPro',
+                            category: 'Just Chatting',
+                            viewers: 1250,
+                            thumbnail: '/img/stream1.jpg',
+                            avatar: '/img/avatar1.jpg',
+                            isLive: true
+                        },
+                        // Adicione mais streams de exemplo conforme necessário
+                    ];
+                    
+                    const streamsGrid = document.getElementById('live-streams');
+                    if (streamsGrid) {
+                        // Limpar conteúdo existente
+                        streamsGrid.innerHTML = '';
+                        
+                        // Adicionar streams ao grid
+                        mockStreams.forEach(stream => {
+                            const streamCard = document.createElement('div');
+                            streamCard.className = 'stream-card';
+                            streamCard.innerHTML = `
+                                <div class="stream-thumbnail">
+                                    <img src="${stream.thumbnail}" alt="${stream.title}">
+                                    <span class="live-badge">AO VIVO</span>
+                                    <span class="viewer-count">
+                                        <i class="fas fa-user"></i> ${stream.viewers.toLocaleString()}
+                                    </span>
+                                </div>
+                                <div class="stream-info">
+                                    <div class="streamer-avatar">
+                                        <img src="${stream.avatar}" alt="${stream.streamer}">
+                                    </div>
+                                    <div class="stream-details">
+                                        <h3>${stream.title}</h3>
+                                        <p class="streamer">${stream.streamer}</p>
+                                        <p class="category">${stream.category}</p>
+                                    </div>
+                                </div>
+                            `;
+                            streamsGrid.appendChild(streamCard);
+                        });
+                    }
+                } catch (error) {
+                    console.error('Erro ao carregar streams:', error);
+                }
+            }
+            
+            // Carregar streams quando a página for carregada
+            loadLiveStreams();
+            
+            // Atualizar a cada 30 segundos (opcional)
+            setInterval(loadLiveStreams, 30000);
+            
+            // Menu de usuário dropdown
+            const userMenuTrigger = document.getElementById('user-menu-trigger');
+            const userDropdown = document.getElementById('user-dropdown');
+            
+            if (userMenuTrigger && userDropdown) {
+                userMenuTrigger.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    userDropdown.classList.toggle('show');
+                });
+                
+                // Fechar o dropdown ao clicar fora
+                document.addEventListener('click', () => {
+                    userDropdown.classList.remove('show');
+                });
+                
+                // Impedir que o clique no dropdown feche o menu
+                userDropdown.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                });
+            }
+            
+            // Verificar status de login (simulação)
+            function checkAuthStatus() {
+                // Substitua por uma verificação real de autenticação
+                const isLoggedIn = false; // Simulação de usuário não logado
+                
+                const loginBtn = document.getElementById('login-btn');
+                const signupBtn = document.getElementById('signup-btn');
+                const userMenu = document.querySelector('.user-menu');
+                
+                if (isLoggedIn) {
+                    loginBtn.style.display = 'none';
+                    signupBtn.style.display = 'none';
+                    userMenu.style.display = 'block';
+                } else {
+                    loginBtn.style.display = 'inline-block';
+                    signupBtn.style.display = 'inline-block';
+                    userMenu.style.display = 'none';
+                }
+            }
+            
+            // Verificar status de autenticação ao carregar a página
+            checkAuthStatus();
+        });
+    </script>
+</body>
+</html>

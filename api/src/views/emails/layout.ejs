@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= typeof subject !== 'undefined' ? subject : appName %></title>
+  <style>
+    /* Reset de estilos */
+    body, html {
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      line-height: 1.6;
+      color: #333333;
+      background-color: #f5f5f5;
+    }
+    
+    /* Container principal */
+    .email-container {
+      max-width: 600px;
+      margin: 0 auto;
+      background-color: #ffffff;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+    
+    /* Cabeçalho */
+    .email-header {
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      padding: 30px 20px;
+      text-align: center;
+      color: white;
+    }
+    
+    .email-logo {
+      font-size: 28px;
+      font-weight: bold;
+      margin: 0 0 10px 0;
+    }
+    
+    .email-subject {
+      font-size: 20px;
+      margin: 0;
+      font-weight: 600;
+    }
+    
+    /* Conteúdo */
+    .email-content {
+      padding: 30px;
+    }
+    
+    .email-body {
+      margin-bottom: 25px;
+    }
+    
+    .email-footer {
+      text-align: center;
+      padding: 20px;
+      font-size: 14px;
+      color: #6b7280;
+      border-top: 1px solid #e5e7eb;
+    }
+    
+    /* Botão */
+    .btn {
+      display: inline-block;
+      padding: 12px 24px;
+      background-color: #6366f1;
+      color: white !important;
+      text-decoration: none;
+      border-radius: 6px;
+      font-weight: 600;
+      margin: 15px 0;
+    }
+    
+    .btn:hover {
+      background-color: #4f46e5;
+    }
+    
+    /* Responsividade */
+    @media screen and (max-width: 600px) {
+      .email-container {
+        width: 100% !important;
+        border-radius: 0;
+      }
+      
+      .email-content {
+        padding: 20px 15px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="email-container">
+    <div class="email-header">
+      <div class="email-logo"><%= appName %></div>
+      <% if (typeof subject !== 'undefined') { %>
+        <h1 class="email-subject"><%= subject %></h1>
+      <% } %>
+    </div>
+    
+    <div class="email-content">
+      <%- body %>
+    </div>
+    
+    <div class="email-footer">
+      <p>© <%= currentYear %> <%= appName %>. Todos os direitos reservados.</p>
+      <p>
+        <a href="<%= appUrl %>" style="color: #6366f1; text-decoration: none;">Acessar o site</a> | 
+        <a href="<%= appUrl %>/ajuda" style="color: #6366f1; text-decoration: none;">Ajuda</a> | 
+        <a href="<%= appUrl %>/contato" style="color: #6366f1; text-decoration: none;">Contato</a>
+      </p>
+      <p style="font-size: 12px; color: #9ca3af; margin-top: 15px;">
+        Esta é uma mensagem automática, por favor não responda este e-mail.
+        <br>
+        Você está recebendo este e-mail porque se cadastrou no <%= appName %>.
+      </p>
+    </div>
+  </div>
+</body>
+</html>

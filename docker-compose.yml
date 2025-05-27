@@ -1,0 +1,54 @@
+services:
+  srs:
+    image: ossrs/srs:5.0
+    container_name: srs
+    ports:
+      - "1935:1935"     # RTMP
+      - "1985:1985"     # HTTP API
+      - "8080:8080"     # HTTP Server
+      - "8000:8000/udp" # WebRTC over UDP
+      - "10080:10080/udp" # WebRTC over TCP
+    volumes:
+      - ./srs.conf:/usr/local/srs/conf/srs.conf
+    environment:
+      - CANDIDATE=172.17.0.1
+    restart: always
+    network_mode: host
+
+  mongo:
+    image: mongo:6.0
+    container_name: mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    restart: always
+    networks:
+      - livego-network
+
+  api:
+    build: ./api
+    container_name: api
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./api:/usr/src/app
+      - /usr/src/app/node_modules
+    environment:
+      - NODE_ENV=development
+      - MONGODB_URI=mongodb://mongo:27017/livego
+      - JWT_SECRET=your_jwt_secret_key_here
+      - SRS_API=http://srs:1985/api/v1
+    depends_on:
+      - mongo
+      - srs
+    restart: always
+    networks:
+      - livego-network
+
+networks:
+  livego-network:
+    driver: bridge
+
+volumes:
+  mongodb_data:

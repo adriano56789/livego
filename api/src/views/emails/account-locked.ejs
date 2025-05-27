@@ -1,0 +1,54 @@
+<%- include('layout', { subject: 'Conta temporariamente bloqueada' }) %>
+
+<div class="email-body">
+  <p>Olá <strong><%= name %></strong>,</p>
+  
+  <p>Identificamos várias tentativas de login sem sucesso na sua conta do <strong><%= appName %></strong>. Por questões de segurança, sua conta foi temporariamente bloqueada.</p>
+  
+  <div style="background-color: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 15px; margin: 20px 0;">
+    <p style="margin: 0; color: #991b1b; font-weight: 500;">
+      <span style="display: inline-block; margin-right: 8px;">🔒</span>
+      Sua conta foi bloqueada por 30 minutos.
+    </p>
+  </div>
+  
+  <p><strong>Detalhes do bloqueio:</strong></p>
+  <ul style="margin: 15px 0 25px 0; padding-left: 20px;">
+    <li style="margin-bottom: 8px;">Motivo: Múltiplas tentativas de login sem sucesso</li>
+    <li style="margin-bottom: 8px;">Endereço IP: <strong><%= ipAddress || 'Não identificado' %></strong></li>
+    <li>Data e Hora: <strong><%= new Date().toLocaleString('pt-BR') %></strong></li>
+  </ul>
+  
+  <p><strong>O que fazer agora?</strong></p>
+  <p>Sua conta será desbloqueada automaticamente após 30 minutos. Após esse período, você poderá tentar fazer login novamente.</p>
+  
+  <p>Se você esqueceu sua senha, você pode:</p>
+  <ol style="margin: 15px 0 25px 0; padding-left: 20px;">
+    <li style="margin-bottom: 8px;">Aguardar 30 minutos até que o bloqueio expire</li>
+    <li style="margin-bottom: 8px;">Usar a opção "Esqueci minha senha" na página de login</li>
+    <li>Criar uma nova senha segura através do link que enviaremos para o seu e-mail</li>
+  </ol>
+  
+  <div style="text-align: center; margin: 30px 0;">
+    <a href="<%= appUrl %>/forgot-password" class="btn" target="_blank" style="background-color: #6366f1; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block;">
+      Redefinir Senha
+    </a>
+  </div>
+  
+  <p><strong>Não foi você quem tentou acessar?</strong><br>
+  Se você não reconhece esta tentativa de acesso, recomendamos que:</p>
+  
+  <ol style="margin: 15px 0 25px 0; padding-left: 20px;">
+    <li style="margin-bottom: 8px;">Altere sua senha imediatamente após o desbloqueio</li>
+    <li style="margin-bottom: 8px;">Verifique se há atividades suspeitas na sua conta</li>
+    <li>Entre em contato com nosso suporte se precisar de ajuda</li>
+  </ol>
+  
+  <p>Para sua segurança, nunca compartilhe suas credenciais de login com ninguém. A equipe do <strong><%= appName %></strong> nunca solicitará sua senha por e-mail, telefone ou mensagem.</p>
+  
+  <p>Atenciosamente,<br>Equipe de Segurança do <strong><%= appName %></strong></p>
+  
+  <p style="font-size: 12px; color: #9ca3af; margin-top: 25px; padding-top: 15px; border-top: 1px solid #e5e7eb;">
+    <strong>Dica de segurança:</strong> Considere ativar a autenticação de dois fatores para uma camada adicional de segurança na sua conta.
+  </p>
+</div>

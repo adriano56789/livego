@@ -1,0 +1,54 @@
+<%- include('layout', { subject: 'Novo login detectado na sua conta' }) %>
+
+<div class="email-body">
+  <p>Olá <strong><%= name %></strong>,</p>
+  
+  <p>Detectamos um novo login na sua conta do <strong><%= appName %></strong> a partir de um dispositivo não reconhecido.</p>
+  
+  <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; margin: 20px 0;">
+    <p style="margin: 0 0 10px 0; font-weight: 600; color: #1e293b;">Detalhes do login:</p>
+    <table style="width: 100%; border-collapse: collapse;">
+      <tr>
+        <td style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; color: #64748b; width: 120px;">Data e Hora:</td>
+        <td style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; color: #334155; font-weight: 500;"><%= new Date().toLocaleString('pt-BR') %></td>
+      </tr>
+      <tr>
+        <td style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; color: #64748b;">Navegador:</td>
+        <td style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; color: #334155; font-weight: 500;"><%= deviceInfo.browser %></td>
+      </tr>
+      <tr>
+        <td style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; color: #64748b;">Sistema Operacional:</td>
+        <td style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; color: #334155; font-weight: 500;"><%= deviceInfo.os %></td>
+      </tr>
+      <tr>
+        <td style="padding: 8px 0; color: #64748b;">Endereço IP:</td>
+        <td style="padding: 8px 0; color: #334155; font-weight: 500;"><%= ipAddress %></td>
+      </tr>
+    </table>
+  </div>
+  
+  <p>Se foi você quem fez login, pode ignorar este aviso. No entanto, se você não reconhece este acesso, recomendamos que:</p>
+  
+  <ol style="margin: 20px 0; padding-left: 20px;">
+    <li style="margin-bottom: 10px;">Altere sua senha imediatamente</li>
+    <li style="margin-bottom: 10px;">Verifique se há atividades suspeitas na sua conta</li>
+    <li>Entre em contato com nosso suporte se precisar de ajuda</li>
+  </ol>
+  
+  <div style="text-align: center; margin: 30px 0;">
+    <a href="<%= appUrl %>/security" class="btn" target="_blank" style="background-color: #6366f1; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block; margin-right: 10px;">
+      Verificar Segurança
+    </a>
+    <a href="<%= appUrl %>/change-password" class="btn" target="_blank" style="background-color: #ef4444; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block;">
+      Alterar Senha
+    </a>
+  </div>
+  
+  <p>Para sua segurança, recomendamos ativar a autenticação de dois fatores para proteção adicional da sua conta.</p>
+  
+  <p>Atenciosamente,<br>Equipe de Segurança do <strong><%= appName %></strong></p>
+  
+  <p style="font-size: 12px; color: #9ca3af; margin-top: 25px; padding-top: 15px; border-top: 1px solid #e5e7eb;">
+    <strong>Observação:</strong> Este é um e-mail automático. Se você recebeu esta mensagem por engano, por favor, entre em contato com nosso suporte imediatamente.
+  </p>
+</div>

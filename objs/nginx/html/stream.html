@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Streaming ao Vivo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            overflow: hidden;
+        }
+
+        .container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            background: linear-gradient(to bottom, #9ca3af, #d1d5db, #e5e7eb);
+        }
+
+        /* Status Bar Empty */
+        .status-bar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 50;
+            height: 32px;
+        }
+
+        /* Streamer Info */
+        .streamer-info {
+            position: absolute;
+            top: 48px;
+            left: 16px;
+            z-index: 40;
+            display: flex;
+            align-items: center;
+        }
+
+        .avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #8b5cf6, #ec4899);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 12px;
+        }
+
+        .avatar span {
+            color: white;
+            font-weight: bold;
+            font-size: 18px;
+        }
+
+        .streamer-details {
+            color: white;
+        }
+
+        .streamer-name {
+            display: flex;
+            align-items: center;
+            font-weight: 600;
+        }
+
+        .badges {
+            margin-left: 8px;
+            display: flex;
+            align-items: center;
+        }
+
+        .badge {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 4px;
+        }
+
+        .badge-orange {
+            background: linear-gradient(to right, #fb923c, #fbbf24);
+        }
+
+        .badge-yellow {
+            background: linear-gradient(to right, #fbbf24, #eab308);
+        }
+
+        .badge-inner {
+            width: 12px;
+            height: 12px;
+            background: white;
+            border-radius: 50%;
+        }
+
+        .viewer-count {
+            display: flex;
+            align-items: center;
+            font-size: 14px;
+            margin-top: 4px;
+        }
+        
+        .stream-description {
+            color: #e0e0e0;
+            font-size: 14px;
+            margin-top: 4px;
+            max-width: 250px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 0;
+            right: 16px;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+        }
+
+        /* Live Stats */
+        .live-stats {
+            position: absolute;
+            top: 112px;
+            left: 16px;
+            z-index: 40;
+            display: flex;
+            align-items: center;
+        }
+
+        .stat-item {
+            display: flex;
+            align-items: center;
+            margin-right: 16px;
+        }
+
+        .stat-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 8px;
+            font-size: 14px;
+        }
+
+        .stat-yellow {
+            background: #eab308;
+        }
+
+        .stat-pink {
+            background: #ec4899;
+        }
+
+        .stat-count {
+            color: white;
+            font-weight: 600;
+        }
+
+        /* Stream ID */
+        .stream-id {
+            position: absolute;
+            top: 80px;
+            right: 16px;
+            z-index: 40;
+            color: white;
+            font-size: 12px;
+            opacity: 0.7;
+        }
+
+        /* Add Button */
+        .add-button {
+            position: absolute;
+            top: 128px;
+            right: 16px;
+            z-index: 40;
+            width: 48px;
+            height: 48px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+
+        .add-button::before {
+            content: '+';
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        /* Bottom Content */
+        .bottom-content {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 40;
+            padding: 16px;
+        }
+
+        /* Warning Message */
+        .warning-message {
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 16px;
+            backdrop-filter: blur(4px);
+        }
+
+        .warning-message p {
+            color: white;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        /* Invite Button */
+        .invite-button {
+            background: linear-gradient(to right, #8b5cf6, #ec4899);
+            border-radius: 25px;
+            padding: 12px 24px;
+            margin-bottom: 16px;
+            cursor: pointer;
+        }
+
+        .invite-content {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .invite-text {
+            color: white;
+            font-weight: 600;
+        }
+
+        .invite-arrow {
+            color: white;
+            font-size: 18px;
+        }
+
+        /* Game Ad */
+        .game-ad {
+            position: absolute;
+            bottom: 80px;
+            right: 16px;
+            width: 64px;
+            height: 64px;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .game-content {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #7c3aed, #ec4899);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .game-text {
+            color: white;
+            font-size: 10px;
+            font-weight: bold;
+            text-align: center;
+            z-index: 2;
+        }
+
+        .game-overlay {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(168, 85, 247, 0.5), rgba(236, 72, 153, 0.5));
+        }
+
+        /* Bottom Navigation */
+        .bottom-navigation {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 50;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(4px);
+            padding: 16px 32px;
+        }
+
+        .nav-content {
+            display: flex;
+            justify-content: flex-start; /* Alinha os itens à esquerda */
+            align-items: center;
+            gap: 0; /* Remove o espaçamento entre os itens */
+        }
+        
+        .nav-content svg {
+            margin-right: 24px; /* Adiciona espaço apenas à direita de cada ícone */
+        }
+        
+        .nav-content .nav-icon {
+            margin-left: auto; /* Empurra os botões para a direita */
+        }
+
+        .nav-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+
+        .nav-icon-blue {
+            background: #3b82f6;
+        }
+
+        .nav-icon-gradient {
+            background: linear-gradient(135deg, #f87171, #ec4899);
+        }
+
+        .nav-icon svg {
+            width: 24px;
+            height: 24px;
+            color: white;
+        }
+
+        .nav-dot {
+            width: 24px;
+            height: 24px;
+            background: white;
+            border-radius: 50%;
+        }
+
+        /* Navigation Dots */
+        .navigation-dots {
+            position: absolute;
+            bottom: 64px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 40;
+            display: flex;
+            gap: 8px;
+        }
+
+        .dot {
+            width: 8px;
+            height: 8px;
+            background: white;
+            border-radius: 50%;
+        }
+
+        .dot-inactive {
+            opacity: 0.5;
+        }
+
+        /* System Navigation */
+        .system-nav {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 64px;
+            background: black;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 64px;
+        }
+
+        .nav-bar {
+            width: 32px;
+            height: 4px;
+            background: white;
+            border-radius: 2px;
+        }
+
+        .nav-circle {
+            width: 48px;
+            height: 48px;
+            border: 2px solid white;
+            border-radius: 50%;
+        }
+
+        .nav-square {
+            width: 32px;
+            height: 32px;
+            background: white;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Status Bar Empty -->
+        <div class="status-bar"></div>
+
+        <!-- Streamer Info -->
+        <div class="streamer-info">
+            <a href="perfil.html?id=1&name=fernando1135" style="text-decoration: none;">
+                <a href='perfil.html?id=1&name=fernando1135' style='text-decoration: none;'><div class='avatar'><span>A</span></div></a>
+            </a>
+            <div class="streamer-details">
+                <div class="streamer-name">
+                    <span>adriao</span>
+                    <div class="badges">
+                        <div class="badge badge-orange">
+                            <div class="badge-inner"></div>
+                        </div>
+                        <div class="badge badge-yellow">
+                            <div class="badge-inner"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="viewer-count">
+                    <span>👥</span>
+                    <span>0</span>
+                </div>
+                <div class="stream-description" id="stream-description"></div>
+            </div>
+            <div class="close-btn">×</div>
+        </div>
+
+        <!-- Live Stats -->
+        <div class="live-stats">
+            <div class="stat-item">
+                <div class="stat-icon stat-yellow">💰</div>
+                <span class="stat-count">1</span>
+            </div>
+            <div class="stat-item">
+                <div class="stat-icon stat-pink">❤️</div>
+                <span class="stat-count">0</span>
+            </div>
+        </div>
+
+        <!-- Stream ID -->
+        <div class="stream-id">ID:14431934</div>
+
+        <!-- Add Button -->
+        <div class="add-button"></div>
+
+        <!-- Bottom Content -->
+        <div class="bottom-content">
+            <!-- Warning Message -->
+            <div class="warning-message">
+                <p>Transmissão ao vivo saudável. Serão proibidas a vulgaridade, a pornografia, a exposição, a violência, as transações privadas e outros conteúdos ao vivo. O streamer da sala ao vivo tem autoridade para expulsar e banir; por favor, espectadores com discurso civilizado.</p>
+            </div>
+
+            <!-- Invite Button -->
+            <div class="invite-button">
+                <div class="invite-content">
+                    <span class="invite-text">Convide amigos para se juntarem</span>
+                    <span class="invite-arrow">›</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Game Ad -->
+        <div class="game-ad">
+            <div class="game-content">
+                <div class="game-text">
+                    <div>Festa</div>
+                    <div>Musical</div>
+                </div>
+                <div class="game-overlay"></div>
+            </div>
+        </div>
+
+        <!-- Bottom Navigation -->
+        <div class="bottom-navigation">
+            <div class="nav-content">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width: 24px; height: 24px; color: white;">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+                </svg>
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width: 24px; height: 24px; color: white;">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                </svg>
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width: 24px; height: 24px; color: white;">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                </svg>
+                <div class="nav-icon nav-icon-blue">
+                    <div class="nav-dot"></div>
+                </div>
+                <div class="nav-icon nav-icon-gradient" style="display: flex; align-items: center; justify-content: center; position: relative;">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: white; transform: scale(1.4) translateX(9px);">
+                        <path d="M20 12v10H4V12"></path>
+                        <path d="M22 7H2v5h20V7z"></path>
+                        <path d="M12 22V7"></path>
+                        <path d="M12 7H7.5a2.5 2.5 0 1 1 0-5C11 2 12 7 12 7z"></path>
+                        <path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"></path>
+                    </svg>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation Dots -->
+        <div class="navigation-dots">
+            <div class="dot dot-inactive"></div>
+            <div class="dot"></div>
+            <div class="dot dot-inactive"></div>
+        </div>
+
+        <!-- System Navigation -->
+        <div class="system-nav">
+            <div class="nav-bar"></div>
+            <div class="nav-circle"></div>
+            <div class="nav-square"></div>
+        </div>
+    </div>
+
+    <script>
+        // Função para obter parâmetros da URL
+        function getUrlParameter(name) {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get(name);
+        }
+
+        // Quando o documento estiver carregado
+        document.addEventListener('DOMContentLoaded', function() {
+            // Obtém o nome do streamer da URL
+            const streamerName = getUrlParameter('name');
+            
+            // Se houver um nome na URL, atualiza o elemento
+            if (streamerName) {
+                const decodedName = decodeURIComponent(streamerName);
+                const nameElement = document.querySelector('.streamer-name span');
+                if (nameElement) {
+                    nameElement.textContent = decodedName;
+                }
+                
+                // Atualiza também o título da página
+                document.title = `${decodedName} - Transmissão ao Vivo`;
+            }
+            
+            // Obtém o título da transmissão da URL
+            const streamTitle = getUrlParameter('title');
+            if (streamTitle) {
+                const decodedTitle = decodeURIComponent(streamTitle);
+                // Exibe o título da transmissão no elemento apropriado
+                const descriptionElement = document.getElementById('stream-description');
+                if (descriptionElement) {
+                    descriptionElement.textContent = decodedTitle;
+                }
+            }
+        });
+    </script>
+</body>
+</html>

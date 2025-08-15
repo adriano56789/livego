@@ -1,0 +1,71 @@
+
+import React from 'react';
+import type { User, AppView } from '../types';
+import VideoIcon from './icons/VideoIcon';
+import LiveIcon from './icons/LiveIcon';
+import MessageIcon from './icons/MessageIcon';
+import ProfileIcon from './icons/ProfileIcon';
+import PlusIcon from './icons/PlusIcon';
+
+interface BottomNavProps {
+    user: User;
+    activeView: AppView;
+    onNavigate: (view: AppView) => void;
+    onGoLiveClick: () => void;
+}
+
+const BottomNavItem: React.FC<{ icon: React.ReactNode; label: string; isActive?: boolean; hasNotification?: boolean; onClick: () => void; }> = ({ icon, label, isActive, hasNotification, onClick }) => (
+    <button onClick={onClick} className="relative flex flex-col items-center justify-center gap-1 w-full h-full text-center">
+        <div className={`w-7 h-7 flex items-center justify-center transition-colors duration-200 ${isActive ? 'text-green-400' : 'text-gray-400'}`}>
+            {icon}
+        </div>
+        <span className={`text-xs font-medium transition-colors duration-200 ${isActive ? 'text-white' : 'text-gray-400'}`}>{label}</span>
+        {hasNotification && <div className="absolute top-1 right-1/2 -mr-5 w-2 h-2 bg-red-500 rounded-full"></div>}
+    </button>
+);
+
+
+const BottomNav: React.FC<BottomNavProps> = ({ user, activeView, onNavigate, onGoLiveClick }) => {
+    return (
+        <footer className="bg-[#191919] border-t border-gray-800/50 shrink-0 h-16">
+            <div className="flex justify-around items-center h-full">
+                <BottomNavItem
+                    icon={<VideoIcon />}
+                    label="Video"
+                    isActive={activeView === 'video'}
+                    onClick={() => onNavigate('video')}
+                />
+                 <BottomNavItem
+                    icon={<LiveIcon />}
+                    label="Live"
+                    isActive={activeView === 'feed'}
+                    onClick={() => onNavigate('feed')}
+                />
+                
+                <button 
+                    onClick={onGoLiveClick} 
+                    className="w-16 h-16 -mt-8 bg-green-500 rounded-full flex items-center justify-center shadow-lg shadow-green-500/30 hover:scale-105 transition-transform"
+                    aria-label="Go Live"
+                >
+                    <PlusIcon className="w-8 h-8 text-black" />
+                </button>
+
+                <BottomNavItem
+                    icon={<MessageIcon />}
+                    label="Mensagem"
+                    isActive={activeView === 'messages'}
+                    hasNotification={true}
+                    onClick={() => onNavigate('messages')}
+                />
+                <BottomNavItem
+                    icon={<ProfileIcon avatarUrl={user.avatar_url} />}
+                    label="Eu"
+                    isActive={activeView === 'profile'}
+                    onClick={() => onNavigate('profile')}
+                />
+            </div>
+        </footer>
+    );
+};
+
+export default BottomNav;

@@ -1,0 +1,101 @@
+import { apiClient } from './apiClient';
+import type { User, Conversation, DiamondPackage, Address, CardDetails, PaymentMethod, PurchaseOrder, CardBrand } from '../types';
+
+export const loginWithGoogle = (): Promise<User> => {
+    return apiClient('/api/auth/google', { method: 'POST' });
+};
+
+export const loginWithFacebook = (): Promise<void> => {
+    alert('A funcionalidade de login com Facebook ainda não foi implementada.');
+    return Promise.resolve();
+};
+
+export const getUserProfile = (userId: number): Promise<User> => {
+    return apiClient(`/api/users/${userId}`);
+};
+
+export const getFollowingUsers = (userId: number): Promise<User[]> => {
+    return apiClient(`/api/users/${userId}/following`);
+};
+
+export const getFollowers = (userId: number): Promise<User[]> => {
+    return apiClient(`/api/users/${userId}/followers`);
+};
+
+export const getProfileVisitors = (userId: number): Promise<User[]> => {
+    return apiClient(`/api/users/${userId}/visitors`);
+};
+
+export const uploadProfilePhoto = (userId: number, photoDataUrl: string): Promise<User> => {
+    return apiClient(`/api/users/${userId}/avatar`, {
+        method: 'PATCH',
+        body: JSON.stringify({ photoDataUrl }),
+    });
+};
+
+export const generateNickname = (): Promise<{ newNickname: string }> => {
+    return apiClient('/api/users/generate-nickname', { method: 'POST' });
+};
+
+export const updateUserProfile = (userId: number, profileData: Partial<Pick<User, 'nickname' | 'gender' | 'birthday' | 'invite_code'>>): Promise<User> => {
+    return apiClient(`/api/users/${userId}`, {
+        method: 'PATCH',
+        body: JSON.stringify(profileData),
+    });
+};
+
+export const changeUserEmail = (userId: number, newEmail: string): Promise<User> => {
+    return apiClient(`/api/users/${userId}/email`, {
+        method: 'PATCH',
+        body: JSON.stringify({ newEmail }),
+    });
+};
+
+export const deleteAccount = (userId: number): Promise<{ success: boolean }> => {
+    return apiClient(`/api/users/${userId}`, {
+        method: 'DELETE',
+    });
+};
+
+export const getConversations = (userId: number): Promise<Conversation[]> => {
+    return apiClient(`/api/users/${userId}/conversations`);
+};
+
+export const getDiamondPackages = (): Promise<DiamondPackage[]> => {
+    return apiClient('/api/diamonds/packages');
+};
+
+export const purchaseDiamonds = (
+    userId: number,
+    packageId: number,
+    address: Address,
+    paymentDetails?: { method: PaymentMethod; card?: CardDetails }
+): Promise<{ updatedUser: User, order: PurchaseOrder }> => {
+    return apiClient(`/api/purchase`, {
+        method: 'POST',
+        body: JSON.stringify({ userId, packageId, address, paymentDetails }),
+    });
+};
+
+export const getPurchaseHistory = (userId: number): Promise<PurchaseOrder[]> => {
+    return apiClient(`/api/users/${userId}/purchase-history`);
+};
+
+export const checkOrderStatus = (orderId: string): Promise<{ order: PurchaseOrder | null }> => {
+    return apiClient(`/api/purchase/status/${orderId}`);
+};
+
+export const searchUsers = (query: string): Promise<User[]> => {
+    return apiClient(`/api/users/search?q=${encodeURIComponent(query)}`);
+};
+
+export const detectCardBrand = (cardNumber: string): Promise<{ brand: CardBrand }> => {
+    return apiClient('/api/payment/detect-brand', {
+        method: 'POST',
+        body: JSON.stringify({ cardNumber }),
+    });
+};
+
+export const generateNewUserId = (): Promise<{ newId: number }> => {
+    return apiClient('/api/users/generate-id', { method: 'POST' });
+};

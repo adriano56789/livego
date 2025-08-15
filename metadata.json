@@ -1,0 +1,9 @@
+{
+  "name": "LiveGo",
+  "description": "Uma tela de login visualmente atraente para um aplicativo de streaming, construída com React e Tailwind CSS, com funcionalidade de login social simulada.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ],
+  "prompt": ""
+}

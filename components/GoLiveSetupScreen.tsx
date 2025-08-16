@@ -1,9 +1,3 @@
-
-
-
-
-
-
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import type { User, Category, CameraStatus, FacingMode } from '../types';
 import * as liveStreamService from '../services/liveStreamService';
@@ -15,7 +9,7 @@ import BookOpenIcon from './icons/BookOpenIcon';
 import LockClosedIcon from './icons/LockSolidIcon';
 import LockOpenIcon from './icons/LockOpenIcon';
 import DiamondIcon from './icons/DiamondIcon';
-import SwordsIcon from './icons/SwordsIcon';
+import PkIcon from './icons/PkIcon';
 import ToggleSwitch from './ToggleSwitch';
 import StarIcon from './icons/StarIcon';
 import CameraOffIcon from './icons/CameraOffIcon';
@@ -349,7 +343,7 @@ const GoLiveSetupScreen: React.FC<GoLiveSetupScreenProps> = ({ user, onStartStre
             <div className="bg-black/40 backdrop-blur-sm rounded-xl divide-y divide-white/10 mt-4 px-4">
                 <ToolItem icon={<BookOpenIcon className="w-6 h-6 text-gray-300" />} label="Manual de Transmissão ao Vivo" />
                 <ToolItem icon={<StarIcon className="w-6 h-6 text-gray-300" />} label="Configurações de Beleza" />
-                <ToolItem icon={<SwordsIcon className="w-6 h-6 text-gray-300" />} label="Batalha PK">
+                <ToolItem icon={<PkIcon className="w-7 h-7" />} label="Batalha PK">
                     <ToggleSwitch enabled={isPkEnabled} onChange={handlePkToggleChange} />
                 </ToolItem>
             </div>

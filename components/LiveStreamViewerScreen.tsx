@@ -1,6 +1,4 @@
-
-
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import type { User, Stream, PkBattle, ChatMessage, LiveDetails, PkInvitation, SoundEffectName, MuteStatusListener, UserKickedListener, SoundEffectListener, PublicProfile, PkSession } from '../types';
 import * as liveStreamService from '../services/liveStreamService';
 import * as authService from '../services/authService';
@@ -10,7 +8,7 @@ import { useApiViewer } from './ApiContext';
 import CrossIcon from './icons/CrossIcon';
 import ViewersIcon from './icons/ViewersIcon';
 import AnchorToolsIcon from './icons/AnchorToolsIcon';
-import SwordsIcon from './icons/SwordsIcon';
+import PkIcon from './icons/PkIcon';
 import CoracaoIcon from './icons/CoracaoIcon';
 import ShoppingBasketIcon from './icons/ShoppingBasketIcon';
 import ChatBubbleIcon from './icons/ChatBubbleIcon';
@@ -45,6 +43,8 @@ import InviteToPartyModal from './InviteToPartyModal';
 import QuickChatModal from './QuickChatModal';
 import RankingListScreen from './RankingListScreen';
 import PrivateChatModal from './PrivateChatModal';
+import PkLiveRoomModal from './PkLiveRoomModal';
+import PkSettingsModal from './PkSettingsModal';
 
 
 interface LiveStreamViewerScreenProps {
@@ -81,7 +81,19 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
   onStopStream,
 }) => {
     const { showApiResponse } = useApiViewer();
+
+    const liveId = useMemo(() => {
+        if (!initialStream) return 0;
+        return 'streamer1' in initialStream ? (initialStream as PkBattle).streamer1.streamId : (initialStream as Stream).id;
+    }, [initialStream]);
+
+
     const isPkBattle = 'streamer1' in initialStream;
+    const streamerId = isPkBattle ? (initialStream as PkBattle).streamer1.userId : (initialStream as Stream).userId;
+    const isHost = isPkBattle 
+        ? user.id === (initialStream as PkBattle).streamer1.userId || user.id === (initialStream as PkBattle).streamer2.userId
+        : user.id === streamerId;
+    const isPrivateStream = !isPkBattle && (initialStream as Stream).isPrivate;
 
     const [pkSession, setPkSession] = useState<PkSession | null>(null);
 
@@ -105,32 +117,27 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
     const [isHourlyRankingModalOpen, setIsHourlyRankingModalOpen] = useState(false);
     const [isEndStreamModalOpen, setIsEndStreamModalOpen] = useState(false);
     const [isSelectOpponentModalOpen, setIsSelectOpponentModalOpen] = useState(false);
+    const [isPkLiveRoomModalOpen, setIsPkLiveRoomModalOpen] = useState(false);
+    const [isPkSettingsModalOpen, setIsPkSettingsModalOpen] = useState(false);
     const [pendingPkInvitation, setPendingPkInvitation] = useState<PkInvitation | null>(null);
     const [isInviteToPartyModalOpen, setIsInviteToPartyModalOpen] = useState(false);
     const [isQuickChatOpen, setIsQuickChatOpen] = useState(false);
     const [isRankingListOpen, setIsRankingListOpen] = useState(false);
     const [isPrivateChatModalOpen, setIsPrivateChatModalOpen] = useState(false);
 
-    const liveId = isPkBattle ? (initialStream as PkBattle).streamer1.streamId : (initialStream as Stream).id;
-    const streamerId = isPkBattle ? (initialStream as PkBattle).streamer1.userId : (initialStream as Stream).userId;
-    const isHost = isPkBattle 
-        ? user.id === (initialStream as PkBattle).streamer1.userId || user.id === (initialStream as PkBattle).streamer2.userId
-        : user.id === streamerId;
-    const isPrivateStream = !isPkBattle && (initialStream as Stream).isPrivate;
-
     const fetchLiveDetails = useCallback(async () => {
+        if (!liveId) return;
         try {
-            const streamToFetch = isPkBattle ? (initialStream as PkBattle).streamer1.streamId : (initialStream as Stream).id;
-            const details = await liveStreamService.getLiveStreamDetails(streamToFetch);
+            const details = await liveStreamService.getLiveStreamDetails(liveId);
             setLiveDetails(details);
         } catch (error) { console.error(error); }
-    }, [isPkBattle, initialStream]);
+    }, [liveId]);
     
     const streamHostId = isPkBattle ? (initialStream as PkBattle).streamer1.userId : streamerId;
     
     // Effect for initial block check
     useEffect(() => {
-        if (isHost) return;
+        if (isHost || !streamHostId) return;
         liveStreamService.isUserBlocked(streamHostId, user.id)
             .then(({ isBlocked }) => {
                 setIsBlockedByHost(isBlocked);
@@ -140,6 +147,7 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
     
     // Effect for real-time block updates
     useEffect(() => {
+        if (!streamHostId) return;
         const handleBlocked: liveStreamService.UserBlockedListener = ({ blockerId, targetId }) => {
             if (blockerId === streamHostId && targetId === user.id) {
                 setIsBlockedByHost(true);
@@ -239,11 +247,11 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
     
     useEffect(() => {
         const fetchInitialData = async () => {
+            if (!liveId) return;
             try {
-                const streamToFetchId = isPkBattle ? (initialStream as PkBattle).streamer1.streamId : liveId;
                 const [details, messages] = await Promise.all([
-                    liveStreamService.getLiveStreamDetails(streamToFetchId),
-                    liveStreamService.getChatMessages(streamToFetchId),
+                    liveStreamService.getLiveStreamDetails(liveId),
+                    liveStreamService.getChatMessages(liveId),
                 ]);
                 setLiveDetails(details);
                 setChatMessages(messages);
@@ -252,9 +260,10 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
         fetchInitialData();
         const interval = setInterval(fetchLiveDetails, 5000); // Poll details for updates
         return () => clearInterval(interval);
-    }, [liveId, onExit, fetchLiveDetails, isPkBattle, initialStream]);
+    }, [liveId, onExit, fetchLiveDetails]);
 
     useEffect(() => {
+        if (!liveId) return;
         const handleChatMessageUpdate = (id: number, messages: ChatMessage[]) => { if (id === liveId) setChatMessages(messages); };
         const handleMuteStatus: MuteStatusListener = (update) => {
             if (update.liveId === liveId) {
@@ -287,15 +296,15 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
     }, [liveId, user.id]);
 
     useEffect(() => {
-        const joinId = isPkBattle ? (initialStream as PkBattle).streamer1.streamId : liveId;
-        liveStreamService.joinLiveStream(user.id, joinId).catch(error => {
+        if (!liveId) return;
+        liveStreamService.joinLiveStream(user.id, liveId).catch(error => {
             if (error.message.includes('removido')) {
                 setKickedState('banned_on_join');
             } else { onExit(); }
         });
-        if (user.equipped_entry_effect_id) liveStreamService.postSpecialEntryMessage(joinId, user.id);
-        return () => { liveStreamService.leaveLiveStream(user.id, joinId); };
-    }, [user.id, liveId, onExit, user.equipped_entry_effect_id, isPkBattle, initialStream]);
+        if (user.equipped_entry_effect_id) liveStreamService.postSpecialEntryMessage(liveId, user.id);
+        return () => { liveStreamService.leaveLiveStream(user.id, liveId); };
+    }, [user.id, liveId, onExit, user.equipped_entry_effect_id]);
     
     const handleSendMessage = async (message: string) => {
         try { await liveStreamService.sendChatMessage(liveId, user.id, message); } catch (error) { alert((error as Error).message); }
@@ -307,9 +316,8 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
     };
 
     const handleSendGift = async (giftId: number) => {
-        const targetStreamId = isPkBattle ? (initialStream as PkBattle).streamer1.streamId : liveId;
         try {
-            const response = await liveStreamService.sendGift(targetStreamId, user.id, giftId);
+            const response = await liveStreamService.sendGift(liveId, user.id, giftId);
             if (response.success && response.updatedUser) {
                 onUpdateUser(response.updatedUser);
             } else {
@@ -363,6 +371,11 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
             .then(() => alert(`Convite de PK enviado para o usuário ${inviteeId}!`))
             .catch(err => alert(`Falha ao enviar convite: ${err.message}`));
         setIsSelectOpponentModalOpen(false);
+    };
+
+    const handleSavePkSettings = (settings: { duration: number }) => {
+        console.log("PK settings saved:", settings);
+        alert(`Duração da batalha PK definida para ${settings.duration} minutos.`);
     };
     
     if (kickedState === 'banned_on_join') return <KickedFromStreamModal onExit={onExit} isJoinAttempt={true} />;
@@ -465,20 +478,13 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
                 </div>
                 <div className="relative z-10 flex flex-col h-full p-2 sm:p-4">
                     <header className="flex items-start justify-between shrink-0">
-                        <div className="flex flex-col items-start gap-2">
+                         <div className="flex flex-col items-start gap-2">
                             <div className="bg-black/40 backdrop-blur-sm p-1 rounded-full flex items-center gap-2">
-                                <div onClick={() => handleOpenUserProfile(streamerId)} className="flex items-center gap-2 cursor-pointer">
+                                <button onClick={() => handleOpenUserProfile(streamerId)} className="flex items-center gap-2 cursor-pointer">
                                     <div className="relative shrink-0">
                                         <img src={liveDetails?.streamerAvatarUrl} alt={liveDetails?.streamerName} className="w-10 h-10 rounded-full object-cover"/>
                                     </div>
-                                    <div>
-                                        <p className="font-bold text-sm truncate max-w-[120px]">{liveDetails?.streamerName}</p>
-                                        <div className="flex items-center gap-1.5 text-xs text-gray-300">
-                                          <LevelBarIcon className="w-3 h-3"/>
-                                          <span>{formatStatNumber(liveDetails?.streamerFollowers || 0)}</span>
-                                        </div>
-                                    </div>
-                                </div>
+                                </button>
                                 {!isHost && (
                                     <button
                                         onClick={() => handleFollowToggle(streamerId)}
@@ -501,6 +507,12 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
                                 )}
                             </div>
 
+                            <div className="bg-black/40 backdrop-blur-sm p-2 rounded-lg">
+                                <h1 className="font-bold text-white text-lg">{liveDetails?.streamerName}</h1>
+                                <p className="text-sm text-gray-300">{liveDetails?.title}</p>
+                            </div>
+
+
                             <button onClick={() => setIsHourlyRankingModalOpen(true)} className="bg-black/40 backdrop-blur-sm px-2 py-1.5 rounded-full flex items-center gap-3 self-start">
                                 <div className="flex items-center gap-1">
                                     <CoinBIcon className="w-5 h-5" />
@@ -520,14 +532,6 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
                             <button onClick={handleExitClick} className="p-2 bg-black/40 rounded-full"><CrossIcon className="w-6 h-6"/></button>
                         </div>
                     </header>
-                    
-                    {(liveDetails?.title || liveDetails?.meta) && (
-                        <div className="mt-2 p-2 bg-black/20 backdrop-blur-sm rounded-lg max-w-md self-start">
-                            {liveDetails.title && <h1 className="font-bold text-white text-base">{liveDetails.title}</h1>}
-                            {liveDetails.meta && <p className="text-gray-300 text-sm mt-1">{liveDetails.meta}</p>}
-                        </div>
-                    )}
-
                     <main className="flex-grow flex flex-col justify-end overflow-hidden pointer-events-none">
                         <div className="w-full md:w-3/4 lg:w-1/2 pointer-events-auto">
                             <ChatArea messages={chatMessages} onUserClick={handleOpenUserProfile} />
@@ -571,7 +575,7 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
                                 <span className="font-bold text-base text-white drop-shadow-lg">{formatScore(score2)}</span>
                             </div>
                         </div>
-                        <div className="absolute -top-10 left-1/2 -translate-x-1/2"><SwordsIcon className="w-16 h-16 text-red-500" /></div>
+                        <div className="absolute -top-10 left-1/2 -translate-x-1/2"><PkIcon className="w-16 h-16" /></div>
                     </div>
 
                     <main className="flex-grow flex flex-col justify-end overflow-hidden pointer-events-none">
@@ -619,11 +623,39 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
                 onSwitchCamera={() => {}} 
                 onToggleVoice={() => {}} 
                 isVoiceEnabled={false} 
-                onOpenPrivateChat={() => { setIsArcoraToolModalOpen(false); setIsPrivateChatModalOpen(true); }} 
+                onOpenPrivateChat={() => { setIsArcoraToolModalOpen(false); setIsPrivateChatModalOpen(true); }}
+                onOpenSelectOpponentModal={() => {
+                    setIsArcoraToolModalOpen(false);
+                    setIsPkLiveRoomModalOpen(true);
+                }}
             />}
+            {isPkLiveRoomModalOpen && (
+                <PkLiveRoomModal
+                    onClose={() => setIsPkLiveRoomModalOpen(false)}
+                    onRandomMatch={() => {
+                        setIsPkLiveRoomModalOpen(false);
+                        alert('A correspondência aleatória não foi implementada.');
+                    }}
+                    onPairWithFriends={() => {
+                        setIsPkLiveRoomModalOpen(false);
+                        setIsSelectOpponentModalOpen(true);
+                    }}
+                    onOpenSettings={() => {
+                        setIsPkLiveRoomModalOpen(false);
+                        setIsPkSettingsModalOpen(true);
+                    }}
+                    friendsAvailable={37}
+                />
+            )}
             {isRankingListOpen && <RankingListScreen liveId={liveId} currentUser={user} onExit={() => setIsRankingListOpen(false)} onUserClick={(userId) => { setIsRankingListOpen(false); handleOpenUserProfile(userId); }} />}
             {isPrivateChatModalOpen && <PrivateChatModal user={user} onClose={() => setIsPrivateChatModalOpen(false)} />}
         </div>
+        {isPkSettingsModalOpen && (
+            <PkSettingsModal
+                onClose={() => setIsPkSettingsModalOpen(false)}
+                onSave={handleSavePkSettings}
+            />
+        )}
     );
 };
 

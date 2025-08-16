@@ -1,9 +1,3 @@
-
-
-
-
-
-
 import React from 'react';
 import CrossIcon from './icons/CrossIcon';
 
@@ -12,12 +6,21 @@ import BeautifyStarIcon from './icons/BeautifyStarIcon';
 import SoundEffectIcon from './icons/SoundEffectIcon';
 import VoiceIcon from './icons/VoiceIcon';
 import ClarityIcon from './icons/ClarityIcon';
+import PkIcon from './icons/PkIcon';
+import ManagementIcon from './icons/ManagementIcon';
+import MicGiftIcon from './icons/MicGiftIcon';
+import TurntableIcon from './icons/TurntableIcon';
 
 // Basic Tool Icons
 import CameraFlipIcon from './icons/CameraFlipIcon';
 import MuteIcon from './icons/MuteIcon';
 import RoomEffectsIcon from './icons/RoomEffectsIcon';
 import ChatBubbleIcon from './icons/ChatBubbleIcon';
+import MirrorImageIcon from './icons/MirrorImageIcon';
+import RotateIcon from './icons/RotateIcon';
+import StopEntryIcon from './icons/StopEntryIcon';
+import CensoredWordIcon from './icons/CensoredWordIcon';
+import StickerIcon from './icons/StickerIcon';
 
 
 interface ArcoraToolModalProps {
@@ -28,6 +31,7 @@ interface ArcoraToolModalProps {
   onToggleVoice: () => void;
   isVoiceEnabled: boolean;
   onOpenPrivateChat: () => void;
+  onOpenSelectOpponentModal: () => void;
 }
 
 const ToolButton: React.FC<{ icon: React.ReactNode; label: string; isNew?: boolean; notImplemented?: boolean; onClick?: () => void; isActive?: boolean; }> = ({ icon, label, isNew, notImplemented, onClick, isActive }) => (
@@ -63,20 +67,29 @@ const Section: React.FC<{ title: string; children: React.ReactNode }> = ({ title
 );
 
 
-const ArcoraToolModal: React.FC<ArcoraToolModalProps> = ({ onClose, onOpenMuteModal, onOpenSoundEffectModal, onSwitchCamera, onToggleVoice, isVoiceEnabled, onOpenPrivateChat }) => {
+const ArcoraToolModal: React.FC<ArcoraToolModalProps> = ({ onClose, onOpenMuteModal, onOpenSoundEffectModal, onSwitchCamera, onToggleVoice, isVoiceEnabled, onOpenPrivateChat, onOpenSelectOpponentModal }) => {
     const iconClass = "w-7 h-7 text-gray-200";
 
     const anchorTools = [
-        { icon: <BeautifyStarIcon className={iconClass} />, label: 'Embelezar' },
+        { icon: <BeautifyStarIcon className={iconClass} />, label: 'Embelezar', notImplemented: true },
         { icon: <SoundEffectIcon className={iconClass} />, label: 'Efeito sonoro', onClick: onOpenSoundEffectModal },
         { icon: <VoiceIcon className={iconClass} />, label: 'Âncora de Voz', onClick: onToggleVoice, isActive: isVoiceEnabled },
-        { icon: <ClarityIcon className={iconClass} />, label: 'Clareza' },
+        { icon: <ClarityIcon className={iconClass} />, label: 'Clareza', notImplemented: true },
+        { icon: <PkIcon className={iconClass} />, label: 'Batalha PK', onClick: onOpenSelectOpponentModal },
+        { icon: <ManagementIcon className={iconClass} />, label: 'Gerenciamento', notImplemented: true },
+        { icon: <MicGiftIcon className={iconClass} />, label: 'Presente de Microfone', notImplemented: true },
+        { icon: <TurntableIcon className={iconClass} />, label: 'Mesa giratória', notImplemented: true },
     ];
     
     const basicTools = [
         { icon: <CameraFlipIcon className={iconClass} />, label: 'Giro', onClick: onSwitchCamera },
         { icon: <MuteIcon className={iconClass} />, label: 'Silenciamento', onClick: onOpenMuteModal },
         { icon: <ChatBubbleIcon className={iconClass} />, label: 'Bate-papo', onClick: onOpenPrivateChat },
+        { icon: <MirrorImageIcon className={iconClass} />, label: 'Imagem espelhada', notImplemented: true },
+        { icon: <RotateIcon className={iconClass} />, label: 'Girar', notImplemented: true },
+        { icon: <StopEntryIcon className={iconClass} />, label: 'Parar entrada', notImplemented: true },
+        { icon: <CensoredWordIcon className={iconClass} />, label: 'Palavra censurada', notImplemented: true },
+        { icon: <StickerIcon className={iconClass} />, label: 'Sticker', notImplemented: true },
     ];
 
     const roomEffects = [
@@ -89,7 +102,7 @@ const ArcoraToolModal: React.FC<ArcoraToolModalProps> = ({ onClose, onOpenMuteMo
       onClick={onClose}
     >
       <div 
-        className="bg-[#212124]/95 backdrop-blur-md w-full rounded-t-2xl flex flex-col text-white animate-slide-up-fast border-2 border-purple-500 shadow-[0_0_20px_theme(colors.purple.500)]"
+        className="bg-[#212124]/95 backdrop-blur-md w-full rounded-t-2xl flex flex-col text-white animate-slide-up-fast border-2 border-purple-500 shadow-[0_0_20px_theme(colors.purple.500)] max-h-[80vh]"
         onClick={e => e.stopPropagation()}
       >
         <header className="p-4 border-b border-white/10 flex items-center justify-center relative shrink-0">
@@ -105,7 +118,7 @@ const ArcoraToolModal: React.FC<ArcoraToolModalProps> = ({ onClose, onOpenMuteMo
              <Section title="Ferramentas básicas">
                 {basicTools.map(tool => <ToolButton key={tool.label} {...tool} />)}
             </Section>
-            <Section title="">
+            <Section title="Efeitos">
                 {roomEffects.map(tool => <ToolButton key={tool.label} {...tool} />)}
             </Section>
         </div>

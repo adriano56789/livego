@@ -1,5 +1,5 @@
 // Basic types
-export type AppView = 'login' | 'upload' | 'edit' | 'feed' | 'profile' | 'go-live-setup' | 'messages' | 'diamond-purchase' | 'video' | 'protectors' | 'blocked-list' | 'withdrawal' | 'withdrawal-method-setup' | 'withdrawal-confirmation' | 'customer-service' | 'backpack' | 'help-article' | 'live-support-chat' | 'report-and-suggestion' | 'event-center' | 'event-detail' | 'settings' | 'copyright' | 'earnings-info' | 'connected-accounts' | 'search' | 'app-version' | 'live-ended' | 'my-level' | 'daily-rewards' | 'developer-tools' | 'ranking' | 'documentation' | 'purchase-history' | 'notification-settings' | 'push-settings' | 'private-live-invite-settings' | 'followers' | 'following' | 'visitors' | 'live-stream-viewer' | 'chat' | 'purchase-confirmation';
+export type AppView = 'login' | 'upload' | 'edit' | 'feed' | 'profile' | 'go-live-setup' | 'messages' | 'diamond-purchase' | 'video' | 'protectors' | 'blocked-list' | 'withdrawal' | 'withdrawal-method-setup' | 'withdrawal-confirmation' | 'customer-service' | 'backpack' | 'help-article' | 'live-support-chat' | 'report-and-suggestion' | 'event-center' | 'event-detail' | 'settings' | 'copyright' | 'earnings-info' | 'connected-accounts' | 'search' | 'app-version' | 'live-ended' | 'my-level' | 'daily-rewards' | 'developer-tools' | 'ranking' | 'documentation' | 'purchase-history' | 'notification-settings' | 'push-settings' | 'private-live-invite-settings' | 'followers' | 'following' | 'visitors' | 'live-stream-viewer' | 'chat' | 'purchase-confirmation' | 'ranking-list';
 export type Gender = 'male' | 'female';
 export type Category = 'Popular' | 'Seguindo' | 'Perto' | 'Privada' | 'PK' | 'Novo' | 'Música' | 'Dança';
 export type CameraStatus = 'idle' | 'loading' | 'success' | 'denied' | 'error' | 'not-found' | 'in-use' | 'insecure';
@@ -10,6 +10,7 @@ export type PaymentMethod = 'transfer' | 'card';
 export type FacingMode = 'user' | 'environment';
 export type SoundEffectName = 'riso' | 'aplausos' | 'animar' | 'beijar' | 'estranho' | 'resposta_errada' | 'sorriso';
 export type CardBrand = 'visa' | 'mastercard' | 'amex' | 'elo' | null;
+export type UserListRankingPeriod = 'daily' | 'weekly' | 'total';
 
 
 // User and Profile types
@@ -42,6 +43,7 @@ export interface User {
   xp: number;
   last_camera_used?: FacingMode;
   last_selected_category?: Category;
+  country: 'BR' | 'US' | 'PT' | 'JP' | 'IT' | 'AR' | null;
 }
 
 export interface AchievementFrame {
@@ -188,6 +190,9 @@ export interface LiveDetails {
   receivedGiftsValue: number;
   rankingPosition: string;
   status: 'ao vivo' | 'finalizada' | 'pausada';
+  likeCount?: number;
+  title?: string;
+  meta?: string;
 }
 
 export interface LiveEndSummary {
@@ -197,7 +202,9 @@ export interface LiveEndSummary {
   durationSeconds: number;
   peakViewers: number;
   totalEarnings: number;
-  topContributors: RankingContributor[];
+  newFollowers: number;
+  newMembers: number;
+  newFans: number;
 }
 
 // Chat & Message types
@@ -212,6 +219,7 @@ export interface ConversationMessage {
 
 export interface Conversation {
   id: string;
+  participants: number[];
   otherUserId: number;
   otherUserName: string;
   otherUserAvatarUrl: string;
@@ -229,7 +237,7 @@ export interface ChatMessage {
   emojis?: string;
   color?: string;
   giftName?: string;
-  giftImageUrl?: string;
+  giftAnimationUrl?: string;
   timestamp: string;
 }
 
@@ -292,7 +300,17 @@ export interface Gift {
   id: number;
   name: string;
   price: number;
-  imageUrl: string;
+  animationUrl: string;
+}
+
+export interface GiftTransaction {
+    id: number;
+    senderId: number;
+    receiverId: number;
+    liveId: number;
+    giftId: number;
+    giftValue: number;
+    timestamp: string;
 }
 
 export interface Viewer {
@@ -319,7 +337,7 @@ export interface RankingContributor {
 
 // New Universal Ranking Types
 export interface UniversalRankingUser {
-  rank: number;
+  rank: number | string;
   userId: number;
   avatarUrl: string;
   name: string;
@@ -332,6 +350,7 @@ export interface UniversalRankingUser {
 export interface UniversalRankingData {
   podium: UniversalRankingUser[];
   list: UniversalRankingUser[];
+  currentUserRanking?: UniversalRankingUser;
   countdown?: string;
   footerButtons?: {
       primary: { text: string; value: string; };

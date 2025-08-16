@@ -1,5 +1,5 @@
 import * as mockDb from './mockDb';
-import type { User, DbLive, PkSession, Conversation, PurchaseOrder, WithdrawalTransaction, PkInvitation, PrivateLiveInviteSettings, NotificationSettings, ReportPayload, SuggestionPayload } from '../types';
+import type { User, DbLive, PkSession, Conversation, PurchaseOrder, WithdrawalTransaction, PkInvitation, PrivateLiveInviteSettings, NotificationSettings, ReportPayload, SuggestionPayload, GiftTransaction } from '../types';
 
 // Simulate reading from a .env file
 const ENV = {
@@ -24,6 +24,8 @@ let database: {
     notificationSettings: NotificationSettings[];
     reports: (ReportPayload & { timestamp: string })[];
     suggestions: (SuggestionPayload & { timestamp: string })[];
+    giftTransactions: GiftTransaction[];
+    blockedRelationships: { blockerId: number, targetId: number }[];
 } = {
     users: structuredClone(mockDb.mockUserDatabase),
     lives: structuredClone(mockDb.mockLivesDatabase),
@@ -36,6 +38,8 @@ let database: {
     notificationSettings: structuredClone(mockDb.mockNotificationSettings),
     reports: structuredClone(mockDb.mockReportsDatabase as any),
     suggestions: structuredClone(mockDb.mockSuggestionsDatabase as any),
+    giftTransactions: structuredClone(mockDb.mockGiftTransactionsDatabase),
+    blockedRelationships: structuredClone(mockDb.mockBlockedRelationships),
 };
 
 let connected = false;
@@ -133,7 +137,6 @@ const getRawDb = () => {
     return {
         ...database,
         // These are more like "cache" or non-relational data, so we get them from the original mockDb source
-        mockBlockedUsers: Array.from(mockDb.mockBlockedUsers),
         mockLiveConnections: mockDb.mockLiveConnections,
         mockChatDatabase: mockDb.mockChatDatabase,
         mockViewers: mockDb.mockViewers,

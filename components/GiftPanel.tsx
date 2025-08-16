@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import type { User, Gift } from '../types';
 import * as liveStreamService from '../services/liveStreamService';
 import DiamondIcon from './icons/DiamondIcon';
+import { Player } from '@lottiefiles/react-lottie-player';
+import GiftIcon from './icons/GiftIcon';
 
 interface GiftPanelProps {
   user: User;
@@ -48,17 +50,22 @@ const GiftPanel: React.FC<GiftPanelProps> = ({ user, liveId, onClose, onSendGift
         className="bg-[#212124]/90 backdrop-blur-md w-full rounded-t-2xl flex flex-col text-white animate-slide-up-fast"
         onClick={e => e.stopPropagation()}
       >
-        <div className="p-4 grid grid-cols-4 gap-4 overflow-y-auto max-h-[40vh]">
+        <div className="p-4 grid grid-cols-4 gap-4 overflow-y-auto max-h-[40vh] min-h-[20vh]">
             {isLoading ? (
                  <div className="col-span-4 text-center py-8 text-gray-400">Carregando presentes...</div>
-            ) : (
+            ) : gifts.length > 0 ? (
                 gifts.map(gift => (
                     <button 
                         key={gift.id} 
                         onClick={() => setSelectedGiftId(gift.id)}
                         className={`flex flex-col items-center gap-2 p-2 rounded-lg transition-all ${selectedGiftId === gift.id ? 'bg-white/20 scale-105' : 'bg-black/20'}`}
                     >
-                        <img src={gift.imageUrl} alt={gift.name} className="w-12 h-12" />
+                        <Player
+                            src={gift.animationUrl}
+                            className="w-12 h-12"
+                            autoplay
+                            loop
+                        />
                         <span className="text-xs">{gift.name}</span>
                         <div className="flex items-center gap-1 text-xs text-yellow-400">
                             <DiamondIcon className="w-3 h-3"/>
@@ -66,6 +73,12 @@ const GiftPanel: React.FC<GiftPanelProps> = ({ user, liveId, onClose, onSendGift
                         </div>
                     </button>
                 ))
+            ) : (
+                <div className="col-span-4 flex flex-col items-center justify-center text-center py-8 text-gray-400">
+                    <GiftIcon className="w-16 h-16 mb-4 opacity-30" />
+                    <p className="font-semibold">Nenhum presente disponível</p>
+                    <p className="text-sm mt-1">Verifique novamente mais tarde.</p>
+                </div>
             )}
         </div>
 

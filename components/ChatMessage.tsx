@@ -1,5 +1,6 @@
 import React from 'react';
 import type { ChatMessage } from '../types';
+import { Player } from '@lottiefiles/react-lottie-player';
 
 interface ChatMessageItemProps {
   message: ChatMessage;
@@ -34,8 +35,8 @@ const ChatMessageItem: React.FC<ChatMessageItemProps> = ({ message, onUserClick 
       <div className="w-full max-w-sm self-start my-1 animate-slide-in-bottom">
         <div className="bg-gradient-to-r from-purple-600 via-pink-500 to-red-500 p-0.5 rounded-xl shadow-lg">
           <div className="bg-gray-900/80 backdrop-blur-sm rounded-[10px] p-2 flex items-center gap-3">
-            {message.giftImageUrl && (
-              <img src={message.giftImageUrl} alt={message.giftName || 'Effect'} className="w-12 h-12" />
+            {message.giftAnimationUrl && (
+              <img src={message.giftAnimationUrl} alt={message.giftName || 'Effect'} className="w-12 h-12" />
             )}
             <p className="text-sm">
               <span className="font-bold text-white drop-shadow-sm">{message.username}</span>
@@ -52,11 +53,12 @@ const ChatMessageItem: React.FC<ChatMessageItemProps> = ({ message, onUserClick 
        <div className="bg-gradient-to-r from-yellow-500 via-amber-400 to-yellow-500/80 border-2 border-yellow-300 backdrop-blur-sm p-2 rounded-xl self-start shadow-lg flex items-center gap-3 w-auto max-w-sm animate-slide-in-bottom">
         <button onClick={() => onUserClick(message.userId)} className="font-semibold text-yellow-900 drop-shadow-sm">{message.username}</button>
         <span className="text-sm text-yellow-800 drop-shadow-sm">{message.message}</span>
-        {message.giftImageUrl && (
-            <img 
-                src={message.giftImageUrl} 
-                alt={message.giftName || 'Gift'} 
+        {message.giftAnimationUrl && (
+            <Player
+                src={message.giftAnimationUrl}
                 className="w-12 h-12 ml-auto"
+                autoplay
+                loop
             />
         )}
       </div>

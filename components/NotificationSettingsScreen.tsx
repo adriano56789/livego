@@ -13,16 +13,16 @@ interface NotificationSettingsScreenProps {
 }
 
 const Section: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (
-    <div>
-        <h2 className="px-4 pt-6 pb-2 text-sm text-gray-400">{title}</h2>
-        <div className="bg-[#2c2c2e]/50 divide-y divide-gray-700/50 rounded-lg">
+    <div className="mb-4">
+        <h2 className="px-4 pt-4 pb-2 text-sm text-gray-500 font-semibold">{title}</h2>
+        <div className="bg-black divide-y divide-gray-800">
             {children}
         </div>
     </div>
 );
 
 const SettingItem: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
-    <div className="px-4 py-3 flex justify-between items-center">
+    <div className="px-4 py-3 flex justify-between items-center bg-[#1c1c1c]">
         <span className="text-white text-base">
             {label}
         </span>
@@ -32,7 +32,7 @@ const SettingItem: React.FC<{ label: string; children: React.ReactNode }> = ({ l
 
 
 const NavItem: React.FC<{ label: string; onClick: () => void; }> = ({ label, onClick }) => (
-    <button onClick={onClick} className="w-full px-4 py-3 flex justify-between items-center text-left">
+    <button onClick={onClick} className="w-full px-4 py-3 flex justify-between items-center text-left bg-[#1c1c1c] hover:bg-gray-800 transition-colors">
         <span className="text-white text-base">{label}</span>
         <span className="text-gray-500 text-xl font-semibold">&gt;</span>
     </button>
@@ -52,6 +52,7 @@ const NotificationSettingsScreen: React.FC<NotificationSettingsScreenProps> = ({
                 setSettings(data);
             } catch (error) {
                 console.error("Failed to load notification settings:", error);
+                // Set default settings on error
                 setSettings({
                     newMessages: true,
                     streamerLive: true,
@@ -79,17 +80,16 @@ const NotificationSettingsScreen: React.FC<NotificationSettingsScreenProps> = ({
             setSettings(updatedSettings);
         } catch (error) {
             console.error("Failed to update setting:", error);
-            setSettings(oldSettings);
+            setSettings(oldSettings); // Revert on failure
         }
     };
 
     if (isLoading) {
         return (
-             <div className="h-screen w-full bg-[#1c1c1c] text-white flex flex-col font-sans">
-                <header className="p-4 flex items-center justify-between shrink-0 border-b border-gray-700/50 relative">
+             <div className="h-screen w-full bg-black text-white flex flex-col font-sans">
+                <header className="p-4 flex items-center shrink-0 border-b border-gray-800/50 relative">
                     <button onClick={onExit} className="p-2 -m-2 z-10"><ArrowLeftIcon className="w-6 h-6" /></button>
                     <h1 className="font-semibold text-lg absolute left-1/2 -translate-x-1/2 whitespace-nowrap">Configurações de notificação</h1>
-                    <div className="w-6 h-6"></div>
                 </header>
                 <main className="flex-grow flex items-center justify-center">
                     <div className="w-8 h-8 border-4 border-white border-t-transparent rounded-full animate-spin"></div>
@@ -99,21 +99,23 @@ const NotificationSettingsScreen: React.FC<NotificationSettingsScreenProps> = ({
     }
     
     return (
-        <div className="h-screen w-full bg-[#1c1c1c] text-white flex flex-col font-sans">
-            <header className="p-4 flex items-center justify-between shrink-0 border-b border-gray-700/50 relative">
+        <div className="h-screen w-full bg-black text-white flex flex-col font-sans">
+            <header className="p-4 flex items-center shrink-0 border-b border-gray-800/50 relative">
                 <button onClick={onExit} className="p-2 -m-2 z-10"><ArrowLeftIcon className="w-6 h-6" /></button>
                 <h1 className="font-semibold text-lg absolute left-1/2 -translate-x-1/2 whitespace-nowrap">Configurações de notificação</h1>
-                <div className="w-6 h-6"></div>
             </header>
-            <main className="flex-grow overflow-y-auto px-4">
+            <main className="flex-grow overflow-y-auto bg-black">
                 <Section title="Receber notificações">
                     <SettingItem label="Novas mensagens">
                         <ToggleSwitch enabled={settings?.newMessages ?? true} onChange={(v) => handleSettingChange('newMessages', v)} ariaLabel="Novas mensagens" />
                     </SettingItem>
+                    <div className="h-px bg-gray-800 mx-4"></div>
                     <SettingItem label="Início ao vivo do streamer seguido">
                          <ToggleSwitch enabled={settings?.streamerLive ?? true} onChange={(v) => handleSettingChange('streamerLive', v)} ariaLabel="Início ao vivo do streamer seguido" />
                     </SettingItem>
+                    <div className="h-px bg-gray-800 mx-4"></div>
                      <NavItem label="Iniciar configurações de push" onClick={() => onNavigate('push-settings')} />
+                     <div className="h-px bg-gray-800 mx-4"></div>
                     <SettingItem label="Pessoa seguida postou um vídeo LiveGo">
                         <ToggleSwitch enabled={settings?.followedPost ?? true} onChange={(v) => handleSettingChange('followedPost', v)} ariaLabel="Pessoa seguida postou um vídeo LiveGo" />
                     </SettingItem>
@@ -123,6 +125,7 @@ const NotificationSettingsScreen: React.FC<NotificationSettingsScreenProps> = ({
                      <SettingItem label="Pedido">
                         <ToggleSwitch enabled={settings?.order ?? true} onChange={(v) => handleSettingChange('order', v)} ariaLabel="Pedido" />
                     </SettingItem>
+                    <div className="h-px bg-gray-800 mx-4"></div>
                     <SettingItem label="Notificações interativas">
                          <ToggleSwitch enabled={settings?.interactive ?? true} onChange={(v) => handleSettingChange('interactive', v)} ariaLabel="Notificações interativas" />
                     </SettingItem>

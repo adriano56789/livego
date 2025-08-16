@@ -1,5 +1,5 @@
 import { apiClient } from './apiClient';
-import type { User, LiveDetails, ChatMessage, Gift, Viewer, RankingContributor, Like, PkBattle, PkSession, PublicProfile, PkEventDetails, Conversation, SendGiftResponse, ProtectorDetails, WithdrawalTransaction, WithdrawalMethod, InventoryItem, AppEvent, LiveEndSummary, UserLevelInfo, GeneralRankingStreamer, GeneralRankingUser, WithdrawalBalance, EventStatus, PkRankingData, ReportPayload, SuggestionPayload, Stream, Category, StreamUpdateListener, StartLiveResponse, PkInvitation, LiveFollowUpdate, PrivateLiveInviteSettings, NotificationSettings, FacingMode, SoundEffectName, MuteStatusListener, UserKickedListener, SoundEffectListener, UniversalRankingData } from '../types';
+import type { User, LiveDetails, ChatMessage, Gift, Viewer, RankingContributor, Like, PkBattle, PkSession, PublicProfile, PkEventDetails, Conversation, SendGiftResponse, ProtectorDetails, WithdrawalTransaction, WithdrawalMethod, InventoryItem, AppEvent, LiveEndSummary, UserLevelInfo, GeneralRankingStreamer, GeneralRankingUser, WithdrawalBalance, EventStatus, PkRankingData, ReportPayload, SuggestionPayload, Stream, Category, StreamUpdateListener, StartLiveResponse, PkInvitation, LiveFollowUpdate, PrivateLiveInviteSettings, NotificationSettings, FacingMode, SoundEffectName, MuteStatusListener, UserKickedListener, SoundEffectListener, UniversalRankingData, UserListRankingPeriod } from '../types';
 
 // NOTE: Listener logic remains client-side for real-time simulation without websockets
 const streamListeners = new Set<StreamUpdateListener>();
@@ -45,6 +45,24 @@ export const addSoundEffectListener = (listener: SoundEffectListener) => { sound
 export const removeSoundEffectListener = (listener: SoundEffectListener) => { soundEffectListeners.delete(listener); };
 export const notifySoundEffectListeners = (update: { liveId: number; effectName: SoundEffectName; triggeredBy: number; }) => {
     soundEffectListeners.forEach(listener => listener(update));
+};
+
+// User Blocked
+export type UserBlockedListener = (update: { blockerId: number; targetId: number; }) => void;
+const userBlockedListeners = new Set<UserBlockedListener>();
+export const addUserBlockedListener = (listener: UserBlockedListener) => { userBlockedListeners.add(listener); };
+export const removeUserBlockedListener = (listener: UserBlockedListener) => { userBlockedListeners.delete(listener); };
+export const notifyUserBlockedListeners = (update: { blockerId: number; targetId: number; }) => {
+    userBlockedListeners.forEach(listener => listener(update));
+};
+
+// User Unblocked
+export type UserUnblockedListener = (update: { unblockerId: number; targetId: number; }) => void;
+const userUnblockedListeners = new Set<UserUnblockedListener>();
+export const addUserUnblockedListener = (listener: UserUnblockedListener) => { userUnblockedListeners.add(listener); };
+export const removeUserUnblockedListener = (listener: UserUnblockedListener) => { userUnblockedListeners.delete(listener); };
+export const notifyUserUnblockedListeners = (update: { unblockerId: number; targetId: number; }) => {
+    userUnblockedListeners.forEach(listener => listener(update));
 };
 
 
@@ -122,8 +140,12 @@ export const getRanking = (liveId: number, period: 'hourly' | 'daily' | 'weekly'
     return apiClient(`/api/lives/${liveId}/ranking?period=${period}`);
 };
 
-export const getUniversalRanking = (type: 'hourly_venezuela' | 'hourly_global' | 'daily' | 'weekly' | 'total' | 'hourly_brazil'): Promise<UniversalRankingData> => {
-    return apiClient(`/api/ranking/universal?type=${type}`);
+export const getHourlyRanking = (liveId: number, region: 'brazil' | 'global'): Promise<UniversalRankingData> => {
+    return apiClient(`/api/ranking/hourly?liveId=${liveId}&region=${region}`);
+};
+
+export const getUserListRanking = (period: UserListRankingPeriod): Promise<UniversalRankingData> => {
+    return apiClient(`/api/ranking/user-list?period=${period}`);
 };
 
 export const sendLike = (liveId: number, userId: number): Promise<Like> => {
@@ -140,6 +162,12 @@ export const unblockUser = (unblockerId: number, targetId: number): Promise<{ su
     return apiClient('/api/users/unblock', { method: 'POST', body: JSON.stringify({ unblockerId, targetId }) });
 };
 export const getBlockedUsers = (currentUserId: number): Promise<User[]> => apiClient(`/api/users/${currentUserId}/blocked`);
+export const isUserBlocked = (blockerId: number, targetId: number): Promise<{ isBlocked: boolean }> => {
+    return apiClient('/api/users/is-blocked', {
+        method: 'POST',
+        body: JSON.stringify({ blockerId, targetId })
+    });
+};
 
 export const getConversationById = (conversationId: string, currentUserId: number): Promise<Conversation> => apiClient(`/api/chat/private/${conversationId}?userId=${currentUserId}`);
 export const getOrCreateConversationWithUser = (currentUserId: number, otherUserId: number): Promise<Conversation> => {
@@ -299,5 +327,12 @@ export const toggleVoice = (liveId: number, userId: number): Promise<{ voiceEnab
     return apiClient('/api/live/toggle-voice', {
         method: 'POST',
         body: JSON.stringify({ liveId, userId })
+    });
+};
+
+export const helpHostRankUp = (helperId: number, hostId: number, giftValue: number): Promise<{ success: boolean; message: string; updatedUser: User | null }> => {
+    return apiClient('/api/ranking/help-host', {
+        method: 'POST',
+        body: JSON.stringify({ helperId, hostId, giftValue }),
     });
 };

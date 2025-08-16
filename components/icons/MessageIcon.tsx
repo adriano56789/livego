@@ -1,9 +1,10 @@
 
+
 import React from 'react';
 
 const MessageIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
-  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 8.511c.884.284 1.5 1.128 1.5 2.097v4.286c0 1.136-.847 2.1-1.98 2.193l-3.722.28c-1.28.096-2.457.69-3.286 1.625a4.5 4.5 0 01-6.502 0V21H4.5a2.25 2.25 0 01-2.25-2.25v-13.5A2.25 2.25 0 014.5 3h11.25a2.25 2.25 0 012.25 2.25v1.655Z" />
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" {...props}>
+    <path fillRule="evenodd" d="M4.804 21.644A6.707 6.707 0 006 21.75a6.721 6.721 0 003.583-1.029c.774.182 1.584.279 2.417.279 5.252 0 9.75-3.694 9.75-8.25s-4.498-8.25-9.75-8.25S3 7.694 3 12.25c0 1.801.523 3.514 1.424 4.965.246.388.452.817.614 1.282zM6.38 16.36a.75.75 0 01-.22-.531v-1.63a.75.75 0 011.498-.055l.002.055v1.63a.75.75 0 01-.278.586l.278-.586a.75.75 0 011.058.42l1.06 2.12a.75.75 0 01-.42 1.058l-2.12 1.06a.75.75 0 01-1.058-.42l-1.06-2.12z" clipRule="evenodd" />
   </svg>
 );
 

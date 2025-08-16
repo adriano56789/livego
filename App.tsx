@@ -1,5 +1,3 @@
-
-
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import LoginScreen from './components/LoginScreen';
 import UploadPhotoScreen from './components/UploadPhotoScreen';
@@ -126,6 +124,11 @@ const AppContent: React.FC = () => {
 
     const checkFollowedStatus = async () => {
       try {
+        const settings = await liveStreamService.getNotificationSettings(user.id);
+        if (!settings.streamerLive) {
+            return; // User has disabled this notification
+        }
+
         const statuses = await liveStreamService.getFollowingLiveStatus(user.id);
         const currentlyLive = new Set(statuses.filter(s => s.isLive).map(s => s.userId));
 
@@ -211,6 +214,13 @@ const AppContent: React.FC = () => {
     }
     // Set the underlying view to 'feed'
     setCurrentView('feed');
+
+    // Show a preview of the live notification to the streamer themselves.
+    setLiveNotification({
+        streamerName: user.nickname || user.name,
+        streamerAvatarUrl: user.avatar_url || '',
+        stream: startLiveResponse.live,
+    });
   }, [user, showApiResponse, setActiveCategory, handleViewStream]);
 
 
@@ -379,11 +389,6 @@ const AppContent: React.FC = () => {
             user={user}
             stream={viewingStream}
             onExit={() => setViewingStream(null)}
-            onNavigateToChat={handleNavigateToChat}
-            onNavigateToMessages={() => {
-                setViewingStream(null);
-                setCurrentView('messages');
-            }}
             onRequirePurchase={() => {
                 setPurchaseOverlay({ step: 'purchase' });
             }}
@@ -392,6 +397,7 @@ const AppContent: React.FC = () => {
             onViewStream={handleViewStream}
             onStreamEnded={handleStreamEnded}
             onStopStream={handleStopStream}
+            onNavigateToChat={handleNavigateToChat}
         />
     }
 
@@ -600,12 +606,10 @@ const AppContent: React.FC = () => {
     if (currentView === 'live-ended' && viewingEndedStreamSummary) {
       return <LiveEndedScreen
         summary={viewingEndedStreamSummary}
-        isFollowing={user.following.includes(viewingEndedStreamSummary.streamerId)}
         onExit={() => {
             setViewingEndedStreamSummary(null);
             setCurrentView('feed');
         }}
-        onFollowToggle={handleFollowToggle}
       />;
     }
     if (currentView === 'my-level') {

@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import type { User, Stream, PkBattle, ChatMessage, LiveDetails, PkInvitation, SoundEffectName, MuteStatusListener, UserKickedListener, SoundEffectListener, PublicProfile, PkSession } from '../types';
 import * as liveStreamService from '../services/liveStreamService';
@@ -8,7 +9,6 @@ import { useApiViewer } from './ApiContext';
 
 import CrossIcon from './icons/CrossIcon';
 import ViewersIcon from './icons/ViewersIcon';
-import DiamondIcon from './icons/DiamondIcon';
 import AnchorToolsIcon from './icons/AnchorToolsIcon';
 import SwordsIcon from './icons/SwordsIcon';
 import CoracaoIcon from './icons/CoracaoIcon';
@@ -16,6 +16,15 @@ import ShoppingBasketIcon from './icons/ShoppingBasketIcon';
 import ChatBubbleIcon from './icons/ChatBubbleIcon';
 import MessageIcon from './icons/MessageIcon';
 import PlusIcon from './icons/PlusIcon';
+import CheckIcon from './icons/CheckIcon';
+
+
+// New Icons
+import CoinBIcon from './icons/CoinBIcon';
+import PinkHeartIcon from './icons/PinkHeartIcon';
+import LevelBarIcon from './icons/LevelBarIcon';
+import BrazilFlagIcon from './icons/BrazilFlagIcon';
+
 
 // Modal Imports
 import OnlineUsersModal from './OnlineUsersModal';
@@ -34,6 +43,8 @@ import SelectOpponentModal from './SelectOpponentModal';
 import AcceptPkInviteModal from './AcceptPkInviteModal';
 import InviteToPartyModal from './InviteToPartyModal';
 import QuickChatModal from './QuickChatModal';
+import RankingListScreen from './RankingListScreen';
+import PrivateChatModal from './PrivateChatModal';
 
 
 interface LiveStreamViewerScreenProps {
@@ -41,7 +52,6 @@ interface LiveStreamViewerScreenProps {
   stream: Stream | PkBattle;
   onExit: () => void;
   onNavigateToChat: (userId: number) => void;
-  onNavigateToMessages: () => void;
   onRequirePurchase: () => void;
   onUpdateUser: (user: User) => void;
   onViewProtectors: (userId: number) => void;
@@ -63,7 +73,6 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
   stream: initialStream,
   onExit,
   onNavigateToChat,
-  onNavigateToMessages,
   onRequirePurchase,
   onUpdateUser,
   onViewProtectors,
@@ -80,6 +89,7 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
     const [liveDetails, setLiveDetails] = useState<LiveDetails | null>(null);
     const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
     const [isFollowing, setIsFollowing] = useState<Record<number, boolean>>({});
+    const [isBlockedByHost, setIsBlockedByHost] = useState(false);
     
     // Modal states
     const [isFollowLoading, setIsFollowLoading] = useState<Record<number, boolean>>({});
@@ -98,6 +108,8 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
     const [pendingPkInvitation, setPendingPkInvitation] = useState<PkInvitation | null>(null);
     const [isInviteToPartyModalOpen, setIsInviteToPartyModalOpen] = useState(false);
     const [isQuickChatOpen, setIsQuickChatOpen] = useState(false);
+    const [isRankingListOpen, setIsRankingListOpen] = useState(false);
+    const [isPrivateChatModalOpen, setIsPrivateChatModalOpen] = useState(false);
 
     const liveId = isPkBattle ? (initialStream as PkBattle).streamer1.streamId : (initialStream as Stream).id;
     const streamerId = isPkBattle ? (initialStream as PkBattle).streamer1.userId : (initialStream as Stream).userId;
@@ -105,6 +117,48 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
         ? user.id === (initialStream as PkBattle).streamer1.userId || user.id === (initialStream as PkBattle).streamer2.userId
         : user.id === streamerId;
     const isPrivateStream = !isPkBattle && (initialStream as Stream).isPrivate;
+
+    const fetchLiveDetails = useCallback(async () => {
+        try {
+            const streamToFetch = isPkBattle ? (initialStream as PkBattle).streamer1.streamId : (initialStream as Stream).id;
+            const details = await liveStreamService.getLiveStreamDetails(streamToFetch);
+            setLiveDetails(details);
+        } catch (error) { console.error(error); }
+    }, [isPkBattle, initialStream]);
+    
+    const streamHostId = isPkBattle ? (initialStream as PkBattle).streamer1.userId : streamerId;
+    
+    // Effect for initial block check
+    useEffect(() => {
+        if (isHost) return;
+        liveStreamService.isUserBlocked(streamHostId, user.id)
+            .then(({ isBlocked }) => {
+                setIsBlockedByHost(isBlocked);
+            })
+            .catch(err => console.error("Failed to check block status:", err));
+    }, [streamHostId, user.id, isHost]);
+    
+    // Effect for real-time block updates
+    useEffect(() => {
+        const handleBlocked: liveStreamService.UserBlockedListener = ({ blockerId, targetId }) => {
+            if (blockerId === streamHostId && targetId === user.id) {
+                setIsBlockedByHost(true);
+            }
+        };
+
+        const handleUnblocked: liveStreamService.UserUnblockedListener = ({ unblockerId, targetId }) => {
+            if (unblockerId === streamHostId && targetId === user.id) {
+                setIsBlockedByHost(false);
+            }
+        };
+
+        liveStreamService.addUserBlockedListener(handleBlocked);
+        liveStreamService.addUserUnblockedListener(handleUnblocked);
+        return () => {
+            liveStreamService.removeUserBlockedListener(handleBlocked);
+            liveStreamService.removeUserUnblockedListener(handleUnblocked);
+        };
+    }, [streamHostId, user.id]);
 
     useEffect(() => {
         const initialFollowing: Record<number, boolean> = {};
@@ -184,18 +238,21 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
     }, [isPkBattle, initialStream]);
     
     useEffect(() => {
-        const fetchData = async () => {
+        const fetchInitialData = async () => {
             try {
+                const streamToFetchId = isPkBattle ? (initialStream as PkBattle).streamer1.streamId : liveId;
                 const [details, messages] = await Promise.all([
-                    liveStreamService.getLiveStreamDetails(liveId),
-                    liveStreamService.getChatMessages(liveId),
+                    liveStreamService.getLiveStreamDetails(streamToFetchId),
+                    liveStreamService.getChatMessages(streamToFetchId),
                 ]);
                 setLiveDetails(details);
                 setChatMessages(messages);
             } catch (error) { console.error(error); onExit(); }
         };
-        fetchData();
-    }, [liveId, onExit]);
+        fetchInitialData();
+        const interval = setInterval(fetchLiveDetails, 5000); // Poll details for updates
+        return () => clearInterval(interval);
+    }, [liveId, onExit, fetchLiveDetails, isPkBattle, initialStream]);
 
     useEffect(() => {
         const handleChatMessageUpdate = (id: number, messages: ChatMessage[]) => { if (id === liveId) setChatMessages(messages); };
@@ -230,27 +287,45 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
     }, [liveId, user.id]);
 
     useEffect(() => {
-        liveStreamService.joinLiveStream(user.id, liveId).catch(error => {
+        const joinId = isPkBattle ? (initialStream as PkBattle).streamer1.streamId : liveId;
+        liveStreamService.joinLiveStream(user.id, joinId).catch(error => {
             if (error.message.includes('removido')) {
                 setKickedState('banned_on_join');
             } else { onExit(); }
         });
-        if (user.equipped_entry_effect_id) liveStreamService.postSpecialEntryMessage(liveId, user.id);
-        return () => { liveStreamService.leaveLiveStream(user.id, liveId); };
-    }, [user.id, liveId, onExit, user.equipped_entry_effect_id]);
+        if (user.equipped_entry_effect_id) liveStreamService.postSpecialEntryMessage(joinId, user.id);
+        return () => { liveStreamService.leaveLiveStream(user.id, joinId); };
+    }, [user.id, liveId, onExit, user.equipped_entry_effect_id, isPkBattle, initialStream]);
     
     const handleSendMessage = async (message: string) => {
         try { await liveStreamService.sendChatMessage(liveId, user.id, message); } catch (error) { alert((error as Error).message); }
     };
     
+    const handleSendLike = async () => {
+        await liveStreamService.sendLike(liveId, user.id);
+        fetchLiveDetails();
+    };
+
     const handleSendGift = async (giftId: number) => {
         const targetStreamId = isPkBattle ? (initialStream as PkBattle).streamer1.streamId : liveId;
         try {
             const response = await liveStreamService.sendGift(targetStreamId, user.id, giftId);
-            if (response.success && response.updatedUser) onUpdateUser(response.updatedUser);
-            else { alert(response.message); if (response.message.includes('insuficientes')) onRequirePurchase(); }
-            setIsGiftPanelOpen(false);
-        } catch (error) { alert((error as Error).message); }
+            if (response.success && response.updatedUser) {
+                onUpdateUser(response.updatedUser);
+            } else {
+                 if (response.message.includes('insuficientes')) {
+                    setIsGiftPanelOpen(false); // Close panel before opening purchase overlay
+                    onRequirePurchase();
+                 } else {
+                    alert(response.message);
+                 }
+            }
+            if(response.success) {
+                setIsGiftPanelOpen(false);
+            }
+        } catch (error) {
+             alert((error as Error).message);
+        }
     };
 
     const handleMuteUser = async (targetUserId: number, mute: boolean) => {
@@ -303,14 +378,14 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
                 <ChatBubbleIcon className="w-6 h-6 text-white"/>
             </button>
             {!isHost && (
-                <button onClick={onNavigateToMessages} className="w-10 h-10 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center">
+                <button onClick={() => setIsPrivateChatModalOpen(true)} className="w-10 h-10 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center">
                     <MessageIcon className="w-6 h-6 text-white"/>
                 </button>
             )}
             <button onClick={() => setIsGiftPanelOpen(true)} className="w-10 h-10 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center">
                 <ShoppingBasketIcon className="w-6 h-6 text-yellow-200" />
             </button>
-             <button onClick={() => liveStreamService.sendLike(liveId, user.id)} className="w-10 h-10 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center">
+             <button onClick={handleSendLike} className="w-10 h-10 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center">
                 <CoracaoIcon className="w-7 h-7 text-red-500" />
             </button>
         </div>
@@ -323,15 +398,17 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
                     <button onClick={() => handleOpenUserProfile(battle.streamer1.userId)}>
                         <img src={battle.streamer1.avatarUrl} alt={battle.streamer1.name} className="w-10 h-10 rounded-full object-cover"/>
                     </button>
-                    {user.id !== battle.streamer1.userId && !isFollowing[battle.streamer1.userId] && (
+                    {user.id !== battle.streamer1.userId && (
                         <button
-                            onClick={() => handleFollowToggle(battle.streamer1.userId)}
+                            onClick={(e) => { e.stopPropagation(); handleFollowToggle(battle.streamer1.userId); }}
                             disabled={isFollowLoading[battle.streamer1.userId]}
-                            className="absolute bottom-0 right-0 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center border-2 border-black/40 transform transition-transform hover:scale-110 disabled:bg-gray-500"
+                            className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center border-2 border-black/40 transform transition-transform hover:scale-110 disabled:bg-gray-500"
                             aria-label={`Seguir ${battle.streamer1.name}`}
                         >
                             {isFollowLoading[battle.streamer1.userId] ? 
                                 <div className="w-3 h-3 border-2 border-black border-t-transparent rounded-full animate-spin"></div> : 
+                            isFollowing[battle.streamer1.userId] ?
+                                <CheckIcon className="w-3 h-3 text-black" /> :
                                 <PlusIcon className="w-3 h-3 text-black" />
                             }
                         </button>
@@ -358,15 +435,17 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
                     <button onClick={() => handleOpenUserProfile(battle.streamer2.userId)}>
                         <img src={battle.streamer2.avatarUrl} alt={battle.streamer2.name} className="w-10 h-10 rounded-full object-cover"/>
                     </button>
-                    {user.id !== battle.streamer2.userId && !isFollowing[battle.streamer2.userId] && (
+                    {user.id !== battle.streamer2.userId && (
                         <button
-                            onClick={() => handleFollowToggle(battle.streamer2.userId)}
+                            onClick={(e) => { e.stopPropagation(); handleFollowToggle(battle.streamer2.userId); }}
                             disabled={isFollowLoading[battle.streamer2.userId]}
-                            className="absolute bottom-0 right-0 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center border-2 border-black/40 transform transition-transform hover:scale-110 disabled:bg-gray-500"
+                            className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center border-2 border-black/40 transform transition-transform hover:scale-110 disabled:bg-gray-500"
                             aria-label={`Seguir ${battle.streamer2.name}`}
                         >
                             {isFollowLoading[battle.streamer2.userId] ? 
                                 <div className="w-3 h-3 border-2 border-black border-t-transparent rounded-full animate-spin"></div> : 
+                             isFollowing[battle.streamer2.userId] ?
+                                <CheckIcon className="w-3 h-3 text-black" /> :
                                 <PlusIcon className="w-3 h-3 text-black" />
                             }
                         </button>
@@ -386,38 +465,52 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
                 </div>
                 <div className="relative z-10 flex flex-col h-full p-2 sm:p-4">
                     <header className="flex items-start justify-between shrink-0">
-                        <div className="bg-black/40 backdrop-blur-sm p-2 rounded-lg flex flex-col items-start">
-                           <div className="flex items-center gap-2">
-                                <div className="relative shrink-0">
-                                   <button onClick={() => handleOpenUserProfile(streamerId)}>
-                                       <img src={liveDetails?.streamerAvatarUrl} alt={liveDetails?.streamerName} className="w-10 h-10 rounded-full object-cover"/>
-                                   </button>
-                                   {!isHost && !isFollowing[streamerId] && (
-                                       <button
-                                           onClick={() => handleFollowToggle(streamerId)}
-                                           disabled={isFollowLoading[streamerId]}
-                                           className="absolute bottom-0 right-0 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center border-2 border-black/40 transform transition-transform hover:scale-110 disabled:bg-gray-500"
-                                           aria-label="Seguir streamer"
-                                       >
-                                           {isFollowLoading[streamerId] ? 
-                                               <div className="w-3 h-3 border-2 border-black border-t-transparent rounded-full animate-spin"></div> : 
-                                               <PlusIcon className="w-3 h-3 text-black" />
-                                           }
-                                       </button>
-                                   )}
-                               </div>
-                               <button onClick={() => handleOpenUserProfile(streamerId)}>
-                                   <div>
-                                       <p className="font-bold text-sm truncate max-w-[120px]">{liveDetails?.streamerName}</p>
-                                       <p className="text-xs text-gray-300">{formatStatNumber(liveDetails?.streamerFollowers || 0)} seguidores</p>
-                                   </div>
-                               </button>
-                           </div>
-                           <button onClick={() => setIsHourlyRankingModalOpen(true)} className="flex items-center gap-1.5 mt-1.5 pl-1">
-                               <DiamondIcon className="w-4 h-4"/>
-                               <span className="font-semibold text-sm text-white">{formatStatNumber(liveDetails?.receivedGiftsValue || 0)}</span>
-                               <span className="text-gray-400 text-sm font-bold ml-1">&gt;</span>
-                           </button>
+                        <div className="flex flex-col items-start gap-2">
+                            <div className="bg-black/40 backdrop-blur-sm p-1 rounded-full flex items-center gap-2">
+                                <div onClick={() => handleOpenUserProfile(streamerId)} className="flex items-center gap-2 cursor-pointer">
+                                    <div className="relative shrink-0">
+                                        <img src={liveDetails?.streamerAvatarUrl} alt={liveDetails?.streamerName} className="w-10 h-10 rounded-full object-cover"/>
+                                    </div>
+                                    <div>
+                                        <p className="font-bold text-sm truncate max-w-[120px]">{liveDetails?.streamerName}</p>
+                                        <div className="flex items-center gap-1.5 text-xs text-gray-300">
+                                          <LevelBarIcon className="w-3 h-3"/>
+                                          <span>{formatStatNumber(liveDetails?.streamerFollowers || 0)}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                {!isHost && (
+                                    <button
+                                        onClick={() => handleFollowToggle(streamerId)}
+                                        disabled={isFollowLoading[streamerId]}
+                                        className={`ml-2 w-10 h-10 flex items-center justify-center rounded-full transition-colors ${
+                                            isFollowing[streamerId]
+                                                ? 'bg-white/20'
+                                                : 'bg-green-500'
+                                        }`}
+                                        aria-label={isFollowing[streamerId] ? `Deixar de seguir ${liveDetails?.streamerName}` : `Seguir ${liveDetails?.streamerName}`}
+                                    >
+                                        {isFollowLoading[streamerId] ? (
+                                            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                        ) : isFollowing[streamerId] ? (
+                                            <CheckIcon className="w-5 h-5 text-white" />
+                                        ) : (
+                                            <PlusIcon className="w-5 h-5 text-black" />
+                                        )}
+                                    </button>
+                                )}
+                            </div>
+
+                            <button onClick={() => setIsHourlyRankingModalOpen(true)} className="bg-black/40 backdrop-blur-sm px-2 py-1.5 rounded-full flex items-center gap-3 self-start">
+                                <div className="flex items-center gap-1">
+                                    <CoinBIcon className="w-5 h-5" />
+                                    <span className="font-semibold text-sm text-yellow-400">{formatStatNumber(liveDetails?.receivedGiftsValue || 0)}</span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                    <PinkHeartIcon className="w-5 h-5" />
+                                    <span className="font-semibold text-sm text-white">{formatStatNumber(liveDetails?.likeCount || 0)}</span>
+                                </div>
+                            </button>
                         </div>
                         <div className="flex items-center gap-2">
                             <button onClick={() => setIsOnlineUsersModalOpen(true)} className="flex items-center gap-2 bg-black/40 backdrop-blur-sm px-3 py-2 rounded-full">
@@ -427,6 +520,14 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
                             <button onClick={handleExitClick} className="p-2 bg-black/40 rounded-full"><CrossIcon className="w-6 h-6"/></button>
                         </div>
                     </header>
+                    
+                    {(liveDetails?.title || liveDetails?.meta) && (
+                        <div className="mt-2 p-2 bg-black/20 backdrop-blur-sm rounded-lg max-w-md self-start">
+                            {liveDetails.title && <h1 className="font-bold text-white text-base">{liveDetails.title}</h1>}
+                            {liveDetails.meta && <p className="text-gray-300 text-sm mt-1">{liveDetails.meta}</p>}
+                        </div>
+                    )}
+
                     <main className="flex-grow flex flex-col justify-end overflow-hidden pointer-events-none">
                         <div className="w-full md:w-3/4 lg:w-1/2 pointer-events-auto">
                             <ChatArea messages={chatMessages} onUserClick={handleOpenUserProfile} />
@@ -435,7 +536,7 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
                     <footer className="shrink-0 pt-2 pointer-events-auto">
                         <div className="flex items-center gap-2">
                             <div className="flex-grow">
-                                <ChatInput onSendMessage={handleSendMessage} />
+                                <ChatInput onSendMessage={handleSendMessage} disabled={isBlockedByHost} />
                             </div>
                             {renderCommonFooterButtons()}
                         </div>
@@ -481,7 +582,7 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
                     <footer className="shrink-0 pt-2 pointer-events-auto">
                          <div className="flex items-center gap-2">
                             <div className="flex-grow">
-                                <ChatInput onSendMessage={handleSendMessage} />
+                                <ChatInput onSendMessage={handleSendMessage} disabled={isBlockedByHost} />
                             </div>
                             {renderCommonFooterButtons()}
                         </div>
@@ -504,7 +605,7 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
             
             {/* Re-using existing modals */}
             {isOnlineUsersModalOpen && <OnlineUsersModal liveId={liveId} onClose={() => setIsOnlineUsersModalOpen(false)} onUserClick={handleOpenUserProfile} />}
-            {isHourlyRankingModalOpen && <HourlyRankingModal onClose={() => setIsHourlyRankingModalOpen(false)} onUserClick={(userId) => { setIsHourlyRankingModalOpen(false); handleOpenUserProfile(userId); }}/>}
+            {isHourlyRankingModalOpen && liveDetails && <HourlyRankingModal liveId={liveId} currentUser={user} onUpdateUser={onUpdateUser} streamer={{id: streamerId, name: liveDetails.streamerName, avatarUrl: liveDetails.streamerAvatarUrl}} onClose={() => setIsHourlyRankingModalOpen(false)} onUserClick={(userId) => { setIsHourlyRankingModalOpen(false); handleOpenUserProfile(userId); }} onNavigateToList={() => { setIsHourlyRankingModalOpen(false); setIsRankingListOpen(true); }} onRequirePurchase={onRequirePurchase} />}
             {isGiftPanelOpen && <GiftPanel user={user} liveId={liveId} onClose={() => setIsGiftPanelOpen(false)} onSendGift={handleSendGift} onRechargeClick={() => { setIsGiftPanelOpen(false); onRequirePurchase(); }} />}
             {viewingUserId && <UserProfileModal userId={viewingUserId} currentUser={user} onUpdateUser={onUpdateUser} onClose={() => setViewingUserId(null)} onNavigateToChat={onNavigateToChat} onViewProtectors={onViewProtectors} onViewStream={onViewStream} />}
             {isMuteUserModalOpen && <MuteUserModal liveId={liveId} mutedUsers={mutedUsers} onMuteUser={handleMuteUser} onKickUser={handleKickUser} onClose={() => setIsMuteUserModalOpen(false)}/>}
@@ -518,8 +619,10 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
                 onSwitchCamera={() => {}} 
                 onToggleVoice={() => {}} 
                 isVoiceEnabled={false} 
-                onOpenPrivateChat={() => { setIsArcoraToolModalOpen(false); onNavigateToMessages(); }} 
+                onOpenPrivateChat={() => { setIsArcoraToolModalOpen(false); setIsPrivateChatModalOpen(true); }} 
             />}
+            {isRankingListOpen && <RankingListScreen liveId={liveId} currentUser={user} onExit={() => setIsRankingListOpen(false)} onUserClick={(userId) => { setIsRankingListOpen(false); handleOpenUserProfile(userId); }} />}
+            {isPrivateChatModalOpen && <PrivateChatModal user={user} onClose={() => setIsPrivateChatModalOpen(false)} />}
         </div>
     );
 };

@@ -34,7 +34,6 @@ const ChatBubble: React.FC<{ message: ConversationMessage; isSender: boolean }> 
   );
 };
 
-
 const PrivateChatModal: React.FC<PrivateChatModalProps> = ({ user, onClose }) => {
     const [conversations, setConversations] = useState<Conversation[]>([]);
     const [activeConversation, setActiveConversation] = useState<Conversation | null>(null);
@@ -156,13 +155,18 @@ const PrivateChatModal: React.FC<PrivateChatModalProps> = ({ user, onClose }) =>
     );
 
     return (
-         <div className="fixed inset-0 bg-black/60 z-50 flex items-end" onClick={onClose}>
-            <div className="bg-[#212124]/95 backdrop-blur-md w-full max-w-lg h-[80vh] rounded-t-2xl flex flex-col text-white animate-slide-up-fast" onClick={e => e.stopPropagation()}>
+         <div className="fixed top-0 bottom-0 right-0 w-full max-w-md h-screen z-50 animate-slide-in-right">
+            <div className="bg-[#212124] w-full h-full flex flex-col text-white shadow-2xl">
                 {activeConversation ? renderChatView() : renderConversationList()}
             </div>
              <style>{`
-                @keyframes slide-up-fast { from { transform: translateY(100%); } to { transform: translateY(0); } }
-                .animate-slide-up-fast { animation: slide-up-fast 0.25s ease-out forwards; }
+                @keyframes slide-in-right { 
+                    from { transform: translateX(100%); } 
+                    to { transform: translateX(0); } 
+                }
+                .animate-slide-in-right { 
+                    animation: slide-in-right 0.3s ease-out forwards; 
+                }
             `}</style>
          </div>
     );

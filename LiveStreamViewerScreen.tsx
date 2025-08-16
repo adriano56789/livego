@@ -1,7 +1,7 @@
 
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import type { User, Stream, PkBattle, ChatMessage, LiveDetails, RankingContributor, Viewer, PkInvitation, SoundEffectName, MuteStatusListener, UserKickedListener, SoundEffectListener } from '../types';
+import type { User, Stream, PkBattle, ChatMessage, LiveDetails, PkInvitation, SoundEffectName, MuteStatusListener, UserKickedListener, SoundEffectListener, PublicProfile, PkSession } from '../types';
 import * as liveStreamService from '../services/liveStreamService';
 import * as authService from '../services/authService';
 import * as soundService from '../services/soundService';
@@ -9,29 +9,43 @@ import { useApiViewer } from './ApiContext';
 
 import CrossIcon from './icons/CrossIcon';
 import ViewersIcon from './icons/ViewersIcon';
-import DiamondIcon from './icons/DiamondIcon';
+import AnchorToolsIcon from './icons/AnchorToolsIcon';
 import SwordsIcon from './icons/SwordsIcon';
-import WhiteBalloonIcon from './icons/WhiteBalloonIcon';
+import CoracaoIcon from './icons/CoracaoIcon';
+import ShoppingBasketIcon from './icons/ShoppingBasketIcon';
+import ChatBubbleIcon from './icons/ChatBubbleIcon';
+import MessageIcon from './icons/MessageIcon';
+import PlusIcon from './icons/PlusIcon';
+import CheckIcon from './icons/CheckIcon';
+
+
+// New Icons
+import CoinBIcon from './icons/CoinBIcon';
+import PinkHeartIcon from './icons/PinkHeartIcon';
+import LevelBarIcon from './icons/LevelBarIcon';
+import BrazilFlagIcon from './icons/BrazilFlagIcon';
+
 
 // Modal Imports
 import OnlineUsersModal from './OnlineUsersModal';
 import UserProfileModal from './UserProfileModal';
 import HourlyRankingModal from './HourlyRankingModal';
 import GiftPanel from './GiftPanel';
-import EndStreamConfirmationModal from './EndStreamConfirmationModal';
-import SelectOpponentModal from './SelectOpponentModal';
-import AcceptPkInviteModal from './AcceptPkInviteModal';
-import InviteToPartyModal from './InviteToPartyModal';
-import ChatArea from './ChatArea';
 import ArcoraToolModal from './ArcoraToolModal';
 import MuteUserModal from './MuteUserModal';
 import SoundEffectModal from './SoundEffectModal';
 import MutedNotificationModal from './MutedNotificationModal';
 import KickedFromStreamModal from './KickedFromStreamModal';
-import CoracaoIcon from './icons/CoracaoIcon';
-import WaterDropIcon from './icons/WaterDropIcon';
-import ShoppingBasketIcon from './icons/ShoppingBasketIcon';
+import ChatArea from './ChatArea';
 import ChatInput from './ChatInput';
+import EndStreamConfirmationModal from './EndStreamConfirmationModal';
+import SelectOpponentModal from './SelectOpponentModal';
+import AcceptPkInviteModal from './AcceptPkInviteModal';
+import InviteToPartyModal from './InviteToPartyModal';
+import QuickChatModal from './QuickChatModal';
+import RankingListScreen from './RankingListScreen';
+import PrivateChatModal from './PrivateChatModal';
+
 
 interface LiveStreamViewerScreenProps {
   user: User;
@@ -43,18 +57,16 @@ interface LiveStreamViewerScreenProps {
   onViewProtectors: (userId: number) => void;
   onViewStream: (stream: Stream | PkBattle) => void;
   onStreamEnded: (streamId: number) => void;
-  onStopStream?: (streamerId: number, streamId: number) => void;
+  onStopStream: (streamerId: number, streamId: number) => void;
 }
 
 const formatStatNumber = (num: number): string => {
-    if (num >= 1000000) {
-        return (num / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
-    }
-    if (num >= 1000) {
-        return (num / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
-    }
+    if (num >= 1000000) return (num / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
+    if (num >= 1000) return (num / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
     return num.toString();
 };
+
+const formatScore = (num: number): string => num.toLocaleString('en-US');
 
 const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
   user,
@@ -69,15 +81,18 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
   onStopStream,
 }) => {
     const { showApiResponse } = useApiViewer();
-    const liveId = 'streamer1' in initialStream ? initialStream.streamer1.userId : initialStream.id;
-    const streamerId = 'streamer1' in initialStream ? initialStream.streamer1.userId : initialStream.userId;
-    const isHost = user.id === streamerId;
+    const isPkBattle = 'streamer1' in initialStream;
 
+    const [pkSession, setPkSession] = useState<PkSession | null>(null);
+
+    // Common State
     const [liveDetails, setLiveDetails] = useState<LiveDetails | null>(null);
     const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
-    const [isFollowing, setIsFollowing] = useState(user.following.includes(streamerId));
+    const [isFollowing, setIsFollowing] = useState<Record<number, boolean>>({});
+    const [isBlockedByHost, setIsBlockedByHost] = useState(false);
     
     // Modal states
+    const [isFollowLoading, setIsFollowLoading] = useState<Record<number, boolean>>({});
     const [isOnlineUsersModalOpen, setIsOnlineUsersModalOpen] = useState(false);
     const [viewingUserId, setViewingUserId] = useState<number | null>(null);
     const [isGiftPanelOpen, setIsGiftPanelOpen] = useState(false);
@@ -85,56 +100,162 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
     const [isMuteUserModalOpen, setIsMuteUserModalOpen] = useState(false);
     const [isSoundEffectModalOpen, setIsSoundEffectModalOpen] = useState(false);
     const [mutedUsers, setMutedUsers] = useState<Record<number, { mutedUntil: string }>>({});
-    const [kickedNotification, setKickedNotification] = useState(false);
+    const [kickedState, setKickedState] = useState<'none' | 'just_kicked' | 'banned_on_join'>('none');
     const [muteNotification, setMuteNotification] = useState<{ type: 'muted' | 'unmuted' } | null>(null);
     const [isHourlyRankingModalOpen, setIsHourlyRankingModalOpen] = useState(false);
+    const [isEndStreamModalOpen, setIsEndStreamModalOpen] = useState(false);
+    const [isSelectOpponentModalOpen, setIsSelectOpponentModalOpen] = useState(false);
+    const [pendingPkInvitation, setPendingPkInvitation] = useState<PkInvitation | null>(null);
+    const [isInviteToPartyModalOpen, setIsInviteToPartyModalOpen] = useState(false);
+    const [isQuickChatOpen, setIsQuickChatOpen] = useState(false);
+    const [isRankingListOpen, setIsRankingListOpen] = useState(false);
+    const [isPrivateChatModalOpen, setIsPrivateChatModalOpen] = useState(false);
 
+    const liveId = isPkBattle ? (initialStream as PkBattle).streamer1.streamId : (initialStream as Stream).id;
+    const streamerId = isPkBattle ? (initialStream as PkBattle).streamer1.userId : (initialStream as Stream).userId;
+    const isHost = isPkBattle 
+        ? user.id === (initialStream as PkBattle).streamer1.userId || user.id === (initialStream as PkBattle).streamer2.userId
+        : user.id === streamerId;
+    const isPrivateStream = !isPkBattle && (initialStream as Stream).isPrivate;
+
+    const fetchLiveDetails = useCallback(async () => {
+        try {
+            const streamToFetch = isPkBattle ? (initialStream as PkBattle).streamer1.streamId : (initialStream as Stream).id;
+            const details = await liveStreamService.getLiveStreamDetails(streamToFetch);
+            setLiveDetails(details);
+        } catch (error) { console.error(error); }
+    }, [liveId, isPkBattle, initialStream]);
+    
+    const streamHostId = isPkBattle ? (initialStream as PkBattle).streamer1.userId : streamerId;
+    
+    // Effect for initial block check
+    useEffect(() => {
+        if (isHost) return;
+        liveStreamService.isUserBlocked(streamHostId, user.id)
+            .then(({ isBlocked }) => {
+                setIsBlockedByHost(isBlocked);
+            })
+            .catch(err => console.error("Failed to check block status:", err));
+    }, [streamHostId, user.id, isHost]);
+    
+    // Effect for real-time block updates
+    useEffect(() => {
+        const handleBlocked: liveStreamService.UserBlockedListener = ({ blockerId, targetId }) => {
+            if (blockerId === streamHostId && targetId === user.id) {
+                setIsBlockedByHost(true);
+            }
+        };
+
+        const handleUnblocked: liveStreamService.UserUnblockedListener = ({ unblockerId, targetId }) => {
+            if (unblockerId === streamHostId && targetId === user.id) {
+                setIsBlockedByHost(false);
+            }
+        };
+
+        liveStreamService.addUserBlockedListener(handleBlocked);
+        liveStreamService.addUserUnblockedListener(handleUnblocked);
+        return () => {
+            liveStreamService.removeUserBlockedListener(handleBlocked);
+            liveStreamService.removeUserUnblockedListener(handleUnblocked);
+        };
+    }, [streamHostId, user.id]);
 
     useEffect(() => {
-        setIsFollowing(user.following.includes(streamerId));
-    }, [user.following, streamerId]);
-
-    const handleOpenUserProfile = (userId: number) => {
-        setViewingUserId(userId);
-    };
-
-    const handleFollowToggle = async () => {
-        const func = isFollowing ? liveStreamService.unfollowUser : liveStreamService.followUser;
-        try {
-            const updatedUser = await func(user.id, streamerId);
-            onUpdateUser(updatedUser);
-            showApiResponse(`POST /api/users/${isFollowing ? 'unfollow' : 'follow'}`, { success: true });
-        } catch (error) {
-            console.error("Follow/unfollow failed", error);
+        const initialFollowing: Record<number, boolean> = {};
+        if (isPkBattle) {
+            const battle = initialStream as PkBattle;
+            initialFollowing[battle.streamer1.userId] = user.following.includes(battle.streamer1.userId);
+            initialFollowing[battle.streamer2.userId] = user.following.includes(battle.streamer2.userId);
+        } else {
+            const stream = initialStream as Stream;
+            initialFollowing[stream.userId] = user.following.includes(stream.userId);
+        }
+        setIsFollowing(initialFollowing);
+    }, [user.following, initialStream, isPkBattle]);
+    
+    const handleExitClick = () => {
+        if (isHost) {
+            setIsEndStreamModalOpen(true);
+        } else {
+            onExit();
         }
     };
-    
-    // Fetch initial data
+
+    const confirmStopStream = () => {
+        setIsEndStreamModalOpen(false);
+        onStopStream(streamerId, liveId);
+    };
+
+    const handleOpenUserProfile = (userId: number) => { setViewingUserId(userId); };
+
+    const handleFollowToggle = async (targetUserId: number) => {
+        setIsFollowLoading(prev => ({ ...prev, [targetUserId]: true }));
+        const currentlyFollowing = isFollowing[targetUserId];
+        const func = currentlyFollowing ? liveStreamService.unfollowUser : liveStreamService.followUser;
+        try {
+            const updatedUser = await func(user.id, targetUserId);
+            onUpdateUser(updatedUser);
+            showApiResponse(`POST /api/users/${currentlyFollowing ? 'unfollow' : 'follow'}`, { success: true });
+        } catch (error) {
+            console.error("Follow/unfollow failed", error);
+        } finally {
+            setIsFollowLoading(prev => ({ ...prev, [targetUserId]: false }));
+        }
+    };
+
     useEffect(() => {
-        const fetchData = async () => {
+        if (!isHost) return;
+        const checkInvites = async () => {
             try {
+                const invite = await liveStreamService.getPendingPkInvitation(user.id);
+                if (invite && !pendingPkInvitation) {
+                    const inviter = await authService.getUserProfile(invite.inviterId);
+                    setPendingPkInvitation({ ...invite, inviterName: inviter.nickname || inviter.name, inviterAvatarUrl: inviter.avatar_url || '' });
+                }
+            } catch (e) { console.error("Failed to check for PK invites:", e); }
+        };
+        const intervalId = setInterval(checkInvites, 5000);
+        return () => clearInterval(intervalId);
+    }, [isHost, user.id, pendingPkInvitation]);
+
+    useEffect(() => {
+        if (!isPkBattle) return;
+        const pkBattleId = (initialStream as PkBattle).id;
+        
+        const fetchSession = async () => {
+            try {
+                const sessionData = await liveStreamService.getPkSessionDetails(pkBattleId);
+                setPkSession(sessionData);
+            } catch (e) {
+                console.error("Failed to fetch PK session", e);
+            }
+        };
+        
+        fetchSession();
+        const intervalId = setInterval(fetchSession, 3000);
+
+        return () => clearInterval(intervalId);
+    }, [isPkBattle, initialStream]);
+    
+    useEffect(() => {
+        const fetchInitialData = async () => {
+            try {
+                const streamToFetchId = isPkBattle ? (initialStream as PkBattle).streamer1.streamId : liveId;
                 const [details, messages] = await Promise.all([
-                    liveStreamService.getLiveStreamDetails(liveId),
-                    liveStreamService.getChatMessages(liveId),
+                    liveStreamService.getLiveStreamDetails(streamToFetchId),
+                    liveStreamService.getChatMessages(streamToFetchId),
                 ]);
                 setLiveDetails(details);
                 setChatMessages(messages);
-            } catch (error) {
-                console.error("Failed to fetch initial live data", error);
-                alert("Não foi possível carregar os dados da live.");
-                onExit();
-            }
+            } catch (error) { console.error(error); onExit(); }
         };
-        fetchData();
-    }, [liveId, onExit]);
+        fetchInitialData();
+        const interval = setInterval(fetchLiveDetails, 5000); // Poll details for updates
+        return () => clearInterval(interval);
+    }, [liveId, onExit, fetchLiveDetails, isPkBattle, initialStream]);
 
-    // Setup listeners
     useEffect(() => {
-        const handleChatMessageUpdate = (id: number, messages: ChatMessage[]) => {
-            if (id === liveId) {
-                setChatMessages(messages);
-            }
-        };
+        const handleChatMessageUpdate = (id: number, messages: ChatMessage[]) => { if (id === liveId) setChatMessages(messages); };
         const handleMuteStatus: MuteStatusListener = (update) => {
             if (update.liveId === liveId) {
                 setMutedUsers(prev => {
@@ -144,22 +265,14 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
                         if (update.userId === user.id) setMuteNotification({ type: 'muted' });
                     } else {
                         delete newMuted[update.userId];
-                         if (update.userId === user.id) setMuteNotification({ type: 'unmuted' });
+                        if (update.userId === user.id) setMuteNotification({ type: 'unmuted' });
                     }
                     return newMuted;
                 });
             }
         };
-        const handleUserKicked: UserKickedListener = (update) => {
-            if (update.liveId === liveId && update.kickedUserId === user.id) {
-                setKickedNotification(true);
-            }
-        };
-        const handleSoundEffect: SoundEffectListener = (update) => {
-            if (update.liveId === liveId && update.triggeredBy !== user.id) {
-                soundService.playSound(update.effectName);
-            }
-        };
+        const handleUserKicked: UserKickedListener = (update) => { if (update.liveId === liveId && update.kickedUserId === user.id) setKickedState('just_kicked'); };
+        const handleSoundEffect: SoundEffectListener = (update) => { if (update.liveId === liveId && update.triggeredBy !== user.id) soundService.playSound(update.effectName); };
 
         liveStreamService.addChatMessageListener(handleChatMessageUpdate);
         liveStreamService.addMuteStatusListener(handleMuteStatus);
@@ -173,211 +286,336 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
         };
     }, [liveId, user.id]);
 
-    // Join stream effect
     useEffect(() => {
-        liveStreamService.joinLiveStream(user.id, liveId).catch(error => {
-            console.error("Failed to join stream:", error);
-            alert(error.message);
-            onExit();
+        const joinId = isPkBattle ? (initialStream as PkBattle).streamer1.streamId : liveId;
+        liveStreamService.joinLiveStream(user.id, joinId).catch(error => {
+            if (error.message.includes('removido')) {
+                setKickedState('banned_on_join');
+            } else { onExit(); }
         });
-        if (user.equipped_entry_effect_id) {
-            liveStreamService.postSpecialEntryMessage(liveId, user.id);
-        }
-    }, [user.id, liveId, onExit, user.equipped_entry_effect_id]);
+        if (user.equipped_entry_effect_id) liveStreamService.postSpecialEntryMessage(joinId, user.id);
+        return () => { liveStreamService.leaveLiveStream(user.id, joinId); };
+    }, [user.id, liveId, onExit, user.equipped_entry_effect_id, isPkBattle, initialStream]);
     
     const handleSendMessage = async (message: string) => {
-        try {
-            await liveStreamService.sendChatMessage(liveId, user.id, message);
-        } catch (error) {
-            console.error("Send message failed:", error);
-            alert((error as Error).message);
-        }
+        try { await liveStreamService.sendChatMessage(liveId, user.id, message); } catch (error) { alert((error as Error).message); }
     };
     
+    const handleSendLike = async () => {
+        await liveStreamService.sendLike(liveId, user.id);
+        fetchLiveDetails();
+    };
+
     const handleSendGift = async (giftId: number) => {
+        const targetStreamId = isPkBattle ? (initialStream as PkBattle).streamer1.streamId : liveId;
         try {
-            const response = await liveStreamService.sendGift(liveId, user.id, giftId);
+            const response = await liveStreamService.sendGift(targetStreamId, user.id, giftId);
             if (response.success && response.updatedUser) {
                 onUpdateUser(response.updatedUser);
             } else {
-                 alert(response.message);
                  if (response.message.includes('insuficientes')) {
-                     onRequirePurchase();
+                    setIsGiftPanelOpen(false); // Close panel before opening purchase overlay
+                    onRequirePurchase();
+                 } else {
+                    alert(response.message);
                  }
             }
-            setIsGiftPanelOpen(false);
+            if(response.success) {
+                setIsGiftPanelOpen(false);
+            }
         } catch (error) {
-             console.error("Send gift failed", error);
              alert((error as Error).message);
         }
     };
 
     const handleMuteUser = async (targetUserId: number, mute: boolean) => {
-        try {
-            await liveStreamService.muteUser(liveId, targetUserId, mute);
-        } catch (error) {
-            alert(`Falha ao ${mute ? 'silenciar' : 'dessilenciar'} usuário.`);
-        }
+      try { await liveStreamService.muteUser(liveId, targetUserId, mute); } catch (error) { alert(`Falha ao ${mute ? 'silenciar' : 'dessilenciar'} usuário.`); }
     };
     
     const handleKickUser = async (targetUserId: number) => {
-        try {
-            await liveStreamService.kickUser(liveId, targetUserId);
-        } catch (error) {
-            alert('Falha ao expulsar usuário.');
-        }
+      try { await liveStreamService.kickUser(liveId, targetUserId); } catch (error) { alert('Falha ao expulsar usuário.'); }
     };
 
     const handlePlaySoundEffect = (effectName: SoundEffectName) => {
-        soundService.playSound(effectName); // Immediate feedback for host
-        liveStreamService.playSoundEffect(liveId, user.id, effectName);
+      soundService.playSound(effectName);
+      liveStreamService.playSoundEffect(liveId, user.id, effectName);
+    };
+
+    const handleAcceptPkInvite = async () => {
+        if (!pendingPkInvitation) return;
+        try {
+            const pkBattle = await liveStreamService.acceptPkInvitation(pendingPkInvitation.id);
+            showApiResponse(`POST /api/pk/invites/${pendingPkInvitation.id}/accept`, pkBattle);
+            setPendingPkInvitation(null);
+            onViewStream(pkBattle);
+        } catch (error) { alert("Não foi possível aceitar o convite de PK."); setPendingPkInvitation(null); }
+    };
+
+    const handleDeclinePkInvite = async () => {
+        if (!pendingPkInvitation) return;
+        try { await liveStreamService.declinePkInvitation(pendingPkInvitation.id); } 
+        catch (error) { console.error("Failed to decline PK invite:", error); } 
+        finally { setPendingPkInvitation(null); }
+    };
+
+    const handleInviteToPk = (inviteeId: number) => {
+        liveStreamService.sendPkInvitation(user.id, inviteeId)
+            .then(() => alert(`Convite de PK enviado para o usuário ${inviteeId}!`))
+            .catch(err => alert(`Falha ao enviar convite: ${err.message}`));
+        setIsSelectOpponentModalOpen(false);
     };
     
-    const thumbnailUrl = 'thumbnailUrl' in initialStream 
-        ? initialStream.thumbnailUrl 
-        : ('streamer1' in initialStream ? initialStream.streamer1.avatarUrl : undefined);
+    if (kickedState === 'banned_on_join') return <KickedFromStreamModal onExit={onExit} isJoinAttempt={true} />;
+    
+    const renderCommonFooterButtons = () => (
+        <div className="flex items-center gap-2 shrink-0">
+            {isHost && (
+                <button onClick={() => setIsArcoraToolModalOpen(true)} className="w-10 h-10 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center">
+                    <AnchorToolsIcon className="w-6 h-6 text-purple-300"/>
+                </button>
+            )}
+            <button onClick={() => setIsQuickChatOpen(true)} className="w-10 h-10 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center">
+                <ChatBubbleIcon className="w-6 h-6 text-white"/>
+            </button>
+            {!isHost && (
+                <button onClick={() => setIsPrivateChatModalOpen(true)} className="w-10 h-10 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center">
+                    <MessageIcon className="w-6 h-6 text-white"/>
+                </button>
+            )}
+            <button onClick={() => setIsGiftPanelOpen(true)} className="w-10 h-10 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center">
+                <ShoppingBasketIcon className="w-6 h-6 text-yellow-200" />
+            </button>
+             <button onClick={handleSendLike} className="w-10 h-10 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center">
+                <CoracaoIcon className="w-7 h-7 text-red-500" />
+            </button>
+        </div>
+    );
+    
+    const PkBattleHeader = ({ battle, score1, score2 }: { battle: PkBattle; score1: number; score2: number }) => (
+        <div className="flex items-center justify-between shrink-0">
+            <div className="flex items-center gap-2 bg-black/40 backdrop-blur-sm p-1 rounded-full">
+                <div className="relative shrink-0">
+                    <button onClick={() => handleOpenUserProfile(battle.streamer1.userId)}>
+                        <img src={battle.streamer1.avatarUrl} alt={battle.streamer1.name} className="w-10 h-10 rounded-full object-cover"/>
+                    </button>
+                    {user.id !== battle.streamer1.userId && (
+                        <button
+                            onClick={(e) => { e.stopPropagation(); handleFollowToggle(battle.streamer1.userId); }}
+                            disabled={isFollowLoading[battle.streamer1.userId]}
+                            className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center border-2 border-black/40 transform transition-transform hover:scale-110 disabled:bg-gray-500"
+                            aria-label={`Seguir ${battle.streamer1.name}`}
+                        >
+                            {isFollowLoading[battle.streamer1.userId] ? 
+                                <div className="w-3 h-3 border-2 border-black border-t-transparent rounded-full animate-spin"></div> : 
+                            isFollowing[battle.streamer1.userId] ?
+                                <CheckIcon className="w-3 h-3 text-black" /> :
+                                <PlusIcon className="w-3 h-3 text-black" />
+                            }
+                        </button>
+                    )}
+                </div>
+                <div className="pr-2">
+                    <p className="font-bold text-sm truncate max-w-[80px]">{battle.streamer1.name}</p>
+                    <p className="text-xs text-gray-300">Score: {formatScore(score1)}</p>
+                </div>
+            </div>
+            <div className="flex items-center gap-2">
+                <button onClick={() => setIsOnlineUsersModalOpen(true)} className="flex items-center gap-2 bg-black/40 backdrop-blur-sm px-3 py-2 rounded-full">
+                   <ViewersIcon className="w-5 h-5"/>
+                   <span className="font-bold text-sm">{formatStatNumber(liveDetails?.viewerCount || 0)}</span>
+                </button>
+                <button onClick={handleExitClick} className="p-2 bg-black/40 rounded-full"><CrossIcon className="w-6 h-6"/></button>
+            </div>
+             <div className="flex items-center gap-2 bg-black/40 backdrop-blur-sm p-1 rounded-full">
+                <div className="pl-2 text-right">
+                    <p className="font-bold text-sm truncate max-w-[80px]">{battle.streamer2.name}</p>
+                    <p className="text-xs text-gray-300">Score: {formatScore(score2)}</p>
+                </div>
+                <div className="relative shrink-0">
+                    <button onClick={() => handleOpenUserProfile(battle.streamer2.userId)}>
+                        <img src={battle.streamer2.avatarUrl} alt={battle.streamer2.name} className="w-10 h-10 rounded-full object-cover"/>
+                    </button>
+                    {user.id !== battle.streamer2.userId && (
+                        <button
+                            onClick={(e) => { e.stopPropagation(); handleFollowToggle(battle.streamer2.userId); }}
+                            disabled={isFollowLoading[battle.streamer2.userId]}
+                            className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center border-2 border-black/40 transform transition-transform hover:scale-110 disabled:bg-gray-500"
+                            aria-label={`Seguir ${battle.streamer2.name}`}
+                        >
+                            {isFollowLoading[battle.streamer2.userId] ? 
+                                <div className="w-3 h-3 border-2 border-black border-t-transparent rounded-full animate-spin"></div> : 
+                             isFollowing[battle.streamer2.userId] ?
+                                <CheckIcon className="w-3 h-3 text-black" /> :
+                                <PlusIcon className="w-3 h-3 text-black" />
+                            }
+                        </button>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+
+    const renderSingleStreamView = () => {
+        const stream = initialStream as Stream;
+        return (
+            <>
+                <div className="absolute inset-0 z-0">
+                    <img src={stream.thumbnailUrl || 'https://images.pexels.com/photos/3225517/pexels-photo-3225517.jpeg?auto=compress&cs=tinysrgb&w=800&h=1200'} alt="Stream background" className="w-full h-full object-cover"/>
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent"></div>
+                </div>
+                <div className="relative z-10 flex flex-col h-full p-2 sm:p-4">
+                    <header className="flex items-start justify-between shrink-0">
+                        <div className="flex flex-col items-start gap-2">
+                            <div className="bg-black/40 backdrop-blur-sm p-1 rounded-full flex items-center gap-2">
+                                <div onClick={() => handleOpenUserProfile(streamerId)} className="flex items-center gap-2 cursor-pointer">
+                                    <div className="relative shrink-0">
+                                        <img src={liveDetails?.streamerAvatarUrl} alt={liveDetails?.streamerName} className="w-10 h-10 rounded-full object-cover"/>
+                                    </div>
+                                    <div>
+                                        <p className="font-bold text-sm truncate max-w-[120px]">{liveDetails?.streamerName}</p>
+                                        {liveDetails?.title && <p className="text-xs text-yellow-300 truncate max-w-[150px]">{liveDetails.title}</p>}
+                                        <div className="flex items-center gap-1.5 text-xs text-gray-300">
+                                          <LevelBarIcon className="w-3 h-3"/>
+                                          <span>{formatStatNumber(liveDetails?.streamerFollowers || 0)}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                {!isHost && (
+                                    <button
+                                        onClick={() => handleFollowToggle(streamerId)}
+                                        disabled={isFollowLoading[streamerId]}
+                                        className={`ml-2 w-10 h-10 flex items-center justify-center rounded-full transition-colors ${
+                                            isFollowing[streamerId]
+                                                ? 'bg-white/20'
+                                                : 'bg-green-500'
+                                        }`}
+                                        aria-label={isFollowing[streamerId] ? `Deixar de seguir ${liveDetails?.streamerName}` : `Seguir ${liveDetails?.streamerName}`}
+                                    >
+                                        {isFollowLoading[streamerId] ? (
+                                            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                        ) : isFollowing[streamerId] ? (
+                                            <CheckIcon className="w-5 h-5 text-white" />
+                                        ) : (
+                                            <PlusIcon className="w-5 h-5 text-black" />
+                                        )}
+                                    </button>
+                                )}
+                            </div>
+
+                            <button onClick={() => setIsHourlyRankingModalOpen(true)} className="bg-black/40 backdrop-blur-sm px-2 py-1.5 rounded-full flex items-center gap-3 self-start">
+                                <div className="flex items-center gap-1">
+                                    <CoinBIcon className="w-5 h-5" />
+                                    <span className="font-semibold text-sm text-yellow-400">{formatStatNumber(liveDetails?.receivedGiftsValue || 0)}</span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                    <PinkHeartIcon className="w-5 h-5" />
+                                    <span className="font-semibold text-sm text-white">{formatStatNumber(liveDetails?.likeCount || 0)}</span>
+                                </div>
+                            </button>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <button onClick={() => setIsOnlineUsersModalOpen(true)} className="flex items-center gap-2 bg-black/40 backdrop-blur-sm px-3 py-2 rounded-full">
+                               <ViewersIcon className="w-5 h-5"/>
+                               <span className="font-bold text-sm">{formatStatNumber(liveDetails?.viewerCount || 0)}</span>
+                            </button>
+                            <button onClick={handleExitClick} className="p-2 bg-black/40 rounded-full"><CrossIcon className="w-6 h-6"/></button>
+                        </div>
+                    </header>
+                    <main className="flex-grow flex flex-col justify-end overflow-hidden pointer-events-none">
+                        <div className="w-full md:w-3/4 lg:w-1/2 pointer-events-auto">
+                            <ChatArea messages={chatMessages} onUserClick={handleOpenUserProfile} />
+                        </div>
+                    </main>
+                    <footer className="shrink-0 pt-2 pointer-events-auto">
+                        <div className="flex items-center gap-2">
+                            <div className="flex-grow">
+                                <ChatInput onSendMessage={handleSendMessage} disabled={isBlockedByHost} />
+                            </div>
+                            {renderCommonFooterButtons()}
+                        </div>
+                    </footer>
+                </div>
+            </>
+        )
+    };
+    
+    const renderPkBattleView = () => {
+        const battle = initialStream as PkBattle;
+        const score1 = pkSession?.score1 ?? battle.streamer1.score;
+        const score2 = pkSession?.score2 ?? battle.streamer2.score;
+        const totalScore = score1 + score2;
+        const streamer1Percent = totalScore > 0 ? (score1 / totalScore) * 100 : 50;
+
+        return (
+            <>
+                <div className="absolute inset-0 z-0 flex">
+                    <div className="w-1/2 h-full relative"><img src={battle.streamer1.avatarUrl} className="w-full h-full object-cover" /><div className="absolute inset-0 bg-gradient-to-r from-black/60 to-transparent" /></div>
+                    <div className="w-1/2 h-full relative"><img src={battle.streamer2.avatarUrl} className="w-full h-full object-cover" /><div className="absolute inset-0 bg-gradient-to-l from-black/60 to-transparent" /></div>
+                </div>
+                <div className="relative z-10 flex flex-col h-full p-2 sm:p-4">
+                    <PkBattleHeader battle={battle} score1={score1} score2={score2} />
+
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%]">
+                        <div className="relative w-full h-8 bg-black/30 rounded-full overflow-hidden flex items-center border border-white/10">
+                            <div className="h-full bg-gradient-to-r from-blue-500 to-cyan-400 transition-all duration-500 ease-out" style={{ width: `${streamer1Percent}%` }}></div>
+                            <div className="h-full bg-gradient-to-l from-pink-500 to-red-400 transition-all duration-500 ease-out" style={{ width: `${100 - streamer1Percent}%` }}></div>
+                            <div className="absolute inset-0 flex justify-between items-center px-3">
+                                <span className="font-bold text-base text-white drop-shadow-lg">{formatScore(score1)}</span>
+                                <span className="font-bold text-base text-white drop-shadow-lg">{formatScore(score2)}</span>
+                            </div>
+                        </div>
+                        <div className="absolute -top-10 left-1/2 -translate-x-1/2"><SwordsIcon className="w-16 h-16 text-red-500" /></div>
+                    </div>
+
+                    <main className="flex-grow flex flex-col justify-end overflow-hidden pointer-events-none">
+                        <div className="w-full md:w-3/4 lg:w-1/2 pointer-events-auto">
+                            <ChatArea messages={chatMessages} onUserClick={handleOpenUserProfile} />
+                        </div>
+                    </main>
+                    <footer className="shrink-0 pt-2 pointer-events-auto">
+                         <div className="flex items-center gap-2">
+                            <div className="flex-grow">
+                                <ChatInput onSendMessage={handleSendMessage} disabled={isBlockedByHost} />
+                            </div>
+                            {renderCommonFooterButtons()}
+                        </div>
+                    </footer>
+                </div>
+            </>
+        )
+    };
 
     return (
         <div className="h-screen w-full bg-black text-white font-sans flex flex-col">
-            <div className="absolute inset-0 z-0">
-                <img src={thumbnailUrl || 'https://images.pexels.com/photos/3225517/pexels-photo-3225517.jpeg?auto=compress&cs=tinysrgb&w=800&h=1200'} alt="Stream background" className="w-full h-full object-cover"/>
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent"></div>
-            </div>
-
-            <div className="relative z-10 flex flex-col h-full p-2 sm:p-4">
-                 <header className="flex items-start justify-between shrink-0">
-                    <div className="bg-black/40 backdrop-blur-sm p-2 rounded-lg flex flex-col items-start">
-                        <div className="flex items-center gap-2">
-                            <img src={liveDetails?.streamerAvatarUrl} alt={liveDetails?.streamerName} className="w-10 h-10 rounded-full object-cover"/>
-                            <div>
-                                <p className="font-bold text-sm truncate max-w-[120px]">{liveDetails?.streamerName}</p>
-                                <p className="text-xs text-gray-300">{formatStatNumber(liveDetails?.streamerFollowers || 0)} seguidores</p>
-                            </div>
-                            {!isHost && (
-                                <button
-                                    onClick={handleFollowToggle}
-                                    className={`ml-2 px-3 py-1 rounded-full text-xs font-semibold transition-colors ${isFollowing ? 'bg-gray-600 text-gray-200' : 'bg-green-500 text-black'}`}
-                                >
-                                    {isFollowing ? 'Seguindo' : 'Seguir'}
-                                </button>
-                            )}
-                        </div>
-                        <button onClick={() => setIsHourlyRankingModalOpen(true)} className="flex items-center gap-1.5 mt-1.5 pl-1">
-                            <DiamondIcon className="w-4 h-4"/>
-                            <span className="font-semibold text-sm text-white">{formatStatNumber(liveDetails?.receivedGiftsValue || 0)}</span>
-                            <span className="text-gray-400 text-sm font-bold ml-1">&gt;</span>
-                        </button>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                        <button onClick={() => setIsOnlineUsersModalOpen(true)} className="flex items-center gap-2 bg-black/40 backdrop-blur-sm px-3 py-2 rounded-full">
-                           <ViewersIcon className="w-5 h-5"/>
-                           <span className="font-bold text-sm">{formatStatNumber(liveDetails?.viewerCount || 0)}</span>
-                        </button>
-                        <button onClick={onExit} className="p-2 bg-black/40 rounded-full"><CrossIcon className="w-6 h-6"/></button>
-                    </div>
-                </header>
-
-                <main className="flex-grow flex flex-col justify-end overflow-hidden pointer-events-none">
-                    <div className="w-full md:w-3/4 lg:w-1/2 pointer-events-auto">
-                        <ChatArea messages={chatMessages} onUserClick={handleOpenUserProfile} />
-                    </div>
-                </main>
-                
-                <footer className="shrink-0 pt-2 pointer-events-auto">
-                    <div className="flex items-center gap-2">
-                        <div className="flex-grow">
-                            <ChatInput onSendMessage={handleSendMessage} />
-                        </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                             {isHost && (
-                                <button
-                                    onClick={() => setIsArcoraToolModalOpen(true)}
-                                    className="w-10 h-10 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center"
-                                >
-                                    <WhiteBalloonIcon className="w-6 h-6 text-purple-300"/>
-                                </button>
-                            )}
-                            <button
-                                onClick={() => liveStreamService.sendLike(liveId, user.id)}
-                                className="w-10 h-10 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center"
-                            >
-                                <WaterDropIcon className="w-6 h-6 text-purple-200" />
-                            </button>
-                            <button
-                                onClick={() => setIsGiftPanelOpen(true)}
-                                className="w-10 h-10 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center"
-                            >
-                                <ShoppingBasketIcon className="w-6 h-6 text-yellow-200" />
-                            </button>
-                        </div>
-                    </div>
-                </footer>
-            </div>
-
-            {/* Modals */}
-             {isOnlineUsersModalOpen && (
-                <OnlineUsersModal liveId={liveId} onClose={() => setIsOnlineUsersModalOpen(false)} onUserClick={handleOpenUserProfile} />
-             )}
-             {isHourlyRankingModalOpen && (
-                <HourlyRankingModal
-                    liveId={liveId}
-                    onClose={() => setIsHourlyRankingModalOpen(false)}
-                    onUserClick={(userId) => {
-                        setIsHourlyRankingModalOpen(false);
-                        handleOpenUserProfile(userId);
-                    }}
-                />
-             )}
-             {isMuteUserModalOpen && (
-                <MuteUserModal 
-                    liveId={liveId}
-                    mutedUsers={mutedUsers}
-                    onMuteUser={handleMuteUser}
-                    onKickUser={handleKickUser}
-                    onClose={() => setIsMuteUserModalOpen(false)}
-                />
-            )}
-            {isSoundEffectModalOpen && (
-                <SoundEffectModal 
-                    onClose={() => setIsSoundEffectModalOpen(false)}
-                    onPlaySoundEffect={handlePlaySoundEffect}
-                />
-            )}
-            {isArcoraToolModalOpen && (
-                <ArcoraToolModal 
-                    onClose={() => setIsArcoraToolModalOpen(false)} 
-                    onOpenMuteModal={() => { setIsArcoraToolModalOpen(false); setIsMuteUserModalOpen(true); }}
-                    onOpenSoundEffectModal={() => { setIsArcoraToolModalOpen(false); setIsSoundEffectModalOpen(true); }}
-                />
-            )}
-            {isGiftPanelOpen && (
-                <GiftPanel
-                    user={user}
-                    liveId={liveId}
-                    onClose={() => setIsGiftPanelOpen(false)}
-                    onSendGift={handleSendGift}
-                    onRechargeClick={() => { setIsGiftPanelOpen(false); onRequirePurchase(); }}
-                />
-            )}
-             {viewingUserId && (
-                <UserProfileModal
-                    userId={viewingUserId}
-                    currentUser={user}
-                    onUpdateUser={onUpdateUser}
-                    onClose={() => setViewingUserId(null)}
-                    onNavigateToChat={onNavigateToChat}
-                    onViewProtectors={onViewProtectors}
-                    onViewStream={onViewStream}
-                />
-            )}
-             {kickedNotification && <KickedFromStreamModal onExit={onExit} />}
-             {muteNotification && (
-                <MutedNotificationModal 
-                    type={muteNotification.type} 
-                    onClose={() => setMuteNotification(null)} 
-                />
-             )}
+            {isPkBattle ? renderPkBattleView() : renderSingleStreamView()}
+            
+            {/* --- Modals --- */}
+            {isEndStreamModalOpen && <EndStreamConfirmationModal onConfirm={confirmStopStream} onCancel={() => setIsEndStreamModalOpen(false)} />}
+            {isSelectOpponentModalOpen && <SelectOpponentModal currentUserId={user.id} onClose={() => setIsSelectOpponentModalOpen(false)} onInvite={handleInviteToPk} />}
+            {pendingPkInvitation && <AcceptPkInviteModal invitation={pendingPkInvitation} onAccept={handleAcceptPkInvite} onDecline={handleDeclinePkInvite} />}
+            {isInviteToPartyModalOpen && <InviteToPartyModal streamerId={user.id} liveId={liveId} onClose={() => setIsInviteToPartyModalOpen(false)} />}
+            {isQuickChatOpen && <QuickChatModal onClose={() => setIsQuickChatOpen(false)} onSendMessage={(msg) => { handleSendMessage(msg); setIsQuickChatOpen(false); }} />}
+            
+            {/* Re-using existing modals */}
+            {isOnlineUsersModalOpen && <OnlineUsersModal liveId={liveId} onClose={() => setIsOnlineUsersModalOpen(false)} onUserClick={handleOpenUserProfile} />}
+            {isHourlyRankingModalOpen && liveDetails && <HourlyRankingModal liveId={liveId} currentUser={user} onUpdateUser={onUpdateUser} streamer={{id: streamerId, name: liveDetails.streamerName, avatarUrl: liveDetails.streamerAvatarUrl}} onClose={() => setIsHourlyRankingModalOpen(false)} onUserClick={(userId) => { setIsHourlyRankingModalOpen(false); handleOpenUserProfile(userId); }} onNavigateToList={() => { setIsHourlyRankingModalOpen(false); setIsRankingListOpen(true); }} onRequirePurchase={onRequirePurchase} />}
+            {isGiftPanelOpen && <GiftPanel user={user} liveId={liveId} onClose={() => setIsGiftPanelOpen(false)} onSendGift={handleSendGift} onRechargeClick={() => { setIsGiftPanelOpen(false); onRequirePurchase(); }} />}
+            {viewingUserId && <UserProfileModal userId={viewingUserId} currentUser={user} onUpdateUser={onUpdateUser} onClose={() => setViewingUserId(null)} onNavigateToChat={onNavigateToChat} onViewProtectors={onViewProtectors} onViewStream={onViewStream} />}
+            {isMuteUserModalOpen && <MuteUserModal liveId={liveId} mutedUsers={mutedUsers} onMuteUser={handleMuteUser} onKickUser={handleKickUser} onClose={() => setIsMuteUserModalOpen(false)}/>}
+            {isSoundEffectModalOpen && <SoundEffectModal onClose={() => setIsSoundEffectModalOpen(false)} onPlaySoundEffect={handlePlaySoundEffect} />}
+            {muteNotification && <MutedNotificationModal type={muteNotification.type} onClose={() => setMuteNotification(null)} />}
+            {kickedState === 'just_kicked' && <KickedFromStreamModal onExit={onExit} />}
+            {isArcoraToolModalOpen && <ArcoraToolModal 
+                onClose={() => setIsArcoraToolModalOpen(false)} 
+                onOpenMuteModal={() => { setIsArcoraToolModalOpen(false); setIsMuteUserModalOpen(true); }}
+                onOpenSoundEffectModal={() => { setIsArcoraToolModalOpen(false); setIsSoundEffectModalOpen(true); }}
+                onSwitchCamera={() => {}} 
+                onToggleVoice={() => {}} 
+                isVoiceEnabled={false} 
+                onOpenPrivateChat={() => { setIsArcoraToolModalOpen(false); setIsPrivateChatModalOpen(true); }} 
+            />}
+            {isRankingListOpen && <RankingListScreen liveId={liveId} currentUser={user} onExit={() => setIsRankingListOpen(false)} onUserClick={(userId) => { setIsRankingListOpen(false); handleOpenUserProfile(userId); }} />}
+            {isPrivateChatModalOpen && <PrivateChatModal user={user} onClose={() => setIsPrivateChatModalOpen(false)} />}
         </div>
     );
 };

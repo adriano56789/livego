@@ -2,6 +2,8 @@
 
 
 
+
+
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import type { User, Category, CameraStatus, FacingMode } from '../types';
 import * as liveStreamService from '../services/liveStreamService';
@@ -268,7 +270,7 @@ const GoLiveSetupScreen: React.FC<GoLiveSetupScreenProps> = ({ user, onStartStre
         )}
       </div>
 
-      <div className="absolute inset-0 bg-black/60 z-10"></div>
+      <div className="absolute inset-0 bg-black/40 z-10"></div>
       
       <div className="absolute top-1/3 right-4 z-20 flex flex-col gap-4">
         <button

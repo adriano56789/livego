@@ -273,10 +273,16 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ userId, currentUser
                       )}
 
                       <ProfileSection title="Proteger" isLink icon={<ProtectIcon className="w-6 h-6"/>} onClick={() => onViewProtectors(profile.id)}>
-                          {profile.achievements && profile.achievements.length > 0 ? (
-                              <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide pb-2 -mb-2">
-                                  {profile.achievements.map((achievement) => (
-                                      <AchievementBadge key={achievement.id} {...achievement} />
+                          {profile.protectors && profile.protectors.length > 0 ? (
+                              <div className="flex items-center -space-x-3">
+                                  {profile.protectors.slice(0, 5).map((protector) => (
+                                      <img
+                                          key={protector.userId}
+                                          src={protector.avatarUrl}
+                                          alt={protector.name}
+                                          className="w-8 h-8 rounded-full border-2 border-black object-cover"
+                                          title={protector.name}
+                                      />
                                   ))}
                               </div>
                           ) : (

@@ -1,212 +1,438 @@
-import type { User, DbLive, PkSession, Conversation, DiamondPackage, LiveDetails, Gift, Viewer, Like, RankingContributor, ChatMessage, PublicProfile, PkEventDetails, ProtectorDetails, WithdrawalTransaction, InventoryItem, AppEvent, DailyReward, UserRewardStatus, PkRankingData, PurchaseOrder, HelpArticle, PkInvitation, PrivateLiveInviteSettings, NotificationSettings, VersionInfo, SoundEffectLogEntry, UniversalRankingData } from '../types';
+import type { User, DbLive, PkSession, Conversation, DiamondPackage, Gift, Viewer, Like, RankingContributor, ChatMessage, PublicProfile, PkEventDetails, ProtectorDetails, WithdrawalTransaction, InventoryItem, AppEvent, DailyReward, UserRewardStatus, PkRankingData, PurchaseOrder, HelpArticle, PkInvitation, PrivateLiveInviteSettings, NotificationSettings, VersionInfo, SoundEffectLogEntry, UniversalRankingData, GiftTransaction, UserListRankingPeriod, EventStatus, ReportPayload, SuggestionPayload } from '../types';
 
-export let mockBlockedUsers = new Set<number>();
+export const mockBlockedRelationships: { blockerId: number, targetId: number }[] = [];
 
 // A base64 encoded SVG of a simple smiley face for use in achievement badges.
-export const smileyIconDataUri = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyMCAyMCIgZmlsbD0iI2ZmZmZmZiI+PHBhdGggZmlsbC1ydWxlPSJldmVub2RkIiBkPSJNMTAgMThhOCA4IDAgMTAtMTYgOCAxNiAwIDAwMCwwek03IDlhMSAxIDAgMTAwLTIgMSAxIDAgMDAwIDJ6bTctMWExIDEgMCAxMS0yIDAgMSAxIDAgMDEyIDB6bS0uNDY0IDUuNTM1YTEuNzUuNzUgMCAwMS4wODMuNjY1bC0uMDgzLjA4M2EuNzUuNzUgMCAwMS0xLjA2LTEuMDZsLjA4My0uMDgzYS43NS43NSAwIDAxLjk3Ny4zMzJ6IiBjbGlwLXJvbGU9ImV2ZW5vZGQiIC8+PC9zdmc+';
-
-// =================================================================
-// MOCK DATABASE
-// Este arquivo simula um banco de dados relacional (PostgreSQL) e
-// um cache (Redis) conforme a arquitetura sugerida. As chaves primárias
-// para usuários e lives são numéricas (simulando SERIAL PRIMARY KEY).
-// =================================================================
-
-// -----------------------------------------------------------------
-// Tabela: `version_info` (Simulação)
-// -----------------------------------------------------------------
-export const mockVersionInfo: VersionInfo = {
-    minVersion: '1.0.0',
-    latestVersion: '1.0.0',
-    updateUrl: 'https://livego.example.com/update',
-};
-
-// -----------------------------------------------------------------
-// Tabela: `reports` e `suggestions` (Simulação)
-// -----------------------------------------------------------------
-export let mockReportsDatabase: any[] = [];
-export let mockSuggestionsDatabase: any[] = [];
+export const smileyIconDataUri = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyMCAyMCIgZmlsbD0iI2ZmZmZmZiI+PHBhdGggZmlsbC1ydWxlPSJldmVub2RkIiBkPSJNMTAgMThhOCA4IDAgMTAtMTYgOCAxNiAwIDAwMCwwek03IDlhMSAxIDAgMTAwLTIgMSAxIDAgMDAwIDJ6bTctMWExIDEgMCAxMS0yIDAgMSAxIDAgMDEyIDB6bS0uNDY0IDUuNTM1YTEuNzUuNzUgMCAwMS4wODMuNjY1bC0uMDgzLjA4M2EuNzUuNzUgMCAwMS0xLjA2LTEuMDZsLjA4My0uMDgzYS43NS43NSAwIDAxLjk3Ny4zMzJ6IiBjbGlwLXJ1WGU9ImV2ZW5vZGQiLz48L3N2Zz4=';
 
 
-// -----------------------------------------------------------------
-// Tabela: `usuarios` (Simulação PostgreSQL)
-// -----------------------------------------------------------------
 export const mockUserDatabase: User[] = [
-  // Usuário principal logado - Resetado para o fluxo de onboarding
-  {
-    id: 10755083,
-    name: 'GamerX',
-    email: 'gamerx@email.com',
-    avatar_url: 'https://images.pexels.com/photos/428364/pexels-photo-428364.jpeg?auto=compress&cs=tinysrgb&w=300',
-    has_uploaded_real_photo: true,
-    nickname: 'GamerX 👑',
-    gender: 'male',
-    birthday: '1993-07-20',
-    age: 32,
-    has_completed_profile: true,
-    invite_code: null,
-    following: [2, 3, 401, 402, 403, 404, 6, 7],
-    followers: 183,
-    visitors: 0,
-    wallet_earnings: 6353,
-    wallet_diamonds: 50,
-    paid_stream_ids: [],
-    withdrawal_method: null,
-    equipped_entry_effect_id: null,
-    level: 6,
-    xp: 4345,
-    last_selected_category: 'Dança',
-  },
-  // Usuários que são streamers
-  { id: 2, name: 'Elektra', email: 'nairobi@livego.com', avatar_url: 'https://images.pexels.com/photos/1848565/pexels-photo-1848565.jpeg?auto=compress&cs=tinysrgb&w=300', following: [10755083], followers: 12500, visitors: 0, wallet_earnings: 100, wallet_diamonds: 50, nickname: 'Elektra', paid_stream_ids: [], withdrawal_method: null, level: 12, xp: 15000, gender: 'female', birthday: '1995-05-10', age: 30, has_uploaded_real_photo: true, has_completed_profile: true },
-  { id: 3, name: 'Mulher Maravilha', email: 'ww@livego.com', avatar_url: 'https://images.pexels.com/photos/1130626/pexels-photo-1130626.jpeg?auto=compress&cs=tinysrgb&w=300', following: [10755083], followers: 45000, visitors: 0, wallet_earnings: 100, wallet_diamonds: 50, nickname: 'WW', gender: 'female', age: 28, has_completed_profile: true, has_uploaded_real_photo: true, birthday: '1996-03-22', paid_stream_ids: [], withdrawal_method: null, level: 10, xp: 11200 },
-  { id: 401, name: 'Lest Go 500 K...', email: 'lestgo@livego.com', avatar_url: 'https://images.pexels.com/photos/1758144/pexels-photo-1758144.jpeg?auto=compress&cs=tinysrgb&w=400&h=600', following: [10755083], followers: 500000, visitors: 0, wallet_earnings: 100, wallet_diamonds: 50, nickname: 'Lest Go 500 K...', paid_stream_ids: [], withdrawal_method: null, level: 25, xp: 63000, gender: 'female', birthday: '1998-01-15', age: 27, has_uploaded_real_photo: true, has_completed_profile: true },
-  { id: 402, name: 'Emy', email: 'emy@livego.com', avatar_url: 'https://images.pexels.com/photos/459392/pexels-photo-459392.jpeg?auto=compress&cs=tinysrgb&w=400&h=600', following: [10755083], followers: 180000, visitors: 0, wallet_earnings: 100, wallet_diamonds: 50, nickname: 'Emy', paid_stream_ids: [], withdrawal_method: null, level: 22, xp: 49000, gender: 'female', birthday: '1999-06-20', age: 26, has_uploaded_real_photo: true, has_completed_profile: true },
-  { id: 403, name: 'Help 150K', email: 'help150k@livego.com', avatar_url: 'https://images.pexels.com/photos/3220360/pexels-photo-3220360.jpeg?auto=compress&cs=tinysrgb&w=400&h=600', following: [], followers: 150000, visitors: 0, wallet_earnings: 100, wallet_diamonds: 50, nickname: 'Help 150K', paid_stream_ids: [], withdrawal_method: null, level: 18, xp: 33000, gender: 'female', birthday: '2000-02-02', age: 25, has_uploaded_real_photo: true, has_completed_profile: true },
-  { id: 404, name: 'Luh_Araujo0', email: 'luh@livego.com', avatar_url: 'https://images.pexels.com/photos/2613260/pexels-photo-2613260.jpeg?auto=compress&cs=tinysrgb&w=400&h=600', following: [], followers: 85000, visitors: 0, wallet_earnings: 100, wallet_diamonds: 50, nickname: 'Luh_Araujo0', paid_stream_ids: [], withdrawal_method: null, level: 15, xp: 23000, gender: 'female', birthday: '2001-11-11', age: 23, has_uploaded_real_photo: true, has_completed_profile: true },
-  { id: 6, name: 'PK-Master', email: 'pk@livego.com', avatar_url: 'https://i.pravatar.cc/150?u=user_s5', following: [], followers: 75000, visitors: 0, wallet_earnings: 100, wallet_diamonds: 50, paid_stream_ids: [], withdrawal_method: null, level: 30, xp: 91000, nickname: 'PK-Master', gender: 'male', birthday: '1994-04-04', age: 31, has_uploaded_real_photo: true, has_completed_profile: true },
-  { id: 7, name: 'GamerGirl', email: 'gg@livego.com', avatar_url: 'https://i.pravatar.cc/150?u=user_s6', following: [], followers: 68000, visitors: 0, wallet_earnings: 100, wallet_diamonds: 50, paid_stream_ids: [], withdrawal_method: null, level: 28, xp: 80000, nickname: 'GamerGirl', gender: 'female', birthday: '1996-08-12', age: 28, has_uploaded_real_photo: true, has_completed_profile: true },
-  { id: 8, name: 'NovatoStream', email: 'novato@livego.com', avatar_url: 'https://images.pexels.com/photos/3777943/pexels-photo-3777943.jpeg?auto=compress&cs=tinysrgb&w=300', following: [], followers: 150, visitors: 0, wallet_earnings: 100, wallet_diamonds: 50, nickname: 'NovatoStream', paid_stream_ids: [], withdrawal_method: null, level: 2, xp: 250, gender: 'male', birthday: '2002-03-03', age: 23, has_uploaded_real_photo: true, has_completed_profile: true },
+    {
+        id: 10755083,
+        name: "Usuário Principal",
+        email: "usuario@livego.com",
+        avatar_url: "https://i.pravatar.cc/150?u=10755083",
+        nickname: "GamerX 🎮",
+        gender: "male",
+        birthday: "1993-05-15",
+        age: 32,
+        has_uploaded_real_photo: true,
+        has_completed_profile: true,
+        invite_code: "LIVEGO2025",
+        following: [401, 402, 403, 404, 405],
+        followers: 12500,
+        visitors: 8900,
+        wallet_earnings: 75000,
+        wallet_diamonds: 1200,
+        paid_stream_ids: [],
+        withdrawal_method: { method: "pix", account: "user@email.com" },
+        equipped_entry_effect_id: "entry_effect_1",
+        level: 45,
+        xp: 60000,
+        last_camera_used: 'user',
+        last_selected_category: 'Popular',
+        country: 'BR',
+    },
+    {
+        id: 401,
+        name: "Lest Go",
+        email: "lestgo@livego.com",
+        avatar_url: "https://i.pravatar.cc/150?u=401",
+        nickname: "Lest Go 500 K...",
+        gender: "female",
+        birthday: "1998-10-20",
+        age: 26,
+        has_uploaded_real_photo: true,
+        has_completed_profile: true,
+        following: [10755083],
+        followers: 512000,
+        visitors: 150000,
+        wallet_earnings: 250000,
+        wallet_diamonds: 5000,
+        level: 82,
+        xp: 180000,
+        country: 'BR',
+        withdrawal_method: null,
+    },
+    {
+        id: 402,
+        name: "Simone",
+        email: "simone@livego.com",
+        avatar_url: "https://i.pravatar.cc/150?u=402",
+        nickname: "Simone 🦋",
+        gender: "female",
+        birthday: "1995-02-11",
+        age: 30,
+        has_uploaded_real_photo: true,
+        has_completed_profile: true,
+        following: [],
+        followers: 32000,
+        visitors: 45000,
+        wallet_earnings: 120000,
+        wallet_diamonds: 800,
+        level: 65,
+        xp: 120000,
+        country: 'PT',
+        withdrawal_method: null,
+    },
+    {
+        id: 403,
+        name: "Fernando",
+        email: "fernando@livego.com",
+        avatar_url: "https://i.pravatar.cc/150?u=403",
+        nickname: "Fernando11...",
+        gender: "male",
+        birthday: "2000-01-01",
+        age: 25,
+        has_uploaded_real_photo: true,
+        has_completed_profile: true,
+        following: [],
+        followers: 15000,
+        visitors: 22000,
+        wallet_earnings: 80000,
+        wallet_diamonds: 300,
+        level: 50,
+        xp: 85000,
+        country: 'BR',
+        withdrawal_method: null,
+    },
+    {
+        id: 404,
+        name: "PK Host",
+        email: "pkhost@livego.com",
+        avatar_url: "https://i.pravatar.cc/150?u=404",
+        nickname: "PK Host",
+        gender: "male",
+        birthday: "1999-07-07",
+        age: 25,
+        has_uploaded_real_photo: true,
+        has_completed_profile: true,
+        following: [],
+        followers: 180000,
+        visitors: 95000,
+        wallet_earnings: 450000,
+        wallet_diamonds: 10000,
+        level: 95,
+        xp: 250000,
+        country: 'US',
+        withdrawal_method: null,
+    },
+    {
+        id: 405,
+        name: "Music Queen",
+        email: "music@livego.com",
+        avatar_url: "https://i.pravatar.cc/150?u=405",
+        nickname: "Music Queen 🎶",
+        gender: "female",
+        birthday: "1996-12-25",
+        age: 28,
+        has_uploaded_real_photo: true,
+        has_completed_profile: true,
+        following: [],
+        followers: 98000,
+        visitors: 62000,
+        wallet_earnings: 210000,
+        wallet_diamonds: 1500,
+        level: 78,
+        xp: 160000,
+        country: 'JP',
+        withdrawal_method: null,
+    },
+    {
+        id: 406,
+        name: "New Streamer",
+        email: "newstreamer@livego.com",
+        avatar_url: "https://i.pravatar.cc/150?u=406",
+        nickname: "LiveGo Star",
+        gender: "female",
+        birthday: "1997-08-10",
+        age: 28,
+        has_uploaded_real_photo: true,
+        has_completed_profile: true,
+        following: [],
+        followers: 75000,
+        visitors: 32000,
+        wallet_earnings: 95000,
+        wallet_diamonds: 2200,
+        level: 70,
+        xp: 140000,
+        country: 'BR',
+        withdrawal_method: null,
+    },
+    {
+        id: 407,
+        name: "New Streamer 107",
+        email: "newstreamer107@livego.com",
+        avatar_url: "https://i.pravatar.cc/150?u=407",
+        nickname: "LiveGo 107",
+        gender: "male",
+        birthday: "1999-09-09",
+        age: 26,
+        has_uploaded_real_photo: true,
+        has_completed_profile: true,
+        following: [],
+        followers: 12000,
+        visitors: 5000,
+        wallet_earnings: 15000,
+        wallet_diamonds: 500,
+        level: 30,
+        xp: 40000,
+        country: 'IT',
+        withdrawal_method: null,
+    },
+    {
+        id: 408,
+        name: "Streamer 108",
+        email: "streamer108@livego.com",
+        avatar_url: "https://i.pravatar.cc/150?u=408",
+        nickname: "Live Pro 108",
+        gender: "male",
+        birthday: "2001-01-01",
+        age: 24,
+        has_uploaded_real_photo: true,
+        has_completed_profile: true,
+        following: [],
+        followers: 5000,
+        visitors: 2000,
+        wallet_earnings: 5000,
+        wallet_diamonds: 200,
+        level: 25,
+        xp: 30000,
+        country: 'AR',
+        withdrawal_method: null,
+    },
+    {
+        id: 409,
+        name: "Dancer Extra",
+        email: "dancer@livego.com",
+        avatar_url: "https://i.pravatar.cc/150?u=409",
+        nickname: "Dança Comigo",
+        gender: "female",
+        birthday: "2002-03-15",
+        age: 23,
+        has_uploaded_real_photo: true,
+        has_completed_profile: true,
+        following: [],
+        followers: 8200,
+        visitors: 3000,
+        wallet_earnings: 9000,
+        wallet_diamonds: 150,
+        level: 28,
+        xp: 35000,
+        country: 'BR',
+        withdrawal_method: null,
+    },
+    {
+        id: 410,
+        name: "Private Streamer",
+        email: "private@livego.com",
+        avatar_url: "https://i.pravatar.cc/150?u=410",
+        nickname: "Sala Secreta",
+        gender: "male",
+        birthday: "2000-05-20",
+        age: 25,
+        has_uploaded_real_photo: true,
+        has_completed_profile: true,
+        following: [],
+        followers: 1500,
+        visitors: 800,
+        wallet_earnings: 2000,
+        wallet_diamonds: 100,
+        level: 20,
+        xp: 25000,
+        country: 'BR',
+        withdrawal_method: null,
+    },
+    {
+        id: 1201,
+        name: "LiveGoFan",
+        email: "livegofan@livego.com",
+        avatar_url: "https://i.pravatar.cc/150?u=1201",
+        nickname: "LiveGoFan 👍",
+        gender: "male",
+        birthday: "2005-01-01",
+        age: 20,
+        has_uploaded_real_photo: true,
+        has_completed_profile: true,
+        following: [],
+        followers: 10,
+        visitors: 5,
+        wallet_earnings: 100,
+        wallet_diamonds: 50,
+        withdrawal_method: null,
+        level: 3,
+        xp: 500,
+        country: 'BR',
+    },
+    {
+        id: 1202,
+        name: "SuperUser",
+        email: "superuser@livego.com",
+        avatar_url: "https://i.pravatar.cc/150?u=1202",
+        nickname: "SuperUser 👾",
+        gender: "female",
+        birthday: "2002-02-02",
+        age: 23,
+        has_uploaded_real_photo: true,
+        has_completed_profile: true,
+        following: [401],
+        followers: 150,
+        visitors: 80,
+        wallet_earnings: 2500,
+        wallet_diamonds: 800,
+        withdrawal_method: null,
+        level: 10,
+        xp: 12000,
+        country: 'PT',
+    },
+    {
+        id: 1203,
+        name: "LiveStar",
+        email: "livestar@livego.com",
+        avatar_url: "https://i.pravatar.cc/150?u=1203",
+        nickname: "LiveStar ✨",
+        gender: "female",
+        birthday: "1999-03-03",
+        age: 26,
+        has_uploaded_real_photo: true,
+        has_completed_profile: true,
+        following: [401, 402, 403],
+        followers: 5000,
+        visitors: 2000,
+        wallet_earnings: 15000,
+        wallet_diamonds: 3000,
+        withdrawal_method: null,
+        level: 32,
+        xp: 45000,
+        country: 'US',
+    },
 ];
 
 export const mockLivesDatabase: DbLive[] = [
-    { id: 101, user_id: 401, titulo: 'PK Challenge', nome_streamer: 'Lest Go 500 K...', espectadores: 680460, categoria: 'PK', ao_vivo: true, em_pk: true, is_private: false, entry_fee: null, meta: 'Evento de PK', inicio: '2023-10-27T10:00:00Z', permite_pk: true, received_gifts_value: 120000 },
-    { id: 102, user_id: 2, titulo: 'Dança Comigo!', nome_streamer: 'Elektra', espectadores: 520300, categoria: 'Dança', ao_vivo: true, em_pk: false, is_private: false, entry_fee: null, meta: 'Top 1 Global', inicio: '2023-10-27T11:00:00Z', permite_pk: true, received_gifts_value: 95000 },
-    { id: 103, user_id: 402, titulo: 'Just Chatting', nome_streamer: 'Emy', espectadores: 450100, categoria: 'Popular', ao_vivo: true, em_pk: false, is_private: false, entry_fee: null, meta: null, inicio: '2023-10-27T09:30:00Z', permite_pk: false, received_gifts_value: 78000 },
-    { id: 104, user_id: 3, titulo: 'Girl Power Hour', nome_streamer: 'Mulher Maravilha', espectadores: 380500, categoria: 'Música', ao_vivo: true, em_pk: false, is_private: false, entry_fee: null, meta: 'Cantando sucessos', inicio: '2023-10-27T12:00:00Z', permite_pk: true, received_gifts_value: 65000 },
-    { id: 105, user_id: 403, titulo: 'Road to 200k', nome_streamer: 'Help 150K', espectadores: 290800, categoria: 'Popular', ao_vivo: true, em_pk: false, is_private: false, entry_fee: null, meta: null, inicio: '2023-10-27T11:30:00Z', permite_pk: false, received_gifts_value: 54000 },
-    { id: 106, user_id: 404, titulo: 'Vem dançar!', nome_streamer: 'Luh_Araujo0', espectadores: 120000, categoria: 'Dança', ao_vivo: true, em_pk: false, is_private: false, entry_fee: null, meta: null, inicio: '2023-10-27T13:00:00Z', permite_pk: true, received_gifts_value: 32000 },
-    { id: 107, user_id: 6, titulo: 'PK Battles All Day', nome_streamer: 'PK-Master', espectadores: 95000, categoria: 'PK', ao_vivo: true, em_pk: true, is_private: false, entry_fee: null, meta: 'Evento de PK', inicio: '2023-10-27T08:00:00Z', permite_pk: true, received_gifts_value: 88000 },
-    { id: 108, user_id: 7, titulo: 'Gaming Session', nome_streamer: 'GamerGirl', espectadores: 85000, categoria: 'Popular', ao_vivo: true, em_pk: false, is_private: false, entry_fee: null, meta: 'Fortnite Friday', inicio: '2023-10-27T14:00:00Z', permite_pk: false, received_gifts_value: 21000 },
-    { id: 109, user_id: 8, titulo: 'Minha Primeira Live!', nome_streamer: 'NovatoStream', espectadores: 150, categoria: 'Novo', ao_vivo: true, em_pk: false, is_private: false, entry_fee: null, meta: null, inicio: '2023-10-27T15:00:00Z', permite_pk: true, received_gifts_value: 500 },
-    { id: 110, user_id: 10755083, titulo: 'Festa Privada!', nome_streamer: 'GamerX 👑', espectadores: 5, categoria: 'Privada', ao_vivo: true, em_pk: false, is_private: true, entry_fee: 100, meta: 'Só para amigos', inicio: '2023-10-27T16:00:00Z', permite_pk: false, received_gifts_value: 1000 },
+    { id: 101, user_id: 401, titulo: "PK Challenge", nome_streamer: "Lest Go 500 K...", thumbnail_url: "https://i.pravatar.cc/400?u=401", espectadores: 680460, categoria: "PK", ao_vivo: true, em_pk: true, is_private: false, entry_fee: null, meta: "Evento de PK", inicio: new Date().toISOString(), permite_pk: true },
+    { id: 102, user_id: 402, titulo: "Chill Vibes", nome_streamer: "Simone 🦋", thumbnail_url: "https://i.pravatar.cc/400?u=402", espectadores: 1200, categoria: "Música", ao_vivo: true, em_pk: false, is_private: false, entry_fee: null, meta: "Relaxando com música", inicio: new Date().toISOString(), permite_pk: true },
+    { id: 103, user_id: 403, titulo: "Just Chatting", nome_streamer: "Fernando11...", thumbnail_url: "https://i.pravatar.cc/400?u=403", espectadores: 850, categoria: "Popular", ao_vivo: true, em_pk: false, is_private: false, entry_fee: null, meta: null, inicio: new Date().toISOString(), permite_pk: false },
+    { id: 104, user_id: 405, titulo: "Live Concert", nome_streamer: "Music Queen 🎶", thumbnail_url: "https://i.pravatar.cc/400?u=405", espectadores: 4500, categoria: "Música", ao_vivo: true, em_pk: false, is_private: false, entry_fee: null, meta: "Show ao vivo!", inicio: new Date().toISOString(), permite_pk: true },
+    { id: 105, user_id: 404, titulo: "PK Hype", nome_streamer: "PK Host", thumbnail_url: "https://i.pravatar.cc/400?u=404", espectadores: 1500, categoria: "PK", ao_vivo: true, em_pk: false, is_private: false, entry_fee: null, meta: "Vem pro PK!", inicio: new Date().toISOString(), permite_pk: true },
+    { id: 106, user_id: 406, titulo: "Welcome!", nome_streamer: "LiveGo Star", thumbnail_url: "https://i.pravatar.cc/400?u=406", espectadores: 3200, categoria: "Popular", ao_vivo: true, em_pk: false, is_private: false, entry_fee: null, meta: "Let's chat!", inicio: new Date().toISOString(), permite_pk: true },
+    { id: 107, user_id: 407, titulo: "Italian Vibes", nome_streamer: "LiveGo 107", thumbnail_url: "https://i.pravatar.cc/400?u=407", espectadores: 1337, categoria: "Popular", ao_vivo: true, em_pk: false, is_private: false, entry_fee: null, meta: "Chatting from Italy!", inicio: new Date().toISOString(), permite_pk: true },
+    { id: 108, user_id: 408, titulo: "Argentinian Live", nome_streamer: "Live Pro 108", thumbnail_url: "https://i.pravatar.cc/400?u=408", espectadores: 987, categoria: "Popular", ao_vivo: true, em_pk: false, is_private: false, entry_fee: null, meta: "¡Vamos!", inicio: new Date().toISOString(), permite_pk: true },
+    { id: 109, user_id: 409, titulo: "Dance Party!", nome_streamer: "Dança Comigo", thumbnail_url: "https://i.pravatar.cc/400?u=409", espectadores: 1234, categoria: "Dança", ao_vivo: true, em_pk: false, is_private: false, entry_fee: null, meta: "Vem dançar!", inicio: new Date().toISOString(), permite_pk: true },
+    { id: 110, user_id: 410, titulo: "Apenas para convidados", nome_streamer: "Sala Secreta", thumbnail_url: "https://i.pravatar.cc/400?u=410", espectadores: 5, categoria: "Privada", ao_vivo: true, em_pk: false, is_private: true, entry_fee: 100, meta: "Sessão privada", inicio: new Date().toISOString(), permite_pk: false },
 ];
 
 export const mockPkSessionDatabase: PkSession[] = [
-    { id: 201, stream1Id: 101, stream2Id: 107, score1: 120000, score2: 88000, startTime: '2023-10-27T10:00:00Z', endTime: null },
+    { id: 201, stream1Id: 101, stream2Id: 104, score1: 54200, score2: 48900, startTime: new Date().toISOString(), endTime: null },
 ];
 
 export const mockConversationsDatabase: Omit<Conversation, 'otherUserName' | 'otherUserAvatarUrl'>[] = [
-    { id: 'conv-1', otherUserId: 2, unreadCount: 2, messages: [
-        { id: 1, senderId: 2, text: 'Ei! Vi que você entrou na minha live!', timestamp: '2023-10-27T11:05:00Z', status: 'sent', seenBy: [] },
-        { id: 2, senderId: 2, text: 'Obrigado pelo presente! ❤️', timestamp: '2023-10-27T11:05:30Z', status: 'sent', seenBy: [] },
-    ]},
-    { id: 'conv-2', otherUserId: 3, unreadCount: 0, messages: [
-        { id: 3, senderId: 10755083, text: 'Adorei sua live de música!', timestamp: '2023-10-27T12:15:00Z', status: 'seen', seenBy: [3] },
-        { id: 4, senderId: 3, text: 'Obrigada! Fico feliz que gostou 😊', timestamp: '2023-10-27T12:16:00Z', status: 'seen', seenBy: [10755083] },
-    ]},
+    {
+        id: 'conv-1',
+        participants: [10755083, 401],
+        otherUserId: 401,
+        unreadCount: 2,
+        messages: [
+            { id: 1, senderId: 401, text: "Hey! Thanks for watching my stream.", timestamp: new Date(Date.now() - 3600000).toISOString(), status: 'sent', seenBy: [] },
+            { id: 2, senderId: 401, text: "Hope you enjoyed it! 😄", timestamp: new Date(Date.now() - 3540000).toISOString(), status: 'sent', seenBy: [] },
+        ]
+    },
+    {
+        id: 'conv-2',
+        participants: [10755083, 402],
+        otherUserId: 402,
+        unreadCount: 0,
+        messages: [
+            { id: 3, senderId: 10755083, text: "Your music stream was awesome!", timestamp: new Date(Date.now() - 86400000).toISOString(), status: 'seen', seenBy: [10755083, 402] },
+            { id: 4, senderId: 402, text: "Thank you so much! Glad you liked it.", timestamp: new Date(Date.now() - 86340000).toISOString(), status: 'seen', seenBy: [10755083, 402] },
+        ]
+    }
 ];
 
-export let mockPurchaseOrders: PurchaseOrder[] = [];
-export let mockWithdrawalTransactions: WithdrawalTransaction[] = [];
-export let mockPkInvitationsDatabase: PkInvitation[] = [];
-export let mockPrivateLiveInviteSettings: PrivateLiveInviteSettings[] = [];
-export let mockNotificationSettings: NotificationSettings[] = [];
-export let mockUserInventory: Record<number, InventoryItem[]> = {};
-export let mockChatDatabase: Record<number, ChatMessage[]> = {};
-export let mockPublicProfiles: Record<number, Partial<PublicProfile>> = {};
-export let mockGiftCatalog: Gift[] = [
-    { id: 1, name: 'Rosa', price: 1, imageUrl: 'https://storage.googleapis.com/genai-assets/rose.png' },
-    { id: 2, name: 'Sorvete', price: 10, imageUrl: 'https://storage.googleapis.com/genai-assets/icecream.png' },
-    { id: 3, name: 'Diamante', price: 50, imageUrl: 'https://storage.googleapis.com/genai-assets/diamond.png' },
-    { id: 4, name: 'Coroa', price: 100, imageUrl: 'https://storage.googleapis.com/genai-assets/crown.png' },
-    { id: 5, name: 'Carro Esportivo', price: 1000, imageUrl: 'https://storage.googleapis.com/genai-assets/sportscar.png' },
-    { id: 6, name: 'Castelo', price: 5000, imageUrl: 'https://storage.googleapis.com/genai-assets/castle.png' },
-];
-export let mockMutedUsersInLive: Record<number, Record<number, { mutedUntil: string }>> = {};
-export let mockViewers: Record<number, Viewer[]> = {};
-export let mockRankings: Record<number, { hourly: RankingContributor[], daily: RankingContributor[], weekly: RankingContributor[], monthly: RankingContributor[] }> = {};
-export let mockLiveConnections: Record<number, Set<number>> = {};
-export let mockLikes: Record<number, Like[]> = {};
-export let mockKickedUsersFromLive: Record<number, number[]> = {};
-export let mockSoundEffectLog: SoundEffectLogEntry[] = [];
-export let mockPkPreferences: Record<number, boolean> = {};
-export let mockPkEventData: PkEventDetails = {
-    totalPrize: 50000,
-    endTime: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString(),
-    streamerRanking: [],
-    userRanking: [],
-};
-export let mockHelpArticles: HelpArticle[] = [
-    { id: 'faq', title: 'Perguntas Frequentes', content: '<h1>FAQ</h1><p>...</p>' },
-    { id: 'withdrawal-problems', title: 'Problemas com saque', content: '<h1>Solução de Saques</h1><p>...</p>' },
-    { id: 'how-to-go-live', title: 'Como iniciar uma live?', content: '<h1>Indo ao vivo</h1><p>...</p>' },
-    { id: 'community-rules', title: 'Regras da comunidade', content: '<h1>Regras</h1><p>...</p>' },
-    { id: 'account-security', title: 'Segurança da conta', content: '<h1>Segurança</h1><p>...</p>' },
-];
 export const mockDiamondPackages: DiamondPackage[] = [
     { id: 1, diamonds: 100, price: 5.99, currency: 'BRL' },
-    { id: 2, diamonds: 500, price: 28.99, currency: 'BRL' },
+    { id: 2, diamonds: 500, price: 27.99, currency: 'BRL' },
     { id: 3, diamonds: 1000, price: 54.99, currency: 'BRL' },
     { id: 4, diamonds: 2000, price: 109.99, currency: 'BRL' },
-    { id: 5, diamonds: 5000, price: 279.99, currency: 'BRL' },
+    { id: 5, diamonds: 5000, price: 274.99, currency: 'BRL' },
     { id: 6, diamonds: 10000, price: 549.99, currency: 'BRL' },
 ];
-export let mockSupportConversation: Conversation = {
-    id: 'conv-support-10755083',
-    otherUserId: 999,
-    otherUserName: 'Suporte LiveGo',
-    otherUserAvatarUrl: 'https://storage.googleapis.com/genai-assets/support_avatar.png',
-    unreadCount: 1,
-    messages: [
-        { id: 1, senderId: 999, text: 'Olá! Como podemos ajudar você hoje?', timestamp: new Date(Date.now() - 5 * 60000).toISOString(), status: 'sent', seenBy: [] }
+
+export const mockGiftCatalog: Gift[] = [
+    { id: 1, name: "Rosa", price: 10, animationUrl: "https://lottie.host/8e31034a-9b42-4f05-a839-397a6e13309a/T2l5A8iS5l.json" },
+    { id: 2, name: "Coração", price: 50, animationUrl: "https://lottie.host/80a87a41-61a7-4560-8f6a-0d19f1f6c4be/Ym2QkI3VDr.json" },
+    { id: 3, name: "Diamante", price: 100, animationUrl: "https://lottie.host/b0347895-3b95-4a11-8dee-5a505b38a7c2/WnAs625S8M.json" },
+    { id: 8, name: "Coroa", price: 200, animationUrl: "https://lottie.host/6253507c-9562-4318-9c59-25f028e469e3/oFrC6a3B66.json" },
+    { id: 4, name: "Carro", price: 500, animationUrl: "https://lottie.host/890875e6-2318-47a3-86b6-f3b1f0c291d5/sY3uWlBinv.json" },
+    { id: 5, name: "Foguete", price: 1000, animationUrl: "https://lottie.host/87062402-995a-4cc0-8488-8495a70e7a2b/YgTNHBS3yK.json" },
+    { id: 6, name: "Castelo", price: 5000, animationUrl: "https://lottie.host/c58045a5-7f72-4d2c-806b-4e815668e169/aPuvX1yWkF.json" },
+    { id: 7, name: "Iate", price: 10000, animationUrl: "https://lottie.host/f7e028b5-31a8-44d4-8d99-52d3a24b104c/k2uI8aE8vM.json" }
+];
+
+export const mockLiveConnections: Record<number, Set<number>> = {
+    101: new Set([10755083, 402, 403]),
+    102: new Set([10755083, 401]),
+    103: new Set([401, 402]),
+    104: new Set([10755083])
+};
+
+export const mockViewers: Record<number, Viewer[]> = {};
+export const mockLikes: Record<number, Like[]> = {
+    103: [{id: 1, userId: 401, timestamp: new Date().toISOString()}]
+};
+
+export const mockRankings: Record<number, RankingContributor[]> = {};
+export const mockChatDatabase: Record<number, ChatMessage[]> = {
+    103: [
+        { id: 1, type: 'entry', username: "Lest Go 500 K...", userId: 401, message: "entrou.", timestamp: new Date().toISOString() },
+        { id: 2, type: 'message', level: 82, username: "Lest Go 500 K...", userId: 401, message: "Oi Fernando!", emojis: "👋", color: "pink", timestamp: new Date().toISOString() },
     ]
 };
-export let mockUserRewardsStatus: Record<number, UserRewardStatus> = {};
-export let mockPushSettings: Record<number, Record<number, boolean>> = {};
-export let mockProfileVisitors: Record<number, number[]> = {};
-
-export const mockUniversalRankingData: Record<string, UniversalRankingData> = {
-  'hourly_venezuela': {
-    podium: [
-      { rank: 1, userId: 201, avatarUrl: 'https://images.pexels.com/photos/3764014/pexels-photo-3764014.jpeg?auto=compress&cs=tinysrgb&w=120', name: 'T☆...', score: 200, level: 8, gender: 'female', badges: [{type: 'flag', value: '🇻🇪'}, {type: 'v_badge', value: 1}] },
-      { rank: 2, userId: 202, avatarUrl: 'https://images.pexels.com/photos/718978/pexels-photo-718978.jpeg?auto=compress&cs=tinysrgb&w=120', name: 'OSPL', score: 200, level: 33, gender: 'female', badges: [{type: 'flag', value: '🇨🇴'}, {type: 'v_badge', value: 1}] },
-      { rank: 3, userId: 203, avatarUrl: 'https://images.pexels.com/photos/1382731/pexels-photo-1382731.jpeg?auto=compress&cs=tinysrgb&w=120', name: '...🎀', score: 100, level: 14, gender: 'female', badges: [{type: 'flag', value: '🇺🇸'}, {type: 'v_badge', value: 1}] },
-    ],
-    list: [
-      { rank: 4, userId: 204, avatarUrl: 'https://images.pexels.com/photos/837358/pexels-photo-837358.jpeg?auto=compress&cs=tinysrgb&w=120', name: 'carolina24265466', score: 67, level: 6, gender: 'male', badges: [{type: 'flag', value: '🇻🇪'}] },
-      { rank: 5, userId: 205, avatarUrl: 'https://images.pexels.com/photos/1065084/pexels-photo-1065084.jpeg?auto=compress&cs=tinysrgb&w=120', name: 'w Maddison💕', score: 65, level: 4, gender: 'female', badges: [] },
-      { rank: 8, userId: 206, avatarUrl: 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=120', name: 'Yohandrick Villarr', score: 57, level: 1, gender: 'male', badges: [] },
-    ],
-    countdown: '45m1s',
-    footerButtons: {
-      primary: { text: "Conseguiu o primeiro lugar", value: "X144" },
-      secondary: { text: "Supere o anterior", value: "X2" }
-    }
-  },
-  'total': {
-    podium: [
-       { rank: 1, userId: 301, avatarUrl: 'https://i.pravatar.cc/150?u=jdee8', name: 'JDee8...', score: 18, level: 13, gender: 'male', badges: [] },
-       { rank: 2, userId: 302, avatarUrl: 'https://i.pravatar.cc/150?u=steve', name: 'steve...', score: 10, level: 16, gender: 'male', badges: [{type: 'flag', value: '🇸🇸'}] },
-       { rank: 3, userId: 303, avatarUrl: 'https://images.pexels.com/photos/1680172/pexels-photo-1680172.jpeg?auto=compress&cs=tinysrgb&w=120', name: 'Henri...', score: 4, level: 12, gender: 'male', badges: [] },
-    ],
-    list: [
-      { rank: 4, userId: 304, avatarUrl: 'https://i.pravatar.cc/150?u=elver83', name: 'Elver83', score: 3, level: 21, gender: 'male', badges: [] },
-      { rank: 5, userId: 305, avatarUrl: 'https://images.pexels.com/photos/1587009/pexels-photo-1587009.jpeg?auto=compress&cs=tinysrgb&w=120', name: 'dani pinga fogo', score: 2, level: 9, gender: 'female', badges: [] },
-      { rank: 6, userId: 306, avatarUrl: 'https://images.pexels.com/photos/2379004/pexels-photo-2379004.jpeg?auto=compress&cs=tinysrgb&w=120', name: 'gustavoitry', score: 2, level: 9, gender: 'male', badges: [{type: 'flag', value: '🇨🇱'}] },
+export const mockPublicProfiles: Record<number, Partial<PublicProfile>> = {};
+export const mockPkPreferences: Record<number, boolean> = {};
+export const mockPkEventDetails: PkEventDetails = { totalPrize: 0, endTime: "", streamerRanking: [], userRanking: [] };
+export const mockProtectorsList: Record<number, ProtectorDetails[]> = {
+    401: [
+        { rank: 1, userId: 10755083, name: "GamerX 🎮", avatarUrl: "https://i.pravatar.cc/150?u=10755083", protectionValue: 150000 },
+        { rank: 2, userId: 402, name: "Simone 🦋", avatarUrl: "https://i.pravatar.cc/150?u=402", protectionValue: 95000 },
+        { rank: 3, userId: 403, name: "Fernando11...", avatarUrl: "https://i.pravatar.cc/150?u=403", protectionValue: 50000 },
     ]
-  }
 };
-
-const mockBrazilRankingData: UniversalRankingData = {
-    podium: [
-      { rank: 1, userId: 501, avatarUrl: 'https://images.pexels.com/photos/1043474/pexels-photo-1043474.jpeg?auto=compress&cs=tinysrgb&w=120', name: 'LucasBR', score: 250, level: 10, gender: 'male', badges: [{type: 'flag', value: '🇧🇷'}, {type: 'v_badge', value: 1}] },
-      { rank: 2, userId: 502, avatarUrl: 'https://images.pexels.com/photos/1542085/pexels-photo-1542085.jpeg?auto=compress&cs=tinysrgb&w=120', name: 'Juliana S.', score: 220, level: 25, gender: 'female', badges: [{type: 'flag', value: '🇧🇷'}, {type: 'v_badge', value: 1}] },
-      { rank: 3, userId: 202, avatarUrl: 'https://images.pexels.com/photos/718978/pexels-photo-718978.jpeg?auto=compress&cs=tinysrgb&w=120', name: 'OSPL', score: 200, level: 33, gender: 'female', badges: [{type: 'flag', value: '🇨🇴'}, {type: 'v_badge', value: 1}] },
-    ],
-    list: [
-      { rank: 4, userId: 504, avatarUrl: 'https://images.pexels.com/photos/2379004/pexels-photo-2379004.jpeg?auto=compress&cs=tinysrgb&w=120', name: 'fernando_oficial', score: 150, level: 8, gender: 'male', badges: [{type: 'flag', value: '🇧🇷'}] },
-      { rank: 5, userId: 505, avatarUrl: 'https://images.pexels.com/photos/3772510/pexels-photo-3772510.jpeg?auto=compress&cs=tinysrgb&w=120', name: 'Gabi ✨', score: 135, level: 5, gender: 'female', badges: [] },
-      { rank: 6, userId: 203, avatarUrl: 'https://images.pexels.com/photos/1382731/pexels-photo-1382731.jpeg?auto=compress&cs=tinysrgb&w=120', name: '...🎀', score: 100, level: 14, gender: 'female', badges: [{type: 'flag', value: '🇺🇸'}, {type: 'v_badge', value: 1}] },
-    ],
-    countdown: '32m15s',
-    footerButtons: {
-      primary: { text: "Conseguiu o primeiro lugar", value: "X120" },
-      secondary: { text: "Supere o anterior", value: "X3" }
+export const mockWithdrawalTransactions: WithdrawalTransaction[] = [];
+export const mockUserInventory: Record<number, InventoryItem[]> = {
+    10755083: [
+        { id: 'entry_effect_1', name: "Entrada Estelar", imageUrl: "https://storage.googleapis.com/genai-assets/entry_effect_star.png", quantity: 1, category: 'decoration', sub_type: 'entry_effect', description: "Faça uma entrada brilhante em qualquer sala." },
+    ]
+};
+export const mockEvents: AppEvent[] = [];
+export const mockDailyRewards: DailyReward[] = [];
+export const mockUserRewardsStatus: Record<number, UserRewardStatus> = {};
+export const mockPkRankingData: PkRankingData = { totalPrize: 0, currency: "", timeRemaining: "", streamerRanking: [], userRanking: [] };
+export const mockPurchaseOrders: PurchaseOrder[] = [];
+export const mockHelpArticles: HelpArticle[] = [];
+export const mockPkInvitationsDatabase: PkInvitation[] = [];
+export const mockProfileVisitors: Record<number, number[]> = {};
+export const mockPrivateLiveInviteSettings: PrivateLiveInviteSettings[] = [];
+export const mockNotificationSettings: NotificationSettings[] = [
+    {
+        userId: 10755083,
+        newMessages: true,
+        streamerLive: true,
+        followedPost: true,
+        order: true,
+        interactive: true,
     }
+];
+export const mockPushSettings: Record<number, Record<number, boolean>> = {};
+export const mockVersionInfo: VersionInfo = { minVersion: '1.0.0', latestVersion: '1.0.0', updateUrl: '#' };
+export const mockSoundEffectLog: Record<number, SoundEffectLogEntry[]> = {};
+export const mockMutedUsersInLive: Record<number, Record<number, { mutedUntil: string }>> = {};
+export const mockKickedUsersFromLive: Record<number, number[]> = {};
+export const mockSupportConversation: Conversation = { id: "", participants: [], otherUserId: 0, otherUserName: "", otherUserAvatarUrl: "", unreadCount: 0, messages: [] };
+export const mockUserListRankingData: Record<UserListRankingPeriod, UniversalRankingData> = {
+    daily: { podium: [], list: [] },
+    weekly: { podium: [], list: [] },
+    total: { podium: [], list: [] },
 };
-
-mockUniversalRankingData['hourly_global'] = { ...mockUniversalRankingData['hourly_venezuela'], list: [...mockUniversalRankingData['hourly_venezuela'].list].reverse() };
-mockUniversalRankingData['hourly_brazil'] = mockBrazilRankingData;
-mockUniversalRankingData['daily'] = mockUniversalRankingData['total'];
-mockUniversalRankingData['weekly'] = { ...mockUniversalRankingData['total'], list: [...mockUniversalRankingData['total'].list].reverse() };
+export const mockReportsDatabase: (ReportPayload & { timestamp: string })[] = [];
+export const mockSuggestionsDatabase: (SuggestionPayload & { timestamp: string })[] = [];
+export const mockGiftTransactionsDatabase: GiftTransaction[] = [];

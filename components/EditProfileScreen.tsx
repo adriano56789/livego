@@ -183,13 +183,13 @@ const EditProfileScreen: React.FC<EditProfileScreenProps> = ({ user, onProfileCo
         </FormField>
         
         <FormField label="ID do LiveGo">
-          <div className="flex items-center bg-[#252525] rounded-full p-1.5">
-            <span className="flex-grow bg-transparent text-gray-400 px-4 py-2">
+          <div className="flex items-center justify-between bg-[#252525] h-[50px] rounded-2xl px-4">
+            <span className="text-white font-medium">
               {user.id}
             </span>
             <button
               onClick={handleCopyId}
-              className="bg-gray-700/50 w-10 h-10 rounded-full flex items-center justify-center shrink-0 hover:bg-gray-600 transition-colors"
+              className="p-2 -m-2 rounded-full hover:bg-gray-700/50 transition-colors"
               aria-label="Copiar ID"
             >
               {idCopied ? (

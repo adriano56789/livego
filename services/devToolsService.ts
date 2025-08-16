@@ -1,7 +1,7 @@
 // This service provides functions for the developer tools screen
 // to inspect the state of the mock database.
-import { getDbState } from './api';
+import { dbClient } from './dbClient';
 
 export const getDatabaseState = (): Record<string, any> => {
-  return getDbState();
+  return dbClient.getRawDb();
 };

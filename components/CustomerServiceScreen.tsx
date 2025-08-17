@@ -1,10 +1,12 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
 import HeadsetIcon from './icons/HeadsetIcon';
 import EnvelopeIcon from './icons/EnvelopeIcon';
 import WhatsAppIcon from './icons/WhatsAppIcon';
 import HelpIcon from './icons/HelpIcon';
+import type { ArtigoAjuda, CanalContato } from '../types';
+import * as helpService from '../services/helpService';
 
 interface CustomerServiceScreenProps {
   onExit: () => void;
@@ -29,8 +31,51 @@ const ArticleItem: React.FC<{ label: string; onClick: () => void; }> = ({ label,
 );
 
 const CustomerServiceScreen: React.FC<CustomerServiceScreenProps> = ({ onExit, onViewArticle, onViewSupportChat }) => {
-  const handleEmail = () => window.open('mailto:suporte@livego.com');
-  const handleWhatsApp = () => window.open('https://wa.me/5511999999999', '_blank');
+  const [contactChannels, setContactChannels] = useState<CanalContato[]>([]);
+  const [usefulArticles, setUsefulArticles] = useState<ArtigoAjuda[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      setIsLoading(true);
+      try {
+        const [channels, articles] = await Promise.all([
+          helpService.getContactChannels(),
+          helpService.getHelpArticles('Artigos Úteis')
+        ]);
+        setContactChannels(channels);
+        setUsefulArticles(articles);
+      } catch (error) {
+        console.error("Failed to load customer service data:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
+  const getIconForChannel = (iconName: CanalContato['icone']) => {
+    switch (iconName) {
+      case 'headset': return <HeadsetIcon className="w-7 h-7" />;
+      case 'envelope': return <EnvelopeIcon className="w-7 h-7" />;
+      case 'whatsapp': return <WhatsAppIcon className="w-7 h-7" />;
+      default: return null;
+    }
+  };
+
+  const handleChannelClick = (channel: CanalContato) => {
+    switch (channel.tipo) {
+      case 'chat_interno':
+        onViewSupportChat();
+        break;
+      case 'email':
+        window.open(channel.destino);
+        break;
+      case 'link_externo':
+        window.open(channel.destino, '_blank');
+        break;
+    }
+  };
 
   return (
     <div className="h-screen w-full bg-black text-white flex flex-col font-sans">
@@ -39,7 +84,7 @@ const CustomerServiceScreen: React.FC<CustomerServiceScreenProps> = ({ onExit, o
         <h1 className="font-bold text-lg">Atendimento ao Cliente</h1>
         <div className="w-6 h-6"></div>
       </header>
-      <main className="flex-grow p-4 overflow-y-auto">
+      <main className="flex-grow p-4 overflow-y-auto scrollbar-hide">
         <section className="text-center mb-8">
           <h2 className="text-xl font-semibold">Como podemos ajudar?</h2>
           <p className="text-gray-400 mt-2">Nossa equipe de suporte está pronta para te atender.</p>
@@ -47,11 +92,20 @@ const CustomerServiceScreen: React.FC<CustomerServiceScreenProps> = ({ onExit, o
 
         <section className="mb-8">
           <h3 className="font-semibold text-gray-300 mb-3">Contato Direto</h3>
-          <div className="grid grid-cols-3 gap-4">
-            <ServiceButton icon={<HeadsetIcon className="w-7 h-7" />} label="Chat ao Vivo" onClick={onViewSupportChat} />
-            <ServiceButton icon={<EnvelopeIcon className="w-7 h-7" />} label="Enviar E-mail" onClick={handleEmail} />
-            <ServiceButton icon={<WhatsAppIcon className="w-7 h-7" />} label="WhatsApp" onClick={handleWhatsApp} />
-          </div>
+          {isLoading ? (
+            <div className="text-center text-gray-500">Carregando...</div>
+          ) : (
+            <div className="grid grid-cols-3 gap-4">
+              {contactChannels.map(channel => (
+                <ServiceButton 
+                  key={channel.id}
+                  icon={getIconForChannel(channel.icone)} 
+                  label={channel.nome} 
+                  onClick={() => handleChannelClick(channel)} 
+                />
+              ))}
+            </div>
+          )}
         </section>
         
         <section className="mb-8">
@@ -66,12 +120,15 @@ const CustomerServiceScreen: React.FC<CustomerServiceScreenProps> = ({ onExit, o
 
         <section>
           <h3 className="font-semibold text-gray-300 mb-3">Artigos Úteis</h3>
-          <div className="space-y-3">
-            <ArticleItem label="Problemas com saque" onClick={() => onViewArticle('withdrawal-problems')} />
-            <ArticleItem label="Como iniciar uma live?" onClick={() => onViewArticle('how-to-go-live')} />
-            <ArticleItem label="Regras da comunidade" onClick={() => onViewArticle('community-rules')} />
-            <ArticleItem label="Segurança da conta" onClick={() => onViewArticle('account-security')} />
-          </div>
+           {isLoading ? (
+            <div className="text-center text-gray-500">Carregando...</div>
+          ) : (
+            <div className="space-y-3">
+              {usefulArticles.map(article => (
+                <ArticleItem key={article.id} label={article.titulo} onClick={() => onViewArticle(article.id)} />
+              ))}
+            </div>
+          )}
         </section>
       </main>
     </div>

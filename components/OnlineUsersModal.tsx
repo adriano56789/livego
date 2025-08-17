@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import type { Viewer } from '../types';
 import * as liveStreamService from '../services/liveStreamService';
@@ -55,7 +54,7 @@ const OnlineUsersModal: React.FC<OnlineUsersModalProps> = ({ liveId, onClose, on
     }, [fetchUsers]);
 
     return (
-        <div className="fixed inset-0 z-50 bg-black/60 flex items-end" onClick={onClose}>
+        <div className="fixed inset-0 z-50 bg-transparent flex items-end" onClick={onClose}>
             <div className="bg-gradient-to-b from-[#1E1B4B] to-[#141026] w-full h-[60vh] rounded-t-2xl flex flex-col border-t-2 border-purple-400/50" onClick={e => e.stopPropagation()}>
                 <header className="p-4 flex items-center justify-between border-b border-white/10 shrink-0">
                     <button onClick={onClose}><CrossIcon className="w-6 h-6 text-gray-400" /></button>

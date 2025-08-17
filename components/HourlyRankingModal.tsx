@@ -26,6 +26,37 @@ type MainTab = 'hourly' | 'users';
 type HourlySubTab = 'brazil' | 'global';
 type UserListSubTab = UserListRankingPeriod;
 
+const HourlyCountdown: React.FC<{ endTime: string }> = ({ endTime }) => {
+    const calculateTimeLeft = useCallback(() => {
+        const difference = +new Date(endTime) - +new Date();
+        let timeLeft = { h: 0, m: 0, s: 0 };
+
+        if (difference > 0) {
+            timeLeft = {
+                h: Math.floor((difference / (1000 * 60 * 60)) % 24),
+                m: Math.floor((difference / 1000 / 60) % 60),
+                s: Math.floor((difference / 1000) % 60),
+            };
+        }
+        return timeLeft;
+    }, [endTime]);
+
+    const [timeLeft, setTimeLeft] = useState(calculateTimeLeft());
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setTimeLeft(calculateTimeLeft());
+        }, 1000);
+        return () => clearTimeout(timer);
+    });
+
+    const format = (t: number) => t.toString().padStart(2, '0');
+
+    return (
+        <span>Contagem regressiva: <span className="font-bold text-white">{`${format(timeLeft.h)}:${format(timeLeft.m)}:${format(timeLeft.s)}`}</span></span>
+    );
+};
+
 const UserRankBadge: React.FC<{ rank: number }> = ({ rank }) => {
     let bgColor = 'bg-slate-500';
     if (rank === 1) bgColor = 'bg-yellow-500';
@@ -260,9 +291,9 @@ const HourlyRankingModal: React.FC<UniversalRankingScreenProps> = ({ liveId, onC
                     </div>
                 ) : data ? (
                     <>
-                        {mainTab === 'hourly' && (
+                        {mainTab === 'hourly' && data.countdown && (
                             <div className="px-4 py-2 flex justify-between items-center text-sm text-gray-200">
-                                <span>Contagem regressiva: <span className="font-bold text-white">{data.countdown}</span></span>
+                                <HourlyCountdown endTime={data.countdown} />
                                 <button onClick={onNavigateToList} className="flex items-center gap-1">A lista horária <span className="font-bold">&gt;</span></button>
                             </div>
                         )}

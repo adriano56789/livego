@@ -125,7 +125,7 @@ const EventCenterScreen: React.FC<EventCenterScreenProps> = ({ onExit, onViewEve
         ))}
       </nav>
 
-      <main className="flex-grow p-4 overflow-y-auto">
+      <main className="flex-grow p-4 overflow-y-auto scrollbar-hide">
         {isLoading ? (
           <div className="flex justify-center items-center h-full">
             <div className="w-8 h-8 border-4 border-white border-t-transparent rounded-full animate-spin"></div>

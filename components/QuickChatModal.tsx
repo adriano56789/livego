@@ -1,4 +1,3 @@
-
 import React from 'react';
 import CrossIcon from './icons/CrossIcon';
 
@@ -26,11 +25,11 @@ const QuickChatModal: React.FC<QuickChatModalProps> = ({ onClose, onSendMessage 
 
     return (
         <div
-            className="fixed inset-0 bg-black/60 z-50 flex items-end"
+            className="fixed inset-0 bg-transparent z-50 flex items-end"
             onClick={onClose}
         >
             <div
-                className="bg-[#212124]/95 backdrop-blur-md w-full rounded-t-2xl flex flex-col text-white animate-slide-up-fast max-h-[60vh]"
+                className="bg-[#212124]/95 backdrop-blur-md w-full rounded-t-2xl flex flex-col text-white animate-slide-up-fast max-h-[55vh]"
                 onClick={e => e.stopPropagation()}
             >
                 <header className="p-4 border-b border-white/10 flex items-center justify-center relative shrink-0">
@@ -39,7 +38,7 @@ const QuickChatModal: React.FC<QuickChatModalProps> = ({ onClose, onSendMessage 
                         <CrossIcon className="w-6 h-6 text-gray-400" />
                     </button>
                 </header>
-                <main className="p-4 overflow-y-auto">
+                <main className="p-4 overflow-y-auto scrollbar-hide">
                     <div className="flex flex-col gap-3">
                         {quickMessages.map((msg, index) => (
                             <button

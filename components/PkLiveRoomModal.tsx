@@ -14,7 +14,7 @@ interface PkLiveRoomModalProps {
 
 const PkLiveRoomModal: React.FC<PkLiveRoomModalProps> = ({ onClose, onRandomMatch, onPairWithFriends, friendsAvailable, onOpenSettings }) => {
   return (
-    <div className="fixed inset-0 z-50 bg-black/70 flex items-end" onClick={onClose}>
+    <div className="fixed inset-0 z-50 bg-transparent flex items-end" onClick={onClose}>
       <div
         className="bg-gray-900 w-full rounded-t-2xl flex flex-col text-white animate-slide-up-fast"
         onClick={e => e.stopPropagation()}

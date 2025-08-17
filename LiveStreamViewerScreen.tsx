@@ -1,7 +1,6 @@
 
-
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import type { User, Stream, PkBattle, ChatMessage, LiveDetails, PkInvitation, SoundEffectName, MuteStatusListener, UserKickedListener, SoundEffectListener, PublicProfile, PkSession } from '../types';
+import type { User, Stream, PkBattle, ChatMessage, LiveDetails, PkInvitation, SoundEffectName, MuteStatusListener, UserKickedListener, SoundEffectListener, PublicProfile, BatalhaPK, ConvitePK, IncomingPrivateLiveInvite } from '../types';
 import * as liveStreamService from '../services/liveStreamService';
 import * as authService from '../services/authService';
 import * as soundService from '../services/soundService';
@@ -10,21 +9,19 @@ import { useApiViewer } from './ApiContext';
 import CrossIcon from './icons/CrossIcon';
 import ViewersIcon from './icons/ViewersIcon';
 import AnchorToolsIcon from './icons/AnchorToolsIcon';
-import SwordsIcon from './icons/SwordsIcon';
 import CoracaoIcon from './icons/CoracaoIcon';
 import ShoppingBasketIcon from './icons/ShoppingBasketIcon';
 import ChatBubbleIcon from './icons/ChatBubbleIcon';
 import MessageIcon from './icons/MessageIcon';
 import PlusIcon from './icons/PlusIcon';
 import CheckIcon from './icons/CheckIcon';
+import DiamondIcon from './icons/DiamondIcon';
+import SwordsIcon from './icons/SwordsIcon';
 
 
 // New Icons
 import CoinBIcon from './icons/CoinBIcon';
 import PinkHeartIcon from './icons/PinkHeartIcon';
-import LevelBarIcon from './icons/LevelBarIcon';
-import BrazilFlagIcon from './icons/BrazilFlagIcon';
-
 
 // Modal Imports
 import OnlineUsersModal from './OnlineUsersModal';
@@ -41,10 +38,16 @@ import ChatInput from './ChatInput';
 import EndStreamConfirmationModal from './EndStreamConfirmationModal';
 import SelectOpponentModal from './SelectOpponentModal';
 import AcceptPkInviteModal from './AcceptPkInviteModal';
-import InviteToPartyModal from './InviteToPartyModal';
+import InviteToPrivateLiveModal from './InviteToPrivateLiveModal';
 import QuickChatModal from './QuickChatModal';
 import RankingListScreen from './RankingListScreen';
 import PrivateChatModal from './PrivateChatModal';
+import PkLiveRoomModal from './PkLiveRoomModal';
+import PkSettingsModal from './PkSettingsModal';
+import PkMatchingModal from './PkMatchingModal';
+import PkRandomMatchModal from './PkRandomMatchModal';
+import PkInvitationModal from './PkInvitationModal';
+import FloatingGiftAnimation from './FloatingGiftAnimation';
 
 
 interface LiveStreamViewerScreenProps {
@@ -58,6 +61,7 @@ interface LiveStreamViewerScreenProps {
   onViewStream: (stream: Stream | PkBattle) => void;
   onStreamEnded: (streamId: number) => void;
   onStopStream: (streamerId: number, streamId: number) => void;
+  onShowPrivateLiveInvite: (invite: IncomingPrivateLiveInvite) => void;
 }
 
 const formatStatNumber = (num: number): string => {
@@ -79,17 +83,20 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
   onViewStream,
   onStreamEnded,
   onStopStream,
+  onShowPrivateLiveInvite,
 }) => {
     const { showApiResponse } = useApiViewer();
     const isPkBattle = 'streamer1' in initialStream;
+    const pkBattleId = isPkBattle ? (initialStream as PkBattle).id : null;
 
-    const [pkSession, setPkSession] = useState<PkSession | null>(null);
+    const [activePkBattle, setActivePkBattle] = useState<BatalhaPK | null>(null);
 
     // Common State
     const [liveDetails, setLiveDetails] = useState<LiveDetails | null>(null);
     const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
     const [isFollowing, setIsFollowing] = useState<Record<number, boolean>>({});
     const [isBlockedByHost, setIsBlockedByHost] = useState(false);
+    const [lastSentGift, setLastSentGift] = useState<ChatMessage | null>(null);
     
     // Modal states
     const [isFollowLoading, setIsFollowLoading] = useState<Record<number, boolean>>({});
@@ -104,12 +111,21 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
     const [muteNotification, setMuteNotification] = useState<{ type: 'muted' | 'unmuted' } | null>(null);
     const [isHourlyRankingModalOpen, setIsHourlyRankingModalOpen] = useState(false);
     const [isEndStreamModalOpen, setIsEndStreamModalOpen] = useState(false);
-    const [isSelectOpponentModalOpen, setIsSelectOpponentModalOpen] = useState(false);
+    
     const [pendingPkInvitation, setPendingPkInvitation] = useState<PkInvitation | null>(null);
-    const [isInviteToPartyModalOpen, setIsInviteToPartyModalOpen] = useState(false);
+    const [isInviteToPrivateLiveModalOpen, setIsInviteToPrivateLiveModalOpen] = useState(false);
     const [isQuickChatOpen, setIsQuickChatOpen] = useState(false);
     const [isRankingListOpen, setIsRankingListOpen] = useState(false);
     const [isPrivateChatModalOpen, setIsPrivateChatModalOpen] = useState(false);
+    const [isPkLiveRoomModalOpen, setIsPkLiveRoomModalOpen] = useState(false);
+    const [isPkSettingsModalOpen, setIsPkSettingsModalOpen] = useState(false);
+
+    // PK Invitation Flow State
+    const [pkOpponent, setPkOpponent] = useState<User | null>(null);
+    const [pkFlowStep, setPkFlowStep] = useState<'idle' | 'select' | 'invite' | 'random-match-waiting'>('idle');
+    const [sentPkInvitation, setSentPkInvitation] = useState<ConvitePK | null>(null);
+    const [simulatedIncomingInvite, setSimulatedIncomingInvite] = useState<PkInvitation | null>(null);
+    const pkPollingInterval = useRef<number | null>(null);
 
     const liveId = isPkBattle ? (initialStream as PkBattle).streamer1.streamId : (initialStream as Stream).id;
     const streamerId = isPkBattle ? (initialStream as PkBattle).streamer1.userId : (initialStream as Stream).userId;
@@ -124,7 +140,7 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
             const details = await liveStreamService.getLiveStreamDetails(streamToFetch);
             setLiveDetails(details);
         } catch (error) { console.error(error); }
-    }, [liveId, isPkBattle, initialStream]);
+    }, [isPkBattle, initialStream]);
     
     const streamHostId = isPkBattle ? (initialStream as PkBattle).streamer1.userId : streamerId;
     
@@ -202,40 +218,94 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
             setIsFollowLoading(prev => ({ ...prev, [targetUserId]: false }));
         }
     };
+    
+    const handleClosePkFlow = () => {
+        if (pkPollingInterval.current) clearInterval(pkPollingInterval.current);
+        setPkFlowStep('idle');
+        setPkOpponent(null);
+        setSentPkInvitation(null);
+        setSimulatedIncomingInvite(null);
+    };
+
+    const handleAcceptSimulatedInvite = async () => {
+        if (!sentPkInvitation) {
+            alert("Erro: convite simulado não encontrado.");
+            handleClosePkFlow();
+            return;
+        }
+        try {
+            const battle = await liveStreamService.acceptPkInvitation(sentPkInvitation.id);
+            showApiResponse(`POST /api/pk/invites/${sentPkInvitation.id}/accept`, battle);
+            handleClosePkFlow();
+            onViewStream(battle);
+        } catch (error) {
+            alert(`Não foi possível aceitar o convite de PK (simulado): ${error instanceof Error ? error.message : String(error)}`);
+            handleClosePkFlow();
+        }
+    };
 
     useEffect(() => {
-        if (!isHost) return;
-        const checkInvites = async () => {
+        const checkIncomingInvites = async () => {
+            if (!isHost || simulatedIncomingInvite) return;
             try {
                 const invite = await liveStreamService.getPendingPkInvitation(user.id);
-                if (invite && !pendingPkInvitation) {
-                    const inviter = await authService.getUserProfile(invite.inviterId);
-                    setPendingPkInvitation({ ...invite, inviterName: inviter.nickname || inviter.name, inviterAvatarUrl: inviter.avatar_url || '' });
+                if (invite && (!pendingPkInvitation || pendingPkInvitation.id !== invite.id)) {
+                     const inviter = await authService.getUserProfile(invite.remetente_id);
+                     setPendingPkInvitation({
+                         ...invite,
+                         inviterName: inviter.nickname || inviter.name,
+                         inviterAvatarUrl: inviter.avatar_url || '',
+                     });
+                } else if (!invite && pendingPkInvitation) {
+                    // Invitation was likely cancelled or expired
+                    setPendingPkInvitation(null);
                 }
-            } catch (e) { console.error("Failed to check for PK invites:", e); }
+            } catch (e) { /* Fail silently */ }
         };
-        const intervalId = setInterval(checkInvites, 5000);
+        const intervalId = setInterval(checkIncomingInvites, 5000);
         return () => clearInterval(intervalId);
-    }, [isHost, user.id, pendingPkInvitation]);
+    }, [isHost, user.id, pendingPkInvitation, simulatedIncomingInvite]);
 
     useEffect(() => {
-        if (!isPkBattle) return;
-        const pkBattleId = (initialStream as PkBattle).id;
-        
-        const fetchSession = async () => {
+        if (!isPkBattle || !pkBattleId) return;
+    
+        let isMounted = true;
+    
+        const checkBattleStatus = async () => {
+            if (!isMounted) return;
             try {
-                const sessionData = await liveStreamService.getPkSessionDetails(pkBattleId);
-                setPkSession(sessionData);
+                const battleData = await liveStreamService.getActivePkBattle(pkBattleId);
+                if (!isMounted) return;
+    
+                setActivePkBattle(prevBattle => {
+                    if (JSON.stringify(prevBattle) !== JSON.stringify(battleData)) {
+                        return battleData;
+                    }
+                    return prevBattle;
+                });
+    
+                if (battleData.status === 'finalizada' && battleData.data_comemoracao_fim) {
+                    const celebrationEnd = new Date(battleData.data_comemoracao_fim);
+                    if (new Date() > celebrationEnd) {
+                        onStreamEnded((initialStream as PkBattle).streamer1.streamId);
+                    }
+                }
             } catch (e) {
-                console.error("Failed to fetch PK session", e);
+                if (isMounted) {
+                    console.error("Failed to fetch PK battle data", e);
+                    onStreamEnded((initialStream as PkBattle).streamer1.streamId);
+                }
             }
         };
-        
-        fetchSession();
-        const intervalId = setInterval(fetchSession, 3000);
-
-        return () => clearInterval(intervalId);
-    }, [isPkBattle, initialStream]);
+    
+        checkBattleStatus();
+        const intervalId = setInterval(checkBattleStatus, 3000);
+    
+        return () => {
+            isMounted = false;
+            clearInterval(intervalId);
+        };
+    }, [isPkBattle, pkBattleId, onStreamEnded, initialStream]);
     
     useEffect(() => {
         const fetchInitialData = async () => {
@@ -255,7 +325,15 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
     }, [liveId, onExit, fetchLiveDetails, isPkBattle, initialStream]);
 
     useEffect(() => {
-        const handleChatMessageUpdate = (id: number, messages: ChatMessage[]) => { if (id === liveId) setChatMessages(messages); };
+        const handleChatMessageUpdate = (id: number, messages: ChatMessage[]) => { 
+            if (id === liveId) {
+                setChatMessages(messages);
+                const newGift = messages.filter(m => m.type === 'gift').pop();
+                if(newGift) {
+                    setLastSentGift(newGift);
+                }
+            }
+        };
         const handleMuteStatus: MuteStatusListener = (update) => {
             if (update.liveId === liveId) {
                 setMutedUsers(prev => {
@@ -297,19 +375,23 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
         return () => { liveStreamService.leaveLiveStream(user.id, joinId); };
     }, [user.id, liveId, onExit, user.equipped_entry_effect_id, isPkBattle, initialStream]);
     
-    const handleSendMessage = async (message: string) => {
+    const handleSendMessage = useCallback(async (message: string) => {
         try { await liveStreamService.sendChatMessage(liveId, user.id, message); } catch (error) { alert((error as Error).message); }
-    };
+    }, [liveId, user.id]);
     
     const handleSendLike = async () => {
         await liveStreamService.sendLike(liveId, user.id);
         fetchLiveDetails();
     };
 
-    const handleSendGift = async (giftId: number) => {
-        const targetStreamId = isPkBattle ? (initialStream as PkBattle).streamer1.streamId : liveId;
+    const handleSendGift = async (giftId: number, receiverId?: number) => {
+        const targetReceiverId = isPkBattle ? receiverId : streamerId;
+        if (isPkBattle && !targetReceiverId) {
+            alert("Por favor, selecione para qual streamer enviar o presente.");
+            return;
+        }
         try {
-            const response = await liveStreamService.sendGift(targetStreamId, user.id, giftId);
+            const response = await liveStreamService.sendGift(liveId, user.id, giftId, targetReceiverId);
             if (response.success && response.updatedUser) {
                 onUpdateUser(response.updatedUser);
             } else {
@@ -357,12 +439,53 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
         catch (error) { console.error("Failed to decline PK invite:", error); } 
         finally { setPendingPkInvitation(null); }
     };
+    
+    // --- PK Invitation Flow Handlers ---
+    const handleInviteSent = useCallback((invitation: ConvitePK) => {
+        setSentPkInvitation(invitation);
 
-    const handleInviteToPk = (inviteeId: number) => {
-        liveStreamService.sendPkInvitation(user.id, inviteeId)
-            .then(() => alert(`Convite de PK enviado para o usuário ${inviteeId}!`))
-            .catch(err => alert(`Falha ao enviar convite: ${err.message}`));
-        setIsSelectOpponentModalOpen(false);
+        if (pkOpponent) {
+            const simulatedInvite: PkInvitation = {
+                ...invitation,
+                id: `sim-${invitation.id}`,
+                inviterName: user.nickname || user.name,
+                inviterAvatarUrl: user.avatar_url || '',
+            };
+            setSimulatedIncomingInvite(simulatedInvite);
+        }
+
+        const poll = async () => {
+            try {
+                const { invitation: updatedInvite, battle } = await liveStreamService.getPkInvitationStatus(invitation.id);
+                setSentPkInvitation(updatedInvite);
+
+                if (updatedInvite.status === 'aceito' && battle) {
+                    if (pkPollingInterval.current) clearInterval(pkPollingInterval.current);
+                    handleClosePkFlow();
+                    onViewStream(battle);
+                } else if (updatedInvite.status === 'recusado' || updatedInvite.status === 'expirado') {
+                    if (pkPollingInterval.current) clearInterval(pkPollingInterval.current);
+                    alert("Seu convite foi recusado ou expirou.");
+                    handleClosePkFlow();
+                }
+            } catch (error) {
+                console.error("Polling error:", error);
+                if (pkPollingInterval.current) clearInterval(pkPollingInterval.current);
+                handleClosePkFlow();
+            }
+        };
+
+        pkPollingInterval.current = window.setInterval(poll, 5000);
+    }, [onViewStream, pkOpponent, user]);
+    
+    const handlePrivateInviteSent = (invitee: User) => {
+        if (isPkBattle) return; // Cannot send private invites from PK battle
+
+        onShowPrivateLiveInvite({
+            stream: initialStream as Stream,
+            inviter: user,
+            invitee: invitee,
+        });
     };
     
     if (kickedState === 'banned_on_join') return <KickedFromStreamModal onExit={onExit} isJoinAttempt={true} />;
@@ -390,109 +513,45 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
             </button>
         </div>
     );
-    
-    const PkBattleHeader = ({ battle, score1, score2 }: { battle: PkBattle; score1: number; score2: number }) => (
-        <div className="flex items-center justify-between shrink-0">
-            <div className="flex items-center gap-2 bg-black/40 backdrop-blur-sm p-1 rounded-full">
-                <div className="relative shrink-0">
-                    <button onClick={() => handleOpenUserProfile(battle.streamer1.userId)}>
-                        <img src={battle.streamer1.avatarUrl} alt={battle.streamer1.name} className="w-10 h-10 rounded-full object-cover"/>
-                    </button>
-                    {user.id !== battle.streamer1.userId && (
-                        <button
-                            onClick={(e) => { e.stopPropagation(); handleFollowToggle(battle.streamer1.userId); }}
-                            disabled={isFollowLoading[battle.streamer1.userId]}
-                            className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center border-2 border-black/40 transform transition-transform hover:scale-110 disabled:bg-gray-500"
-                            aria-label={`Seguir ${battle.streamer1.name}`}
-                        >
-                            {isFollowLoading[battle.streamer1.userId] ? 
-                                <div className="w-3 h-3 border-2 border-black border-t-transparent rounded-full animate-spin"></div> : 
-                            isFollowing[battle.streamer1.userId] ?
-                                <CheckIcon className="w-3 h-3 text-black" /> :
-                                <PlusIcon className="w-3 h-3 text-black" />
-                            }
-                        </button>
-                    )}
-                </div>
-                <div className="pr-2">
-                    <p className="font-bold text-sm truncate max-w-[80px]">{battle.streamer1.name}</p>
-                    <p className="text-xs text-gray-300">Score: {formatScore(score1)}</p>
-                </div>
-            </div>
-            <div className="flex items-center gap-2">
-                <button onClick={() => setIsOnlineUsersModalOpen(true)} className="flex items-center gap-2 bg-black/40 backdrop-blur-sm px-3 py-2 rounded-full">
-                   <ViewersIcon className="w-5 h-5"/>
-                   <span className="font-bold text-sm">{formatStatNumber(liveDetails?.viewerCount || 0)}</span>
-                </button>
-                <button onClick={handleExitClick} className="p-2 bg-black/40 rounded-full"><CrossIcon className="w-6 h-6"/></button>
-            </div>
-             <div className="flex items-center gap-2 bg-black/40 backdrop-blur-sm p-1 rounded-full">
-                <div className="pl-2 text-right">
-                    <p className="font-bold text-sm truncate max-w-[80px]">{battle.streamer2.name}</p>
-                    <p className="text-xs text-gray-300">Score: {formatScore(score2)}</p>
-                </div>
-                <div className="relative shrink-0">
-                    <button onClick={() => handleOpenUserProfile(battle.streamer2.userId)}>
-                        <img src={battle.streamer2.avatarUrl} alt={battle.streamer2.name} className="w-10 h-10 rounded-full object-cover"/>
-                    </button>
-                    {user.id !== battle.streamer2.userId && (
-                        <button
-                            onClick={(e) => { e.stopPropagation(); handleFollowToggle(battle.streamer2.userId); }}
-                            disabled={isFollowLoading[battle.streamer2.userId]}
-                            className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center border-2 border-black/40 transform transition-transform hover:scale-110 disabled:bg-gray-500"
-                            aria-label={`Seguir ${battle.streamer2.name}`}
-                        >
-                            {isFollowLoading[battle.streamer2.userId] ? 
-                                <div className="w-3 h-3 border-2 border-black border-t-transparent rounded-full animate-spin"></div> : 
-                             isFollowing[battle.streamer2.userId] ?
-                                <CheckIcon className="w-3 h-3 text-black" /> :
-                                <PlusIcon className="w-3 h-3 text-black" />
-                            }
-                        </button>
-                    )}
-                </div>
-            </div>
-        </div>
-    );
 
     const renderSingleStreamView = () => {
-        const stream = initialStream as Stream;
         return (
             <>
                 <div className="absolute inset-0 z-0">
-                    <img src={stream.thumbnailUrl || 'https://images.pexels.com/photos/3225517/pexels-photo-3225517.jpeg?auto=compress&cs=tinysrgb&w=800&h=1200'} alt="Stream background" className="w-full h-full object-cover"/>
+                    <img
+                        src="https://images.pexels.com/photos/1763075/pexels-photo-1763075.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2"
+                        alt="Stream background"
+                        className="w-full h-full object-cover"
+                    />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent"></div>
                 </div>
+    
                 <div className="relative z-10 flex flex-col h-full p-2 sm:p-4">
                     <header className="flex items-start justify-between shrink-0">
-                        <div className="flex flex-col items-start gap-2">
-                            <div className="bg-black/40 backdrop-blur-sm p-1 rounded-full flex items-center gap-2">
-                                <div onClick={() => handleOpenUserProfile(streamerId)} className="flex items-center gap-2 cursor-pointer">
-                                    <div className="relative shrink-0">
-                                        <img src={liveDetails?.streamerAvatarUrl} alt={liveDetails?.streamerName} className="w-10 h-10 rounded-full object-cover"/>
-                                    </div>
+                         <div className="flex flex-col items-start gap-2">
+                            <div className="bg-black/40 backdrop-blur-sm p-1.5 rounded-full flex items-center gap-2">
+                                <button onClick={() => handleOpenUserProfile(streamerId)} className="flex items-center gap-2">
+                                    <img src={liveDetails?.streamerAvatarUrl} alt={liveDetails?.streamerName} className="w-10 h-10 rounded-full object-cover"/>
                                     <div>
                                         <p className="font-bold text-sm truncate max-w-[120px]">{liveDetails?.streamerName}</p>
-                                        {liveDetails?.title && <p className="text-xs text-yellow-300 truncate max-w-[150px]">{liveDetails.title}</p>}
                                         <div className="flex items-center gap-1.5 text-xs text-gray-300">
-                                          <LevelBarIcon className="w-3 h-3"/>
-                                          <span>{formatStatNumber(liveDetails?.streamerFollowers || 0)}</span>
+                                            ||
+                                            <span>{formatStatNumber(liveDetails?.streamerFollowers || 0)}</span>
                                         </div>
                                     </div>
-                                </div>
-                                {!isHost && (
+                                </button>
+                                 {!isHost && (
                                     <button
                                         onClick={() => handleFollowToggle(streamerId)}
                                         disabled={isFollowLoading[streamerId]}
-                                        className={`ml-2 w-10 h-10 flex items-center justify-center rounded-full transition-colors ${
+                                        className={`w-9 h-9 flex items-center justify-center rounded-full transition-colors ${
                                             isFollowing[streamerId]
                                                 ? 'bg-white/20'
                                                 : 'bg-green-500'
                                         }`}
-                                        aria-label={isFollowing[streamerId] ? `Deixar de seguir ${liveDetails?.streamerName}` : `Seguir ${liveDetails?.streamerName}`}
                                     >
                                         {isFollowLoading[streamerId] ? (
-                                            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                                         ) : isFollowing[streamerId] ? (
                                             <CheckIcon className="w-5 h-5 text-white" />
                                         ) : (
@@ -501,31 +560,43 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
                                     </button>
                                 )}
                             </div>
-
-                            <button onClick={() => setIsHourlyRankingModalOpen(true)} className="bg-black/40 backdrop-blur-sm px-2 py-1.5 rounded-full flex items-center gap-3 self-start">
+                            <button 
+                                onClick={() => setIsHourlyRankingModalOpen(true)} 
+                                className="bg-black/40 backdrop-blur-sm px-2 py-1.5 rounded-full flex items-center gap-2 self-start"
+                            >
                                 <div className="flex items-center gap-1">
-                                    <CoinBIcon className="w-5 h-5" />
-                                    <span className="font-semibold text-sm text-yellow-400">{formatStatNumber(liveDetails?.receivedGiftsValue || 0)}</span>
+                                    <span className="font-bold text-yellow-400">G</span>
+                                    <span className="font-semibold text-sm text-white">{formatStatNumber(liveDetails?.receivedGiftsValue || 0)}</span>
                                 </div>
+                                <div className="w-px h-4 bg-gray-600"></div>
                                 <div className="flex items-center gap-1">
                                     <PinkHeartIcon className="w-5 h-5" />
                                     <span className="font-semibold text-sm text-white">{formatStatNumber(liveDetails?.likeCount || 0)}</span>
                                 </div>
                             </button>
                         </div>
+    
                         <div className="flex items-center gap-2">
-                            <button onClick={() => setIsOnlineUsersModalOpen(true)} className="flex items-center gap-2 bg-black/40 backdrop-blur-sm px-3 py-2 rounded-full">
+                            <button 
+                                onClick={() => setIsOnlineUsersModalOpen(true)} 
+                                className="flex items-center gap-2 bg-black/40 backdrop-blur-sm px-3 py-2 rounded-full"
+                            >
                                <ViewersIcon className="w-5 h-5"/>
                                <span className="font-bold text-sm">{formatStatNumber(liveDetails?.viewerCount || 0)}</span>
                             </button>
-                            <button onClick={handleExitClick} className="p-2 bg-black/40 rounded-full"><CrossIcon className="w-6 h-6"/></button>
+                            <button onClick={handleExitClick} className="p-2 bg-black/40 rounded-full">
+                                <CrossIcon className="w-6 h-6"/>
+                            </button>
                         </div>
                     </header>
+    
                     <main className="flex-grow flex flex-col justify-end overflow-hidden pointer-events-none">
                         <div className="w-full md:w-3/4 lg:w-1/2 pointer-events-auto">
+                            <FloatingGiftAnimation lastGift={lastSentGift} />
                             <ChatArea messages={chatMessages} onUserClick={handleOpenUserProfile} />
                         </div>
                     </main>
+                    
                     <footer className="shrink-0 pt-2 pointer-events-auto">
                         <div className="flex items-center gap-2">
                             <div className="flex-grow">
@@ -536,26 +607,61 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
                     </footer>
                 </div>
             </>
-        )
+        );
     };
     
+    // --- PK Battle View Components ---
+    const PkBattleHeader = ({ battle, score1, score2 }: { battle: PkBattle, score1: number, score2: number }) => (
+      <header className="flex items-center justify-between shrink-0">
+        <div className="flex items-center gap-2 bg-black/40 backdrop-blur-sm p-1 pr-2 rounded-full">
+          <button onClick={() => handleOpenUserProfile(battle.streamer1.userId)}>
+            <img src={battle.streamer1.avatarUrl} alt={battle.streamer1.name} className="w-10 h-10 rounded-full object-cover"/>
+          </button>
+          <div>
+            <p className="font-bold text-sm truncate max-w-[80px]">{battle.streamer1.name}</p>
+            <p className="text-xs text-gray-300">Score: <span className="font-semibold text-white">{formatScore(score1)}</span></p>
+          </div>
+        </div>
+    
+        <div className="flex items-center gap-2">
+            <button onClick={() => setIsOnlineUsersModalOpen(true)} className="flex items-center gap-2 bg-black/40 backdrop-blur-sm px-3 py-2 rounded-full">
+               <ViewersIcon className="w-5 h-5"/>
+               <span className="font-bold text-sm">{formatStatNumber(liveDetails?.viewerCount || 0)}</span>
+            </button>
+            <button onClick={handleExitClick} className="p-2 bg-black/40 rounded-full"><CrossIcon className="w-6 h-6"/></button>
+        </div>
+    
+        <div className="flex items-center gap-2 bg-black/40 backdrop-blur-sm p-1 pl-2 rounded-full">
+          <div className="text-right">
+            <p className="font-bold text-sm truncate max-w-[80px]">{battle.streamer2.name}</p>
+            <p className="text-xs text-gray-300">Score: <span className="font-semibold text-white">{formatScore(score2)}</span></p>
+          </div>
+          <button onClick={() => handleOpenUserProfile(battle.streamer2.userId)}>
+            <img src={battle.streamer2.avatarUrl} alt={battle.streamer2.name} className="w-10 h-10 rounded-full object-cover"/>
+          </button>
+        </div>
+      </header>
+    );
+
     const renderPkBattleView = () => {
         const battle = initialStream as PkBattle;
-        const score1 = pkSession?.score1 ?? battle.streamer1.score;
-        const score2 = pkSession?.score2 ?? battle.streamer2.score;
+        const score1 = activePkBattle?.pontos_streamer_1 ?? battle.streamer1.score;
+        const score2 = activePkBattle?.pontos_streamer_2 ?? battle.streamer2.score;
         const totalScore = score1 + score2;
         const streamer1Percent = totalScore > 0 ? (score1 / totalScore) * 100 : 50;
-
+        
         return (
-            <>
-                <div className="absolute inset-0 z-0 flex">
-                    <div className="w-1/2 h-full relative"><img src={battle.streamer1.avatarUrl} className="w-full h-full object-cover" /><div className="absolute inset-0 bg-gradient-to-r from-black/60 to-transparent" /></div>
-                    <div className="w-1/2 h-full relative"><img src={battle.streamer2.avatarUrl} className="w-full h-full object-cover" /><div className="absolute inset-0 bg-gradient-to-l from-black/60 to-transparent" /></div>
-                </div>
+             <div className="relative h-full w-full bg-black">
+                {/* Video Panels */}
+                <div className="absolute top-0 left-0 w-1/2 h-full bg-cover bg-center" style={{backgroundImage: `url(${battle.streamer1.avatarUrl})`}} />
+                <div className="absolute top-0 right-0 w-1/2 h-full bg-cover bg-center" style={{backgroundImage: `url(${battle.streamer2.avatarUrl})`}} />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent"></div>
+
                 <div className="relative z-10 flex flex-col h-full p-2 sm:p-4">
                     <PkBattleHeader battle={battle} score1={score1} score2={score2} />
 
-                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%]">
+                    {/* VS Bar and Timer */}
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] flex flex-col items-center gap-2">
                         <div className="relative w-full h-8 bg-black/30 rounded-full overflow-hidden flex items-center border border-white/10">
                             <div className="h-full bg-gradient-to-r from-blue-500 to-cyan-400 transition-all duration-500 ease-out" style={{ width: `${streamer1Percent}%` }}></div>
                             <div className="h-full bg-gradient-to-l from-pink-500 to-red-400 transition-all duration-500 ease-out" style={{ width: `${100 - streamer1Percent}%` }}></div>
@@ -566,14 +672,16 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
                         </div>
                         <div className="absolute -top-10 left-1/2 -translate-x-1/2"><SwordsIcon className="w-16 h-16 text-red-500" /></div>
                     </div>
-
+                    
                     <main className="flex-grow flex flex-col justify-end overflow-hidden pointer-events-none">
                         <div className="w-full md:w-3/4 lg:w-1/2 pointer-events-auto">
+                            <FloatingGiftAnimation lastGift={lastSentGift} />
                             <ChatArea messages={chatMessages} onUserClick={handleOpenUserProfile} />
                         </div>
                     </main>
+
                     <footer className="shrink-0 pt-2 pointer-events-auto">
-                         <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2">
                             <div className="flex-grow">
                                 <ChatInput onSendMessage={handleSendMessage} disabled={isBlockedByHost} />
                             </div>
@@ -581,25 +689,51 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
                         </div>
                     </footer>
                 </div>
-            </>
+             </div>
         )
     };
-
+    
     return (
         <div className="h-screen w-full bg-black text-white font-sans flex flex-col">
             {isPkBattle ? renderPkBattleView() : renderSingleStreamView()}
             
             {/* --- Modals --- */}
             {isEndStreamModalOpen && <EndStreamConfirmationModal onConfirm={confirmStopStream} onCancel={() => setIsEndStreamModalOpen(false)} />}
-            {isSelectOpponentModalOpen && <SelectOpponentModal currentUserId={user.id} onClose={() => setIsSelectOpponentModalOpen(false)} onInvite={handleInviteToPk} />}
-            {pendingPkInvitation && <AcceptPkInviteModal invitation={pendingPkInvitation} onAccept={handleAcceptPkInvite} onDecline={handleDeclinePkInvite} />}
-            {isInviteToPartyModalOpen && <InviteToPartyModal streamerId={user.id} liveId={liveId} onClose={() => setIsInviteToPartyModalOpen(false)} />}
+            {pkFlowStep === 'select' && <SelectOpponentModal currentUserId={user.id} onClose={handleClosePkFlow} onInvite={(opponent) => { setPkOpponent(opponent); setPkFlowStep('invite'); }} />}
+            {pkFlowStep === 'invite' && pkOpponent && <PkInvitationModal currentUser={user} opponent={pkOpponent} onInviteSent={handleInviteSent} onClose={handleClosePkFlow} invitation={sentPkInvitation} />}
+            {pkFlowStep === 'random-match-waiting' && (
+                <PkRandomMatchModal
+                    currentUser={user}
+                    onClose={() => setPkFlowStep('idle')}
+                    onMatchFound={(battle) => {
+                        setPkFlowStep('idle');
+                        onViewStream(battle);
+                    }}
+                />
+            )}
+            {simulatedIncomingInvite && pkOpponent && (
+                <AcceptPkInviteModal
+                    currentUser={pkOpponent}
+                    invitation={simulatedIncomingInvite}
+                    onAccept={handleAcceptSimulatedInvite}
+                    onDecline={() => {
+                        handleClosePkFlow();
+                        if (sentPkInvitation) {
+                            liveStreamService.cancelPkInvitation(sentPkInvitation.id);
+                        }
+                    }}
+                />
+            )}
+            {pendingPkInvitation && <AcceptPkInviteModal currentUser={user} invitation={pendingPkInvitation} onAccept={handleAcceptPkInvite} onDecline={handleDeclinePkInvite} />}
+            {isInviteToPrivateLiveModalOpen && <InviteToPrivateLiveModal streamerId={user.id} liveId={liveId} onClose={() => setIsInviteToPrivateLiveModalOpen(false)} onInviteSent={handlePrivateInviteSent} />}
             {isQuickChatOpen && <QuickChatModal onClose={() => setIsQuickChatOpen(false)} onSendMessage={(msg) => { handleSendMessage(msg); setIsQuickChatOpen(false); }} />}
+            {isPkLiveRoomModalOpen && <PkLiveRoomModal friendsAvailable={user.following.length} onClose={() => setIsPkLiveRoomModalOpen(false)} onRandomMatch={() => { setIsPkLiveRoomModalOpen(false); setPkFlowStep('random-match-waiting'); }} onPairWithFriends={() => { setIsPkLiveRoomModalOpen(false); setPkFlowStep('select'); }} onOpenSettings={() => { setIsPkLiveRoomModalOpen(false); setIsPkSettingsModalOpen(true); }} />}
+            {isPkSettingsModalOpen && <PkSettingsModal userId={user.id} onClose={() => setIsPkLiveRoomModalOpen(false)} />}
             
             {/* Re-using existing modals */}
             {isOnlineUsersModalOpen && <OnlineUsersModal liveId={liveId} onClose={() => setIsOnlineUsersModalOpen(false)} onUserClick={handleOpenUserProfile} />}
             {isHourlyRankingModalOpen && liveDetails && <HourlyRankingModal liveId={liveId} currentUser={user} onUpdateUser={onUpdateUser} streamer={{id: streamerId, name: liveDetails.streamerName, avatarUrl: liveDetails.streamerAvatarUrl}} onClose={() => setIsHourlyRankingModalOpen(false)} onUserClick={(userId) => { setIsHourlyRankingModalOpen(false); handleOpenUserProfile(userId); }} onNavigateToList={() => { setIsHourlyRankingModalOpen(false); setIsRankingListOpen(true); }} onRequirePurchase={onRequirePurchase} />}
-            {isGiftPanelOpen && <GiftPanel user={user} liveId={liveId} onClose={() => setIsGiftPanelOpen(false)} onSendGift={handleSendGift} onRechargeClick={() => { setIsGiftPanelOpen(false); onRequirePurchase(); }} />}
+            {isGiftPanelOpen && <GiftPanel user={user} liveId={liveId} onClose={() => setIsGiftPanelOpen(false)} onSendGift={handleSendGift} onRechargeClick={() => { setIsGiftPanelOpen(false); onRequirePurchase(); }} pkBattleStreamers={isPkBattle ? { streamer1: (initialStream as PkBattle).streamer1, streamer2: (initialStream as PkBattle).streamer2 } : undefined}/>}
             {viewingUserId && <UserProfileModal userId={viewingUserId} currentUser={user} onUpdateUser={onUpdateUser} onClose={() => setViewingUserId(null)} onNavigateToChat={onNavigateToChat} onViewProtectors={onViewProtectors} onViewStream={onViewStream} />}
             {isMuteUserModalOpen && <MuteUserModal liveId={liveId} mutedUsers={mutedUsers} onMuteUser={handleMuteUser} onKickUser={handleKickUser} onClose={() => setIsMuteUserModalOpen(false)}/>}
             {isSoundEffectModalOpen && <SoundEffectModal onClose={() => setIsSoundEffectModalOpen(false)} onPlaySoundEffect={handlePlaySoundEffect} />}
@@ -612,7 +746,10 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
                 onSwitchCamera={() => {}} 
                 onToggleVoice={() => {}} 
                 isVoiceEnabled={false} 
-                onOpenPrivateChat={() => { setIsArcoraToolModalOpen(false); setIsPrivateChatModalOpen(true); }} 
+                onOpenPrivateChat={() => { setIsArcoraToolModalOpen(false); setIsPrivateChatModalOpen(true); }}
+                onOpenSelectOpponentModal={() => { setIsArcoraToolModalOpen(false); setIsPkLiveRoomModalOpen(true); }}
+                isPrivateStream={isPrivateStream}
+                onOpenPrivateInviteModal={() => { setIsArcoraToolModalOpen(false); setIsInviteToPrivateLiveModalOpen(true); }}
             />}
             {isRankingListOpen && <RankingListScreen liveId={liveId} currentUser={user} onExit={() => setIsRankingListOpen(false)} onUserClick={(userId) => { setIsRankingListOpen(false); handleOpenUserProfile(userId); }} />}
             {isPrivateChatModalOpen && <PrivateChatModal user={user} onClose={() => setIsPrivateChatModalOpen(false)} />}

@@ -114,7 +114,7 @@ const PurchaseHistoryScreen: React.FC<PurchaseHistoryScreenProps> = ({ user, onE
         <h1 className="font-bold text-lg">Histórico de Compras</h1>
         <div className="w-6 h-6"></div>
       </header>
-      <main className="flex-grow p-4 overflow-y-auto">
+      <main className="flex-grow p-4 overflow-y-auto scrollbar-hide">
         {renderContent()}
       </main>
     </div>

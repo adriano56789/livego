@@ -107,7 +107,7 @@ const PushSettingsScreen: React.FC<{ user: User; onExit: () => void; }> = ({ use
                 <h1 className="font-semibold text-lg absolute left-1/2 -translate-x-1/2 whitespace-nowrap">Iniciar configurações de push</h1>
                 <div className="w-6 h-6"></div>
             </header>
-            <main className="flex-grow overflow-y-auto">
+            <main className="flex-grow overflow-y-auto scrollbar-hide">
                 {isLoading ? (
                     <div className="text-center text-gray-400 pt-10">Carregando...</div>
                 ) : (

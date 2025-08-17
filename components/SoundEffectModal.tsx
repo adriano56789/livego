@@ -1,4 +1,3 @@
-
 import React from 'react';
 import CrossIcon from './icons/CrossIcon';
 import type { SoundEffectName } from '../types';
@@ -43,7 +42,7 @@ const SoundEffectModal: React.FC<SoundEffectModalProps> = ({ onClose, onPlaySoun
 
     return (
         <div 
-          className="fixed inset-0 bg-black/60 z-50 flex items-end"
+          className="fixed inset-0 bg-transparent z-50 flex items-end"
           onClick={onClose}
         >
           <div 

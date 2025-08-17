@@ -1,22 +1,24 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import type { User } from '../types';
 import * as authService from '../services/authService';
 import * as liveStreamService from '../services/liveStreamService';
 import CrossIcon from './icons/CrossIcon';
-import CheckIcon from './icons/CheckIcon';
 import { useApiViewer } from './ApiContext';
+import SearchIcon from './icons/SearchIcon';
 
 interface InviteToPrivateLiveModalProps {
   streamerId: number;
   liveId: number;
   onClose: () => void;
+  onInviteSent: (invitee: User) => void;
 }
 
-const InviteToPrivateLiveModal: React.FC<InviteToPrivateLiveModalProps> = ({ streamerId, liveId, onClose }) => {
+const InviteToPrivateLiveModal: React.FC<InviteToPrivateLiveModalProps> = ({ streamerId, liveId, onClose, onInviteSent }) => {
   const [following, setFollowing] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [invitedUserIds, setInvitedUserIds] = useState<Set<number>>(new Set());
+  const [query, setQuery] = useState('');
   const { showApiResponse } = useApiViewer();
 
   useEffect(() => {
@@ -34,19 +36,50 @@ const InviteToPrivateLiveModal: React.FC<InviteToPrivateLiveModalProps> = ({ str
     fetchFollowing();
   }, [streamerId]);
 
-  const handleInvite = async (inviteeId: number) => {
-    if (invitedUserIds.has(inviteeId)) return;
+  const filteredFollowing = useMemo(() => {
+    if (!query.trim()) return following;
+    const lowerQuery = query.toLowerCase();
+    return following.filter(user =>
+        (user.nickname || user.name).toLowerCase().includes(lowerQuery) ||
+        String(user.id).includes(lowerQuery)
+    );
+  }, [following, query]);
 
-    setInvitedUserIds(prev => new Set(prev).add(inviteeId));
+  const handleInviteToggle = async (userToInvite: User) => {
+    const inviteeId = userToInvite.id;
+    const isInviting = !invitedUserIds.has(inviteeId);
+
+    // Optimistic UI update
+    setInvitedUserIds(prev => {
+      const newSet = new Set(prev);
+      if (isInviting) {
+        newSet.add(inviteeId);
+      } else {
+        newSet.delete(inviteeId);
+      }
+      return newSet;
+    });
+
     try {
-      const response = await liveStreamService.inviteUserToPrivateLive(liveId, inviteeId);
-      showApiResponse(`POST /api/lives/${liveId}/invite`, { inviteeId, response });
+      if (isInviting) {
+        const response = await liveStreamService.inviteUserToPrivateLive(liveId, inviteeId);
+        showApiResponse(`POST /api/lives/${liveId}/invite`, { inviteeId, response });
+        onInviteSent(userToInvite);
+      } else {
+        const response = await liveStreamService.cancelPrivateLiveInvite(liveId, inviteeId);
+        showApiResponse(`POST /api/lives/${liveId}/cancel-invite`, { inviteeId, response });
+      }
     } catch (error) {
-      console.error("Failed to send invite:", error);
-      alert('Falha ao enviar convite.');
+      console.error("Failed to update invite status:", error);
+      alert('Falha ao atualizar o status do convite.');
+      // Revert UI on failure
       setInvitedUserIds(prev => {
         const newSet = new Set(prev);
-        newSet.delete(inviteeId);
+        if (isInviting) {
+          newSet.delete(inviteeId);
+        } else {
+          newSet.add(inviteeId);
+        }
         return newSet;
       });
     }
@@ -63,35 +96,48 @@ const InviteToPrivateLiveModal: React.FC<InviteToPrivateLiveModalProps> = ({ str
           <h2 className="text-lg font-bold">Convidar para Live Privada</h2>
           <button onClick={onClose}><CrossIcon className="w-6 h-6 text-gray-400" /></button>
         </header>
-        <main className="flex-grow overflow-y-auto p-4 space-y-2">
+
+        <div className="p-4 shrink-0">
+          <div className="relative">
+            <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Pesquisar por nome ou ID"
+              className="w-full bg-[#2c2c2e] h-11 rounded-full pl-11 pr-4 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500/50"
+            />
+          </div>
+        </div>
+        
+        <main className="flex-grow overflow-y-auto px-4 pb-4 space-y-2">
           {isLoading ? ( 
             <div className="text-center text-gray-400 pt-10">Carregando...</div>
-          ) : following.length > 0 ? (
-            following.map(user => {
+          ) : filteredFollowing.length > 0 ? (
+            filteredFollowing.map(user => {
                 const isInvited = invitedUserIds.has(user.id);
                 return (
                     <div key={user.id} className="flex items-center gap-3 p-2 rounded-lg w-full bg-white/5">
                         <img src={user.avatar_url || 'https://i.pravatar.cc/150?u=' + user.id} alt={user.name} className="w-12 h-12 rounded-full object-cover" />
-                        <div className="flex-grow text-left">
-                        <p className="font-semibold text-white truncate">{user.nickname || user.name}</p>
-                        <p className="text-xs text-gray-400">Nível {user.level}</p>
+                        <div className="flex-grow text-left overflow-hidden">
+                          <p className="font-semibold text-white truncate">{user.nickname || user.name}</p>
+                          <p className="text-xs text-gray-400">Nível {user.level}</p>
                         </div>
                         <button 
-                          onClick={() => handleInvite(user.id)}
-                          disabled={isInvited}
+                          onClick={() => handleInviteToggle(user)}
                           className={`font-semibold text-sm px-5 py-2 rounded-full transition-colors ${
                               isInvited 
-                              ? 'bg-gray-600 text-gray-400 flex items-center gap-1.5' 
+                              ? 'bg-red-600 text-white hover:bg-red-500' 
                               : 'bg-green-600 text-white hover:bg-green-500'
                           }`}
                         >
-                          {isInvited ? <><CheckIcon className="w-4 h-4"/> Convidado</> : 'Convidar'}
+                          {isInvited ? 'Cancelar' : 'Convidar'}
                         </button>
                     </div>
                 )
             })
           ) : (
-            <div className="text-center text-gray-500 pt-20">Você não está seguindo ninguém para convidar.</div>
+            <div className="text-center text-gray-500 pt-20">Nenhum usuário encontrado.</div>
           )}
         </main>
       </div>

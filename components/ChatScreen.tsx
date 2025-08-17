@@ -169,7 +169,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ conversationId, currentUserId, 
         <button onClick={() => setIsActionsModalOpen(true)}><EllipsisIcon className="w-6 h-6" /></button>
       </header>
 
-      <main className="flex-grow p-4 overflow-y-auto flex flex-col gap-3">
+      <main className="flex-grow p-4 overflow-y-auto flex flex-col gap-3 scrollbar-hide">
         {conversation.messages.map(msg => (
           <ChatBubble key={msg.id} message={msg} isSender={msg.senderId === currentUserId} />
         ))}

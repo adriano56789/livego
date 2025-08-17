@@ -118,7 +118,7 @@ const DeveloperToolsScreen: React.FC<DeveloperToolsScreenProps> = ({ onExit, onN
         </button>
       </nav>
 
-      <main className="flex-grow p-4 overflow-y-auto">
+      <main className="flex-grow p-4 overflow-y-auto scrollbar-hide">
         {activeTab === 'tools' && renderTools()}
         {activeTab === 'db' && renderDbContent()}
         {activeTab === 'api' && renderApiLogContent()}

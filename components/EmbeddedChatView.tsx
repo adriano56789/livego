@@ -98,7 +98,7 @@ const EmbeddedChatView: React.FC<EmbeddedChatViewProps> = ({ currentUser, otherU
           <div className="w-6 h-6" />
         </header>
 
-        <main className="flex-grow p-4 overflow-y-auto flex flex-col gap-3">
+        <main className="flex-grow p-4 overflow-y-auto flex flex-col gap-3 scrollbar-hide">
           {isLoading && (!conversation || conversation.messages.length === 0) ? (
               <div className="flex-grow flex items-center justify-center">
                   <div className="w-8 h-8 border-4 border-white border-t-transparent rounded-full animate-spin"></div>

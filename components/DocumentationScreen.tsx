@@ -26,7 +26,7 @@ const DocumentationScreen: React.FC<DocumentationScreenProps> = ({ onExit }) => 
         <h1 className="font-bold text-lg">Documentação de Venda</h1>
         <div className="w-6 h-6"></div>
       </header>
-      <main className="flex-grow p-6 overflow-y-auto">
+      <main className="flex-grow p-6 overflow-y-auto scrollbar-hide">
         
         <Section title="1. Proposta de Valor">
           <p>O LiveGo é um aplicativo de streaming ao vivo "plug-and-play" pronto para o mercado. Ele foi construído com uma arquitetura escalável e uma interface de usuário moderna para atrair e reter usuários. A plataforma está pronta para gerar receita através de um sistema de presentes virtuais e taxas de saque, com potencial de expansão para assinaturas e anúncios.</p>

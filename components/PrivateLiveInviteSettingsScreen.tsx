@@ -110,7 +110,7 @@ const PrivateLiveInviteSettingsScreen: React.FC<PrivateLiveInviteSettingsScreenP
                 <h1 className="font-semibold text-lg absolute left-1/2 -translate-x-1/2 whitespace-nowrap">Convite privado ao vivo</h1>
                 <div className="w-6 h-6"></div>
             </header>
-            <main className="flex-grow overflow-y-auto pt-4">
+            <main className="flex-grow overflow-y-auto pt-4 scrollbar-hide">
                  {renderContent()}
             </main>
         </div>

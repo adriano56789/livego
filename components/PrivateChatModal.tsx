@@ -111,7 +111,7 @@ const PrivateChatModal: React.FC<PrivateChatModalProps> = ({ user, onClose }) =>
                     <CrossIcon className="w-6 h-6 text-gray-400" />
                 </button>
             </header>
-            <main className="p-2 overflow-y-auto flex-grow">
+            <main className="p-2 overflow-y-auto flex-grow scrollbar-hide">
                 {isLoading && conversations.length === 0 ? (
                     <div className="text-center text-gray-400 pt-10">Carregando...</div>
                 ) : conversations.length > 0 ? (
@@ -138,7 +138,7 @@ const PrivateChatModal: React.FC<PrivateChatModalProps> = ({ user, onClose }) =>
                 <h2 className="font-semibold">{activeConversation?.otherUserName}</h2>
                 <button onClick={onClose}><CrossIcon className="w-6 h-6 text-gray-400" /></button>
             </header>
-            <main className="flex-grow p-4 overflow-y-auto flex flex-col gap-3 bg-black/20">
+            <main className="flex-grow p-4 overflow-y-auto flex flex-col gap-3 bg-black/20 scrollbar-hide">
                 {isLoading && !activeConversation?.messages.length ? (
                     <div className="flex-grow flex items-center justify-center"><div className="w-8 h-8 border-4 border-white border-t-transparent rounded-full animate-spin"></div></div>
                 ) : (

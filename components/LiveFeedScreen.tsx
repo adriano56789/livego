@@ -1,14 +1,15 @@
 
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import type { User, Stream, Category, PkBattle, AppView } from '../types';
+import type { User, Stream, Category, PkBattle, AppView, LiveCategory } from '../types';
 import { 
     getPopularStreams,
     getFollowingStreams,
     getPkBattles,
     getNewStreams,
     getStreamsForCategory,
-    getPrivateStreams
+    getPrivateStreams,
+    getLiveCategories
 } from '../services/liveStreamService';
 import StreamerCard from './StreamerCard';
 import PkBattleCard from './PkBattleCard';
@@ -28,8 +29,6 @@ interface LiveFeedScreenProps {
   onViewProtectors: (userId: number) => void;
   onNavigate: (view: AppView) => void;
 }
-
-const categories: Category[] = ['Seguindo', 'Popular', 'Privada', 'PK', 'Novo', 'Música', 'Dança'];
 
 const NavItem: React.FC<{ children: React.ReactNode; isActive?: boolean, onClick: () => void }> = ({ children, isActive, onClick }) => (
     <button
@@ -58,6 +57,7 @@ export const LiveFeedScreen: React.FC<LiveFeedScreenProps> = ({
     const [streams, setStreams] = useState<(Stream | PkBattle)[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [viewingUser, setViewingUser] = useState<User | null>(null);
+    const [categories, setCategories] = useState<LiveCategory[]>([]);
 
     // Pull-to-refresh state
     const [isRefreshing, setIsRefreshing] = useState(false);
@@ -66,6 +66,17 @@ export const LiveFeedScreen: React.FC<LiveFeedScreenProps> = ({
     const mainRef = useRef<HTMLElement>(null);
     const PULL_THRESHOLD = 70;
 
+    useEffect(() => {
+        const fetchCategories = async () => {
+            try {
+                const fetchedCategories = await getLiveCategories();
+                setCategories(fetchedCategories);
+            } catch (error) {
+                console.error('Failed to fetch categories:', error);
+            }
+        };
+        fetchCategories();
+    }, []);
 
     const fetchStreams = useCallback(async (isRefresh: boolean = false) => {
         if (!isRefresh) {
@@ -152,8 +163,8 @@ export const LiveFeedScreen: React.FC<LiveFeedScreenProps> = ({
                 <div className="flex-grow overflow-x-auto whitespace-nowrap scrollbar-hide">
                     <div className="flex items-center gap-x-1 sm:gap-x-4">
                         {categories.map(cat => (
-                            <NavItem key={cat} isActive={cat === activeCategory} onClick={() => onSelectCategory(cat)}>
-                                {cat}
+                            <NavItem key={cat.id} isActive={cat.name === activeCategory} onClick={() => onSelectCategory(cat.name)}>
+                                {cat.name}
                             </NavItem>
                         ))}
                     </div>
@@ -169,7 +180,7 @@ export const LiveFeedScreen: React.FC<LiveFeedScreenProps> = ({
             </header>
             <main
                 ref={mainRef}
-                className="flex-grow p-2 overflow-y-auto relative"
+                className="flex-grow p-2 overflow-y-auto relative scrollbar-hide"
                 onTouchStart={handleTouchStart}
                 onTouchMove={handleTouchMove}
                 onTouchEnd={handleTouchEnd}
@@ -215,15 +226,6 @@ export const LiveFeedScreen: React.FC<LiveFeedScreenProps> = ({
                     onViewStream={onViewStream}
                 />
             )}
-            <style>{`
-                .scrollbar-hide::-webkit-scrollbar {
-                    display: none;
-                }
-                .scrollbar-hide {
-                    -ms-overflow-style: none;
-                    scrollbar-width: none;
-                }
-            `}</style>
         </div>
     );
 };

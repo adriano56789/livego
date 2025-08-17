@@ -106,7 +106,7 @@ const BlockedListScreen: React.FC<BlockedListScreenProps> = ({ currentUserId, on
                 <h1 className="font-bold text-lg">Lista de Bloqueio</h1>
                 <div className="w-6 h-6"></div> {/* Spacer */}
             </header>
-            <main className="flex-grow p-4 overflow-y-auto">
+            <main className="flex-grow p-4 overflow-y-auto scrollbar-hide">
                 {renderContent()}
             </main>
         </div>

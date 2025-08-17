@@ -271,7 +271,7 @@ const DiamondPurchaseScreen: React.FC<DiamondPurchaseScreenProps> = ({
         </div>
       </header>
 
-      <main className="flex-grow p-4 overflow-y-auto">
+      <main className="flex-grow p-4 overflow-y-auto scrollbar-hide">
         <div className="border-b border-gray-800 pb-6 mb-6">
             <div className="grid grid-cols-2 divide-x divide-gray-800">
                 <div className="text-center px-2">

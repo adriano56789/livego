@@ -18,7 +18,7 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, disabled = false }
     };
 
     return (
-        <form onSubmit={handleSubmit} className="flex items-center gap-2">
+        <form onSubmit={handleSubmit} className="flex items-center gap-2 flex-grow">
             <input
                 type="text"
                 value={message}

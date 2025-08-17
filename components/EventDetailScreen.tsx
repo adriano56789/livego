@@ -113,7 +113,7 @@ const EventDetailScreen: React.FC<EventDetailScreenProps> = ({ eventId, onExit, 
         <button onClick={onExit} className="p-2 bg-black/30 rounded-full backdrop-blur-sm"><ArrowLeftIcon className="w-6 h-6" /></button>
       </header>
 
-      <main className="relative z-10 flex-grow p-4 overflow-y-auto flex flex-col justify-end">
+      <main className="relative z-10 flex-grow p-4 overflow-y-auto flex flex-col justify-end scrollbar-hide">
         <h1 className="text-3xl font-bold text-white mb-3 drop-shadow-lg">{event.title}</h1>
         <p className="text-base text-gray-200 mb-6 drop-shadow-md">{event.description}</p>
         

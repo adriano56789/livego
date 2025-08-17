@@ -1,4 +1,5 @@
 
+
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import type { User, Gender } from '../types';
 import { generateNickname, updateUserProfile, uploadProfilePhoto } from '../services/authService';
@@ -157,7 +158,7 @@ const EditProfileScreen: React.FC<EditProfileScreenProps> = ({ user, onProfileCo
         </div>
       </header>
       
-      <main className="flex-grow px-6 py-4 overflow-y-auto">
+      <main className="flex-grow px-6 py-4 overflow-y-auto scrollbar-hide">
         <FormField label="Apelido">
           <div className="flex items-center bg-[#252525] rounded-full p-1.5">
             <input

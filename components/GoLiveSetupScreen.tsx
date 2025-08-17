@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import type { User, Category, CameraStatus, FacingMode } from '../types';
+import type { User, Category, CameraStatus, FacingMode, LiveCategory } from '../types';
 import * as liveStreamService from '../services/liveStreamService';
 import CrossIcon from './icons/CrossIcon';
 import PlusIcon from './icons/PlusIcon';
@@ -20,20 +20,19 @@ interface GoLiveSetupScreenProps {
   onExit: () => void;
 }
 
-const availableCategories: Category[] = ['Popular', 'Música', 'Dança', 'Novo', 'PK'];
-
 const CategorySelectionModal: React.FC<{
+    categories: LiveCategory[];
     onSelect: (category: Category) => void;
     onClose: () => void;
-}> = ({ onSelect, onClose }) => {
+}> = ({ categories, onSelect, onClose }) => {
     return (
         <div className="fixed inset-0 z-30 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4" onClick={onClose}>
             <div className="bg-[#1c1c1e] rounded-2xl w-full max-w-sm p-6" onClick={e => e.stopPropagation()}>
                 <h2 className="text-xl font-bold text-center text-white mb-6">Selecione uma Categoria</h2>
                 <div className="grid grid-cols-3 gap-4">
-                    {availableCategories.map(cat => (
-                        <button key={cat} onClick={() => onSelect(cat)} className="p-3 bg-gray-700/50 rounded-lg text-white font-semibold hover:bg-gray-600 transition-colors">
-                            {cat}
+                    {categories.map(cat => (
+                        <button key={cat.id} onClick={() => onSelect(cat.name)} className="p-3 bg-gray-700/50 rounded-lg text-white font-semibold hover:bg-gray-600 transition-colors">
+                            {cat.name}
                         </button>
                     ))}
                 </div>
@@ -43,18 +42,42 @@ const CategorySelectionModal: React.FC<{
 };
 
 
-const ToolItem: React.FC<{ icon: React.ReactNode; label: string; children?: React.ReactNode }> = ({ icon, label, children }) => (
-  <div className="flex items-center justify-between py-3">
-    <div className="flex items-center gap-4">
-      {icon}
-      <span className="font-semibold text-gray-200">{label}</span>
-    </div>
-    <div className="flex items-center gap-2">
-        {children}
-        <span className="text-gray-500 text-lg font-bold">&gt;</span>
-    </div>
-  </div>
-);
+const ToolItem: React.FC<{ icon: React.ReactNode; label: string; onClick?: () => void; children?: React.ReactNode }> = ({ icon, label, onClick, children }) => {
+  const handleClick = onClick || (() => alert(`Funcionalidade "${label}" não implementada.`));
+  
+  // If there are interactive children, render a div to avoid conflicting clicks.
+  // The interactive child (e.g., ToggleSwitch) will handle its own events.
+  if (children) {
+    return (
+      <div className="flex items-center justify-between py-3">
+        <div className="flex items-center gap-4">
+          {icon}
+          <span className="font-semibold text-gray-200">{label}</span>
+        </div>
+        <div className="flex items-center gap-2">
+            {children}
+            <span className="text-gray-500 text-lg font-bold">&gt;</span>
+        </div>
+      </div>
+    );
+  }
+
+  // If there are no children, the whole row is a button.
+  return (
+    <button 
+        onClick={handleClick}
+        className="w-full flex items-center justify-between py-3 text-left transition-colors hover:bg-white/5"
+    >
+        <div className="flex items-center gap-4">
+            {icon}
+            <span className="font-semibold text-gray-200">{label}</span>
+        </div>
+        <div className="flex items-center gap-2">
+            <span className="text-gray-500 text-lg font-bold">&gt;</span>
+        </div>
+    </button>
+  );
+};
 
 const GoLiveSetupScreen: React.FC<GoLiveSetupScreenProps> = ({ user, onStartStream, onExit }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -73,6 +96,7 @@ const GoLiveSetupScreen: React.FC<GoLiveSetupScreenProps> = ({ user, onStartStre
   const [entryFee, setEntryFee] = useState('');
   const [isSettingsLoading, setIsSettingsLoading] = useState(true);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+  const [categories, setCategories] = useState<LiveCategory[]>([]);
 
   const handleFlipCamera = useCallback(() => {
     setFacingMode(prev => (prev === 'user' ? 'environment' : 'user'));
@@ -160,10 +184,14 @@ const GoLiveSetupScreen: React.FC<GoLiveSetupScreenProps> = ({ user, onStartStre
     const fetchSettings = async () => {
         setIsSettingsLoading(true);
         try {
-            const pkSettings = await liveStreamService.getUserPkPreference(user.id);
+            const [pkSettings, fetchedCategories] = await Promise.all([
+              liveStreamService.getUserPkPreference(user.id),
+              liveStreamService.getLiveCategories()
+            ]);
             setIsPkEnabled(pkSettings.isPkEnabled);
+            setCategories(fetchedCategories);
         } catch (error) {
-            console.error("Failed to fetch PK preference:", error);
+            console.error("Failed to fetch settings:", error);
         } finally {
             setIsSettingsLoading(false);
         }
@@ -236,6 +264,7 @@ const GoLiveSetupScreen: React.FC<GoLiveSetupScreenProps> = ({ user, onStartStre
     <div className="relative h-screen w-full bg-black text-white flex flex-col font-sans">
       {isCategoryModalOpen && (
           <CategorySelectionModal 
+              categories={categories}
               onClose={() => setIsCategoryModalOpen(false)}
               onSelect={(cat) => {
                   setCategory(cat);

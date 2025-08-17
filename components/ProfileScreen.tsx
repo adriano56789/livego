@@ -45,7 +45,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onNavigate, onGoLiv
 
     return (
         <div className="bg-[#202124] text-white h-full flex flex-col font-sans">
-            <main className="flex-grow p-4 overflow-y-auto pt-10">
+            <main className="flex-grow p-4 overflow-y-auto pt-10 scrollbar-hide">
                 
                 {/* Header */}
                 <header className="flex flex-col items-center gap-3 mb-6">

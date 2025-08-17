@@ -10,7 +10,7 @@ import * as db from './mockDb';
 import * as levelService from './levelService';
 import { dbClient } from './dbClient';
 import { notifyStreamListeners, notifyChatMessageListeners, notifyMuteStatusListeners, notifyUserKickedListeners, notifySoundEffectListeners, notifyUserBlockedListeners, notifyUserUnblockedListeners } from './liveStreamService';
-import type { User, LiveDetails, ChatMessage, Gift, Viewer, RankingContributor, Like, PkBattle, PkSession, PublicProfile, PkEventDetails, Conversation, SendGiftResponse, ProtectorDetails, AchievementFrame, WithdrawalTransaction, WithdrawalMethod, InventoryItem, AppEvent, LiveEndSummary, UserLevelInfo, GeneralRankingStreamer, GeneralRankingUser, WithdrawalBalance, EventStatus, PkRankingData, ReportPayload, SuggestionPayload, Stream, DbLive, Category, StartLiveResponse, DiamondPackage, Address, PaymentMethod, CardDetails, PurchaseOrder, HelpArticle, DailyReward, UserRewardStatus, VersionInfo, ConversationMessage, PkInvitation, LiveFollowUpdate, PrivateLiveInviteSettings, NotificationSettings, FacingMode, SoundEffectName, SoundEffectLogEntry, CardBrand, UniversalRankingData, UniversalRankingUser, GiftTransaction } from '../types';
+import type { User, LiveDetails, ChatMessage, Gift, Viewer, RankingContributor, Like, PkBattle, BatalhaPK, PublicProfile, PkEventDetails, Conversation, SendGiftResponse, ProtectorDetails, AchievementFrame, WithdrawalTransaction, WithdrawalMethod, InventoryItem, AppEvent, LiveEndSummary, UserLevelInfo, GeneralRankingStreamer, GeneralRankingUser, WithdrawalBalance, EventStatus, PkRankingData, Stream, Category, StartLiveResponse, DiamondPackage, Address, PaymentMethod, CardDetails, PurchaseOrder, DailyReward, UserRewardStatus, VersionInfo, ConversationMessage, LiveFollowUpdate, PrivateLiveInviteSettings, NotificationSettings, FacingMode, SoundEffectName, SoundEffectLogEntry, CardBrand, UniversalRankingData, UniversalRankingUser, PkSettings, TabelaMensagem, TabelaConversa, Denuncia, Sugestao, LiveCategory, LiveStreamRecord, ArtigoAjuda, LogPresenteEnviado, FilaPK, ConvitePK, Achievement } from '../types';
 
 // Connect to the database when the API module is initialized
 dbClient.connect();
@@ -58,7 +58,7 @@ const calculateAge = (birthday: string | null | undefined): number => {
     return Math.max(0, age);
 };
 
-const mapDbLiveToStream = (dbLive: DbLive): Stream => ({
+const mapLiveRecordToStream = (dbLive: LiveStreamRecord): Stream => ({
     id: dbLive.id,
     userId: dbLive.user_id,
     titulo: dbLive.titulo,
@@ -76,6 +76,54 @@ const mapDbLiveToStream = (dbLive: DbLive): Stream => ({
     cameraFacingMode: dbLive.camera_facing_mode,
     voiceEnabled: dbLive.voice_enabled,
 });
+
+const mapTabelaMensagemToConversationMessage = (msg: TabelaMensagem, currentUserId: number): ConversationMessage => {
+    const isSender = msg.remetente_id === currentUserId;
+    const isSeen = isSender ? Object.keys(msg.status_leitura).length > 1 : msg.status_leitura[currentUserId] === true;
+    
+    return {
+        id: msg.id,
+        senderId: msg.remetente_id,
+        text: msg.conteudo,
+        timestamp: msg.timestamp,
+        status: isSeen ? 'seen' : 'sent',
+        seenBy: Object.keys(msg.status_leitura).map(Number),
+    };
+};
+
+const calculateTopSupporters = async (streamerId: number, pkBattleId: number, dbClient: any): Promise<RankingContributor[]> => {
+    const allGiftsForBattle = await dbClient.find('logPresentesEnviados', (g: LogPresenteEnviado) => g.batalha_id === pkBattleId);
+    
+    const supporterPoints: { [userId: number]: number } = {};
+    
+    allGiftsForBattle
+        .filter((g: LogPresenteEnviado) => g.receiverId === streamerId)
+        .forEach((g: LogPresenteEnviado) => {
+            supporterPoints[g.senderId] = (supporterPoints[g.senderId] || 0) + g.giftValue;
+        });
+
+    const sortedSupporters = Object.entries(supporterPoints)
+        .sort(([, a], [, b]) => b - a)
+        .slice(0, 3);
+    
+    if (sortedSupporters.length === 0) return [];
+    
+    const supporterIds = sortedSupporters.map(([id]) => parseInt(id, 10));
+    const supporterUsers = await dbClient.find('users', (u: User) => supporterIds.includes(u.id));
+
+    return sortedSupporters.map(([userId, contribution], index) => {
+        const user = supporterUsers.find(u => u.id === parseInt(userId, 10));
+        return {
+            rank: index + 1,
+            userId: parseInt(userId, 10),
+            name: user?.nickname || user?.name || 'Unknown',
+            avatarUrl: user?.avatar_url || '',
+            contribution,
+            level: user?.level || 1,
+            level2: 1, // Placeholder
+        };
+    });
+};
 
 // =================================================================
 // AUTH & USER LOGIC
@@ -126,7 +174,11 @@ const getFollowersLogic = async (userIdStr: string) => {
 
 const getVisitorsLogic = async (userIdStr: string) => {
     const userId = parseInt(userIdStr, 10);
-    const visitorIds = db.mockProfileVisitors[userId] || [];
+    const visits = await dbClient.find('visitasPerfil', v => v.perfil_visitado_id === userId);
+    const visitorIds = visits.map(v => v.visitante_id);
+    if (visitorIds.length === 0) {
+        return createSuccessResponse([]);
+    }
     const visitors = await dbClient.find('users', u => visitorIds.includes(u.id));
     return createSuccessResponse(visitors);
 };
@@ -243,9 +295,9 @@ const isUserBlockedLogic = async (body: any) => {
 // =================================================================
 
 const getPopularStreamsLogic = async () => {
-  const lives = await dbClient.find('lives', l => l.ao_vivo && !l.is_private);
+  const lives = await dbClient.find('liveStreamRecords', l => l.ao_vivo && !l.is_private);
   lives.sort((a, b) => b.espectadores - a.espectadores);
-  return createSuccessResponse(lives.map(mapDbLiveToStream));
+  return createSuccessResponse(lives.map(mapLiveRecordToStream));
 };
 
 const getFollowingStreamsLogic = async (userIdStr: string) => {
@@ -254,63 +306,65 @@ const getFollowingStreamsLogic = async (userIdStr: string) => {
     if (!user) {
         return createErrorResponse(404, "Usuário não encontrado.");
     }
-    const lives = await dbClient.find('lives', l => l.ao_vivo && user.following.includes(l.user_id) && !l.is_private);
-    return createSuccessResponse(lives.map(mapDbLiveToStream));
+    const lives = await dbClient.find('liveStreamRecords', l => l.ao_vivo && user.following.includes(l.user_id) && !l.is_private);
+    return createSuccessResponse(lives.map(mapLiveRecordToStream));
 };
 
 const getNewStreamsLogic = async () => {
-    const lives = await dbClient.find('lives', l => l.ao_vivo && !l.is_private);
+    const lives = await dbClient.find('liveStreamRecords', l => l.ao_vivo && !l.is_private);
     lives.sort((a, b) => new Date(b.inicio).getTime() - new Date(a.inicio).getTime());
-    return createSuccessResponse(lives.map(mapDbLiveToStream).slice(0, 10)); // Limit to 10 newest
+    return createSuccessResponse(lives.map(mapLiveRecordToStream).slice(0, 10)); // Limit to 10 newest
 };
 
 const getCategoryStreamsLogic = async (category: string) => {
     const capitalizedCategory = (category.charAt(0).toUpperCase() + category.slice(1)) as Category;
-    const lives = await dbClient.find('lives', l => l.ao_vivo && l.categoria === capitalizedCategory && !l.is_private);
-    return createSuccessResponse(lives.map(mapDbLiveToStream));
+    const lives = await dbClient.find('liveStreamRecords', l => l.ao_vivo && l.categoria === capitalizedCategory && !l.is_private);
+    return createSuccessResponse(lives.map(mapLiveRecordToStream));
 };
 
 const getPrivateStreamsLogic = async (userIdStr: string) => {
     const userId = parseInt(userIdStr, 10);
-    const lives = await dbClient.find('lives', l => 
+    const lives = await dbClient.find('liveStreamRecords', l => 
         l.ao_vivo && 
         l.is_private && 
         (l.user_id === userId || (l.invited_users || []).includes(userId))
     );
-    return createSuccessResponse(lives.map(mapDbLiveToStream));
+    return createSuccessResponse(lives.map(mapLiveRecordToStream));
 };
 
 const getPkBattlesLogic = async () => {
-    const pkSessions = await dbClient.find('pkSessions', s => s.endTime === null);
+    const pkBattles = await dbClient.find('batalhasPK', pk => pk.status === 'ativa');
     const battles: PkBattle[] = [];
 
-    for (const session of pkSessions) {
+    for (const battle of pkBattles) {
         const [stream1, stream2] = await Promise.all([
-            dbClient.findOne('lives', l => l.id === session.stream1Id),
-            dbClient.findOne('lives', l => l.id === session.stream2Id)
+            dbClient.findOne('liveStreamRecords', l => l.id === battle.live_id_1),
+            dbClient.findOne('liveStreamRecords', l => l.id === battle.live_id_2)
         ]);
         const [user1, user2] = await Promise.all([
-            dbClient.findOne('users', u => u.id === stream1?.user_id),
-            dbClient.findOne('users', u => u.id === stream2?.user_id)
+            dbClient.findOne('users', u => u.id === battle.streamer_id_1),
+            dbClient.findOne('users', u => u.id === battle.streamer_id_2)
         ]);
 
         if (stream1 && stream2 && user1 && user2) {
             battles.push({
-                id: session.id,
+                id: battle.id,
                 title: `${stream1.nome_streamer} vs ${stream2.nome_streamer}`,
                 streamer1: {
                     userId: user1.id,
                     streamId: stream1.id,
                     name: user1.nickname || user1.name,
-                    score: session.score1,
-                    avatarUrl: user1.avatar_url || ''
+                    score: battle.pontos_streamer_1,
+                    avatarUrl: user1.avatar_url || '',
+                    isVerified: true,
                 },
                 streamer2: {
                     userId: user2.id,
                     streamId: stream2.id,
                     name: user2.nickname || user2.name,
-                    score: session.score2,
-                    avatarUrl: user2.avatar_url || ''
+                    score: battle.pontos_streamer_2,
+                    avatarUrl: user2.avatar_url || '',
+                    isVerified: true,
                 }
             });
         }
@@ -325,13 +379,13 @@ const startLiveStreamLogic = async (body: any): Promise<ApiResponse> => {
         return createErrorResponse(404, "Usuário não encontrado.");
     }
 
-    const existingLive = await dbClient.findOne('lives', l => l.user_id === userId && l.ao_vivo);
+    const existingLive = await dbClient.findOne('liveStreamRecords', l => l.user_id === userId && l.ao_vivo);
     if (existingLive) {
         return createErrorResponse(400, "Usuário já está ao vivo.");
     }
     
-    // Create new DbLive object
-    const newLive: Omit<DbLive, 'id'> = {
+    // Create new LiveStreamRecord object
+    const newLive: Omit<LiveStreamRecord, 'id'> = {
         user_id: userId,
         titulo: title,
         nome_streamer: user.nickname || user.name,
@@ -348,13 +402,13 @@ const startLiveStreamLogic = async (body: any): Promise<ApiResponse> => {
         camera_facing_mode: cameraUsed,
     };
     
-    const createdLive = await dbClient.insert('lives', newLive);
+    const createdLive = await dbClient.insert('liveStreamRecords', newLive);
     
     // Update user's last camera and category
     await dbClient.update('users', userId, { last_camera_used: cameraUsed, last_selected_category: category });
 
     const response: StartLiveResponse = {
-        live: mapDbLiveToStream(createdLive),
+        live: mapLiveRecordToStream(createdLive),
         urls: {
             rtmp: `rtmp://live.livego.com/app/${createdLive.id}`,
             hls: `https://hls.livego.com/app/${createdLive.id}.m3u8`,
@@ -364,7 +418,7 @@ const startLiveStreamLogic = async (body: any): Promise<ApiResponse> => {
     };
     
     // Notify listeners about the new stream
-    const allStreams = (await dbClient.find('lives', l => l.ao_vivo)).map(mapDbLiveToStream);
+    const allStreams = (await dbClient.find('liveStreamRecords', l => l.ao_vivo)).map(mapLiveRecordToStream);
     notifyStreamListeners(allStreams);
 
     return createSuccessResponse(response);
@@ -372,20 +426,20 @@ const startLiveStreamLogic = async (body: any): Promise<ApiResponse> => {
 
 const stopLiveStreamLogic = async (userIdStr: string) => {
     const userId = parseInt(userIdStr, 10);
-    const live = await dbClient.findOne('lives', l => l.user_id === userId && l.ao_vivo);
+    const live = await dbClient.findOne('liveStreamRecords', l => l.user_id === userId && l.ao_vivo);
     if (!live) {
         return createErrorResponse(404, "Nenhuma transmissão ao vivo encontrada para este usuário.");
     }
-    await dbClient.update('lives', live.id, { ao_vivo: false });
+    await dbClient.update('liveStreamRecords', live.id, { ao_vivo: false });
 
     // Also end any active PK session
-    const pkSession = await dbClient.findOne('pkSessions', s => (s.stream1Id === live.id || s.stream2Id === live.id) && !s.endTime);
-    if (pkSession) {
-        await dbClient.update('pkSessions', pkSession.id, { endTime: new Date().toISOString() });
+    const pkBattle = await dbClient.findOne('batalhasPK', pk => (pk.live_id_1 === live.id || pk.live_id_2 === live.id) && pk.status === 'ativa');
+    if (pkBattle) {
+        await dbClient.update('batalhasPK', pkBattle.id, { status: 'finalizada', data_fim: new Date().toISOString() });
     }
     
      // Notify listeners about the change
-    const allStreams = (await dbClient.find('lives', l => l.ao_vivo)).map(mapDbLiveToStream);
+    const allStreams = (await dbClient.find('liveStreamRecords', l => l.ao_vivo)).map(mapLiveRecordToStream);
     notifyStreamListeners(allStreams);
 
     return createSuccessResponse({ success: true });
@@ -393,16 +447,18 @@ const stopLiveStreamLogic = async (userIdStr: string) => {
 
 const getLiveStreamDetailsLogic = async (liveIdStr: string) => {
   const liveId = parseInt(liveIdStr, 10);
-  const live = await dbClient.findOne('lives', l => l.id === liveId);
+  const live = await dbClient.findOne('liveStreamRecords', l => l.id === liveId);
   if (!live) return createErrorResponse(404, 'Transmissão ao vivo não encontrada.');
 
   const streamer = await dbClient.findOne('users', u => u.id === live.user_id);
   if (!streamer) return createErrorResponse(404, 'Streamer não encontrado.');
   
-  const totalVisitors = Object.values(db.mockLiveConnections).reduce((acc, userSet) => userSet.has(liveId) ? acc + 1 : acc, 0);
+  const totalVisitors = (await dbClient.find('visitasPerfil', v => v.perfil_visitado_id === live.user_id)).length;
   
-  const giftTransactions = await dbClient.find('giftTransactions', t => t.liveId === liveId);
+  const giftTransactions = await dbClient.find('logPresentesEnviados', t => t.liveId === liveId);
   const receivedGiftsValue = giftTransactions.reduce((sum, tx) => sum + tx.giftValue, 0);
+  
+  const likes = await dbClient.find('likes', l => l.liveId === liveId);
 
   const details: LiveDetails = {
     streamerName: streamer.nickname || streamer.name,
@@ -411,9 +467,9 @@ const getLiveStreamDetailsLogic = async (liveIdStr: string) => {
     viewerCount: live.espectadores,
     totalVisitors: totalVisitors,
     receivedGiftsValue: receivedGiftsValue,
-    rankingPosition: 'Top 10%',
+    rankingPosition: 'Top 10%', // This can be calculated in a more complex query later
     status: 'ao vivo',
-    likeCount: db.mockLikes[liveId]?.length || 0,
+    likeCount: likes.length,
     title: live.titulo,
     meta: live.meta,
   };
@@ -436,7 +492,7 @@ const sendChatMessageLogic = async (liveIdStr: string, body: any) => {
     const user = await dbClient.findOne('users', u => u.id === userId);
     if (!user) return createErrorResponse(404, 'Usuário não encontrado.');
     
-    const live = await dbClient.findOne('lives', l => l.id === liveId);
+    const live = await dbClient.findOne('liveStreamRecords', l => l.id === liveId);
     if (!live) return createErrorResponse(404, 'Live não encontrada.');
 
     // Server-side check for blocked user
@@ -468,10 +524,10 @@ const sendChatMessageLogic = async (liveIdStr: string, body: any) => {
 
 const sendGiftLogic = async (liveIdStr: string, body: any) => {
     const liveId = parseInt(liveIdStr, 10);
-    const { senderId, giftId } = body;
+    const { senderId, giftId, receiverId } = body;
     
     const sender = await dbClient.findOne('users', u => u.id === senderId);
-    const live = await dbClient.findOne('lives', l => l.id === liveId);
+    const live = await dbClient.findOne('liveStreamRecords', l => l.id === liveId);
     
     if (!sender || !live) {
         return createErrorResponse(404, "Usuário ou live não encontrado.");
@@ -485,22 +541,26 @@ const sendGiftLogic = async (liveIdStr: string, body: any) => {
     if (sender.wallet_diamonds < gift.price) {
         return createSuccessResponse({ success: false, updatedUser: null, message: "Diamantes insuficientes." });
     }
+
+    const actualReceiverId = receiverId || live.user_id;
     
     // Deduct diamonds from sender and add earnings to receiver
     const updatedSender = await dbClient.update('users', senderId, { wallet_diamonds: sender.wallet_diamonds - gift.price });
-    const receiver = await dbClient.findOne('users', u => u.id === live.user_id);
+    const receiver = await dbClient.findOne('users', u => u.id === actualReceiverId);
     if (receiver) {
         const earnings = gift.price; // 1 diamond = 1 earning
-        await dbClient.update('users', receiver.id, { wallet_earnings: receiver.wallet_earnings + earnings });
+        await dbClient.update('users', actualReceiverId, { wallet_earnings: receiver.wallet_earnings + earnings });
     }
 
     // Add gift transaction to log
-    await dbClient.insert('giftTransactions', {
+    const pkBattleForGift = await dbClient.findOne('batalhasPK', pk => (pk.live_id_1 === liveId || pk.live_id_2 === liveId) && pk.status === 'ativa');
+    await dbClient.insert('logPresentesEnviados', {
         senderId,
-        receiverId: live.user_id,
+        receiverId: actualReceiverId,
         liveId,
         giftId,
         giftValue: gift.price,
+        batalha_id: pkBattleForGift?.id,
         timestamp: new Date().toISOString(),
     });
 
@@ -513,12 +573,21 @@ const sendGiftLogic = async (liveIdStr: string, body: any) => {
         type: 'gift',
         username: sender.nickname || sender.name,
         userId: sender.id,
-        message: `enviou um ${gift.name}`,
+        message: `enviou um ${gift.name}${receiver && receiver.id !== live.user_id ? ` para ${receiver.nickname || receiver.name}` : ''}`,
         giftName: gift.name,
         giftAnimationUrl: gift.animationUrl,
         timestamp: new Date().toISOString()
     };
     db.mockChatDatabase[liveId].push(giftMessage);
+
+    // Update PK battle score if applicable
+    if (pkBattleForGift) {
+        if (pkBattleForGift.streamer_id_1 === actualReceiverId) {
+            await dbClient.update('batalhasPK', pkBattleForGift.id, { pontos_streamer_1: pkBattleForGift.pontos_streamer_1 + gift.valor_pontos });
+        } else if (pkBattleForGift.streamer_id_2 === actualReceiverId) {
+            await dbClient.update('batalhasPK', pkBattleForGift.id, { pontos_streamer_2: pkBattleForGift.pontos_streamer_2 + gift.valor_pontos });
+        }
+    }
 
     notifyChatMessageListeners(liveId, db.mockChatDatabase[liveId]);
 
@@ -528,7 +597,7 @@ const sendGiftLogic = async (liveIdStr: string, body: any) => {
 const joinLiveStreamLogic = async (liveIdStr: string, body: any) => {
     const liveId = parseInt(liveIdStr, 10);
     const { userId } = body;
-    const live = await dbClient.findOne('lives', l => l.id === liveId);
+    const live = await dbClient.findOne('liveStreamRecords', l => l.id === liveId);
     if (!live || !live.ao_vivo) {
         return createErrorResponse(404, "Transmissão ao vivo não encontrada ou encerrada.");
     }
@@ -544,10 +613,10 @@ const joinLiveStreamLogic = async (liveIdStr: string, body: any) => {
     if (!db.mockLiveConnections[liveId].has(userId)) {
         db.mockLiveConnections[liveId].add(userId);
         
-        const updatedLive = await dbClient.update('lives', liveId, { espectadores: live.espectadores + 1 });
+        await dbClient.update('liveStreamRecords', liveId, { espectadores: live.espectadores + 1 });
         
         // Notify all clients about the stream changes
-        const allStreams = (await dbClient.find('lives', l => l.ao_vivo)).map(mapDbLiveToStream);
+        const allStreams = (await dbClient.find('liveStreamRecords', l => l.ao_vivo)).map(mapLiveRecordToStream);
         notifyStreamListeners(allStreams);
     }
     return createSuccessResponse({ success: true });
@@ -556,16 +625,30 @@ const joinLiveStreamLogic = async (liveIdStr: string, body: any) => {
 const leaveLiveStreamLogic = async (liveIdStr: string, body: any) => {
     const liveId = parseInt(liveIdStr, 10);
     const { userId } = body;
-    const live = await dbClient.findOne('lives', l => l.id === liveId);
+    const live = await dbClient.findOne('liveStreamRecords', l => l.id === liveId);
     if (!live) {
         return createSuccessResponse({ success: true }); // Already gone
     }
     if (db.mockLiveConnections[liveId] && db.mockLiveConnections[liveId].has(userId)) {
         db.mockLiveConnections[liveId].delete(userId);
-        await dbClient.update('lives', liveId, { espectadores: Math.max(0, live.espectadores - 1) });
-        const allStreams = (await dbClient.find('lives', l => l.ao_vivo)).map(mapDbLiveToStream);
+        await dbClient.update('liveStreamRecords', liveId, { espectadores: Math.max(0, live.espectadores - 1) });
+        const allStreams = (await dbClient.find('liveStreamRecords', l => l.ao_vivo)).map(mapLiveRecordToStream);
         notifyStreamListeners(allStreams);
     }
+    return createSuccessResponse({ success: true });
+};
+
+const cancelPrivateLiveInviteLogic = async (liveIdStr: string, body: any) => {
+    const liveId = parseInt(liveIdStr, 10);
+    const { inviteeId } = body;
+    const live = await dbClient.findOne('liveStreamRecords', l => l.id === liveId);
+    if (!live || !live.invited_users) {
+        return createSuccessResponse({ success: true });
+    }
+    
+    const updatedInvitedUsers = live.invited_users.filter(id => id !== inviteeId);
+    await dbClient.update('liveStreamRecords', liveId, { invited_users: updatedInvitedUsers });
+
     return createSuccessResponse({ success: true });
 };
 
@@ -632,6 +715,8 @@ router.post('/api/users/:id/stop-live', (id, _) => stopLiveStreamLogic(id));
 router.get('/api/lives/:id/details', (id, _) => getLiveStreamDetailsLogic(id));
 router.post('/api/lives/:id/join', (id, body) => joinLiveStreamLogic(id, body));
 router.post('/api/lives/:id/leave', (id, body) => leaveLiveStreamLogic(id, body));
+router.post('/api/lives/:id/cancel-invite', (id, body) => cancelPrivateLiveInviteLogic(id, body));
+
 
 // --- Chat & Gift Routes ---
 router.get('/api/chat/live/:id', (id, _) => getChatMessagesLogic(id));
@@ -640,31 +725,55 @@ router.post('/api/lives/:id/gift', (id, body) => sendGiftLogic(id, body));
 router.get('/api/gifts', async (_, __) => createSuccessResponse(db.mockGiftCatalog));
 
 // --- Private Chat ---
+const getConversationByIdLogic = async (id: string, currentUserId: number): Promise<ApiResponse> => {
+    const conversation = await dbClient.findOne('tabelaConversas', c => c.id === id);
+    if (!conversation) return createErrorResponse(404, "Conversa não encontrada.");
+    
+    const otherUserId = conversation.participantes.find(pId => pId !== currentUserId);
+    const otherUser = await dbClient.findOne('users', u => u.id === otherUserId);
+    const messages = await dbClient.find('tabelaMensagens', m => m.conversa_id === id);
+
+    const enrichedConversation: Conversation = {
+        id: conversation.id,
+        participants: conversation.participantes,
+        otherUserId: otherUser?.id || 0,
+        otherUserName: otherUser?.nickname || otherUser?.name || 'Unknown',
+        otherUserAvatarUrl: otherUser?.avatar_url || '',
+        unreadCount: messages.filter(m => m.remetente_id !== currentUserId && !m.status_leitura[currentUserId]).length,
+        messages: messages.map(m => mapTabelaMensagemToConversationMessage(m, currentUserId))
+    };
+
+    return createSuccessResponse(enrichedConversation);
+};
+
 router.get('/api/users/:id/conversations', async (idStr) => {
     const userId = parseInt(idStr, 10);
-    const conversations = await dbClient.find('conversations', c => c.participants.includes(userId));
+    const conversations = await dbClient.find('tabelaConversas', c => c.participantes.includes(userId));
     
     const enrichedConversations = await Promise.all(conversations.map(async c => {
-        const otherUserId = c.participants.find(pId => pId !== userId);
+        const otherUserId = c.participantes.find(pId => pId !== userId);
         if (!otherUserId) return null;
         
         const otherUser = await dbClient.findOne('users', u => u.id === otherUserId);
-        const unreadCount = c.messages.filter(m => m.senderId !== userId && !m.seenBy.includes(userId)).length;
+        const messages = await dbClient.find('tabelaMensagens', m => m.conversa_id === c.id);
+        const unreadCount = messages.filter(m => m.remetente_id !== userId && !m.status_leitura[userId]).length;
         
         return {
-            ...c,
+            id: c.id,
+            participants: c.participantes,
             otherUserId: otherUser?.id || 0,
             otherUserName: otherUser?.nickname || otherUser?.name || 'Unknown',
             otherUserAvatarUrl: otherUser?.avatar_url || '',
-            unreadCount
+            unreadCount,
+            messages: messages.map(m => mapTabelaMensagemToConversationMessage(m, userId))
         };
     }));
 
     const validConversations = enrichedConversations
-        .filter(c => c !== null)
+        .filter((c): c is Conversation => c !== null)
         .sort((a, b) => {
-            const lastMsgA = a!.messages[a!.messages.length - 1];
-            const lastMsgB = b!.messages[b!.messages.length - 1];
+            const lastMsgA = a.messages[a.messages.length - 1];
+            const lastMsgB = b.messages[b.messages.length - 1];
             if (!lastMsgA) return 1;
             if (!lastMsgB) return -1;
             return new Date(lastMsgB.timestamp).getTime() - new Date(lastMsgA.timestamp).getTime();
@@ -675,42 +784,31 @@ router.get('/api/users/:id/conversations', async (idStr) => {
 
 router.get('/api/chat/private/:id', async (id, query) => {
     const currentUserId = parseInt(new URLSearchParams(query).get('userId') || '0', 10);
-    const conversation = await dbClient.findOne('conversations', c => c.id === id);
-    if (!conversation) return createErrorResponse(404, "Conversa não encontrada.");
-    
-    const otherUserId = conversation.participants.find(pId => pId !== currentUserId);
-    const otherUser = await dbClient.findOne('users', u => u.id === otherUserId);
-
-    const enrichedConversation = {
-        ...conversation,
-        otherUserId: otherUser?.id || 0,
-        otherUserName: otherUser?.nickname || otherUser?.name || 'Unknown',
-        otherUserAvatarUrl: otherUser?.avatar_url || '',
-        unreadCount: conversation.messages.filter(m => m.senderId !== currentUserId && m.status !== 'seen').length
-    };
-
-    return createSuccessResponse(enrichedConversation);
+    return getConversationByIdLogic(id, currentUserId);
 });
 
 router.post('/api/chat/private/get-or-create', async (_, body) => {
     const { currentUserId, otherUserId } = body;
-    let conversation = await dbClient.findOne('conversations', c => c.participants.includes(currentUserId) && c.participants.includes(otherUserId));
+    let conversation = await dbClient.findOne('tabelaConversas', c => c.participantes.includes(currentUserId) && c.participantes.includes(otherUserId));
     if (!conversation) {
-        conversation = await dbClient.insert('conversations', {
-            participants: [currentUserId, otherUserId],
-            otherUserId: otherUserId,
-            unreadCount: 0,
-            messages: [],
+        conversation = await dbClient.insert('tabelaConversas', {
+            participantes: [currentUserId, otherUserId],
+            ultima_mensagem_texto: "",
+            ultima_mensagem_timestamp: new Date().toISOString()
         });
     }
 
     const otherUser = await dbClient.findOne('users', u => u.id === otherUserId);
-    const enrichedConversation = {
-        ...conversation,
+    const messages = await dbClient.find('tabelaMensagens', m => m.conversa_id === conversation!.id);
+
+    const enrichedConversation: Conversation = {
+        id: conversation!.id,
+        participants: conversation!.participantes,
         otherUserId: otherUser?.id || 0,
         otherUserName: otherUser?.nickname || otherUser?.name || 'Unknown',
         otherUserAvatarUrl: otherUser?.avatar_url || '',
-        unreadCount: conversation.messages.filter(m => m.senderId !== currentUserId && m.status !== 'seen').length
+        unreadCount: messages.filter(m => m.remetente_id !== currentUserId && !m.status_leitura[currentUserId]).length,
+        messages: messages.map(m => mapTabelaMensagemToConversationMessage(m, currentUserId))
     };
     return createSuccessResponse(enrichedConversation);
 });
@@ -718,49 +816,79 @@ router.post('/api/chat/private/get-or-create', async (_, body) => {
 
 router.post('/api/chat/private/:id', async (id, body) => {
     const { senderId, text } = body;
-    const conversation = await dbClient.findOne('conversations', c => c.id === id);
+    const conversation = await dbClient.findOne('tabelaConversas', c => c.id === id);
     if (!conversation) return createErrorResponse(404, "Conversa não encontrada.");
     
-    const newMessage: ConversationMessage = {
-        id: (conversation.messages[conversation.messages.length - 1]?.id || 0) + 1,
-        senderId,
-        text,
+    const newMessage: Omit<TabelaMensagem, 'id'> = {
+        conversa_id: id,
+        remetente_id: senderId,
+        conteudo: text,
         timestamp: new Date().toISOString(),
-        status: 'sent',
-        seenBy: [senderId],
+        tipo_conteudo: 'texto',
+        status_leitura: { [senderId]: true },
     };
+    await dbClient.insert('tabelaMensagens', newMessage);
     
-    conversation.messages.push(newMessage);
-    const updatedConversation = await dbClient.update('conversations', id, { messages: conversation.messages });
-    
-    const otherUserId = updatedConversation!.participants.find(pId => pId !== senderId);
-    const otherUser = await dbClient.findOne('users', u => u.id === otherUserId);
+    await dbClient.update('tabelaConversas', id, { 
+        ultima_mensagem_texto: text,
+        ultima_mensagem_timestamp: newMessage.timestamp
+    });
 
-    const enrichedConversation = {
-        ...updatedConversation,
-        otherUserId: otherUser?.id || 0,
-        otherUserName: otherUser?.nickname || otherUser?.name || 'Unknown',
-        otherUserAvatarUrl: otherUser?.avatar_url || '',
-        unreadCount: 0 // Assume it's 0 for the sender
-    };
-
-    return createSuccessResponse(enrichedConversation);
+    // Re-fetch and assemble the full conversation to return it
+    const updatedConvoData = await getConversationByIdLogic(id, senderId);
+    return updatedConvoData;
 });
 
 router.post('/api/chat/viewed', async (_, body) => {
     const { conversationId, viewerId } = body;
-    const conversation = await dbClient.findOne('conversations', c => c.id === conversationId);
-    if (!conversation) return createErrorResponse(404, "Conversa não encontrada.");
+    const messages = await dbClient.find('tabelaMensagens', m => m.conversa_id === conversationId && m.remetente_id !== viewerId);
 
-    const updatedMessages = conversation.messages.map(msg => {
-        if (msg.senderId !== viewerId && !msg.seenBy.includes(viewerId)) {
-            return { ...msg, status: 'seen' as const, seenBy: [...msg.seenBy, viewerId] };
+    for (const msg of messages) {
+        if (!msg.status_leitura[viewerId]) {
+            const newStatus = { ...msg.status_leitura, [viewerId]: true };
+            await dbClient.update('tabelaMensagens', msg.id, { status_leitura: newStatus });
         }
-        return msg;
-    });
-
-    await dbClient.update('conversations', conversationId, { messages: updatedMessages });
+    }
     return createSuccessResponse({ success: true });
+});
+
+// --- Help & Support Routes ---
+router.get('/api/help/articles/:id', async (idStr) => {
+    const article = await dbClient.findOne('artigosAjuda', a => a.id === idStr);
+    if (article) {
+        return createSuccessResponse(article);
+    }
+    if (idStr === 'faq') {
+        const faqArticles = await dbClient.find('artigosAjuda', a => a.categoria === 'FAQ' && a.is_ativo);
+        faqArticles.sort((a,b) => a.ordem_exibicao - b.ordem_exibicao);
+        const faqContent = faqArticles.map(a => `<h2>${a.titulo}</h2><div>${a.conteudo}</div>`).join('<hr class="my-4 border-gray-700">');
+        const faqSummaryArticle: ArtigoAjuda = {
+            id: 'faq',
+            titulo: 'Perguntas Frequentes (FAQ)',
+            conteudo: faqContent,
+            categoria: 'FAQ',
+            is_ativo: true,
+            ordem_exibicao: 0,
+            visualizacoes: 0
+        };
+        return createSuccessResponse(faqSummaryArticle);
+    }
+    return createErrorResponse(404, "Artigo não encontrado.");
+});
+
+router.get('/api/help/articles', async (_, query) => {
+    const category = new URLSearchParams(query).get('category');
+    let articles = await dbClient.find('artigosAjuda', a => a.is_ativo);
+    if (category) {
+        articles = articles.filter(a => a.categoria === category);
+    }
+    articles.sort((a, b) => a.ordem_exibicao - b.ordem_exibicao);
+    return createSuccessResponse(articles);
+});
+
+router.get('/api/help/contact-channels', async () => {
+    const channels = await dbClient.find('canaisContato', c => c.is_ativo);
+    return createSuccessResponse(channels);
 });
 
 // --- Purchase ---
@@ -833,84 +961,159 @@ router.post('/api/payment/detect-brand', async (_, body) => {
 
 
 // --- PK Battle ---
-router.get('/api/lives/invitable/:id', async (idStr) => {
-    const currentUserId = parseInt(idStr, 10);
-    const lives = await dbClient.find('lives', l => l.ao_vivo && l.permite_pk && l.user_id !== currentUserId);
-    const userIds = lives.map(l => l.user_id);
-    const users = await dbClient.find('users', u => userIds.includes(u.id));
-    return createSuccessResponse(users);
-});
+const endPkBattleLogic = async (pkBattleIdStr: string, body: any) => {
+    const pkBattleId = parseInt(pkBattleIdStr, 10);
+    const { userId } = body; // The user requesting the end
 
-router.post('/api/pk/invite', async (_, body) => {
-    const { inviterId, inviteeId } = body;
-    const existing = await dbClient.findOne('pkInvitations', i => 
-        (i.inviterId === inviterId && i.inviteeId === inviteeId && i.status === 'pending') ||
-        (i.inviterId === inviteeId && i.inviteeId === inviterId && i.status === 'pending')
-    );
-    if(existing) {
-        return createErrorResponse(400, "Já existe um convite pendente entre esses usuários.");
+    const battle = await dbClient.findOne('batalhasPK', b => b.id === pkBattleId);
+    if (!battle) {
+        return createErrorResponse(404, "Batalha não encontrada.");
     }
-    const inviter = await dbClient.findOne('users', u => u.id === inviterId);
-    if (!inviter) {
-        return createErrorResponse(404, "Usuário convidante não encontrado.");
+    if (battle.status !== 'ativa') {
+        return createErrorResponse(400, "Esta batalha não está mais ativa.");
     }
-    const invitation = await dbClient.insert('pkInvitations', {
-        inviterId,
-        inviterName: inviter.nickname || inviter.name,
-        inviterAvatarUrl: inviter.avatar_url || '',
-        inviteeId,
-        status: 'pending',
-        timestamp: new Date().toISOString(),
+    if (battle.streamer_id_1 !== userId && battle.streamer_id_2 !== userId) {
+        return createErrorResponse(403, "Apenas um dos anfitriões pode encerrar a batalha.");
+    }
+
+    // Update battle status
+    await dbClient.update('batalhasPK', pkBattleId, { 
+        status: 'finalizada',
+        data_fim: new Date().toISOString() 
     });
-    return createSuccessResponse(invitation);
-});
+    
+    // Update live stream records to no longer be in PK
+    await dbClient.update('liveStreamRecords', battle.live_id_1, { em_pk: false });
+    await dbClient.update('liveStreamRecords', battle.live_id_2, { em_pk: false });
 
-router.get('/api/pk/invites/pending/:id', async (idStr) => {
-    const userId = parseInt(idStr, 10);
-    const invitation = await dbClient.findOne('pkInvitations', i => i.inviteeId === userId && i.status === 'pending');
-    return createSuccessResponse(invitation);
-});
+    return createSuccessResponse({ success: true });
+};
 
-router.post('/api/pk/invites/:id/accept', async (id) => {
-    const invitation = await dbClient.findOne('pkInvitations', i => i.id === id);
-    if (!invitation || invitation.status !== 'pending') {
+const acceptPkInvitationLogic = async (idStr: string) => {
+    const invitation = await dbClient.findOne('pkInvitations', i => i.id === idStr);
+    if (!invitation || invitation.status !== 'pendente') {
         return createErrorResponse(400, "Convite inválido ou expirado.");
     }
     
-    await dbClient.update('pkInvitations', id, { status: 'accepted' });
-    
     const [inviterLive, inviteeLive] = await Promise.all([
-        dbClient.findOne('lives', l => l.user_id === invitation.inviterId && l.ao_vivo),
-        dbClient.findOne('lives', l => l.user_id === invitation.inviteeId && l.ao_vivo)
+        dbClient.findOne('liveStreamRecords', l => l.user_id === invitation.remetente_id && l.ao_vivo),
+        dbClient.findOne('liveStreamRecords', l => l.user_id === invitation.destinatario_id && l.ao_vivo)
     ]);
 
     if (!inviterLive || !inviteeLive) {
         return createErrorResponse(400, "Um dos streamers não está mais ao vivo.");
     }
     
-    await dbClient.update('lives', inviterLive.id, { em_pk: true });
-    await dbClient.update('lives', inviteeLive.id, { em_pk: true });
+    await dbClient.update('liveStreamRecords', inviterLive.id, { em_pk: true });
+    await dbClient.update('liveStreamRecords', inviteeLive.id, { em_pk: true });
 
-    const newPkSession = await dbClient.insert('pkSessions', {
-        stream1Id: inviterLive.id,
-        stream2Id: inviteeLive.id,
-        score1: 0,
-        score2: 0,
-        startTime: new Date().toISOString(),
-        endTime: null,
+    const newPkBattle = await dbClient.insert('batalhasPK', {
+        live_id_1: inviterLive.id,
+        live_id_2: inviteeLive.id,
+        streamer_id_1: invitation.remetente_id,
+        streamer_id_2: invitation.destinatario_id,
+        pontos_streamer_1: 0,
+        pontos_streamer_2: 0,
+        vencedor_id: null,
+        data_inicio: new Date().toISOString(),
+        data_fim: new Date(Date.now() + 5 * 60 * 1000).toISOString(), // 5 minute battle
+        status: 'ativa',
+        data_comemoracao_fim: null,
+        top_supporters_1: [],
+        top_supporters_2: [],
     });
     
+    await dbClient.update('pkInvitations', idStr, { status: 'aceito', batalha_id: newPkBattle.id });
+
     const battles = await getPkBattlesLogic();
-    const newBattle = (battles.body as PkBattle[]).find(b => b.id === newPkSession.id);
+    const newBattle = (battles.body as PkBattle[]).find(b => b.id === newPkBattle.id);
     
     return createSuccessResponse(newBattle);
+};
+
+const getPkInvitationStatusLogic = async (idStr: string) => {
+    const invitation = await dbClient.findOne('pkInvitations', i => i.id === idStr);
+    if (!invitation) {
+        return createErrorResponse(404, "Convite não encontrado.");
+    }
+    
+    let battle: PkBattle | undefined = undefined;
+    if (invitation.status === 'aceito' && invitation.batalha_id) {
+         const battlesResponse = await getPkBattlesLogic(); // this function gets all live PKs
+         const allBattles = battlesResponse.body as PkBattle[];
+         battle = allBattles.find(b => b.id === invitation.batalha_id);
+    }
+    
+    return createSuccessResponse({ invitation, battle });
+};
+
+const simulateReceivePkGiftLogic = async (pkBattleIdStr: string, body: any) => {
+    const pkBattleId = parseInt(pkBattleIdStr, 10);
+    const { receiverId, giftValue } = body;
+
+    const battle = await dbClient.findOne('batalhasPK', b => b.id === pkBattleId);
+    if (!battle || battle.status !== 'ativa') {
+        return createErrorResponse(400, "Batalha não está ativa.");
+    }
+
+    let updatedBattle = null;
+    if (battle.streamer_id_1 === receiverId) {
+        updatedBattle = await dbClient.update('batalhasPK', pkBattleId, { pontos_streamer_1: battle.pontos_streamer_1 + giftValue });
+    } else if (battle.streamer_id_2 === receiverId) {
+        updatedBattle = await dbClient.update('batalhasPK', pkBattleId, { pontos_streamer_2: battle.pontos_streamer_2 + giftValue });
+    }
+
+    return createSuccessResponse(updatedBattle || battle);
+}
+
+router.get('/api/lives/invitable/:id', async (idStr) => {
+    const currentUserId = parseInt(idStr, 10);
+    const lives = await dbClient.find('liveStreamRecords', l => l.ao_vivo && l.permite_pk && l.user_id !== currentUserId);
+    const userIds = lives.map(l => l.user_id);
+    const users = await dbClient.find('users', u => userIds.includes(u.id));
+    return createSuccessResponse(users);
 });
 
+router.post('/api/pk/invite', async (_, body) => {
+    const { remetente_id, destinatario_id } = body;
+    const existing = await dbClient.findOne('pkInvitations', i => 
+        (i.remetente_id === remetente_id && i.destinatario_id === destinatario_id && i.status === 'pendente') ||
+        (i.remetente_id === destinatario_id && i.destinatario_id === remetente_id && i.status === 'pendente')
+    );
+    if(existing) {
+        return createErrorResponse(400, "Já existe um convite pendente entre esses usuários.");
+    }
+    const inviter = await dbClient.findOne('users', u => u.id === remetente_id);
+    if (!inviter) {
+        return createErrorResponse(404, "Usuário convidante não encontrado.");
+    }
+    const invitationData: Omit<ConvitePK, 'id'> = {
+        remetente_id,
+        destinatario_id,
+        status: 'pendente',
+        data_envio: new Date().toISOString(),
+        data_expiracao: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
+    };
+    const invitation = await dbClient.insert('pkInvitations', invitationData);
+    return createSuccessResponse(invitation);
+});
+
+router.get('/api/pk/invites/pending/:id', async (idStr) => {
+    const userId = parseInt(idStr, 10);
+    const invitation = await dbClient.findOne('pkInvitations', i => i.destinatario_id === userId && i.status === 'pendente');
+    return createSuccessResponse(invitation);
+});
+
+router.post('/api/pk/invites/:id/accept', (id, _) => acceptPkInvitationLogic(id));
 router.post('/api/pk/invites/:id/decline', async (id) => {
-    await dbClient.update('pkInvitations', id, { status: 'declined' });
+    await dbClient.update('pkInvitations', id, { status: 'recusado' });
     return createSuccessResponse({ success: true });
 });
-
+router.post('/api/pk/invites/:id/cancel', async (id) => {
+    await dbClient.update('pkInvitations', id, { status: 'cancelado' });
+    return createSuccessResponse({ success: true });
+});
+router.get('/api/pk/invites/status/:id', (id, _) => getPkInvitationStatusLogic(id));
 router.get('/api/pk-battles/:id', async (idStr) => {
     const pkId = parseInt(idStr, 10);
     const battles = await getPkBattlesLogic();
@@ -918,24 +1121,143 @@ router.get('/api/pk-battles/:id', async (idStr) => {
     if (!battle) return createErrorResponse(404, "Batalha não encontrada.");
     return createSuccessResponse(battle);
 });
+router.post('/api/pk-battles/:id/end', (id, body) => endPkBattleLogic(id, body));
 
-router.get('/api/pk-sessions/:id', async (idStr) => {
-    const pkId = parseInt(idStr, 10);
-    const session = await dbClient.findOne('pkSessions', s => s.id === pkId);
-    if (!session) return createErrorResponse(404, "Sessão PK não encontrada.");
+const getActivePkBattleLogic = async (pkBattleIdStr: string) => {
+    const pkBattleId = parseInt(pkBattleIdStr, 10);
+    const battle = await dbClient.findOne('batalhasPK', b => b.id === pkBattleId);
+    if (!battle) {
+        return createErrorResponse(404, "Batalha PK não encontrada.");
+    }
 
-    // Simulate score updates
-    session.score1 += Math.floor(Math.random() * 50);
-    session.score2 += Math.floor(Math.random() * 50);
-    await dbClient.update('pkSessions', session.id, { score1: session.score1, score2: session.score2 });
+    if (battle.data_fim && new Date(battle.data_fim) < new Date() && battle.status === 'ativa') {
+        const winnerId = battle.pontos_streamer_1 > battle.pontos_streamer_2 ? battle.streamer_id_1 : battle.streamer_id_2;
+        const updatedBattle = await dbClient.update('batalhasPK', pkBattleId, { 
+            status: 'finalizada',
+            vencedor_id: winnerId,
+            data_comemoracao_fim: new Date(Date.now() + 10 * 1000).toISOString() // 10 sec celebration
+        });
 
+        await dbClient.update('liveStreamRecords', battle.live_id_1, { em_pk: false });
+        await dbClient.update('liveStreamRecords', battle.live_id_2, { em_pk: false });
+        
+        return createSuccessResponse(updatedBattle);
+    }
+
+    battle.top_supporters_1 = await calculateTopSupporters(battle.streamer_id_1, pkBattleId, dbClient);
+    battle.top_supporters_2 = await calculateTopSupporters(battle.streamer_id_2, pkBattleId, dbClient);
+    
+    return createSuccessResponse(battle);
+};
+router.get('/api/batalhas-pk/:id', (id, _) => getActivePkBattleLogic(id));
+router.post('/api/batalhas-pk/:id/simulate-gift', (id, body) => simulateReceivePkGiftLogic(id, body));
+
+router.get('/api/streams/:id/batalha-pk', async (idStr) => {
+    const streamId = parseInt(idStr, 10);
+    const session = await dbClient.findOne('batalhasPK', s => (s.live_id_1 === streamId || s.live_id_2 === streamId) && s.status === 'ativa');
     return createSuccessResponse(session);
 });
 
-router.get('/api/streams/:id/pk-session', async (idStr) => {
-    const streamId = parseInt(idStr, 10);
-    const session = await dbClient.findOne('pkSessions', s => (s.stream1Id === streamId || s.stream2Id === streamId) && s.endTime === null);
-    return createSuccessResponse(session);
+// --- PK Matchmaking ---
+const findAndCreatePkMatch = async () => {
+    const queue = await dbClient.find('filaPK', q => q.status === 'aguardando');
+    if (queue.length === 0) {
+        return; // No one is waiting
+    }
+
+    // Match the first person in the queue
+    const player1QueueEntry = queue[0];
+    const player1Id = player1QueueEntry.streamer_id;
+    
+    // Avoid re-matching if a race condition occurred
+    const existingBattle = await dbClient.findOne('batalhasPK', b => (b.streamer_id_1 === player1Id || b.streamer_id_2 === player1Id) && b.status === 'ativa');
+    if (existingBattle) {
+        await dbClient.delete('filaPK', q => q.streamer_id === player1Id);
+        return;
+    }
+
+    // Find a suitable bot/mock opponent that is live, allows PK, and is not the player.
+    const opponentLive = await dbClient.findOne('liveStreamRecords', l => 
+        l.ao_vivo && 
+        l.permite_pk && 
+        l.user_id !== player1Id
+    );
+
+    if (!opponentLive) {
+        console.warn(`[API Matchmaking] No opponent found for ${player1Id}. They will keep waiting.`);
+        return; 
+    }
+
+    const player2Id = opponentLive.user_id;
+    const player1Live = await dbClient.findOne('liveStreamRecords', l => l.user_id === player1Id && l.ao_vivo);
+
+    if (player1Live) {
+        console.log(`[API Matchmaking] Match found: ${player1Id} vs ${player2Id}`);
+
+        await dbClient.update('liveStreamRecords', player1Live.id, { em_pk: true });
+        await dbClient.update('liveStreamRecords', opponentLive.id, { em_pk: true });
+
+        await dbClient.insert('batalhasPK', {
+            live_id_1: player1Live.id,
+            live_id_2: opponentLive.id,
+            streamer_id_1: player1Id,
+            streamer_id_2: player2Id,
+            pontos_streamer_1: 0,
+            pontos_streamer_2: 0,
+            vencedor_id: null,
+            data_inicio: new Date().toISOString(),
+            data_fim: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
+            status: 'ativa',
+            data_comemoracao_fim: null,
+            top_supporters_1: [],
+            top_supporters_2: [],
+        });
+
+        await dbClient.delete('filaPK', q => q.streamer_id === player1Id);
+    }
+};
+
+
+router.post('/api/pk/matchmaking/join', async (_, body) => {
+    const { userId } = body;
+    await dbClient.delete('filaPK', q => q.streamer_id === userId); // Remove any old entry
+    await dbClient.insert('filaPK', {
+        streamer_id: userId,
+        data_entrada: new Date().toISOString(),
+        status: 'aguardando',
+    });
+    // Simulate finding a match after a short delay
+    setTimeout(findAndCreatePkMatch, 2500); 
+    return createSuccessResponse({ success: true });
+});
+
+router.post('/api/pk/matchmaking/leave', async (_, body) => {
+    const { userId } = body;
+    await dbClient.delete('filaPK', q => q.streamer_id === userId);
+    return createSuccessResponse({ success: true });
+});
+
+router.get('/api/pk/matchmaking/status/:id', async (idStr) => {
+    const userId = parseInt(idStr, 10);
+    // Check if I was paired and a battle was created for me
+    const battleDb = await dbClient.findOne('batalhasPK', b => (b.streamer_id_1 === userId || b.streamer_id_2 === userId) && b.status === 'ativa');
+
+    if (battleDb) {
+        // I'm in a battle, so I'm no longer in the queue
+        await dbClient.delete('filaPK', q => q.streamer_id === userId);
+        const battles = await getPkBattlesLogic();
+        const battleViewModel = (battles.body as PkBattle[]).find(b => b.id === battleDb.id);
+        return createSuccessResponse({ status: 'pareado', battle: battleViewModel });
+    }
+
+    // Check if I'm still in the queue
+    const queueEntry = await dbClient.findOne('filaPK', q => q.streamer_id === userId);
+    if (queueEntry) {
+        return createSuccessResponse({ status: 'aguardando' });
+    }
+    
+    // Fallback if not found anywhere (maybe battle just ended)
+    return createSuccessResponse({ status: 'aguardando' });
 });
 
 
@@ -949,8 +1271,38 @@ router.get('/api/users/:id/profile', async (idStr) => {
     const user = await dbClient.findOne('users', u => u.id === userId);
     if (!user) return createErrorResponse(404, 'Usuário não encontrado.');
 
-    const liveStream = await dbClient.findOne('lives', l => l.user_id === userId && l.ao_vivo);
-    const protectors = (db.mockProtectorsList[userId] || []).slice(0,3);
+    const liveStream = await dbClient.findOne('liveStreamRecords', l => l.user_id === userId && l.ao_vivo);
+    
+    const giftsReceived = await dbClient.find('logPresentesEnviados', g => g.receiverId === userId);
+    const protectorScores: { [id: number]: number } = {};
+    giftsReceived.forEach(g => {
+        protectorScores[g.senderId] = (protectorScores[g.senderId] || 0) + g.giftValue;
+    });
+    const sortedProtectorIds = Object.keys(protectorScores).sort((a, b) => protectorScores[Number(b)] - protectorScores[Number(a)]).slice(0, 3).map(Number);
+    const protectorUsers = await dbClient.find('users', u => sortedProtectorIds.includes(u.id));
+    const protectors = sortedProtectorIds.map((id, index) => {
+        const pUser = protectorUsers.find(u => u.id === id);
+        return {
+            rank: index + 1,
+            userId: id,
+            name: pUser?.nickname || pUser?.name || 'Unknown',
+            avatarUrl: pUser?.avatar_url || '',
+            protectionValue: protectorScores[id],
+        };
+    });
+
+    const giftsSent = await dbClient.find('logPresentesEnviados', g => g.senderId === userId);
+    const totalSentValue = giftsSent.reduce((sum, g) => sum + g.giftValue, 0);
+
+    const badges: PublicProfile['badges'] = [{ text: String(user.level), type: 'level' }];
+    if (user.gender) {
+        badges.push({ text: String(calculateAge(user.birthday)), type: 'gender_age', icon: user.gender });
+    }
+    if (user.level > 50) {
+        badges.push({ text: 'Top', type: 'top', icon: 'play' });
+    }
+
+    const userAchievements = user.achievements ? await dbClient.find('achievements', a => user.achievements!.includes(a.id)) : [];
 
     const profile: PublicProfile = {
         id: user.id,
@@ -961,39 +1313,54 @@ router.get('/api/users/:id/profile', async (idStr) => {
         gender: user.gender,
         birthday: user.birthday,
         isLive: !!liveStream,
-        isFollowing: false, // This should be set client-side based on current user
+        isFollowing: false, // Client-side responsibility
         coverPhotoUrl: 'https://images.pexels.com/photos/1763075/pexels-photo-1763075.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2',
-        stats: { value: 123456, icon: 'moon' },
-        badges: [
-            { text: String(user.level), type: 'level' },
-            { text: 'Top', type: 'top', icon: 'play' },
-        ],
+        stats: { value: totalSentValue, icon: 'moon' },
+        badges: badges,
         protectors: protectors,
-        achievements: [],
-        personalityTags: [{id: '1', label: 'Amigável'}, {id: '2', label: 'Música'}],
-        personalSignature: 'Vivendo a vida um stream de cada vez ✨'
+        achievements: userAchievements,
+        personalityTags: user.personalityTags || [],
+        personalSignature: user.personalSignature || 'Vivendo a vida um stream de cada vez ✨',
     };
-    if (user.gender) {
-        profile.badges.unshift({ text: String(profile.age), type: 'gender_age', icon: user.gender });
-    }
+
     return createSuccessResponse(profile);
 });
 
 router.get('/api/pk-event/details', async () => {
-    const streamerRanking = db.mockPkRankingData.streamerRanking.map(s => ({
+    const streamerRanking = db.mockPkEventDetailsData.streamerRanking.map(s => ({
         ...s,
         score: s.score + Math.floor(Math.random() * 100),
     })).sort((a,b) => b.score - a.score).map((s,i) => ({ ...s, rank: i + 1 }));
 
     return createSuccessResponse({
-        ...db.mockPkRankingData,
+        ...db.mockPkEventDetailsData,
         streamerRanking,
     });
 });
 
 router.get('/api/users/:id/protectors', async (idStr) => {
-    const userId = parseInt(idStr, 10);
-    return createSuccessResponse(db.mockProtectorsList[userId] || []);
+    const streamerId = parseInt(idStr, 10);
+    const giftsReceived = await dbClient.find('logPresentesEnviados', g => g.receiverId === streamerId);
+    const protectorScores: { [id: number]: number } = {};
+    giftsReceived.forEach(g => {
+        protectorScores[g.senderId] = (protectorScores[g.senderId] || 0) + g.giftValue;
+    });
+    const sortedProtectorIds = Object.keys(protectorScores).sort((a, b) => protectorScores[Number(b)] - protectorScores[Number(a)]).map(Number);
+    if (sortedProtectorIds.length === 0) {
+        return createSuccessResponse([]);
+    }
+    const protectorUsers = await dbClient.find('users', u => sortedProtectorIds.includes(u.id));
+    const protectors = sortedProtectorIds.map((id, index) => {
+        const pUser = protectorUsers.find(u => u.id === id);
+        return {
+            rank: index + 1,
+            userId: id,
+            name: pUser?.nickname || pUser?.name || 'Unknown',
+            avatarUrl: pUser?.avatar_url || '',
+            protectionValue: protectorScores[id],
+        };
+    });
+    return createSuccessResponse(protectors);
 });
 
 router.post('/api/users/follow', async (_, body) => {
@@ -1149,7 +1516,7 @@ router.post('/api/support/messages', async (_, body) => {
     
     // User's message
     db.mockSupportConversation.messages.push({
-        id: db.mockSupportConversation.messages.length + 1,
+        id: String(db.mockSupportConversation.messages.length + 1),
         senderId: userId,
         text,
         timestamp: new Date().toISOString(),
@@ -1160,7 +1527,7 @@ router.post('/api/support/messages', async (_, body) => {
     // Simulated auto-reply
     setTimeout(() => {
         db.mockSupportConversation.messages.push({
-            id: db.mockSupportConversation.messages.length + 1,
+            id: String(db.mockSupportConversation.messages.length + 1),
             senderId: 0, // 0 for support
             text: "Obrigado por entrar em contato. Um agente responderá em breve.",
             timestamp: new Date().toISOString(),
@@ -1172,12 +1539,29 @@ router.post('/api/support/messages', async (_, body) => {
     return createSuccessResponse(db.mockSupportConversation);
 });
 
-router.post('/api/reports', async (_, body: ReportPayload) => {
-    await dbClient.insert('reports', { ...body, timestamp: new Date().toISOString() });
+router.post('/api/reports', async (_, body) => {
+    const { reporterId, reportedId, reportReason, reportDetails } = body;
+    const denuncia: Omit<Denuncia, 'id'> = {
+        usuario_denunciante_id: reporterId,
+        usuario_denunciado_id: reportedId,
+        motivo_denuncia: reportReason,
+        comentarios: reportDetails,
+        status_revisao: 'Pendente',
+        data_denuncia: new Date().toISOString(),
+    };
+    await dbClient.insert('denuncias', denuncia);
     return createSuccessResponse({ success: true });
 });
-router.post('/api/suggestions', async (_, body: SuggestionPayload) => {
-    await dbClient.insert('suggestions', { ...body, timestamp: new Date().toISOString() });
+
+router.post('/api/suggestions', async (_, body) => {
+    const { suggesterId, suggestion } = body;
+    const sugestao: Omit<Sugestao, 'id'> = {
+        usuario_id: suggesterId,
+        texto_sugestao: suggestion,
+        status_revisao: 'Recebida',
+        data_sugestao: new Date().toISOString(),
+    };
+    await dbClient.insert('sugestoes', sugestao);
     return createSuccessResponse({ success: true });
 });
 
@@ -1219,6 +1603,7 @@ router.get('/api/ranking/streamers', async () => {
         }));
     return createSuccessResponse(streamers);
 });
+
 router.get('/api/ranking/users', async () => {
     const users = await dbClient.find('users', () => true);
     const rankedUsers = users
@@ -1258,15 +1643,14 @@ router.get('/api/lives/:id/ranking', async (idStr) => {
 
 router.post('/api/lives/:id/like', async (idStr, body) => {
     const liveId = parseInt(idStr, 10);
-    if (!db.mockLikes[liveId]) db.mockLikes[liveId] = [];
-    const like: Like = { id: db.mockLikes[liveId].length + 1, userId: body.userId, timestamp: new Date().toISOString() };
-    db.mockLikes[liveId].push(like);
-    return createSuccessResponse(like);
+    const like: Omit<Like, 'id'> = { liveId, userId: body.userId, timestamp: new Date().toISOString() };
+    const newLike = await dbClient.insert('likes', like);
+    return createSuccessResponse(newLike);
 });
 
 router.get('/api/lives/:id/summary', async (idStr) => {
     const liveId = parseInt(idStr, 10);
-    const live = await dbClient.findOne('lives', l => l.id === liveId);
+    const live = await dbClient.findOne('liveStreamRecords', l => l.id === liveId);
     if (!live) return createErrorResponse(404, "Live não encontrada.");
     
     const streamer = await dbClient.findOne('users', u => u.id === live.user_id);
@@ -1288,7 +1672,7 @@ router.get('/api/lives/:id/summary', async (idStr) => {
 
 router.get('/api/users/:id/live-status', async (idStr) => {
     const userId = parseInt(idStr, 10);
-    const live = await dbClient.findOne('lives', l => l.user_id === userId && l.ao_vivo);
+    const live = await dbClient.findOne('liveStreamRecords', l => l.user_id === userId && l.ao_vivo);
     return createSuccessResponse(!!live);
 });
 
@@ -1298,12 +1682,12 @@ router.get('/api/users/:id/following-live-status', async (idStr) => {
     if (!user) return createSuccessResponse([]);
     
     const followingIds = user.following;
-    const lives = await dbClient.find('lives', l => l.ao_vivo && followingIds.includes(l.user_id));
+    const lives = await dbClient.find('liveStreamRecords', l => l.ao_vivo && followingIds.includes(l.user_id));
     const liveUserIds = new Set(lives.map(l => l.user_id));
 
     const updates: LiveFollowUpdate[] = followingIds.map(id => {
         const isLive = liveUserIds.has(id);
-        const stream = isLive ? mapDbLiveToStream(lives.find(l => l.user_id === id)!) : null;
+        const stream = isLive ? mapLiveRecordToStream(lives.find(l => l.user_id === id)!) : null;
         return { userId: id, isLive, stream };
     });
     return createSuccessResponse(updates);
@@ -1311,14 +1695,14 @@ router.get('/api/users/:id/following-live-status', async (idStr) => {
 
 router.get('/api/users/:id/active-stream', async (idStr) => {
     const userId = parseInt(idStr, 10);
-    const live = await dbClient.findOne('lives', l => l.user_id === userId && l.ao_vivo);
-    return createSuccessResponse(live ? mapDbLiveToStream(live) : null);
+    const live = await dbClient.findOne('liveStreamRecords', l => l.user_id === userId && l.ao_vivo);
+    return createSuccessResponse(live ? mapLiveRecordToStream(live) : null);
 });
 
 router.get('/api/users/:id/lives', async (idStr) => {
     const userId = parseInt(idStr, 10);
-    const lives = await dbClient.find('lives', l => l.user_id === userId);
-    return createSuccessResponse(lives.map(mapDbLiveToStream));
+    const lives = await dbClient.find('liveStreamRecords', l => l.user_id === userId);
+    return createSuccessResponse(lives.map(mapLiveRecordToStream));
 });
 
 router.post('/api/lives/thumbnail', async (_, body) => {
@@ -1328,7 +1712,7 @@ router.post('/api/lives/thumbnail', async (_, body) => {
 router.post('/api/lives/:id/pay-entry', async (idStr, body) => {
     const liveId = parseInt(idStr, 10);
     const { viewerId } = body;
-    const live = await dbClient.findOne('lives', l => l.id === liveId);
+    const live = await dbClient.findOne('liveStreamRecords', l => l.id === liveId);
     if (!live || !live.is_private || !live.entry_fee) return createErrorResponse(400, "Esta não é uma live privada paga.");
     
     const viewer = await dbClient.findOne('users', u => u.id === viewerId);
@@ -1345,13 +1729,13 @@ router.post('/api/lives/:id/pay-entry', async (idStr, body) => {
 router.post('/api/lives/:id/invite', async (idStr, body) => {
     const liveId = parseInt(idStr, 10);
     const { inviteeId } = body;
-    const live = await dbClient.findOne('lives', l => l.id === liveId);
+    const live = await dbClient.findOne('liveStreamRecords', l => l.id === liveId);
     if (!live) return createErrorResponse(404, "Live não encontrada.");
     
     if (!live.invited_users) live.invited_users = [];
     if (!live.invited_users.includes(inviteeId)) {
         live.invited_users.push(inviteeId);
-        await dbClient.update('lives', liveId, { invited_users: live.invited_users });
+        await dbClient.update('liveStreamRecords', liveId, { invited_users: live.invited_users });
     }
     return createSuccessResponse({ success: true });
 });
@@ -1381,7 +1765,14 @@ router.get('/api/users/:id/private-live-invite-settings', async (idStr) => {
 
 router.put('/api/users/:id/private-live-invite-settings', async (idStr, body) => {
     const userId = parseInt(idStr, 10);
-    const updated = await dbClient.update('privateLiveInviteSettings', userId, body);
+    const existing = await dbClient.findOne('privateLiveInviteSettings', s => s.userId === userId);
+    let updated;
+    if (existing) {
+        updated = await dbClient.update('privateLiveInviteSettings', String(userId), body);
+    } else {
+        const defaultSettings = { privateInvites: true, onlyFollowing: true, onlyFans: false, onlyFriends: false };
+        updated = await dbClient.insert('privateLiveInviteSettings', { userId, ...defaultSettings, ...body });
+    }
     return createSuccessResponse(updated);
 });
 
@@ -1398,7 +1789,14 @@ router.get('/api/users/:id/notification-settings', async (idStr) => {
 
 router.patch('/api/users/:id/notification-settings', async (idStr, body) => {
     const userId = parseInt(idStr, 10);
-    const updated = await dbClient.update('notificationSettings', userId, body);
+    const existing = await dbClient.findOne('notificationSettings', s => s.userId === userId);
+    let updated;
+    if (existing) {
+        updated = await dbClient.update('notificationSettings', String(userId), body);
+    } else {
+        const defaultSettings = { newMessages: true, streamerLive: true, followedPost: true, order: true, interactive: true };
+        updated = await dbClient.insert('notificationSettings', { userId, ...defaultSettings, ...body });
+    }
     return createSuccessResponse(updated);
 });
 
@@ -1417,8 +1815,8 @@ router.patch('/api/users/:id/push-settings', async (idStr, body) => {
     return createSuccessResponse({ success: true });
 });
 
-router.get('/api/help/articles/:id', async (id) => {
-    const article = db.mockHelpArticles.find(a => a.id === id);
+router.get('/api/help/articles/:id', async (idStr) => {
+    const article = await dbClient.findOne('artigosAjuda', a => a.id === idStr);
     if (article) return createSuccessResponse(article);
     // Generic FAQ fallback
     return createSuccessResponse({ id: 'faq', title: 'Perguntas Frequentes', content: '<p>Nossos artigos de ajuda estão sendo atualizados. Por favor, entre em contato com o suporte ao vivo para assistência imediata.</p>' });
@@ -1526,11 +1924,11 @@ router.post('/api/lives/:id/sound-effect', async (idStr, body) => {
 
 router.post('/api/live/switch-camera', async (_, body) => {
     const { liveId, userId } = body;
-    const live = await dbClient.findOne('lives', l => l.id === liveId && l.user_id === userId);
+    const live = await dbClient.findOne('liveStreamRecords', l => l.id === liveId && l.user_id === userId);
     if (!live) return createErrorResponse(403, "Apenas o anfitrião pode trocar a câmera.");
 
     const newFacingMode: FacingMode = live.camera_facing_mode === 'user' ? 'environment' : 'user';
-    await dbClient.update('lives', liveId, { camera_facing_mode: newFacingMode });
+    await dbClient.update('liveStreamRecords', liveId, { camera_facing_mode: newFacingMode });
     await dbClient.update('users', userId, { last_camera_used: newFacingMode });
 
     return createSuccessResponse({ newFacingMode });
@@ -1538,11 +1936,11 @@ router.post('/api/live/switch-camera', async (_, body) => {
 
 router.post('/api/live/toggle-voice', async (_, body) => {
     const { liveId, userId } = body;
-    const live = await dbClient.findOne('lives', l => l.id === liveId && l.user_id === userId);
+    const live = await dbClient.findOne('liveStreamRecords', l => l.id === liveId && l.user_id === userId);
     if (!live) return createErrorResponse(403, "Apenas o anfitrião pode alterar a voz.");
 
     const voiceEnabled = !(live.voice_enabled ?? false);
-    await dbClient.update('lives', liveId, { voice_enabled: voiceEnabled });
+    await dbClient.update('liveStreamRecords', liveId, { voice_enabled: voiceEnabled });
     return createSuccessResponse({ voiceEnabled });
 });
 
@@ -1564,11 +1962,15 @@ router.get('/api/ranking/hourly', async (_, query) => {
     
     const currentUserRanking: UniversalRankingUser = { rank: '50+', userId: 10755083, avatarUrl: db.mockUserDatabase.find(u=>u.id===10755083)!.avatar_url!, name: db.mockUserDatabase.find(u=>u.id===10755083)!.nickname!, score: 1234, level: 45, gender: 'male', badges: [{type:'flag', value:'🇧🇷'}, {type:'level', value: 45}] };
     
+    const now = new Date();
+    const nextHour = new Date(now);
+    nextHour.setHours(now.getHours() + 1, 0, 0, 0);
+
     const data: UniversalRankingData = {
         podium,
         list,
         currentUserRanking,
-        countdown: '00:32:15',
+        countdown: nextHour.toISOString(),
         footerButtons: {
             primary: { text: "1º Lugar", value: '1060' },
             secondary: { text: "Entrar na lista", value: '203' }
@@ -1602,6 +2004,37 @@ router.post('/api/ranking/help-host', async (_, body) => {
     return createSuccessResponse({ success: true, updatedUser, message: "Ajuda enviada!" });
 });
 
+
+// --- Settings Routes (General) ---
+router.get('/api/pk-settings/:id', async (idStr) => {
+    const userId = parseInt(idStr, 10);
+    const settings = await dbClient.findOne('pkSettings', s => s.userId === userId);
+    if (settings) {
+        return createSuccessResponse({ durationSeconds: settings.durationSeconds });
+    }
+    // Return a default if no settings are found
+    return createSuccessResponse({ durationSeconds: 300 }); // Default to 5 minutes (300s)
+});
+
+router.post('/api/pk-settings/:id', async (idStr, body) => {
+    const userId = parseInt(idStr, 10);
+    const { durationSeconds } = body;
+
+    const existingSettings = await dbClient.findOne('pkSettings', s => s.userId === userId);
+
+    if (existingSettings) {
+        await dbClient.update('pkSettings', String(userId), { durationSeconds });
+    } else {
+        await dbClient.insert('pkSettings', { userId, durationSeconds });
+    }
+    
+    return createSuccessResponse({ success: true });
+});
+
+router.get('/api/categories', async () => {
+    const categories = await dbClient.find('liveCategories', () => true);
+    return createSuccessResponse(categories);
+});
 
 export const mockApi = async (url: string, options?: RequestInit): Promise<ApiResponse> => {
   const method = options?.method || 'GET';

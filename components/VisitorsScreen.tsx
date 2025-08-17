@@ -74,7 +74,7 @@ const VisitorsScreen: React.FC<VisitorsScreenProps> = ({ currentUser, onExit, on
                     <h1 className="font-bold text-lg absolute left-1/2 -translate-x-1/2">Visitantes</h1>
                     <div className="w-6 h-6"></div>
                 </header>
-                <main className="flex-grow overflow-y-auto">
+                <main className="flex-grow overflow-y-auto scrollbar-hide">
                     {renderContent()}
                 </main>
             </div>

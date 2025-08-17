@@ -1,5 +1,5 @@
 import * as mockDb from './mockDb';
-import type { User, DbLive, PkSession, Conversation, PurchaseOrder, WithdrawalTransaction, PkInvitation, PrivateLiveInviteSettings, NotificationSettings, ReportPayload, SuggestionPayload, GiftTransaction } from '../types';
+import type { User, LiveStreamRecord, PurchaseOrder, WithdrawalTransaction, ConvitePK, PrivateLiveInviteSettings, NotificationSettings, LogPresenteEnviado, PkSettings, LiveCategory, TabelaUsuario, BatalhaPK, TabelaConversa, TabelaMensagem, Denuncia, Sugestao, ConfiguracaoNivel, ArtigoAjuda, CanalContato, SeguidorRelacionamento, VisitaPerfil, FilaPK, Achievement, Like } from '../types';
 
 // Simulate reading from a .env file
 const ENV = {
@@ -14,32 +14,56 @@ const ENV = {
 // Using structuredClone to avoid direct mutation of the imported arrays
 let database: {
     users: User[];
-    lives: DbLive[];
-    pkSessions: PkSession[];
-    conversations: Omit<Conversation, 'otherUserName' | 'otherUserAvatarUrl'>[];
+    tabelaUsuarios: TabelaUsuario[];
+    liveStreamRecords: LiveStreamRecord[];
+    tabelaConversas: TabelaConversa[];
+    tabelaMensagens: TabelaMensagem[];
     purchaseOrders: PurchaseOrder[];
     withdrawalTransactions: WithdrawalTransaction[];
-    pkInvitations: PkInvitation[];
+    pkInvitations: ConvitePK[];
     privateLiveInviteSettings: PrivateLiveInviteSettings[];
     notificationSettings: NotificationSettings[];
-    reports: (ReportPayload & { timestamp: string })[];
-    suggestions: (SuggestionPayload & { timestamp: string })[];
-    giftTransactions: GiftTransaction[];
+    pkSettings: PkSettings[];
+    denuncias: Denuncia[];
+    sugestoes: Sugestao[];
+    logPresentesEnviados: LogPresenteEnviado[];
+    liveCategories: LiveCategory[];
+    batalhasPK: BatalhaPK[];
+    configuracaoNiveis: ConfiguracaoNivel[];
+    artigosAjuda: ArtigoAjuda[];
+    canaisContato: CanalContato[];
+    seguidores: SeguidorRelacionamento[];
+    visitasPerfil: VisitaPerfil[];
+    filaPK: FilaPK[];
     blockedRelationships: { blockerId: number, targetId: number }[];
+    achievements: Achievement[];
+    likes: Like[];
 } = {
     users: structuredClone(mockDb.mockUserDatabase),
-    lives: structuredClone(mockDb.mockLivesDatabase),
-    pkSessions: structuredClone(mockDb.mockPkSessionDatabase),
-    conversations: structuredClone(mockDb.mockConversationsDatabase),
+    tabelaUsuarios: structuredClone(mockDb.mockTabelaUsuariosDatabase),
+    liveStreamRecords: structuredClone(mockDb.mockLiveStreamRecordsDatabase),
+    tabelaConversas: structuredClone(mockDb.mockTabelaConversasDatabase),
+    tabelaMensagens: structuredClone(mockDb.mockTabelaMensagensDatabase),
     purchaseOrders: structuredClone(mockDb.mockPurchaseOrders),
     withdrawalTransactions: structuredClone(mockDb.mockWithdrawalTransactions),
-    pkInvitations: structuredClone(mockDb.mockPkInvitationsDatabase),
+    pkInvitations: structuredClone(mockDb.mockConvitesPKDatabase),
     privateLiveInviteSettings: structuredClone(mockDb.mockPrivateLiveInviteSettings),
     notificationSettings: structuredClone(mockDb.mockNotificationSettings),
-    reports: structuredClone(mockDb.mockReportsDatabase as any),
-    suggestions: structuredClone(mockDb.mockSuggestionsDatabase as any),
-    giftTransactions: structuredClone(mockDb.mockGiftTransactionsDatabase),
+    pkSettings: structuredClone(mockDb.mockPkSettingsDatabase),
+    denuncias: structuredClone(mockDb.mockDenunciasDatabase),
+    sugestoes: structuredClone(mockDb.mockSugestoesDatabase),
+    logPresentesEnviados: structuredClone(mockDb.mockLogPresentesEnviadosDatabase),
+    liveCategories: structuredClone(mockDb.mockLiveCategoriesDatabase),
+    batalhasPK: structuredClone(mockDb.mockBatalhasPKDatabase),
+    configuracaoNiveis: structuredClone(mockDb.mockConfiguracaoNiveisDatabase),
+    artigosAjuda: structuredClone(mockDb.mockArtigosAjudaDatabase),
+    canaisContato: structuredClone(mockDb.mockCanaisContatoDatabase),
+    seguidores: structuredClone(mockDb.mockSeguidoresDatabase),
+    visitasPerfil: structuredClone(mockDb.mockVisitasPerfilDatabase),
+    filaPK: structuredClone(mockDb.mockFilaPKDatabase),
     blockedRelationships: structuredClone(mockDb.mockBlockedRelationships),
+    achievements: structuredClone(mockDb.mockAchievementsDatabase),
+    likes: structuredClone(mockDb.mockLikesDatabase),
 };
 
 let connected = false;
@@ -79,7 +103,7 @@ const insert = async <K extends TableName>(tableName: K, data: Omit<TableItem<K>
     if (!table) throw new Error(`Table ${tableName} not found.`);
 
     const newItem = { ...data };
-    const primaryKey = (tableName === 'privateLiveInviteSettings' || tableName === 'notificationSettings') ? 'userId' : 'id';
+    const primaryKey = (tableName === 'privateLiveInviteSettings' || tableName === 'notificationSettings' || tableName === 'pkSettings') ? 'userId' : 'id';
     
     // Only generate an 'id' if the primary key is 'id' and it's not provided
     if (primaryKey === 'id' && typeof (newItem as any).id === 'undefined') {
@@ -101,15 +125,19 @@ const update = async <K extends TableName>(tableName: K, id: number | string, up
     const table = database[tableName] as any[];
     if (!table) throw new Error(`Table ${tableName} not found.`);
     
-    const primaryKey = (tableName === 'privateLiveInviteSettings' || tableName === 'notificationSettings') ? 'userId' : 'id';
+    const primaryKey = 
+        (tableName === 'privateLiveInviteSettings' || tableName === 'notificationSettings' || tableName === 'pkSettings') ? 'userId' :
+        (tableName === 'purchaseOrders') ? 'orderId' :
+        'id';
     
-    const itemIndex = table.findIndex(item => item[primaryKey] === id);
+    const itemIndex = table.findIndex(item => String(item[primaryKey]) === String(id));
 
     if (itemIndex === -1) {
         // Handle "upsert" for settings tables that might not exist yet
         if (primaryKey === 'userId') {
             const newItemData = { ...updates };
-            (newItemData as any)[primaryKey] = id;
+            // Ensure userId is a number
+            (newItemData as any)[primaryKey] = typeof id === 'string' ? parseInt(id, 10) : id;
             table.push(newItemData);
             return structuredClone(newItemData as TableItem<K>);
         }
@@ -137,11 +165,11 @@ const getRawDb = () => {
     return {
         ...database,
         // These are more like "cache" or non-relational data, so we get them from the original mockDb source
+        mockGiftCatalog: mockDb.mockGiftCatalog,
         mockLiveConnections: mockDb.mockLiveConnections,
         mockChatDatabase: mockDb.mockChatDatabase,
         mockViewers: mockDb.mockViewers,
         mockRankings: mockDb.mockRankings,
-        mockLikes: mockDb.mockLikes,
         mockPublicProfiles: mockDb.mockPublicProfiles,
         mockPkPreferences: mockDb.mockPkPreferences,
         mockUserRewardsStatus: mockDb.mockUserRewardsStatus,

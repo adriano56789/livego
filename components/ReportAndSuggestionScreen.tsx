@@ -4,13 +4,14 @@ import { useApiViewer } from './ApiContext';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
 import PaperClipIcon from './icons/PaperClipIcon';
 import SuccessIcon from './icons/SuccessIcon';
-import type { ReportPayload, SuggestionPayload } from '../types';
+import type { User } from '../types';
 
 interface ReportAndSuggestionScreenProps {
+  user: User;
   onExit: () => void;
 }
 
-const ReportAndSuggestionScreen: React.FC<ReportAndSuggestionScreenProps> = ({ onExit }) => {
+const ReportAndSuggestionScreen: React.FC<ReportAndSuggestionScreenProps> = ({ user, onExit }) => {
   const [activeTab, setActiveTab] = useState<'report' | 'suggestion'>('report');
   
   // State for report form
@@ -54,7 +55,7 @@ const ReportAndSuggestionScreen: React.FC<ReportAndSuggestionScreenProps> = ({ o
           setIsSubmitting(false);
           return;
         }
-        const payload: ReportPayload = { reportedId, reportReason, reportDetails, fileName };
+        const payload = { reporterId: user.id, reportedId, reportReason, reportDetails, fileName };
         await liveStreamService.submitReport(payload);
         showApiResponse('POST /api/reports', { success: true, payload });
         setSubmitSuccess('Sua denúncia foi enviada com sucesso!');
@@ -65,7 +66,7 @@ const ReportAndSuggestionScreen: React.FC<ReportAndSuggestionScreenProps> = ({ o
           setIsSubmitting(false);
           return;
         }
-        const payload: SuggestionPayload = { suggestion };
+        const payload = { suggesterId: user.id, suggestion };
         await liveStreamService.submitSuggestion(payload);
         showApiResponse('POST /api/suggestions', { success: true, payload });
         setSubmitSuccess('Sua sugestão foi enviada com sucesso!');
@@ -140,7 +141,7 @@ const ReportAndSuggestionScreen: React.FC<ReportAndSuggestionScreenProps> = ({ o
       <header className="p-4 flex items-center justify-between shrink-0 border-b border-gray-800">
         <button onClick={onExit}><ArrowLeftIcon className="w-6 h-6" /></button>
         <h1 className="font-bold text-lg">Denúncias & Sugestões</h1>
-        <div className="w-6"></div>
+        <div className="w-6 h-6"></div>
       </header>
 
       <nav className="shrink-0 flex border-b border-gray-800">
@@ -158,7 +159,7 @@ const ReportAndSuggestionScreen: React.FC<ReportAndSuggestionScreenProps> = ({ o
         </button>
       </nav>
 
-      <main className="flex-grow p-4 overflow-y-auto">
+      <main className="flex-grow p-4 overflow-y-auto scrollbar-hide">
         {activeTab === 'report' ? renderReportForm() : renderSuggestionForm()}
         {error && <p className="text-red-400 text-center text-sm mt-4">{error}</p>}
       </main>

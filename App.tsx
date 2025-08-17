@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import LoginScreen from './components/LoginScreen';
 import UploadPhotoScreen from './components/UploadPhotoScreen';
@@ -42,6 +43,7 @@ import NotificationSettingsScreen from './components/NotificationSettingsScreen'
 import PushSettingsScreen from './components/PushSettingsScreen';
 import PrivateLiveInviteSettingsScreen from './components/PrivateLiveInviteSettingsScreen';
 import InviteToPrivateLiveModal from './components/InviteToPrivateLiveModal';
+import IncomingPrivateLiveInviteModal from './components/IncomingPrivateLiveInviteModal';
 import FollowersScreen from './components/FollowersScreen';
 import FollowingScreen from './components/FollowingScreen';
 import VisitorsScreen from './components/VisitorsScreen';
@@ -49,7 +51,7 @@ import { loginWithGoogle, deleteAccount, getUserProfile } from './services/authS
 import * as liveStreamService from './services/liveStreamService';
 import * as versionService from './services/versionService';
 import * as soundService from './services/soundService';
-import type { User, AppView, Category, Stream, PkBattle, StartLiveResponse, Conversation, WithdrawalTransaction, AppEvent, VersionInfo, LiveEndSummary, PurchaseOrder, DiamondPackage, FacingMode } from './types';
+import type { User, AppView, Category, Stream, PkBattle, StartLiveResponse, Conversation, WithdrawalTransaction, AppEvent, VersionInfo, LiveEndSummary, PurchaseOrder, DiamondPackage, FacingMode, IncomingPrivateLiveInvite } from './types';
 import { ApiViewerProvider, useApiViewer } from './components/ApiContext';
 import ApiViewer from './components/ApiViewer';
 
@@ -80,6 +82,7 @@ const AppContent: React.FC = () => {
     step: 'purchase' | 'confirm';
     pkg?: DiamondPackage;
   } | null>(null);
+  const [incomingPrivateLiveInvite, setIncomingPrivateLiveInvite] = useState<IncomingPrivateLiveInvite | null>(null);
 
   useEffect(() => {
     const compareVersions = (v1: string, v2: string): number => {
@@ -374,6 +377,10 @@ const AppContent: React.FC = () => {
     // `handleStreamEnded` already sets viewingStream to null and currentView to live-ended
     handleStreamEnded(streamId);
   }, [user, handleStreamEnded]);
+  
+  const handleShowPrivateLiveInvite = useCallback((invite: IncomingPrivateLiveInvite) => {
+      setIncomingPrivateLiveInvite(invite);
+  }, []);
 
   const renderContent = () => {
     if (needsUpdate && versionInfo) {
@@ -398,6 +405,7 @@ const AppContent: React.FC = () => {
             onStreamEnded={handleStreamEnded}
             onStopStream={handleStopStream}
             onNavigateToChat={handleNavigateToChat}
+            onShowPrivateLiveInvite={handleShowPrivateLiveInvite}
         />
     }
 
@@ -514,7 +522,7 @@ const AppContent: React.FC = () => {
         />;
     }
     if (currentView === 'report-and-suggestion') {
-        return <ReportAndSuggestionScreen onExit={() => setCurrentView('profile')} />;
+        return <ReportAndSuggestionScreen user={user} onExit={() => setCurrentView('profile')} />;
     }
     if (currentView === 'event-center') {
         return <EventCenterScreen onExit={() => setCurrentView('profile')} onViewEvent={handleViewEvent} />;
@@ -751,6 +759,17 @@ const AppContent: React.FC = () => {
                   handleViewStream(liveNotification.stream);
               }}
               onClose={() => setLiveNotification(null)}
+          />
+      )}
+      
+      {incomingPrivateLiveInvite && (
+          <IncomingPrivateLiveInviteModal
+              invite={incomingPrivateLiveInvite}
+              onAccept={() => {
+                  handleViewStream(incomingPrivateLiveInvite.stream);
+                  setIncomingPrivateLiveInvite(null);
+              }}
+              onDecline={() => setIncomingPrivateLiveInvite(null)}
           />
       )}
     </>

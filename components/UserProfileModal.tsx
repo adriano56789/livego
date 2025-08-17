@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import type { PublicProfile, Stream, PkBattle, User } from '../types';
 import * as liveStreamService from '../services/liveStreamService';
@@ -88,9 +87,9 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ userId, currentUser
 
         const activeStream = await liveStreamService.getActiveStreamForUser(profile.id);
         if (activeStream) {
-            const pkSession = await liveStreamService.findPkSessionForStream(activeStream.id);
-            if (pkSession) {
-                const pkBattle = await liveStreamService.getPkBattleDetails(pkSession.id);
+            const pkBattleDb = await liveStreamService.findActivePkBattleForStream(activeStream.id);
+            if (pkBattleDb) {
+                const pkBattle = await liveStreamService.getPkBattleDetails(pkBattleDb.id);
                 onViewStream(pkBattle);
             } else {
                 onViewStream(activeStream);

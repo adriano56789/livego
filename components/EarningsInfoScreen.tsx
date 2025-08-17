@@ -14,7 +14,7 @@ const EarningsInfoScreen: React.FC<EarningsInfoScreenProps> = ({ onExit }) => {
         <h1 className="font-bold text-lg">Informações de Ganhos</h1>
         <div className="w-6 h-6"></div>
       </header>
-      <main className="flex-grow p-6 overflow-y-auto text-gray-300 leading-relaxed">
+      <main className="flex-grow p-6 overflow-y-auto text-gray-300 leading-relaxed scrollbar-hide">
         <h2 className="text-2xl font-bold text-white mb-8 text-center">Nossa Política de Monetização</h2>
         
         <section className="mb-8">

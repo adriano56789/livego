@@ -44,6 +44,9 @@ export interface User {
   last_camera_used?: FacingMode;
   last_selected_category?: Category;
   country: 'BR' | 'US' | 'PT' | 'JP' | 'IT' | 'AR' | null;
+  personalSignature?: string;
+  personalityTags?: { id: string, label: string }[];
+  achievements?: string[];
 }
 
 export interface AchievementFrame {
@@ -86,34 +89,9 @@ export interface PublicProfile {
 }
 
 // Stream-related types
-export interface Stream {
-  id: number;
-  userId: number;
-  titulo: string;
-  nomeStreamer: string;
-  thumbnailUrl?: string;
-  espectadores: number;
-  categoria: Category;
-  aoVivo: boolean;
-  emPK: boolean;
-  isPrivate: boolean;
-  entryFee: number | null;
-  meta: string | null;
-  inicio: string;
-  permitePk: boolean;
-  isParty?: boolean; // Added for private parties
-  cameraFacingMode?: FacingMode;
-  voiceEnabled?: boolean;
-}
 
-// Listener function type for real-time stream updates.
-export type StreamUpdateListener = (streams: Stream[]) => void;
-export type MuteStatusListener = (update: { liveId: number; userId: number; isMuted: boolean; mutedUntil?: string }) => void;
-export type UserKickedListener = (update: { liveId: number; kickedUserId: number }) => void;
-export type SoundEffectListener = (update: { liveId: number; effectName: SoundEffectName; triggeredBy: number; }) => void;
-
-
-export interface DbLive {
+// This is the single source of truth for a live stream in the database
+export interface LiveStreamRecord {
   id: number;
   user_id: number;
   titulo: string;
@@ -136,12 +114,40 @@ export interface DbLive {
   voice_enabled?: boolean;
 }
 
+// This is the VIEW MODEL for the frontend, derived from LiveStreamRecord
+export interface Stream {
+  id: number;
+  userId: number;
+  titulo: string;
+  nomeStreamer: string;
+  thumbnailUrl?: string;
+  espectadores: number;
+  categoria: Category;
+  aoVivo: boolean;
+  emPK: boolean;
+  isPrivate: boolean;
+  entryFee: number | null;
+  meta: string | null;
+  inicio: string;
+  permitePk: boolean;
+  isParty?: boolean;
+  cameraFacingMode?: FacingMode;
+  voiceEnabled?: boolean;
+}
+
+// Listener function type for real-time stream updates.
+export type StreamUpdateListener = (streams: Stream[]) => void;
+export type MuteStatusListener = (update: { liveId: number; userId: number; isMuted: boolean; mutedUntil?: string }) => void;
+export type UserKickedListener = (update: { liveId: number; kickedUserId: number }) => void;
+export type SoundEffectListener = (update: { liveId: number; effectName: SoundEffectName; triggeredBy: number; }) => void;
+
 export interface PkBattleStreamer {
   userId: number;
   streamId: number;
   name: string;
   score: number;
   avatarUrl: string;
+  isVerified: boolean;
 }
 
 export interface PkBattle {
@@ -151,24 +157,25 @@ export interface PkBattle {
   streamer2: PkBattleStreamer;
 }
 
-export interface PkSession {
-  id: number;
-  stream1Id: number;
-  stream2Id: number;
-  score1: number;
-  score2: number;
-  startTime: string;
-  endTime: string | null;
+export interface ConvitePK {
+  id: string;
+  remetente_id: number;
+  destinatario_id: number;
+  status: 'pendente' | 'aceito' | 'recusado' | 'expirado' | 'cancelado';
+  data_envio: string;
+  data_expiracao: string;
+  batalha_id?: number;
 }
 
-export interface PkInvitation {
-  id: string;
-  inviterId: number;
-  inviterName: string;
-  inviterAvatarUrl: string;
-  inviteeId: number;
-  status: 'pending' | 'accepted' | 'declined' | 'expired';
-  timestamp: string;
+export interface PkInvitation extends ConvitePK {
+    inviterName: string;
+    inviterAvatarUrl: string;
+}
+
+export interface IncomingPrivateLiveInvite {
+  stream: Stream;
+  inviter: User;
+  invitee: User;
 }
 
 export interface StartLiveResponse {
@@ -208,28 +215,49 @@ export interface LiveEndSummary {
 }
 
 // Chat & Message types
-export interface ConversationMessage {
-  id: number;
-  senderId: number;
-  text: string;
-  timestamp: string;
-  status: 'sent' | 'seen';
-  seenBy: number[];
+export interface TabelaConversa {
+  id: string;
+  participantes: number[];
+  ultima_mensagem_texto: string;
+  ultima_mensagem_timestamp: string;
+  titulo_conversa?: string;
+  avatar_conversa?: string;
 }
 
-export interface Conversation {
+export interface TabelaMensagem {
   id: string;
-  participants: number[];
-  otherUserId: number;
-  otherUserName: string;
-  otherUserAvatarUrl: string;
-  unreadCount: number;
-  messages: ConversationMessage[];
+  conversa_id: string;
+  remetente_id: number;
+  conteudo: string;
+  timestamp: string;
+  tipo_conteudo: 'texto';
+  status_leitura: { [userId: number]: boolean };
+}
+
+// This is a VIEW MODEL for the frontend. The API will construct this from the tables above.
+export interface ConversationMessage {
+  id: string; // From TabelaMensagem.id
+  senderId: number; // From TabelaMensagem.remetente_id
+  text: string; // From TabelaMensagem.conteudo
+  timestamp: string; // From TabelaMensagem.timestamp
+  status: 'sent' | 'seen';
+  seenBy: number[]; // Derived from TabelaMensagem.status_leitura
+}
+
+// This is a VIEW MODEL for the frontend. The API will construct this from the tables above.
+export interface Conversation {
+  id: string; // From TabelaConversa.id
+  participants: number[]; // From TabelaConversa.participantes
+  otherUserId: number; // Derived
+  otherUserName: string; // Derived from Users table
+  otherUserAvatarUrl: string; // Derived from Users table
+  unreadCount: number; // Calculated
+  messages: ConversationMessage[]; // Assembled from TabelaMensagem
 }
 
 export interface ChatMessage {
   id: number;
-  type: 'message' | 'entry' | 'gift' | 'special_entry' | 'levelup';
+  type: 'message' | 'entry' | 'gift' | 'special_entry' | 'levelup' | 'announcement';
   level?: number;
   username: string;
   userId: number;
@@ -237,11 +265,22 @@ export interface ChatMessage {
   emojis?: string;
   color?: string;
   giftName?: string;
+  giftValue?: number;
   giftAnimationUrl?: string;
   timestamp: string;
+  badgeText?: string;
 }
 
 // Purchase and Wallet types
+export interface Gift {
+  id: number;
+  name: string;
+  price: number;
+  valor_pontos: number;
+  is_ativo: boolean;
+  animationUrl: string;
+}
+
 export interface DiamondPackage {
   id: number;
   diamonds: number;
@@ -295,21 +334,14 @@ export interface WithdrawalBalance {
     availableBalance: number;
 }
 
-// Gifts, Viewers, Ranking
-export interface Gift {
-  id: number;
-  name: string;
-  price: number;
-  animationUrl: string;
-}
-
-export interface GiftTransaction {
+export interface LogPresenteEnviado {
     id: number;
     senderId: number;
     receiverId: number;
     liveId: number;
     giftId: number;
     giftValue: number;
+    batalha_id?: number;
     timestamp: string;
 }
 
@@ -362,6 +394,7 @@ export interface UniversalRankingData {
 export interface Like {
   id: number;
   userId: number;
+  liveId: number;
   timestamp: string;
 }
 
@@ -432,11 +465,26 @@ export interface AppEvent {
     linkedCategory: Category | null;
 }
 
-export interface HelpArticle {
-    id: string;
-    title: string;
-    content: string;
+export interface ArtigoAjuda {
+  id: string;
+  titulo: string;
+  conteudo: string;
+  categoria: 'FAQ' | 'Artigos Úteis';
+  ordem_exibicao: number;
+  visualizacoes: number;
+  is_ativo: boolean;
 }
+
+export interface CanalContato {
+  id: string;
+  nome: string;
+  tipo: 'link_externo' | 'chat_interno' | 'email';
+  destino: string;
+  icone: 'headset' | 'envelope' | 'whatsapp';
+  is_ativo: boolean;
+  horario_funcionamento?: string;
+}
+
 
 export interface DailyReward {
     day: number;
@@ -496,17 +544,6 @@ export interface GeneralRankingUser {
     xp: number;
 }
 
-export interface ReportPayload {
-    reportedId: string;
-    reportReason: string;
-    reportDetails: string;
-    fileName: string;
-}
-
-export interface SuggestionPayload {
-    suggestion: string;
-}
-
 export interface LiveFollowUpdate {
     userId: number;
     isLive: boolean;
@@ -530,10 +567,98 @@ export interface NotificationSettings {
     interactive: boolean;
 }
 
+export interface PkSettings {
+  userId: number;
+  durationSeconds: number;
+}
+
 export interface SoundEffectLogEntry {
     id: number;
     liveId: number;
     effectName: SoundEffectName;
     triggeredBy: number;
     timestamp: string;
+}
+
+export interface TabelaUsuario {
+  id: number;
+  nome_completo: string;
+  email: string;
+  senha_hash: string;
+  avatar_url?: string;
+  provedor_login: 'google' | 'facebook' | 'email';
+  id_provedor?: string | null;
+  data_criacao: string;
+  ultimo_login: string;
+  is_streamer: boolean;
+}
+
+export interface LiveCategory {
+  id: string;
+  name: Category;
+  slug: string;
+}
+
+export interface BatalhaPK {
+  id: number;
+  live_id_1: number;
+  live_id_2: number;
+  streamer_id_1: number;
+  streamer_id_2: number;
+  pontos_streamer_1: number;
+  pontos_streamer_2: number;
+  vencedor_id: number | null;
+  data_inicio: string;
+  data_fim: string | null;
+  status: 'ativa' | 'finalizada';
+  data_comemoracao_fim: string | null;
+  top_supporters_1: RankingContributor[];
+  top_supporters_2: RankingContributor[];
+}
+
+export interface Denuncia {
+  id: string;
+  usuario_denunciante_id: number;
+  usuario_denunciado_id: string;
+  motivo_denuncia: string;
+  comentarios: string;
+  contexto_id?: string | null;
+  status_revisao: 'Pendente' | 'Analisando' | 'Resolvida';
+  data_denuncia: string;
+  acao_tomada?: string | null;
+}
+
+export interface Sugestao {
+  id: string;
+  usuario_id: number;
+  texto_sugestao: string;
+  status_revisao: 'Recebida' | 'Em análise' | 'Implementada';
+  data_sugestao: string;
+}
+
+export interface ConfiguracaoNivel {
+  nivel: number;
+  xp_necessario_total: number;
+  recompensa_id: string;
+  recompensa_descricao: string;
+  icone_url: string;
+}
+
+export interface SeguidorRelacionamento {
+  seguidor_id: number;
+  streamer_id: number;
+  data_seguindo: string;
+}
+
+export interface VisitaPerfil {
+  id: string;
+  visitante_id: number;
+  perfil_visitado_id: number;
+  data_visita: string;
+}
+
+export interface FilaPK {
+  streamer_id: number;
+  data_entrada: string;
+  status: 'aguardando' | 'em_pareamento';
 }

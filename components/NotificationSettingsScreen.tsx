@@ -104,7 +104,7 @@ const NotificationSettingsScreen: React.FC<NotificationSettingsScreenProps> = ({
                 <button onClick={onExit} className="p-2 -m-2 z-10"><ArrowLeftIcon className="w-6 h-6" /></button>
                 <h1 className="font-semibold text-lg absolute left-1/2 -translate-x-1/2 whitespace-nowrap">Configurações de notificação</h1>
             </header>
-            <main className="flex-grow overflow-y-auto bg-black">
+            <main className="flex-grow overflow-y-auto bg-black scrollbar-hide">
                 <Section title="Receber notificações">
                     <SettingItem label="Novas mensagens">
                         <ToggleSwitch enabled={settings?.newMessages ?? true} onChange={(v) => handleSettingChange('newMessages', v)} ariaLabel="Novas mensagens" />

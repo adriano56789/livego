@@ -74,7 +74,7 @@ const SearchScreen: React.FC<SearchScreenProps> = ({ currentUser, onExit, onUpda
           </div>
         </header>
 
-        <main className="flex-grow overflow-y-auto">
+        <main className="flex-grow overflow-y-auto scrollbar-hide">
           {isLoading ? (
             <div className="text-center text-gray-400 pt-10">Buscando...</div>
           ) : results.length > 0 ? (

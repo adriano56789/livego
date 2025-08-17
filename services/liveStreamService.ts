@@ -1,5 +1,5 @@
 import { apiClient } from './apiClient';
-import type { User, LiveDetails, ChatMessage, Gift, Viewer, RankingContributor, Like, PkBattle, PkSession, PublicProfile, PkEventDetails, Conversation, SendGiftResponse, ProtectorDetails, WithdrawalTransaction, WithdrawalMethod, InventoryItem, AppEvent, LiveEndSummary, UserLevelInfo, GeneralRankingStreamer, GeneralRankingUser, WithdrawalBalance, EventStatus, PkRankingData, ReportPayload, SuggestionPayload, Stream, Category, StreamUpdateListener, StartLiveResponse, PkInvitation, LiveFollowUpdate, PrivateLiveInviteSettings, NotificationSettings, FacingMode, SoundEffectName, MuteStatusListener, UserKickedListener, SoundEffectListener, UniversalRankingData, UserListRankingPeriod } from '../types';
+import type { User, LiveDetails, ChatMessage, Gift, Viewer, RankingContributor, Like, PkBattle, BatalhaPK, PublicProfile, PkEventDetails, Conversation, SendGiftResponse, ProtectorDetails, WithdrawalTransaction, WithdrawalMethod, InventoryItem, AppEvent, LiveEndSummary, UserLevelInfo, GeneralRankingStreamer, GeneralRankingUser, WithdrawalBalance, EventStatus, PkRankingData, Stream, Category, StreamUpdateListener, StartLiveResponse, ConvitePK, LiveFollowUpdate, PrivateLiveInviteSettings, NotificationSettings, FacingMode, SoundEffectName, MuteStatusListener, UserKickedListener, SoundEffectListener, UniversalRankingData, UserListRankingPeriod, PkSettings, LiveCategory } from '../types';
 
 // NOTE: Listener logic remains client-side for real-time simulation without websockets
 const streamListeners = new Set<StreamUpdateListener>();
@@ -75,12 +75,14 @@ export const getStreamsForCategory = (category: Category): Promise<Stream[]> => 
 export const getPrivateStreams = (userId: number): Promise<Stream[]> => apiClient(`/api/lives/private/${userId}`);
 export const getPkBattles = (): Promise<PkBattle[]> => apiClient('/api/lives/pk');
 export const getPkBattleDetails = (pkId: number): Promise<PkBattle> => apiClient(`/api/pk-battles/${pkId}`);
-export const getPkSessionDetails = (pkSessionId: number): Promise<PkSession> => apiClient(`/api/pk-sessions/${pkSessionId}`);
-export const findPkSessionForStream = (streamId: number): Promise<PkSession | null> => apiClient(`/api/streams/${streamId}/pk-session`);
+export const getActivePkBattle = (pkBattleId: number): Promise<BatalhaPK> => apiClient(`/api/batalhas-pk/${pkBattleId}`);
+export const findActivePkBattleForStream = (streamId: number): Promise<BatalhaPK | null> => apiClient(`/api/streams/${streamId}/batalha-pk`);
 export const getUserLiveStatus = (userId: number): Promise<boolean> => apiClient(`/api/users/${userId}/live-status`);
 export const getFollowingLiveStatus = (userId: number): Promise<LiveFollowUpdate[]> => apiClient(`/api/users/${userId}/following-live-status`);
 export const getActiveStreamForUser = (userId: number): Promise<Stream | null> => apiClient(`/api/users/${userId}/active-stream`);
 export const getUserLives = (userId: number): Promise<Stream[]> => apiClient(`/api/users/${userId}/lives`);
+
+export const getLiveCategories = (): Promise<LiveCategory[]> => apiClient('/api/categories');
 
 export const uploadLiveThumbnail = (thumbnailBase64: string): Promise<{ thumbnailUrl: string }> => {
     return apiClient('/api/lives/thumbnail', {
@@ -100,6 +102,13 @@ export const stopLiveStream = (userId: number): Promise<void> => {
     return apiClient(`/api/users/${userId}/stop-live`, { method: 'POST' });
 };
 
+export const endPkBattle = (pkBattleId: number, userId: number): Promise<{ success: boolean }> => {
+    return apiClient(`/api/pk-battles/${pkBattleId}/end`, { 
+        method: 'POST',
+        body: JSON.stringify({ userId }) 
+    });
+};
+
 export const payStreamEntryFee = (viewerId: number, streamId: number): Promise<User> => {
     return apiClient(`/api/lives/${streamId}/pay-entry`, {
         method: 'POST',
@@ -109,6 +118,13 @@ export const payStreamEntryFee = (viewerId: number, streamId: number): Promise<U
 
 export const inviteUserToPrivateLive = (liveId: number, inviteeId: number): Promise<{ success: boolean }> => {
     return apiClient(`/api/lives/${liveId}/invite`, {
+        method: 'POST',
+        body: JSON.stringify({ inviteeId })
+    });
+};
+
+export const cancelPrivateLiveInvite = (liveId: number, inviteeId: number): Promise<{ success: boolean }> => {
+    return apiClient(`/api/lives/${liveId}/cancel-invite`, {
         method: 'POST',
         body: JSON.stringify({ inviteeId })
     });
@@ -124,10 +140,10 @@ export const sendChatMessage = (liveId: number, userId: number, message: string)
 };
 
 export const getGiftCatalog = (): Promise<Gift[]> => apiClient('/api/gifts');
-export const sendGift = (liveId: number, senderId: number, giftId: number): Promise<SendGiftResponse> => {
+export const sendGift = (liveId: number, senderId: number, giftId: number, receiverId?: number): Promise<SendGiftResponse> => {
     return apiClient(`/api/lives/${liveId}/gift`, {
         method: 'POST',
-        body: JSON.stringify({ senderId, giftId })
+        body: JSON.stringify({ senderId, giftId, receiverId })
     });
 };
 
@@ -210,19 +226,18 @@ export const sendMessageToSupport = (userId: number, text: string): Promise<Conv
     return apiClient('/api/support/messages', { method: 'POST', body: JSON.stringify({ userId, text }) });
 };
 
-export const submitReport = (data: ReportPayload): Promise<{ success: boolean }> => {
-    return apiClient('/api/reports', { method: 'POST', body: JSON.stringify(data) });
-};
-export const reportUser = (reporterId: number, reportedId: number, reason = 'Reported from profile'): Promise<{ success: boolean }> => {
-    return submitReport({
-        reportedId: String(reportedId),
-        reportReason: reason,
-        reportDetails: `Reported by user ${reporterId}`,
-        fileName: '',
+export const submitReport = (reportData: { reporterId: number, reportedId: string; reportReason: string; reportDetails: string; fileName: string; }): Promise<{ success: boolean }> => {
+    return apiClient('/api/reports', {
+        method: 'POST',
+        body: JSON.stringify(reportData)
     });
 };
-export const submitSuggestion = (data: SuggestionPayload): Promise<{ success: boolean }> => {
-    return apiClient('/api/suggestions', { method: 'POST', body: JSON.stringify(data) });
+
+export const submitSuggestion = (suggestionData: { suggesterId: number; suggestion: string }): Promise<{ success: boolean }> => {
+    return apiClient('/api/suggestions', {
+        method: 'POST',
+        body: JSON.stringify(suggestionData)
+    });
 };
 
 export const getEventsByStatus = (status: EventStatus): Promise<AppEvent[]> => apiClient(`/api/events?status=${status}`);
@@ -230,109 +245,52 @@ export const getEventById = (eventId: string): Promise<AppEvent> => apiClient(`/
 export const getUserLevelInfo = (userId: number): Promise<UserLevelInfo> => apiClient(`/api/users/${userId}/level`);
 export const getStreamerRanking = (): Promise<GeneralRankingStreamer[]> => apiClient('/api/ranking/streamers');
 export const getUserRanking = (): Promise<GeneralRankingUser[]> => apiClient('/api/ranking/users');
-export const joinLiveStream = (userId: number, liveId: number): Promise<{ success: boolean }> => {
-    return apiClient(`/api/lives/${liveId}/join`, { method: 'POST', body: JSON.stringify({ userId }) });
-};
-export const leaveLiveStream = (userId: number, liveId: number): Promise<{ success: boolean }> => {
-    return apiClient(`/api/lives/${liveId}/leave`, {
-        method: 'POST',
-        body: JSON.stringify({ userId })
-    });
+
+export const joinLiveStream = (userId: number, liveId: number): Promise<{ success: boolean }> => apiClient(`/api/lives/${liveId}/join`, { method: 'POST', body: JSON.stringify({ userId }) });
+export const leaveLiveStream = (userId: number, liveId: number): Promise<{ success: boolean }> => apiClient(`/api/lives/${liveId}/leave`, { method: 'POST', body: JSON.stringify({ userId }) });
+export const muteUser = (liveId: number, targetUserId: number, mute: boolean, durationMinutes: number = 5): Promise<{ success: boolean }> => apiClient(`/api/lives/${liveId}/mute`, { method: 'POST', body: JSON.stringify({ targetUserId, mute, durationMinutes }) });
+export const kickUser = (liveId: number, targetUserId: number): Promise<{ success: boolean }> => apiClient(`/api/lives/${liveId}/kick`, { method: 'POST', body: JSON.stringify({ targetUserId }) });
+export const playSoundEffect = (liveId: number, triggeredBy: number, effectName: SoundEffectName): Promise<{ success: boolean }> => apiClient(`/api/lives/${liveId}/sound-effect`, { method: 'POST', body: JSON.stringify({ triggeredBy, effectName }) });
+export const reportUser = (reporterId: number, targetId: number): Promise<{ success: boolean }> => {
+    const reportData = {
+        reporterId,
+        reportedId: String(targetId),
+        reportReason: "Denúncia do perfil",
+        reportDetails: `Usuário ${reporterId} denunciou o usuário ${targetId} a partir de seu perfil.`,
+        fileName: ''
+    };
+    return apiClient('/api/reports', { method: 'POST', body: JSON.stringify(reportData) });
 };
 
+export const getNotificationSettings = (userId: number): Promise<NotificationSettings> => apiClient(`/api/users/${userId}/notification-settings`);
+export const updateNotificationSettings = (userId: number, settings: Partial<Omit<NotificationSettings, 'userId'>>): Promise<NotificationSettings> => apiClient(`/api/users/${userId}/notification-settings`, { method: 'PATCH', body: JSON.stringify(settings) });
+export const getPushSettings = (userId: number): Promise<Record<number, boolean>> => apiClient(`/api/users/${userId}/push-settings`);
+export const updatePushSetting = (userId: number, followedUserId: number, enabled: boolean): Promise<{ success: boolean }> => apiClient(`/api/users/${userId}/push-settings`, { method: 'PATCH', body: JSON.stringify({ followedUserId, enabled }) });
+export const getPrivateLiveInviteSettings = (userId: number): Promise<PrivateLiveInviteSettings> => apiClient(`/api/users/${userId}/private-live-invite-settings`);
+export const updatePrivateLiveInviteSettings = (userId: number, settings: Partial<Omit<PrivateLiveInviteSettings, 'userId'>>): Promise<PrivateLiveInviteSettings> => apiClient(`/api/users/${userId}/private-live-invite-settings`, { method: 'PUT', body: JSON.stringify(settings) });
 
-// --- PK Battle Functions ---
+export const getUserPkPreference = (userId: number): Promise<{ isPkEnabled: boolean }> => apiClient(`/api/users/${userId}/pk-preference`);
+export const updateUserPkPreference = (userId: number, isPkEnabled: boolean): Promise<{ success: boolean }> => apiClient(`/api/users/${userId}/pk-preference`, { method: 'PATCH', body: JSON.stringify({ isPkEnabled }) });
+
 export const getInvitableOpponents = (currentUserId: number): Promise<User[]> => apiClient(`/api/lives/invitable/${currentUserId}`);
-export const sendPkInvitation = (inviterId: number, inviteeId: number): Promise<PkInvitation> => apiClient('/api/pk/invite', { method: 'POST', body: JSON.stringify({ inviterId, inviteeId }) });
-export const getPendingPkInvitation = (userId: number): Promise<PkInvitation | null> => apiClient(`/api/pk/invites/pending/${userId}`);
+export const sendPkInvitation = (remetente_id: number, destinatario_id: number): Promise<ConvitePK> => apiClient('/api/pk/invite', { method: 'POST', body: JSON.stringify({ remetente_id, destinatario_id }) });
+export const getPendingPkInvitation = (userId: number): Promise<ConvitePK | null> => apiClient(`/api/pk/invites/pending/${userId}`);
 export const acceptPkInvitation = (invitationId: string): Promise<PkBattle> => apiClient(`/api/pk/invites/${invitationId}/accept`, { method: 'POST' });
 export const declinePkInvitation = (invitationId: string): Promise<{ success: boolean }> => apiClient(`/api/pk/invites/${invitationId}/decline`, { method: 'POST' });
-export const endPkBattle = (pkSessionId: number): Promise<{ success: boolean }> => apiClient(`/api/pk/battles/${pkSessionId}/end`, { method: 'POST' });
+export const cancelPkInvitation = (invitationId: string): Promise<{ success: boolean }> => apiClient(`/api/pk/invites/${invitationId}/cancel`, { method: 'POST' });
+export const getPkInvitationStatus = (invitationId: string): Promise<{ invitation: ConvitePK, battle?: PkBattle }> => apiClient(`/api/pk/invites/status/${invitationId}`);
 
-// --- Settings Functions ---
-export const getUserPkPreference = (userId: number): Promise<{ isPkEnabled: boolean }> => {
-    return apiClient(`/api/users/${userId}/pk-preference`);
-};
+export const joinPkMatchmakingQueue = (userId: number): Promise<{ success: boolean }> => apiClient('/api/pk/matchmaking/join', { method: 'POST', body: JSON.stringify({ userId }) });
+export const leavePkMatchmakingQueue = (userId: number): Promise<{ success: boolean }> => apiClient('/api/pk/matchmaking/leave', { method: 'POST', body: JSON.stringify({ userId }) });
+export const checkPkMatchmakingStatus = (userId: number): Promise<{ status: 'aguardando' | 'pareado', battle?: PkBattle }> => apiClient(`/api/pk/matchmaking/status/${userId}`);
 
-export const updateUserPkPreference = (userId: number, isPkEnabled: boolean): Promise<{ success: boolean }> => {
-    return apiClient(`/api/users/${userId}/pk-preference`, {
-        method: 'PATCH',
-        body: JSON.stringify({ isPkEnabled })
-    });
-};
+export const getPkSettings = (userId: number): Promise<{ durationSeconds: number }> => apiClient(`/api/pk-settings/${userId}`);
+export const updatePkSettings = (userId: number, durationSeconds: number): Promise<{ success: boolean }> => apiClient(`/api/pk-settings/${userId}`, { method: 'POST', body: JSON.stringify({ durationSeconds }) });
+export const helpHostRankUp = (helperId: number, hostId: number, giftValue: number): Promise<{ updatedUser: User | null; success: boolean; message: string }> => apiClient('/api/ranking/help-host', { method: 'POST', body: JSON.stringify({ helperId, hostId, giftValue }) });
 
-export const getPrivateLiveInviteSettings = (userId: number): Promise<PrivateLiveInviteSettings> => {
-    return apiClient(`/api/users/${userId}/private-live-invite-settings`);
-};
-
-export const updatePrivateLiveInviteSettings = (userId: number, settings: Partial<Omit<PrivateLiveInviteSettings, 'userId'>>): Promise<PrivateLiveInviteSettings> => {
-    return apiClient(`/api/users/${userId}/private-live-invite-settings`, {
-        method: 'PUT',
-        body: JSON.stringify(settings),
-    });
-};
-
-export const getNotificationSettings = (userId: number): Promise<NotificationSettings> => {
-    return apiClient(`/api/users/${userId}/notification-settings`);
-};
-
-export const updateNotificationSettings = (userId: number, settings: Partial<Omit<NotificationSettings, 'userId'>>): Promise<NotificationSettings> => {
-    return apiClient(`/api/users/${userId}/notification-settings`, {
-        method: 'PATCH',
-        body: JSON.stringify(settings),
-    });
-};
-
-export const getPushSettings = (userId: number): Promise<Record<number, boolean>> => {
-    return apiClient(`/api/users/${userId}/push-settings`);
-};
-
-export const updatePushSetting = (userId: number, followedUserId: number, enabled: boolean): Promise<{ success: boolean }> => {
-    return apiClient(`/api/users/${userId}/push-settings`, {
-        method: 'PATCH',
-        body: JSON.stringify({ followedUserId, enabled }),
-    });
-};
-
-// --- Moderation Functions ---
-export const muteUser = (liveId: number, targetUserId: number, mute: boolean, durationMinutes: number = 5): Promise<{ success: boolean }> => {
-    return apiClient(`/api/lives/${liveId}/mute`, {
+export const simulateReceivePkGift = (pkBattleId: number, receiverId: number, giftValue: number): Promise<BatalhaPK> => {
+    return apiClient(`/api/batalhas-pk/${pkBattleId}/simulate-gift`, {
         method: 'POST',
-        body: JSON.stringify({ targetUserId, mute, durationMinutes })
-    });
-};
-
-export const kickUser = (liveId: number, targetUserId: number): Promise<{ success: boolean }> => {
-    return apiClient(`/api/lives/${liveId}/kick`, {
-        method: 'POST',
-        body: JSON.stringify({ targetUserId })
-    });
-};
-
-export const playSoundEffect = (liveId: number, triggeredBy: number, effectName: SoundEffectName): Promise<{ success: boolean }> => {
-    return apiClient(`/api/lives/${liveId}/sound-effect`, {
-        method: 'POST',
-        body: JSON.stringify({ triggeredBy, effectName })
-    });
-};
-
-export const switchCamera = (liveId: number, userId: number): Promise<{ newFacingMode: FacingMode }> => {
-    return apiClient('/api/live/switch-camera', {
-        method: 'POST',
-        body: JSON.stringify({ liveId, userId })
-    });
-};
-
-export const toggleVoice = (liveId: number, userId: number): Promise<{ voiceEnabled: boolean }> => {
-    return apiClient('/api/live/toggle-voice', {
-        method: 'POST',
-        body: JSON.stringify({ liveId, userId })
-    });
-};
-
-export const helpHostRankUp = (helperId: number, hostId: number, giftValue: number): Promise<{ success: boolean; message: string; updatedUser: User | null }> => {
-    return apiClient('/api/ranking/help-host', {
-        method: 'POST',
-        body: JSON.stringify({ helperId, hostId, giftValue }),
+        body: JSON.stringify({ receiverId, giftValue })
     });
 };

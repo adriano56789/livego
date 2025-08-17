@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import type { User, Gift } from '../types';
+import type { User, Gift, PkBattleStreamer } from '../types';
 import * as liveStreamService from '../services/liveStreamService';
 import DiamondIcon from './icons/DiamondIcon';
 import { Player } from '@lottiefiles/react-lottie-player';
@@ -9,13 +9,18 @@ interface GiftPanelProps {
   user: User;
   liveId: number;
   onClose: () => void;
-  onSendGift: (giftId: number) => void;
+  onSendGift: (giftId: number, receiverId?: number) => void;
   onRechargeClick: () => void;
+  pkBattleStreamers?: {
+    streamer1: PkBattleStreamer;
+    streamer2: PkBattleStreamer;
+  };
 }
 
-const GiftPanel: React.FC<GiftPanelProps> = ({ user, liveId, onClose, onSendGift, onRechargeClick }) => {
+const GiftPanel: React.FC<GiftPanelProps> = ({ user, liveId, onClose, onSendGift, onRechargeClick, pkBattleStreamers }) => {
   const [gifts, setGifts] = useState<Gift[]>([]);
   const [selectedGiftId, setSelectedGiftId] = useState<number | null>(null);
+  const [selectedReceiverId, setSelectedReceiverId] = useState<number | null>(pkBattleStreamers ? null : user.id);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -36,21 +41,48 @@ const GiftPanel: React.FC<GiftPanelProps> = ({ user, liveId, onClose, onSendGift
   const selectedGift = gifts.find(g => g.id === selectedGiftId);
 
   const handleSend = () => {
-      if (selectedGift) {
-          onSendGift(selectedGift.id);
-      }
+    if (selectedGift) {
+      onSendGift(selectedGift.id, selectedReceiverId ?? undefined);
+    }
+  };
+
+  const renderPkReceiverSelection = () => {
+    if (!pkBattleStreamers) return null;
+    const { streamer1, streamer2 } = pkBattleStreamers;
+    return (
+      <div className="px-4 pt-3 flex items-center justify-around">
+          <button onClick={() => setSelectedReceiverId(streamer1.userId)} className="flex flex-col items-center gap-2 text-center">
+              <img 
+                  src={streamer1.avatarUrl} 
+                  alt={streamer1.name} 
+                  className={`w-14 h-14 rounded-full object-cover border-4 transition-colors ${selectedReceiverId === streamer1.userId ? 'border-cyan-400' : 'border-transparent'}`}
+              />
+              <span className="text-xs text-gray-300 w-20 truncate">{streamer1.name}</span>
+          </button>
+           <span className="font-bold text-pink-400 text-xl">VS</span>
+          <button onClick={() => setSelectedReceiverId(streamer2.userId)} className="flex flex-col items-center gap-2 text-center">
+              <img 
+                  src={streamer2.avatarUrl} 
+                  alt={streamer2.name} 
+                  className={`w-14 h-14 rounded-full object-cover border-4 transition-colors ${selectedReceiverId === streamer2.userId ? 'border-pink-400' : 'border-transparent'}`}
+              />
+              <span className="text-xs text-gray-300 w-20 truncate">{streamer2.name}</span>
+          </button>
+      </div>
+    );
   };
 
   return (
     <div 
-      className="fixed inset-0 bg-black/60 z-50 flex items-end"
+      className="fixed inset-0 bg-transparent z-50 flex items-end"
       onClick={onClose}
     >
       <div 
         className="bg-[#212124]/90 backdrop-blur-md w-full rounded-t-2xl flex flex-col text-white animate-slide-up-fast"
         onClick={e => e.stopPropagation()}
       >
-        <div className="p-4 grid grid-cols-4 gap-4 overflow-y-auto max-h-[40vh] min-h-[20vh]">
+        {pkBattleStreamers && renderPkReceiverSelection()}
+        <div className="p-4 grid grid-cols-4 gap-4 overflow-y-auto max-h-[40vh] min-h-[20vh] border-t border-b border-white/10">
             {isLoading ? (
                  <div className="col-span-4 text-center py-8 text-gray-400">Carregando presentes...</div>
             ) : gifts.length > 0 ? (
@@ -82,7 +114,7 @@ const GiftPanel: React.FC<GiftPanelProps> = ({ user, liveId, onClose, onSendGift
             )}
         </div>
 
-        <footer className="p-3 border-t border-white/10 flex items-center justify-between">
+        <footer className="p-3 flex items-center justify-between">
             <button onClick={onRechargeClick} className="flex items-center gap-2">
                 <DiamondIcon className="w-5 h-5"/>
                 <span className="font-bold text-lg">{user.wallet_diamonds.toLocaleString()}</span>
@@ -90,7 +122,7 @@ const GiftPanel: React.FC<GiftPanelProps> = ({ user, liveId, onClose, onSendGift
             </button>
             <button 
                 onClick={handleSend}
-                disabled={!selectedGift}
+                disabled={!selectedGift || (!!pkBattleStreamers && !selectedReceiverId)}
                 className="bg-green-500 text-black font-bold px-8 py-2.5 rounded-full disabled:bg-gray-600 disabled:text-gray-400 transition-colors"
             >
                 Enviar

@@ -97,7 +97,7 @@ const DailyRewardsScreen: React.FC<DailyRewardsScreenProps> = ({ user, onExit, o
           <div className="w-6 h-6"></div>
         </header>
 
-        <main className="flex-grow p-4 overflow-y-auto">
+        <main className="flex-grow p-4 overflow-y-auto scrollbar-hide">
           <div className="text-center mb-6">
             <h2 className="text-2xl font-bold">Check-in Semanal</h2>
             <p className="text-gray-300 mt-1">Entre todos os dias para ganhar prêmios!</p>

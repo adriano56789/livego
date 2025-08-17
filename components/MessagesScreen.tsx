@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import type { User, AppView, Conversation } from '../types';
 import { getConversations } from '../services/authService';
@@ -73,7 +72,7 @@ const MessagesScreen: React.FC<MessagesScreenProps> = ({ user, onNavigate, onNav
             <button onClick={() => alert('Nova mensagem não implementado')}><PlusIcon className="w-6 h-6"/></button>
         </div>
       </header>
-      <main className="flex-grow overflow-y-auto">
+      <main className="flex-grow overflow-y-auto scrollbar-hide">
         {renderContent()}
       </main>
     </div>

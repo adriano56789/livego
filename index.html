@@ -6,6 +6,28 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>LiveGo - Top Streamers</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      .scrollbar-hide::-webkit-scrollbar {
+          display: none;
+      }
+      .scrollbar-hide {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+      }
+      @keyframes float-up {
+        0% {
+          transform: translateY(0) scale(0.5);
+          opacity: 1;
+        }
+        100% {
+          transform: translateY(-500px) scale(1.2);
+          opacity: 0;
+        }
+      }
+      .animate-float-up {
+        animation: float-up 5s ease-out forwards;
+      }
+    </style>
   <script type="importmap">
 {
   "imports": {

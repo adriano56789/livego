@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import CrossIcon from './icons/CrossIcon';
 import EmptyBoxIcon from './icons/EmptyBoxIcon';
@@ -89,11 +88,11 @@ const MuteUserModal: React.FC<MuteUserModalProps> = ({ liveId, mutedUsers, onMut
 
   return (
     <div 
-      className="fixed inset-0 bg-black/60 z-50 flex items-end"
+      className="fixed inset-0 bg-transparent z-50 flex items-end"
       onClick={onClose}
     >
       <div 
-        className="bg-white w-full h-[70vh] max-h-[500px] rounded-t-2xl flex flex-col text-black animate-slide-up-fast"
+        className="bg-white w-full h-[60vh] max-h-[500px] rounded-t-2xl flex flex-col text-black animate-slide-up-fast"
         onClick={e => e.stopPropagation()}
       >
         <header className="p-4 flex items-center justify-center relative shrink-0">
@@ -115,7 +114,7 @@ const MuteUserModal: React.FC<MuteUserModalProps> = ({ liveId, mutedUsers, onMut
                 <CrossIcon className="w-6 h-6 text-gray-400" />
             </button>
         </header>
-        <main className="flex-grow overflow-y-auto px-4">
+        <main className="flex-grow overflow-y-auto px-4 scrollbar-hide">
           {renderContent()}
         </main>
       </div>

@@ -1,3 +1,5 @@
+
+
 import React from 'react';
 import CrossIcon from './icons/CrossIcon';
 
@@ -7,9 +9,7 @@ import SoundEffectIcon from './icons/SoundEffectIcon';
 import VoiceIcon from './icons/VoiceIcon';
 import ClarityIcon from './icons/ClarityIcon';
 import PkIcon from './icons/PkIcon';
-import ManagementIcon from './icons/ManagementIcon';
-import MicGiftIcon from './icons/MicGiftIcon';
-import TurntableIcon from './icons/TurntableIcon';
+import MailIcon from './icons/MailIcon';
 
 // Basic Tool Icons
 import CameraFlipIcon from './icons/CameraFlipIcon';
@@ -18,9 +18,6 @@ import RoomEffectsIcon from './icons/RoomEffectsIcon';
 import ChatBubbleIcon from './icons/ChatBubbleIcon';
 import MirrorImageIcon from './icons/MirrorImageIcon';
 import RotateIcon from './icons/RotateIcon';
-import StopEntryIcon from './icons/StopEntryIcon';
-import CensoredWordIcon from './icons/CensoredWordIcon';
-import StickerIcon from './icons/StickerIcon';
 
 
 interface ArcoraToolModalProps {
@@ -31,6 +28,8 @@ interface ArcoraToolModalProps {
   onToggleVoice: () => void;
   isVoiceEnabled: boolean;
   onOpenPrivateChat: () => void;
+  isPrivateStream: boolean;
+  onOpenPrivateInviteModal: () => void;
   onOpenSelectOpponentModal: () => void;
 }
 
@@ -67,19 +66,34 @@ const Section: React.FC<{ title: string; children: React.ReactNode }> = ({ title
 );
 
 
-const ArcoraToolModal: React.FC<ArcoraToolModalProps> = ({ onClose, onOpenMuteModal, onOpenSoundEffectModal, onSwitchCamera, onToggleVoice, isVoiceEnabled, onOpenPrivateChat, onOpenSelectOpponentModal }) => {
+const ArcoraToolModal: React.FC<ArcoraToolModalProps> = ({ 
+    onClose, 
+    onOpenMuteModal, 
+    onOpenSoundEffectModal, 
+    onSwitchCamera, 
+    onToggleVoice, 
+    isVoiceEnabled, 
+    onOpenPrivateChat, 
+    isPrivateStream,
+    onOpenPrivateInviteModal,
+    onOpenSelectOpponentModal
+}) => {
     const iconClass = "w-7 h-7 text-gray-200";
 
-    const anchorTools = [
+    const anchorTools: any[] = [
         { icon: <BeautifyStarIcon className={iconClass} />, label: 'Embelezar', notImplemented: true },
         { icon: <SoundEffectIcon className={iconClass} />, label: 'Efeito sonoro', onClick: onOpenSoundEffectModal },
         { icon: <VoiceIcon className={iconClass} />, label: 'Âncora de Voz', onClick: onToggleVoice, isActive: isVoiceEnabled },
         { icon: <ClarityIcon className={iconClass} />, label: 'Clareza', notImplemented: true },
-        { icon: <PkIcon className={iconClass} />, label: 'Batalha PK', onClick: onOpenSelectOpponentModal },
-        { icon: <ManagementIcon className={iconClass} />, label: 'Gerenciamento', notImplemented: true },
-        { icon: <MicGiftIcon className={iconClass} />, label: 'Presente de Microfone', notImplemented: true },
-        { icon: <TurntableIcon className={iconClass} />, label: 'Mesa giratória', notImplemented: true },
     ];
+
+    if (!isPrivateStream) {
+        anchorTools.push({ icon: <PkIcon className={iconClass} />, label: 'Batalha PK', onClick: onOpenSelectOpponentModal });
+    }
+
+    if (isPrivateStream) {
+        anchorTools.push({ icon: <MailIcon className={iconClass} />, label: 'Convite Privado', onClick: onOpenPrivateInviteModal });
+    }
     
     const basicTools = [
         { icon: <CameraFlipIcon className={iconClass} />, label: 'Giro', onClick: onSwitchCamera },
@@ -87,9 +101,6 @@ const ArcoraToolModal: React.FC<ArcoraToolModalProps> = ({ onClose, onOpenMuteMo
         { icon: <ChatBubbleIcon className={iconClass} />, label: 'Bate-papo', onClick: onOpenPrivateChat },
         { icon: <MirrorImageIcon className={iconClass} />, label: 'Imagem espelhada', notImplemented: true },
         { icon: <RotateIcon className={iconClass} />, label: 'Girar', notImplemented: true },
-        { icon: <StopEntryIcon className={iconClass} />, label: 'Parar entrada', notImplemented: true },
-        { icon: <CensoredWordIcon className={iconClass} />, label: 'Palavra censurada', notImplemented: true },
-        { icon: <StickerIcon className={iconClass} />, label: 'Sticker', notImplemented: true },
     ];
 
     const roomEffects = [
@@ -98,11 +109,11 @@ const ArcoraToolModal: React.FC<ArcoraToolModalProps> = ({ onClose, onOpenMuteMo
 
   return (
     <div 
-      className="fixed inset-0 bg-black/60 z-50 flex items-end"
+      className="fixed inset-0 bg-transparent z-50 flex items-end"
       onClick={onClose}
     >
       <div 
-        className="bg-[#212124]/95 backdrop-blur-md w-full rounded-t-2xl flex flex-col text-white animate-slide-up-fast border-2 border-purple-500 shadow-[0_0_20px_theme(colors.purple.500)] max-h-[80vh]"
+        className="bg-[#212124]/95 backdrop-blur-md w-full rounded-t-2xl flex flex-col text-white animate-slide-up-fast max-h-[65vh]"
         onClick={e => e.stopPropagation()}
       >
         <header className="p-4 border-b border-white/10 flex items-center justify-center relative shrink-0">
@@ -111,7 +122,7 @@ const ArcoraToolModal: React.FC<ArcoraToolModalProps> = ({ onClose, onOpenMuteMo
                 <CrossIcon className="w-6 h-6 text-gray-400" />
             </button>
         </header>
-        <div className="p-6 overflow-y-auto">
+        <div className="p-6 overflow-y-auto scrollbar-hide">
             <Section title="Ferramentas de âncora">
                 {anchorTools.map(tool => <ToolButton key={tool.label} {...tool} />)}
             </Section>

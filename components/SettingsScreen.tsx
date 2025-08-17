@@ -1,4 +1,3 @@
-
 import React from 'react';
 import type { User, AppView } from '../types';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
@@ -68,7 +67,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onExit, onLogout,
         <div className="w-6 h-6"></div>
       </header>
 
-      <main className="flex-grow overflow-y-auto px-4">
+      <main className="flex-grow overflow-y-auto px-4 scrollbar-hide">
         <div className="bg-[#1c1c1c] rounded-xl divide-y divide-gray-700/50">
           {menuItems.map((item, index) => (
             <SettingsMenuItem

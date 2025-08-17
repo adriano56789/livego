@@ -106,7 +106,7 @@ const RankingScreen: React.FC<RankingScreenProps> = ({ currentUser, onExit, onUp
                     {top1 && <PodiumItem user={top1} position={1} onUserClick={handleUserClick} type={activeTab} />}
                     {top3user && <PodiumItem user={top3user} position={3} onUserClick={handleUserClick} type={activeTab} />}
                 </div>
-                <div className="flex-grow bg-black/20 rounded-t-2xl mt-4 p-2 space-y-1 overflow-y-auto">
+                <div className="flex-grow bg-black/20 rounded-t-2xl mt-4 p-2 space-y-1 overflow-y-auto scrollbar-hide">
                     {rest.map(user => <UserRow key={user.userId} user={user} onUserClick={handleUserClick} type={activeTab} />)}
                 </div>
             </>

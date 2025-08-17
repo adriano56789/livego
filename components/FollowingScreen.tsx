@@ -77,7 +77,7 @@ const FollowingScreen: React.FC<FollowingScreenProps> = ({ currentUser, onExit, 
                     <h1 className="font-bold text-lg absolute left-1/2 -translate-x-1/2">Seguindo</h1>
                     <div className="w-6 h-6"></div>
                 </header>
-                <main className="flex-grow overflow-y-auto">
+                <main className="flex-grow overflow-y-auto scrollbar-hide">
                     {renderContent()}
                 </main>
             </div>

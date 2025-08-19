@@ -1,6 +1,3 @@
-
-
-
 import React from 'react';
 import type { Stream } from '../types';
 import ViewersIcon from './icons/ViewersIcon';
@@ -31,10 +28,10 @@ const StreamerCard: React.FC<StreamerCardProps> = ({ stream, onViewStream }) => 
         >
             {/* 1. Background Image or Placeholder */}
             {stream.thumbnailUrl ? (
-                <img src={stream.thumbnailUrl} alt={stream.nomeStreamer} className="absolute inset-0 w-full h-full object-cover" />
+                <img src={stream.thumbnailUrl} alt={stream.nomeStreamer || 'Streamer'} className="absolute inset-0 w-full h-full object-cover" />
             ) : (
                 <div className={`absolute inset-0 w-full h-full ${color} flex items-center justify-center`}>
-                    <span className="text-white font-bold text-4xl opacity-80">{stream.nomeStreamer.substring(0, 1)}</span>
+                    <span className="text-white font-bold text-4xl opacity-80">{(stream.nomeStreamer || '').substring(0, 1)}</span>
                 </div>
             )}
             
@@ -55,7 +52,7 @@ const StreamerCard: React.FC<StreamerCardProps> = ({ stream, onViewStream }) => 
                     )}
                  </div>
             )}
-            {stream.emPK && !stream.isPrivate && (
+            {stream.emPk && !stream.isPrivate && (
                  <div className="absolute top-2 left-2 z-10 bg-[#581c87]/80 backdrop-blur-sm px-2.5 py-1 rounded-md text-sm font-bold shadow-md text-pink-200 border border-purple-400/30">
                     PK
                  </div>

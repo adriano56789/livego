@@ -1,9 +1,9 @@
+
 import React from 'react';
 
-// Modern video camera icon with a play symbol inside, inspired by user feedback.
 const VideoIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" {...props}>
-    <path d="M18 10.48V6c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2v-4.48l4 4V6.48l-4 4zM10 15V9l4.5 3-4.5 3z"/>
+    <path d="M3.375 3C2.339 3 1.5 3.84 1.5 4.875v14.25C1.5 20.16 2.34 21 3.375 21H20.625c1.035 0 1.875-.84 1.875-1.875V4.875C22.5 3.839 21.66 3 20.625 3H3.375zM9 15.75V8.25a.75.75 0 011.125-.67l5.25 3.75a.75.75 0 010 1.34l-5.25 3.75A.75.75 0 019 15.75z" />
   </svg>
 );
 

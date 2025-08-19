@@ -1,4 +1,5 @@
 
+
 import React from 'react';
 
 // Replaced with a gem icon to match the purchase screen design

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import type { PublicProfile, Stream, PkBattle, User } from '../types';
 import * as liveStreamService from '../services/liveStreamService';
@@ -26,6 +27,7 @@ import JellyfishIcon from './icons/JellyfishIcon';
 import WaveIcon from './icons/WaveIcon';
 import SadButRelievedIcon from './icons/SadButRelievedIcon';
 import EmbeddedChatView from './EmbeddedChatView';
+import UserPlaceholderIcon from './icons/UserPlaceholderIcon';
 
 interface UserProfileModalProps {
   userId: number;
@@ -89,7 +91,7 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ userId, currentUser
         if (activeStream) {
             const pkBattleDb = await liveStreamService.findActivePkBattleForStream(activeStream.id);
             if (pkBattleDb) {
-                const pkBattle = await liveStreamService.getPkBattleDetails(pkBattleDb.id);
+                const pkBattle = await liveStreamService.getPkBattleDetails(Number(pkBattleDb.id));
                 onViewStream(pkBattle);
             } else {
                 onViewStream(activeStream);
@@ -237,8 +239,12 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ userId, currentUser
                   
                   <main className="bg-black p-4 -mt-16">
                       <div className="relative w-28 h-28">
-                          <div className="w-28 h-28 rounded-full border-4 border-black overflow-hidden shrink-0 bg-gray-700">
-                              <img src={profile.avatarUrl} alt={profile.name} className="w-full h-full object-cover" />
+                          <div className="w-28 h-28 rounded-full border-4 border-black overflow-hidden shrink-0 bg-gray-700 flex items-center justify-center">
+                              {profile.avatarUrl ? (
+                                <img src={profile.avatarUrl} alt={profile.name} className="w-full h-full object-cover" />
+                              ) : (
+                                <UserPlaceholderIcon className="w-24 h-24 text-gray-500" />
+                              )}
                           </div>
                       </div>
 

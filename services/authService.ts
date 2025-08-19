@@ -22,6 +22,20 @@ export const getFollowers = (userId: number): Promise<User[]> => {
     return apiClient(`/api/users/${userId}/followers`);
 };
 
+export const getFans = (userId: number): Promise<User[]> => {
+    // In this mock, fans are the same as followers.
+    return apiClient(`/api/users/${userId}/fans`);
+};
+
+export const getGiftsReceived = (userId: number): Promise<{ totalValue: number }> => {
+    return apiClient(`/api/users/${userId}/gifts/received`);
+};
+
+export const getGiftsSent = (userId: number): Promise<{ totalValue: number }> => {
+    return apiClient(`/api/users/${userId}/gifts/sent`);
+};
+
+
 export const getProfileVisitors = (userId: number): Promise<User[]> => {
     return apiClient(`/api/users/${userId}/visitors`);
 };
@@ -37,9 +51,9 @@ export const generateNickname = (): Promise<{ newNickname: string }> => {
     return apiClient('/api/users/generate-nickname', { method: 'POST' });
 };
 
-export const updateUserProfile = (userId: number, profileData: Partial<Pick<User, 'nickname' | 'gender' | 'birthday' | 'invite_code'>>): Promise<User> => {
+export const updateUserProfile = (userId: number, profileData: Partial<Pick<User, 'nickname' | 'gender' | 'birthday' | 'invite_code' | 'personalSignature' | 'country' | 'personalityTags' | 'profession' | 'languages' | 'height' | 'weight' | 'emotionalState'>>): Promise<User> => {
     return apiClient(`/api/users/${userId}`, {
-        method: 'PATCH',
+        method: 'PUT',
         body: JSON.stringify(profileData),
     });
 };
@@ -98,4 +112,27 @@ export const detectCardBrand = (cardNumber: string): Promise<{ brand: CardBrand 
 
 export const generateNewUserId = (): Promise<{ newId: number }> => {
     return apiClient('/api/users/generate-id', { method: 'POST' });
+};
+
+// --- Avatar Protection Services ---
+
+export const activateAvatarProtection = (userId: number, avatarImage: string): Promise<{ success: boolean, protectionId: string, frameUrl: string }> => {
+    return apiClient('/api/avatar/protection/activate', {
+        method: 'POST',
+        body: JSON.stringify({ userId, avatarImage }),
+    });
+};
+
+export const deactivateAvatarProtection = (userId: number): Promise<{ success: boolean }> => {
+    return apiClient('/api/avatar/protection/deactivate', {
+        method: 'POST',
+        body: JSON.stringify({ userId }),
+    });
+};
+
+export const checkAvatarInUse = (avatarImage: string): Promise<{ inUse: boolean, protectedBy: number | null }> => {
+    return apiClient('/api/avatar/protection/check', {
+        method: 'POST',
+        body: JSON.stringify({ avatarImage }),
+    });
 };

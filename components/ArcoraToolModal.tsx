@@ -1,5 +1,4 @@
 
-
 import React from 'react';
 import CrossIcon from './icons/CrossIcon';
 
@@ -8,8 +7,11 @@ import BeautifyStarIcon from './icons/BeautifyStarIcon';
 import SoundEffectIcon from './icons/SoundEffectIcon';
 import VoiceIcon from './icons/VoiceIcon';
 import ClarityIcon from './icons/ClarityIcon';
-import PkIcon from './icons/PkIcon';
 import MailIcon from './icons/MailIcon';
+import BoxingGlovesIcon from './icons/BoxingGlovesIcon';
+import GroupWhiteIcon from './icons/GroupWhiteIcon';
+import LinkedCirclesIcon from './icons/LinkedCirclesIcon';
+
 
 // Basic Tool Icons
 import CameraFlipIcon from './icons/CameraFlipIcon';
@@ -30,7 +32,9 @@ interface ArcoraToolModalProps {
   onOpenPrivateChat: () => void;
   isPrivateStream: boolean;
   onOpenPrivateInviteModal: () => void;
-  onOpenSelectOpponentModal: () => void;
+  onOpenCohostInviteModal: () => void;
+  onOpenPkInviteModal: () => void;
+  isPkBattleActive: boolean;
 }
 
 const ToolButton: React.FC<{ icon: React.ReactNode; label: string; isNew?: boolean; notImplemented?: boolean; onClick?: () => void; isActive?: boolean; }> = ({ icon, label, isNew, notImplemented, onClick, isActive }) => (
@@ -76,25 +80,29 @@ const ArcoraToolModal: React.FC<ArcoraToolModalProps> = ({
     onOpenPrivateChat, 
     isPrivateStream,
     onOpenPrivateInviteModal,
-    onOpenSelectOpponentModal
+    onOpenCohostInviteModal,
+    onOpenPkInviteModal,
+    isPkBattleActive
 }) => {
     const iconClass = "w-7 h-7 text-gray-200";
 
-    const anchorTools: any[] = [
+    const anchorTools = [
         { icon: <BeautifyStarIcon className={iconClass} />, label: 'Embelezar', notImplemented: true },
         { icon: <SoundEffectIcon className={iconClass} />, label: 'Efeito sonoro', onClick: onOpenSoundEffectModal },
         { icon: <VoiceIcon className={iconClass} />, label: 'Âncora de Voz', onClick: onToggleVoice, isActive: isVoiceEnabled },
         { icon: <ClarityIcon className={iconClass} />, label: 'Clareza', notImplemented: true },
     ];
-
-    if (!isPrivateStream) {
-        anchorTools.push({ icon: <PkIcon className={iconClass} />, label: 'Batalha PK', onClick: onOpenSelectOpponentModal });
-    }
-
+    
     if (isPrivateStream) {
         anchorTools.push({ icon: <MailIcon className={iconClass} />, label: 'Convite Privado', onClick: onOpenPrivateInviteModal });
     }
-    
+
+    const pkTools = [
+        { icon: <LinkedCirclesIcon className="w-10 h-10" />, label: '+Hosts', onClick: onOpenCohostInviteModal },
+        { icon: <BoxingGlovesIcon className="w-10 h-10" />, label: 'Batalha', onClick: onOpenPkInviteModal },
+        { icon: <GroupWhiteIcon className="w-10 h-10" />, label: '+Conv', onClick: () => alert("Funcionalidade +Conv não implementada.") }
+    ];
+
     const basicTools = [
         { icon: <CameraFlipIcon className={iconClass} />, label: 'Giro', onClick: onSwitchCamera },
         { icon: <MuteIcon className={iconClass} />, label: 'Silenciamento', onClick: onOpenMuteModal },
@@ -123,6 +131,9 @@ const ArcoraToolModal: React.FC<ArcoraToolModalProps> = ({
             </button>
         </header>
         <div className="p-6 overflow-y-auto scrollbar-hide">
+             <Section title="Ferramentas de Co-host e PK">
+                {pkTools.map(tool => <ToolButton key={tool.label} {...tool} />)}
+            </Section>
             <Section title="Ferramentas de âncora">
                 {anchorTools.map(tool => <ToolButton key={tool.label} {...tool} />)}
             </Section>

@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import CrossIcon from './icons/CrossIcon';
 import BuzzCastIcon from './icons/BuzzCastIcon';
@@ -14,7 +13,7 @@ const LiveNotificationModal: React.FC<LiveNotificationModalProps> = ({ streamerN
   useEffect(() => {
     const timer = setTimeout(() => {
       onClose();
-    }, 10000); // Auto-dismiss after 10 seconds
+    }, 4000); // Auto-dismiss after 4 seconds
 
     return () => clearTimeout(timer);
   }, [onClose]);

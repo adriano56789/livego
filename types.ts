@@ -1,5 +1,7 @@
+
+
 // Basic types
-export type AppView = 'login' | 'upload' | 'edit' | 'feed' | 'profile' | 'go-live-setup' | 'messages' | 'diamond-purchase' | 'video' | 'protectors' | 'blocked-list' | 'withdrawal' | 'withdrawal-method-setup' | 'withdrawal-confirmation' | 'customer-service' | 'backpack' | 'help-article' | 'live-support-chat' | 'report-and-suggestion' | 'event-center' | 'event-detail' | 'settings' | 'copyright' | 'earnings-info' | 'connected-accounts' | 'search' | 'app-version' | 'live-ended' | 'my-level' | 'daily-rewards' | 'developer-tools' | 'ranking' | 'documentation' | 'purchase-history' | 'notification-settings' | 'push-settings' | 'private-live-invite-settings' | 'followers' | 'following' | 'visitors' | 'live-stream-viewer' | 'chat' | 'purchase-confirmation' | 'ranking-list';
+export type AppView = 'login' | 'upload' | 'edit' | 'feed' | 'profile' | 'go-live-setup' | 'messages' | 'diamond-purchase' | 'video' | 'protectors' | 'blocked-list' | 'withdrawal' | 'withdrawal-method-setup' | 'withdrawal-confirmation' | 'customer-service' | 'backpack' | 'help-article' | 'live-support-chat' | 'report-and-suggestion' | 'event-center' | 'event-detail' | 'settings' | 'copyright' | 'earnings-info' | 'connected-accounts' | 'search' | 'app-version' | 'live-ended' | 'my-level' | 'developer-tools' | 'ranking' | 'documentation' | 'purchase-history' | 'notification-settings' | 'push-settings' | 'private-live-invite-settings' | 'followers' | 'following' | 'visitors' | 'live-stream-viewer' | 'chat' | 'purchase-confirmation' | 'ranking-list' | 'profile-editor' | 'fans' | 'avatar-protection';
 export type Gender = 'male' | 'female';
 export type Category = 'Popular' | 'Seguindo' | 'Perto' | 'Privada' | 'PK' | 'Novo' | 'Música' | 'Dança';
 export type CameraStatus = 'idle' | 'loading' | 'success' | 'denied' | 'error' | 'not-found' | 'in-use' | 'insecure';
@@ -12,6 +14,10 @@ export type SoundEffectName = 'riso' | 'aplausos' | 'animar' | 'beijar' | 'estra
 export type CardBrand = 'visa' | 'mastercard' | 'amex' | 'elo' | null;
 export type UserListRankingPeriod = 'daily' | 'weekly' | 'total';
 
+export interface SelectableOption {
+  id: string;
+  label: string;
+}
 
 // User and Profile types
 export interface WithdrawalMethod {
@@ -30,6 +36,7 @@ export interface User {
   age: number | null;
   has_uploaded_real_photo: boolean;
   has_completed_profile: boolean;
+  is_avatar_protected?: boolean;
   invite_code?: string | null;
   following: number[];
   followers: number;
@@ -43,10 +50,16 @@ export interface User {
   xp: number;
   last_camera_used?: FacingMode;
   last_selected_category?: Category;
-  country: 'BR' | 'US' | 'PT' | 'JP' | 'IT' | 'AR' | null;
+  country: string | null;
   personalSignature?: string;
   personalityTags?: { id: string, label: string }[];
   achievements?: string[];
+  coHostHistory?: string;
+  profession: string | null;
+  languages: string[] | null;
+  height: number | null;
+  weight: number | null;
+  emotionalState: string | null;
 }
 
 export interface AchievementFrame {
@@ -124,7 +137,7 @@ export interface Stream {
   espectadores: number;
   categoria: Category;
   aoVivo: boolean;
-  emPK: boolean;
+  emPk: boolean;
   isPrivate: boolean;
   entryFee: number | null;
   meta: string | null;
@@ -137,9 +150,27 @@ export interface Stream {
 
 // Listener function type for real-time stream updates.
 export type StreamUpdateListener = (streams: Stream[]) => void;
-export type MuteStatusListener = (update: { liveId: number; userId: number; isMuted: boolean; mutedUntil?: string }) => void;
-export type UserKickedListener = (update: { liveId: number; kickedUserId: number }) => void;
-export type SoundEffectListener = (update: { liveId: number; effectName: SoundEffectName; triggeredBy: number; }) => void;
+
+export interface MuteStatusUpdate {
+  liveId: number;
+  userId: number;
+  isMuted: boolean;
+  mutedUntil?: string;
+}
+export type MuteStatusListener = (update: MuteStatusUpdate) => void;
+
+export interface UserKickedUpdate {
+  liveId: number;
+  kickedUserId: number;
+}
+export type UserKickedListener = (update: UserKickedUpdate) => void;
+
+export interface SoundEffectUpdate {
+  liveId: number;
+  effectName: SoundEffectName;
+  triggeredBy: number;
+}
+export type SoundEffectListener = (update: SoundEffectUpdate) => void;
 
 export interface PkBattleStreamer {
   userId: number;
@@ -148,6 +179,8 @@ export interface PkBattleStreamer {
   score: number;
   avatarUrl: string;
   isVerified: boolean;
+  winMultiplier?: number;
+  status?: 'win' | 'lose';
 }
 
 export interface PkBattle {
@@ -485,22 +518,6 @@ export interface CanalContato {
   horario_funcionamento?: string;
 }
 
-
-export interface DailyReward {
-    day: number;
-    type: 'diamonds' | 'item';
-    name: string;
-    imageUrl: string;
-    amount?: number;
-    itemId?: string;
-}
-
-export interface UserRewardStatus {
-    lastClaimedDay: number;
-    streak: number;
-    lastClaimTimestamp: string;
-}
-
 export interface VersionInfo {
     minVersion: string;
     latestVersion: string;
@@ -556,6 +573,7 @@ export interface PrivateLiveInviteSettings {
     onlyFollowing: boolean;
     onlyFans: boolean;
     onlyFriends: boolean;
+    acceptOnlyFriendPkInvites?: boolean;
 }
 
 export interface NotificationSettings {
@@ -599,22 +617,44 @@ export interface LiveCategory {
   slug: string;
 }
 
-export interface BatalhaPK {
-  id: number;
-  live_id_1: number;
-  live_id_2: number;
-  streamer_id_1: number;
-  streamer_id_2: number;
-  pontos_streamer_1: number;
-  pontos_streamer_2: number;
-  vencedor_id: number | null;
+export interface TabelaBatalhaPK {
+  id: string | number;
+  streamer_A_id: number;
+  streamer_B_id: number;
+  pontuacao_A: number;
+  pontuacao_B: number;
+  multiplicador_A?: number;
+  multiplicador_B?: number;
+  status: 'ativa' | 'finalizada' | 'cancelada';
+  resultado?: 'vitoria_A' | 'vitoria_B' | 'empate' | null;
   data_inicio: string;
-  data_fim: string | null;
-  status: 'ativa' | 'finalizada';
-  data_comemoracao_fim: string | null;
-  top_supporters_1: RankingContributor[];
-  top_supporters_2: RankingContributor[];
+  data_fim: string;
+  duracao_segundos: number;
+  liga?: string;
+  tipo_batalha?: 'convite_direto' | 'matchmaking';
+  data_comemoracao_fim?: string | null; // Custom field for frontend logic
+  vencedor_id?: number | null; // Custom field for frontend logic
+  round_number?: number;
+  next_battle_id?: number | string;
 }
+
+export interface TabelaRankingApoiadores {
+  id: number;
+  batalha_id: string | number;
+  streamer_id: number;
+  apoiador_id: number;
+  total_pontos_enviados: number;
+  posicao_ranking: number;
+  avatar_url?: string;
+}
+
+export interface PkBattleState extends TabelaBatalhaPK {
+  streamer_A: User & { streamId: number; winMultiplier?: number; status?: 'win' | 'lose'; };
+  streamer_B: User & { streamId: number; winMultiplier?: number; status?: 'win' | 'lose'; };
+  top_supporters_A: TabelaRankingApoiadores[];
+  top_supporters_B: TabelaRankingApoiadores[];
+}
+
 
 export interface Denuncia {
   id: string;
@@ -662,3 +702,15 @@ export interface FilaPK {
   data_entrada: string;
   status: 'aguardando' | 'em_pareamento';
 }
+
+export interface UserBlockedUpdate {
+    blockerId: number;
+    targetId: number;
+}
+export type UserBlockedListener = (data: UserBlockedUpdate) => void;
+
+export interface UserUnblockedUpdate {
+    unblockerId: number;
+    targetId: number;
+}
+export type UserUnblockedListener = (data: UserUnblockedUpdate) => void;

@@ -27,6 +27,131 @@
       .animate-float-up {
         animation: float-up 5s ease-out forwards;
       }
+      @keyframes audiowave {
+        0% { transform: scaleY(0.1); }
+        30% { transform: scaleY(0.8); }
+        60% { transform: scaleY(0.3); }
+        80% { transform: scaleY(1.0); }
+        100% { transform: scaleY(0.1); }
+      }
+      .animate-audiowave {
+          animation: audiowave 1.2s ease-in-out infinite;
+          transform-origin: bottom;
+      }
+      @keyframes pulse-glow {
+        0%, 100% {
+          box-shadow: inset 0 0 0 0px var(--glow-color, rgba(255, 255, 255, 0));
+        }
+        50% {
+          box-shadow: inset 0 0 20px 5px var(--glow-color, rgba(255, 255, 255, 0.5));
+        }
+      }
+      .animate-pulse-glow {
+        animation: pulse-glow 2s ease-in-out infinite;
+      }
+
+      /* Keyframes for PkClashAnimation */
+      @keyframes clash-container-fade {
+        0%, 85% { opacity: 1; }
+        100% { opacity: 0; }
+      }
+      @keyframes aura-left {
+        0% { transform: translateX(-100%); opacity: 0; }
+        30% { transform: translateX(0); opacity: 1; }
+        100% { transform: translateX(0); opacity: 1; }
+      }
+      @keyframes aura-right {
+        0% { transform: translateX(100%); opacity: 0; }
+        30% { transform: translateX(0); opacity: 1; }
+        100% { transform: translateX(0); opacity: 1; }
+      }
+      @keyframes clash-left {
+        0% { transform: translateX(-200px) scale(0.5); opacity: 0; }
+        50% { transform: translateX(-50px) scale(1.1) rotate(-5deg); opacity: 1; }
+        70% { transform: translateX(-60px) scale(1); }
+        100% { transform: translateX(-60px) scale(1); }
+      }
+      @keyframes clash-right {
+        0% { transform: translateX(200px) scale(0.5); opacity: 0; }
+        50% { transform: translateX(50px) scale(1.1) rotate(5deg); opacity: 1; }
+        70% { transform: translateX(60px) scale(1); }
+        100% { transform: translateX(60px) scale(1); }
+      }
+      @keyframes impact-flash {
+        0%, 50% { transform: scale(0); opacity: 0; }
+        55% { transform: scale(300); opacity: 0.9; }
+        100% { transform: scale(300); opacity: 0; }
+      }
+      @keyframes particle-burst {
+        0% {
+          transform: translate(0, 0) scale(0);
+          opacity: 1;
+        }
+        100% {
+          transform: 
+            rotate(var(--angle)) 
+            translateX(var(--distance)) 
+            scale(1);
+          opacity: 0;
+        }
+      }
+      .animate-particle-burst {
+        position: absolute;
+        animation-name: particle-burst;
+        animation-timing-function: cubic-bezier(0.1, 0.8, 0.7, 1);
+        animation-fill-mode: forwards;
+        opacity: 0; /* Start hidden */
+      }
+       /* Keyframes for PK End Animation */
+      @keyframes fade-in-out-long {
+        0% { opacity: 0; }
+        15% { opacity: 1; }
+        85% { opacity: 1; }
+        100% { opacity: 0; }
+      }
+      .animate-fade-in-out-long { animation: fade-in-out-long 4s ease-in-out forwards; }
+
+      @keyframes slide-in-left-result {
+        from { transform: translateX(-50px) scale(0.8); opacity: 0; }
+        to { transform: translateX(0) scale(1); opacity: 1; }
+      }
+      .animate-slide-in-left-result { animation: slide-in-left-result 0.5s 0.2s ease-out backwards; }
+
+      @keyframes slide-in-right-result {
+        from { transform: translateX(50px) scale(0.8); opacity: 0; }
+        to { transform: translateX(0) scale(1); opacity: 1; }
+      }
+      .animate-slide-in-right-result { animation: slide-in-right-result 0.5s 0.2s ease-out backwards; }
+
+      /* Live indicator pulse animation */
+      @keyframes pulse-live {
+        0%, 100% { transform: scale(0.9); opacity: 1; }
+        50% { transform: scale(1.4); opacity: 0.7; }
+      }
+
+      /* New Go Live button glow animation */
+      @keyframes pulse-glow-button {
+        0% {
+          box-shadow: 0 0 0 0 rgba(236, 72, 153, 0.7);
+        }
+        70% {
+          box-shadow: 0 0 0 10px rgba(236, 72, 153, 0);
+        }
+        100% {
+          box-shadow: 0 0 0 0 rgba(236, 72, 153, 0);
+        }
+      }
+      @keyframes protection-glow {
+        0%, 100% {
+          box-shadow: 0 0 5px #0ea5e9, 0 0 10px #0ea5e9, 0 0 15px #0ea5e9, 0 0 20px #0ea5e9;
+        }
+        50% {
+          box-shadow: 0 0 10px #22d3ee, 0 0 20px #22d3ee, 0 0 30px #22d3ee, 0 0 40px #22d3ee;
+        }
+      }
+      .animate-protection-glow {
+        animation: protection-glow 2.5s ease-in-out infinite;
+      }
     </style>
   <script type="importmap">
 {

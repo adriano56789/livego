@@ -1,4 +1,6 @@
-import React from 'react';
+
+
+import React, { useMemo } from 'react';
 import type { User, AppView } from '../types';
 import CopyIcon from './icons/CopyIcon';
 import StarIcon from './icons/StarIcon';
@@ -12,10 +14,11 @@ import UpArrowDiamondIcon from './icons/UpArrowDiamondIcon';
 import PlayOutlineIcon from './icons/PlayOutlineIcon';
 import WarningIcon from './icons/WarningIcon';
 import PencilIcon from './icons/PencilIcon';
-import MaleIcon from './icons/MaleIcon';
-import FemaleIcon from './icons/FemaleIcon';
 import SettingsIcon from './icons/SettingsIcon';
 import ProfileBadge from './ProfileBadge';
+import MaleIcon from './icons/MaleIcon';
+import FemaleIcon from './icons/FemaleIcon';
+import UserPlaceholderIcon from './icons/UserPlaceholderIcon';
 
 interface ProfileScreenProps {
   user: User;
@@ -32,6 +35,18 @@ const StatItem: React.FC<{ value: string; label: string; onClick?: () => void; }
 
 const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onNavigate, onGoLiveClick }) => {
     
+    const userAge = useMemo(() => {
+        if (!user.birthday) return null;
+        const birthDate = new Date(user.birthday);
+        const today = new Date();
+        let age = today.getFullYear() - birthDate.getFullYear();
+        const m = today.getMonth() - birthDate.getMonth();
+        if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+            age--;
+        }
+        return age;
+    }, [user.birthday]);
+
     const menuItems = [
         { icon: <ShopIcon className="w-6 h-6 text-blue-400" />, label: "Loja", onClick: () => onNavigate('diamond-purchase') },
         { icon: <StarIcon className="w-6 h-6 text-yellow-400" />, label: "Meu Nível", onClick: () => onNavigate('my-level') },
@@ -51,11 +66,11 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onNavigate, onGoLiv
                 <header className="flex flex-col items-center gap-3 mb-6">
                     <div className="relative">
                         <div className="w-28 h-28 rounded-full overflow-hidden shrink-0 bg-gray-700 p-1.5 bg-gradient-to-tr from-purple-600 to-fuchsia-400">
-                           <div className="w-full h-full rounded-full bg-black overflow-hidden">
+                           <div className="w-full h-full rounded-full bg-black overflow-hidden flex items-center justify-center">
                              {user.avatar_url ? (
                                 <img src={user.avatar_url} alt={user.name} className="w-full h-full object-cover" />
                             ) : (
-                                <div className="w-full h-full bg-gray-800"></div>
+                                <UserPlaceholderIcon className="w-full h-full text-gray-500 p-1" />
                             )}
                            </div>
                         </div>
@@ -67,11 +82,11 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onNavigate, onGoLiv
                         <h1 className="text-2xl font-bold">{user.nickname || user.name}</h1>
                         <div className="flex items-center justify-center gap-2 mt-2">
                            <ProfileBadge badge={{ text: String(user.level), type: 'level' }} />
-                            {user.age && user.gender && (
-                                <div className={`flex items-center gap-1 text-white font-bold text-xs px-2 py-1 rounded-md ${user.gender === 'male' ? 'bg-sky-500' : 'bg-pink-500'}`}>
-                                    {user.gender === 'male' ? <MaleIcon className="w-3 h-3" /> : <FemaleIcon className="w-3 h-3" />}
-                                    <span>{user.age}</span>
-                                </div>
+                            {userAge && user.gender && (
+                               <div className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-bold ${user.gender === 'female' ? 'bg-[#ff2d55]' : 'bg-[#007aff]'} text-white`}>
+                                   {user.gender === 'female' ? <FemaleIcon className="w-3 h-3" /> : <MaleIcon className="w-3 h-3" />}
+                                   <span>{userAge}</span>
+                               </div>
                             )}
                         </div>
                         <div className="flex items-center justify-center gap-2 text-sm text-gray-400 mt-2">
@@ -82,9 +97,10 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onNavigate, onGoLiv
                 </header>
 
                 {/* Stats */}
-                <div className="grid grid-cols-3 mb-6">
+                <div className="grid grid-cols-4 mb-6">
                     <StatItem value={user.followers.toLocaleString('pt-BR')} label="Seguidores" onClick={() => onNavigate('followers')} />
                     <StatItem value={user.following.length.toLocaleString('pt-BR')} label="Seguindo" onClick={() => onNavigate('following')} />
+                    <StatItem value={user.followers.toLocaleString('pt-BR')} label="Fãs" onClick={() => onNavigate('fans')} />
                     <StatItem value={user.visitors.toLocaleString('pt-BR')} label="Visitantes" onClick={() => onNavigate('visitors')} />
                 </div>
 

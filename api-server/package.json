@@ -1,0 +1,14 @@
+{
+  "name": "livego-api-server",
+  "version": "1.0.0",
+  "description": "Mock API server for LiveGo using Express.",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "livekit-server-sdk": "^1.2.6"
+  }
+}

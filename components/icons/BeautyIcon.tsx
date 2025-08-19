@@ -1,4 +1,5 @@
 
+
 import React from 'react';
 
 const BeautyIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
@@ -9,4 +10,3 @@ const BeautyIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
 );
 
 export default BeautyIcon;
-

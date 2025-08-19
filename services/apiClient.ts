@@ -1,24 +1,21 @@
 
-import { mockApi } from './api';
+import { handleApiRequest } from './api';
 
-export const apiClient = async <T>(url: string, options?: RequestInit): Promise<T> => {
-  console.log(`[API Client] Requesting: ${options?.method || 'GET'} ${url}`);
-  
-  // Simulate network delay
-  await new Promise(res => setTimeout(res, Math.random() * 400 + 100));
-
-  try {
-    const response = await mockApi(url, options);
+/**
+ * A generic API client function that delegates to the mock API handler.
+ * This simulates making a network request.
+ * @param path The API endpoint path (e.g., '/api/users/1').
+ * @param options The standard RequestInit options object (method, body, etc.).
+ * @returns A promise that resolves with the response data.
+ */
+export const apiClient = <T>(path: string, options?: RequestInit): Promise<T> => {
+    const method = options?.method || 'GET';
+    const body = options?.body && typeof options.body === 'string' ? JSON.parse(options.body) : null;
     
-    if (response.status >= 400) {
-      console.error(`[API Client] Error Response:`, response);
-      throw new Error(response.body.message || 'Erro de API');
-    }
-    
-    return response.body as T;
+    // Extract query parameters from the path
+    const url = new URL(path, 'http://localhost'); // Using a dummy base URL to utilize URL API
+    const query = url.searchParams;
+    const purePath = url.pathname;
 
-  } catch (error) {
-    console.error(`[API Client] FAILED Request: ${options?.method || 'GET'} ${url}`, error);
-    throw error;
-  }
+    return handleApiRequest(method, purePath, body, query);
 };

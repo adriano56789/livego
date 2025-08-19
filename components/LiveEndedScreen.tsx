@@ -45,9 +45,9 @@ const LiveEndedScreen: React.FC<LiveEndedScreenProps> = ({ summary, onExit }) =>
             <div className="w-28 h-28 rounded-full bg-gradient-to-br from-purple-500 to-fuchsia-600 p-1">
                 <div className="w-full h-full bg-black rounded-full flex items-center justify-center text-5xl font-bold">
                     {summary.streamerAvatarUrl ? (
-                         <img src={summary.streamerAvatarUrl} alt={summary.streamerName} className="w-full h-full object-cover rounded-full" />
+                         <img src={summary.streamerAvatarUrl} alt={summary.streamerName || 'Streamer'} className="w-full h-full object-cover rounded-full" />
                     ) : (
-                        summary.streamerName.substring(0, 1).toUpperCase()
+                        (summary.streamerName || '').substring(0, 1).toUpperCase()
                     )}
                 </div>
             </div>

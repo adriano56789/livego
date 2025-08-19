@@ -14,15 +14,10 @@ interface BottomNavProps {
     onGoLiveClick: () => void;
 }
 
-const BottomNavItem: React.FC<{ icon: React.ReactNode; label: string; isActive?: boolean; hasNotification?: boolean; onClick: () => void; isLiveActive?: boolean; }> = ({ icon, label, isActive, hasNotification, onClick, isLiveActive }) => (
+const BottomNavItem: React.FC<{ icon: React.ReactNode; label: string; isActive?: boolean; hasNotification?: boolean; onClick: () => void; }> = ({ icon, label, isActive, hasNotification, onClick }) => (
     <button onClick={onClick} className="relative flex flex-col items-center justify-center gap-1 w-full h-full text-center">
         <div className={`relative w-7 h-7 flex items-center justify-center transition-transform duration-200 ${isActive ? 'text-white scale-110' : 'text-gray-400'}`}>
             {icon}
-            {isLiveActive && (
-                 <div className="absolute -top-1.5 right-1/2 translate-x-1/2 bg-red-500 text-white text-[8px] font-bold px-1.5 py-0.5 rounded-md shadow-md">
-                    AO VIVO
-                </div>
-            )}
         </div>
         <span className={`text-xs font-medium transition-colors duration-200 ${isActive ? 'text-white' : 'text-gray-400'}`}>{label}</span>
         {hasNotification && (
@@ -45,7 +40,6 @@ const BottomNav: React.FC<BottomNavProps> = ({ user, activeView, onNavigate, onG
                     icon={<LiveIcon />}
                     label="Live"
                     isActive={activeView === 'feed'}
-                    isLiveActive={activeView === 'feed'}
                     onClick={() => onNavigate('feed')}
                 />
                  <BottomNavItem
@@ -57,10 +51,11 @@ const BottomNav: React.FC<BottomNavProps> = ({ user, activeView, onNavigate, onG
                 
                 <button 
                     onClick={onGoLiveClick} 
-                    className="w-16 h-16 -mt-8 bg-gradient-to-br from-purple-600 to-pink-500 rounded-full flex items-center justify-center shadow-lg shadow-pink-500/30 hover:scale-105 transition-transform"
+                    style={{ animation: 'pulse-glow-button 2s infinite' }}
+                    className="w-14 h-14 bg-gradient-to-br from-purple-600 to-pink-500 rounded-full flex items-center justify-center shadow-lg hover:scale-105 transition-transform"
                     aria-label="Go Live"
                 >
-                    <GoLiveIcon className="w-9 h-9 text-white" />
+                    <GoLiveIcon className="w-8 h-8 text-white" />
                 </button>
 
                 <BottomNavItem

@@ -162,10 +162,10 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ conversationId, currentUserId, 
     <div className="h-screen w-full bg-[#121212] flex flex-col text-white font-sans">
       <header className="p-4 flex items-center justify-between bg-[#1c1c1c] border-b border-gray-800 shrink-0">
         <button onClick={onExit}><ArrowLeftIcon className="w-6 h-6" /></button>
-        <div className="flex flex-col items-center">
+        <button onClick={() => setIsProfileModalOpen(true)} className="flex flex-col items-center rounded-lg p-2 -m-2 transition-colors hover:bg-gray-700/50">
             <h1 className="font-semibold">{conversation.otherUserName}</h1>
             <span className="text-xs text-gray-400">Online</span>
-        </div>
+        </button>
         <button onClick={() => setIsActionsModalOpen(true)}><EllipsisIcon className="w-6 h-6" /></button>
       </header>
 

@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import LoginScreen from './components/LoginScreen';
 import UploadPhotoScreen from './components/UploadPhotoScreen';
@@ -33,7 +32,6 @@ import AppVersionScreen from './components/AppVersionScreen';
 import UpdateRequiredModal from './components/UpdateRequiredModal';
 import LiveEndedScreen from './components/LiveEndedScreen';
 import MyLevelScreen from './components/MyLevelScreen';
-import DailyRewardsScreen from './components/DailyRewardsScreen';
 import DeveloperToolsScreen from './components/DeveloperToolsScreen';
 import RankingScreen from './components/PkRankingScreen';
 import DocumentationScreen from './components/DocumentationScreen';
@@ -47,13 +45,15 @@ import IncomingPrivateLiveInviteModal from './components/IncomingPrivateLiveInvi
 import FollowersScreen from './components/FollowersScreen';
 import FollowingScreen from './components/FollowingScreen';
 import VisitorsScreen from './components/VisitorsScreen';
+import FansScreen from './components/FansScreen';
+import ProfileEditorScreen from './components/ProfileEditorScreen';
+import AvatarProtectionScreen from './components/AvatarProtectionScreen';
 import { loginWithGoogle, deleteAccount, getUserProfile } from './services/authService';
 import * as liveStreamService from './services/liveStreamService';
 import * as versionService from './services/versionService';
 import * as soundService from './services/soundService';
 import type { User, AppView, Category, Stream, PkBattle, StartLiveResponse, Conversation, WithdrawalTransaction, AppEvent, VersionInfo, LiveEndSummary, PurchaseOrder, DiamondPackage, FacingMode, IncomingPrivateLiveInvite } from './types';
 import { ApiViewerProvider, useApiViewer } from './components/ApiContext';
-import ApiViewer from './components/ApiViewer';
 
 // AppContent component to access the context from the provider
 const AppContent: React.FC = () => {
@@ -115,7 +115,9 @@ const AppContent: React.FC = () => {
   useEffect(() => {
     if (!user) return;
     const checkStatus = () => {
-        liveStreamService.getUserLiveStatus(user.id).then(setIsUserLive);
+        if (document.visibilityState === 'visible') {
+            liveStreamService.getUserLiveStatus(user.id).then(setIsUserLive);
+        }
     };
     checkStatus();
     const intervalId = setInterval(checkStatus, 5000);
@@ -126,6 +128,9 @@ const AppContent: React.FC = () => {
     if (!user) return;
 
     const checkFollowedStatus = async () => {
+      if (document.visibilityState !== 'visible') {
+        return;
+      }
       try {
         const settings = await liveStreamService.getNotificationSettings(user.id);
         if (!settings.streamerLive) {
@@ -167,6 +172,10 @@ const AppContent: React.FC = () => {
   const handleViewStream = useCallback((stream: Stream | PkBattle) => {
     soundService.initAudioContext();
     setViewingStream(stream);
+  }, []);
+
+  const handleExitStream = useCallback(() => {
+    setViewingStream(null);
   }, []);
   
   const handleGoLiveClick = useCallback(async () => {
@@ -265,6 +274,11 @@ const AppContent: React.FC = () => {
         setCurrentView('feed'); // Onboarding finished, go to feed
     }
   }, [isEditingFromProfile]);
+
+  const handleAvatarProtectionSave = useCallback((updatedUser: User) => {
+    setUser(updatedUser);
+    setCurrentView('edit'); // Go back to the detailed profile view
+  }, []);
   
   const handleNavigate = useCallback((view: AppView) => {
     if (view === 'edit') {
@@ -395,7 +409,7 @@ const AppContent: React.FC = () => {
         return <LiveStreamViewerScreen
             user={user}
             stream={viewingStream}
-            onExit={() => setViewingStream(null)}
+            onExit={handleExitStream}
             onRequirePurchase={() => {
                 setPurchaseOverlay({ step: 'purchase' });
             }}
@@ -434,7 +448,14 @@ const AppContent: React.FC = () => {
         return <UploadPhotoScreen user={user} onPhotoUploaded={handlePhotoUploaded} />;
     }
     if (currentView === 'edit') {
-      return <EditProfileScreen user={user} onProfileComplete={handleProfileComplete} />;
+      return <EditProfileScreen user={user} onProfileComplete={handleProfileComplete} onNavigate={handleNavigate} />;
+    }
+    if (currentView === 'profile-editor') {
+        return <ProfileEditorScreen 
+            user={user} 
+            onExit={() => setCurrentView('edit')} 
+            onSave={handleProfileComplete} 
+        />;
     }
      if (currentView === 'go-live-setup') {
       return <GoLiveSetupScreen user={user} onStartStream={handleStartStream} onExit={() => setCurrentView('feed')} />;
@@ -512,13 +533,6 @@ const AppContent: React.FC = () => {
             onExit={() => setCurrentView('profile')} 
             onUpdateUser={setUser}
             onNavigate={handleNavigate}
-        />;
-    }
-     if (currentView === 'daily-rewards') {
-        return <DailyRewardsScreen
-            user={user}
-            onExit={() => setCurrentView('profile')}
-            onRewardClaimed={setUser}
         />;
     }
     if (currentView === 'report-and-suggestion') {
@@ -655,6 +669,19 @@ const AppContent: React.FC = () => {
             }}
         />;
     }
+    if (currentView === 'fans') {
+        return <FansScreen
+            currentUser={user}
+            onExit={() => setCurrentView('profile')}
+            onUpdateUser={setUser}
+            onNavigateToChat={handleNavigateToChat}
+            onViewProtectors={handleViewProtectors}
+            onViewStream={(stream) => {
+                setCurrentView('profile');
+                handleViewStream(stream);
+            }}
+        />;
+    }
     if (currentView === 'visitors') {
         return <VisitorsScreen
             currentUser={user}
@@ -666,6 +693,13 @@ const AppContent: React.FC = () => {
                 setCurrentView('profile');
                 handleViewStream(stream);
             }}
+        />;
+    }
+    if (currentView === 'avatar-protection') {
+        return <AvatarProtectionScreen
+            user={user}
+            onExit={() => setCurrentView('edit')}
+            onSave={handleAvatarProtectionSave}
         />;
     }
 

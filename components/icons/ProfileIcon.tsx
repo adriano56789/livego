@@ -1,5 +1,4 @@
 
-
 import React from 'react';
 
 interface ProfileIconProps extends React.SVGProps<SVGSVGElement> {

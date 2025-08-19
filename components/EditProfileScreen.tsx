@@ -1,48 +1,72 @@
 
+import React, { useState, useEffect } from 'react';
+import type { User, AppView } from '../types';
+import { getGiftsReceived, getGiftsSent } from '../services/authService';
 
-import React, { useState, useCallback, useEffect, useRef } from 'react';
-import type { User, Gender } from '../types';
-import { generateNickname, updateUserProfile, uploadProfilePhoto } from '../services/authService';
-import RefreshIcon from './icons/RefreshIcon';
+import ArrowLeftIcon from './icons/ArrowLeftIcon';
+import PencilIcon from './icons/PencilIcon';
+import EllipsisIcon from './icons/EllipsisIcon';
+import BrazilFlagIcon from './icons/BrazilFlagIcon';
 import MaleIcon from './icons/MaleIcon';
-import FemaleIcon from './icons/FemaleIcon';
-import DatePickerModal from './DatePickerModal';
-import { useApiViewer } from './ApiContext';
+import StarIcon from './icons/StarIcon';
 import CopyIcon from './icons/CopyIcon';
+import LocationPinIcon from './icons/LocationPinIcon';
+import CoinIcon from './icons/CoinIcon';
+import DiamondIcon from './icons/DiamondIcon';
+import ClockIcon from './icons/ClockIcon';
+import VideoIcon from './icons/VideoIcon';
+import MenuIcon from './icons/MenuIcon';
 import CheckIcon from './icons/CheckIcon';
-import CameraIcon from './icons/CameraIcon';
-
 
 interface EditProfileScreenProps {
   user: User;
   onProfileComplete: (user: User) => void;
+  onNavigate: (view: AppView) => void;
 }
 
-const FormField: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
-  <div className="mb-6">
-    <label className="block text-sm font-medium text-gray-300 mb-2">
-      {label}
-    </label>
-    {children}
+const Stat: React.FC<{ value: string; label: string; icon?: React.ReactNode; onClick?: () => void; }> = ({ value, label, icon, onClick }) => (
+  <button onClick={onClick} disabled={!onClick} className="text-center w-full p-1 rounded-lg transition-colors hover:enabled:bg-gray-200 disabled:cursor-default">
+    <p className="font-bold text-lg text-gray-800">{value}</p>
+    <div className="flex items-center justify-center gap-1">
+      {icon}
+      <p className="text-xs text-gray-500">{label}</p>
+    </div>
+  </button>
+);
+
+const Tab: React.FC<{ label: string; icon: React.ReactNode; active?: boolean }> = ({ label, icon, active }) => (
+  <button className="flex flex-col items-center gap-2 pb-2 relative w-full">
+    {icon}
+    <span className={`text-sm font-semibold ${active ? 'text-purple-600' : 'text-gray-500'}`}>{label}</span>
+    {active && <div className="absolute bottom-0 w-1/2 h-1 bg-purple-600 rounded-full"></div>}
+  </button>
+);
+
+const DetailRow: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
+  <div className="flex justify-between items-center py-3">
+    <span className="text-gray-500">{label}</span>
+    <div className="text-gray-800 font-semibold">{children}</div>
   </div>
 );
 
-const EditProfileScreen: React.FC<EditProfileScreenProps> = ({ user, onProfileComplete }) => {
-  // Initialize state from the user prop (which now uses snake_case)
-  const [nickname, setNickname] = useState(user.nickname || '');
-  const [gender, setGender] = useState<Gender | null>(user.gender || 'male');
-  const [birthday, setBirthday] = useState<string | null>(user.birthday || null);
-  const [inviteCode, setInviteCode] = useState(user.invite_code || '');
-  
-  const [newAvatarUrl, setNewAvatarUrl] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  
-  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
-  const [isGeneratingNickname, setIsGeneratingNickname] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const { showApiResponse } = useApiViewer();
+
+const EditProfileScreen: React.FC<EditProfileScreenProps> = ({ user, onNavigate }) => {
   const [idCopied, setIdCopied] = useState(false);
+  const [giftsReceived, setGiftsReceived] = useState(0);
+  const [giftsSent, setGiftsSent] = useState(0);
+  const [isActionMenuOpen, setIsActionMenuOpen] = useState(false);
+
+  useEffect(() => {
+    getGiftsReceived(user.id).then(data => setGiftsReceived(data.totalValue));
+    getGiftsSent(user.id).then(data => setGiftsSent(data.totalValue));
+  }, [user.id]);
+
+  const formatStat = (num: number): string => {
+    if (num >= 1000) {
+        return (num / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
+    }
+    return num.toString();
+  };
 
   const handleCopyId = () => {
     navigator.clipboard.writeText(String(user.id));
@@ -50,243 +74,111 @@ const EditProfileScreen: React.FC<EditProfileScreenProps> = ({ user, onProfileCo
     setTimeout(() => setIdCopied(false), 2000);
   };
   
-  const handleAvatarClick = () => {
-    fileInputRef.current?.click();
-  };
+  const formattedBirthday = user.birthday 
+    ? new Date(user.birthday + 'T00:00:00').toLocaleDateString('pt-BR')
+    : 'Não especificado';
 
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      if (file.size > 5 * 1024 * 1024) { // 5MB limit
-        setError("O arquivo é muito grande. Use uma foto com menos de 5MB.");
-        return;
-      }
-      setError(null);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setNewAvatarUrl(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleGenerateNickname = useCallback(async () => {
-    setIsGeneratingNickname(true);
-    setError(null);
-    try {
-      const response = await generateNickname();
-      setNickname(response.newNickname);
-      showApiResponse('Utility: generateNickname', response);
-    } catch (err) {
-      setError('Falha ao gerar apelido.');
-    } finally {
-      setIsGeneratingNickname(false);
-    }
-  }, [showApiResponse]);
-  
-  useEffect(() => {
-    if (!user.nickname) {
-        handleGenerateNickname();
-    } else {
-        setNickname(user.nickname);
-    }
-  }, [user.nickname, handleGenerateNickname]);
-
-
-  const handleSubmit = async () => {
-    if (!nickname) {
-      setError("O apelido não pode ficar em branco.");
-      return;
-    }
-    if (!gender) {
-      setError("Por favor, selecione seu gênero.");
-      return;
-    }
-     if (!birthday) {
-      setError("Por favor, selecione seu aniversário.");
-      return;
-    }
-    
-    setIsSubmitting(true);
-    setError(null);
-
-    try {
-      let userForUpdate = user;
-
-      // 1. Upload new photo if one was selected
-      if (newAvatarUrl) {
-          const updatedUserWithAvatar = await uploadProfilePhoto(user.id, newAvatarUrl);
-          showApiResponse(`PATCH /api/usuarios/${user.id}/avatar`, updatedUserWithAvatar);
-          userForUpdate = updatedUserWithAvatar;
-      }
-
-      // 2. Update the rest of the profile data
-      const updatedProfileData = {
-        nickname,
-        gender,
-        birthday: birthday || undefined,
-        invite_code: inviteCode || undefined,
-      };
-      
-      const finalUpdatedUser = await updateUserProfile(userForUpdate.id, updatedProfileData);
-      showApiResponse(`PATCH /api/usuarios/${userForUpdate.id}`, finalUpdatedUser);
-      onProfileComplete(finalUpdatedUser);
-
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Falha ao atualizar o perfil. Tente novamente.';
-      setError(errorMessage);
-    } finally {
-        setIsSubmitting(false);
-    }
-  };
-
-  const formattedBirthday = birthday 
-    ? new Date(birthday).toLocaleDateString('pt-BR', { timeZone: 'UTC', day: '2-digit', month: '2-digit', year: 'numeric' })
-    : 'Por favor, selecione';
+  const genderText = user.gender === 'male' ? 'Masculino' : user.gender === 'female' ? 'Feminino' : 'Não especificado';
 
   return (
-    <div className="bg-[#0D0D0D] text-white min-h-screen flex flex-col font-sans">
-      <header className="py-4 text-center shrink-0 flex flex-col items-center">
-        <h1 className="text-lg font-semibold text-gray-400">Avatar</h1>
-         <div className="relative mt-4">
-            <button onClick={handleAvatarClick} className="w-24 h-24 rounded-full bg-gray-700 overflow-hidden relative group">
-                <img src={newAvatarUrl || user.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
-                <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                    <CameraIcon className="w-8 h-8 text-white" />
+    <>
+      <div className="h-screen w-full bg-gray-100 flex flex-col font-sans">
+        <header className="relative h-48 bg-purple-500 shrink-0">
+          <div className="absolute top-6 left-4 right-4 flex justify-between items-center z-20">
+            <button onClick={() => onNavigate('profile')} className="p-2 -m-2 rounded-full hover:bg-black/10 transition-colors"><ArrowLeftIcon className="w-6 h-6 text-white" /></button>
+            <div className="flex items-center gap-3">
+              <button onClick={() => onNavigate('profile-editor')} className="p-2 -m-2 rounded-full hover:bg-black/10 transition-colors"><PencilIcon className="w-6 h-6 text-white" /></button>
+              <div className="relative">
+                <button onClick={() => setIsActionMenuOpen(prev => !prev)} className="p-2 -m-2 rounded-full hover:bg-black/10 transition-colors">
+                  <EllipsisIcon className="w-6 h-6 text-white" />
+                </button>
+                {isActionMenuOpen && (
+                  <div className="absolute top-full right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-30 ring-1 ring-black ring-opacity-5">
+                    <button
+                        onClick={() => {
+                            onNavigate('avatar-protection');
+                            setIsActionMenuOpen(false);
+                        }}
+                        className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    >
+                        Proteção de avatar
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+          <div className="absolute -bottom-14 left-1/2 -translate-x-1/2 w-28 h-28 z-10">
+            <div className={`w-full h-full rounded-full p-1.5 bg-gradient-to-br from-purple-400 to-pink-400 ${user.is_avatar_protected ? 'animate-protection-glow' : ''}`}>
+                <div className="bg-white w-full h-full rounded-full p-1">
+                    <img src={user.avatar_url} alt={user.name} className="w-full h-full rounded-full object-cover"/>
                 </div>
-            </button>
-        </div>
-      </header>
-      
-      <main className="flex-grow px-6 py-4 overflow-y-auto scrollbar-hide">
-        <FormField label="Apelido">
-          <div className="flex items-center bg-[#252525] rounded-full p-1.5">
-            <input
-              type="text"
-              value={nickname}
-              onChange={(e) => setNickname(e.target.value)}
-              className="flex-grow bg-transparent text-white placeholder-gray-500 px-4 py-2 focus:outline-none"
-              aria-label="Apelido"
-            />
-            <button
-              onClick={handleGenerateNickname}
-              disabled={isGeneratingNickname}
-              className="bg-gray-700/50 w-10 h-10 rounded-full flex items-center justify-center shrink-0 hover:bg-gray-600 transition-colors disabled:opacity-50"
-              aria-label="Gerar novo apelido"
-            >
-              {isGeneratingNickname ? (
-                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-              ) : (
-                <RefreshIcon className="w-6 h-6 text-gray-300" />
-              )}
-            </button>
+            </div>
+            <div className="absolute -bottom-1 -right-1">
+                <BrazilFlagIcon className="w-7 h-7"/>
+            </div>
           </div>
-        </FormField>
-        
-        <FormField label="ID do LiveGo">
-          <div className="flex items-center justify-between bg-[#252525] h-[50px] rounded-2xl px-4">
-            <span className="text-white font-medium">
-              {user.id}
-            </span>
-            <button
-              onClick={handleCopyId}
-              className="p-2 -m-2 rounded-full hover:bg-gray-700/50 transition-colors"
-              aria-label="Copiar ID"
-            >
-              {idCopied ? (
-                <CheckIcon className="w-5 h-5 text-green-400" />
-              ) : (
-                <CopyIcon className="w-5 h-5 text-gray-300" />
-              )}
-            </button>
-          </div>
-        </FormField>
+        </header>
 
-        <FormField label="Gênero">
-           <div className="bg-[#252525] p-1 rounded-full flex items-center">
-             <button
-                 onClick={() => setGender('male')}
-                 className={`w-1/2 flex items-center justify-center gap-2 py-3 rounded-full transition-all duration-300 ${
-                     gender === 'male' ? 'bg-[#007aff]' : 'bg-transparent'
-                 }`}
-             >
-                 <MaleIcon className="w-5 h-5 text-white" />
-                 <span className="font-semibold text-white">
-                     Homem
-                 </span>
-             </button>
-             <button
-                 onClick={() => setGender('female')}
-                 className={`w-1/2 flex items-center justify-center gap-2 py-3 rounded-full transition-all duration-300 ${
-                     gender === 'female' ? 'bg-[#ff2d55]' : 'bg-transparent'
-                 }`}
-             >
-                 <FemaleIcon className="w-5 h-5 text-white" />
-                 <span className="font-semibold text-white">
-                     Mulher
-                 </span>
-             </button>
-           </div>
-        </FormField>
+        <main className="flex-grow pt-16 overflow-y-auto scrollbar-hide">
+          <section className="text-center px-4">
+            <h1 className="text-2xl font-bold text-gray-800">{user.nickname || user.name}</h1>
+            <div className="flex items-center justify-center gap-3 mt-2">
+                <span className="flex items-center gap-1.5 text-sm bg-blue-100 text-blue-600 font-semibold px-2 py-1 rounded-md">
+                    <MaleIcon className="w-4 h-4"/> 29
+                </span>
+                <span className="flex items-center gap-1.5 text-sm bg-yellow-100 text-yellow-600 font-semibold px-2 py-1 rounded-md">
+                    <StarIcon className="w-4 h-4"/> {user.level}
+                </span>
+            </div>
+            <div className="flex items-center justify-center gap-2 text-sm text-gray-500 mt-2">
+                <span>ID: {user.id}</span>
+                <button onClick={handleCopyId}>
+                    {idCopied ? <CheckIcon className="w-4 h-4 text-green-500" /> : <CopyIcon className="w-4 h-4 text-gray-400" />}
+                </button>
+                <LocationPinIcon className="w-4 h-4 text-gray-400 ml-2"/>
+                <span>BR</span>
+            </div>
+          </section>
 
-        <FormField label="Aniversário">
-          <button
-            onClick={() => setIsDatePickerOpen(true)}
-            className="bg-[#252525] h-[50px] w-full px-4 rounded-2xl flex justify-between items-center text-left"
-            aria-haspopup="dialog"
-            aria-expanded={isDatePickerOpen}
-          >
-            <span className={birthday ? 'text-white' : 'text-gray-500'}>
-              {formattedBirthday}
-            </span>
-            <span className="text-gray-500 text-lg">&gt;</span>
-          </button>
-        </FormField>
-        
-        <FormField label="Código de convite (opcional)">
-          <input
-            type="text"
-            value={inviteCode}
-            onChange={(e) => setInviteCode(e.target.value)}
-            placeholder="Digite o código do convite"
-            className="bg-[#252525] h-[50px] w-full text-white placeholder-gray-500 px-4 py-2 rounded-2xl focus:outline-none focus:ring-2 focus:ring-lime-500/50"
-            aria-label="Código de convite (opcional)"
-          />
-        </FormField>
-
-        {error && <p className="text-red-400 text-center text-sm my-4">{error}</p>}
-      </main>
-
-      <footer className="px-6 pb-8 pt-4 shrink-0">
-        <button
-          onClick={handleSubmit}
-          disabled={isSubmitting || isGeneratingNickname}
-          className="w-full bg-[#34C759] text-black font-semibold py-4 rounded-full text-lg transition-opacity hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-          aria-live="polite"
-        >
-          {isSubmitting ? 'Salvando...' : 'Continuar'}
-        </button>
-      </footer>
-      
-      <input
-        type="file"
-        ref={fileInputRef}
-        onChange={handleFileSelect}
-        className="hidden"
-        accept="image/png, image/jpeg, image/webp"
-        aria-hidden="true"
-      />
-      
-      <DatePickerModal
-        isOpen={isDatePickerOpen}
-        onClose={() => setIsDatePickerOpen(false)}
-        onSelectDate={(date) => {
-            setBirthday(date);
-            setIsDatePickerOpen(false);
-        }}
-        currentDate={birthday}
-      />
-    </div>
+          <section className="my-6 grid grid-cols-4 gap-2 px-4">
+             <Stat value={formatStat(user.followers)} label="Seguidos" onClick={() => onNavigate('followers')}/>
+             <Stat value={formatStat(user.followers)} label="Fãs" onClick={() => onNavigate('fans')}/>
+             <Stat value={formatStat(giftsReceived)} label="Recebir" icon={<CoinIcon className="w-3 h-3 text-yellow-500"/>}/>
+             <Stat value={formatStat(giftsSent)} label="Enviar" icon={<DiamondIcon className="w-3 h-3"/>}/>
+          </section>
+          
+          <nav className="grid grid-cols-4 gap-2 px-4 border-b border-gray-200">
+            <Tab label="Momentos" icon={<ClockIcon className="w-6 h-6 text-gray-500"/>} />
+            <Tab label="Vídeo" icon={<VideoIcon className="w-6 h-6 text-gray-500"/>} />
+            <Tab label="VIP" icon={<StarIcon className="w-6 h-6 text-gray-500"/>} />
+            <Tab label="Detalhes" icon={<MenuIcon className="w-6 h-6 text-purple-600"/>} active />
+          </nav>
+          
+          <section className="px-6 py-4">
+            <div className="inline-block bg-gray-200 text-gray-600 text-sm font-semibold px-3 py-1 rounded-md mb-4">“ LOL</div>
+            <div className="divide-y divide-gray-200">
+              <DetailRow label="Nome">
+                <span>{user.nickname || user.name}</span>
+              </DetailRow>
+              <DetailRow label="Aniversário">
+                <span>{formattedBirthday}</span>
+              </DetailRow>
+              <DetailRow label="Gênero">
+                <span>{genderText}</span>
+              </DetailRow>
+              <DetailRow label="Residência atual"><span>Brasil</span></DetailRow>
+              <DetailRow label="Intenção de fazer amigos">
+                <span>26+, País estrangeiro, Alma gêmea</span>
+              </DetailRow>
+              <DetailRow label="Peso corporal">
+                  <span>{user.weight ? `${user.weight}KG` : 'Não especificado'}</span>
+              </DetailRow>
+            </div>
+          </section>
+        </main>
+      </div>
+    </>
   );
 };
 

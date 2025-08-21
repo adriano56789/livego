@@ -1,6 +1,7 @@
 
+
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import type { User, Conversation, ConversationMessage } from '../types';
+import type { User, Conversation, ConversationMessage, PublicProfile } from '../types';
 import * as liveStreamService from '../services/liveStreamService';
 import * as authService from '../services/authService';
 import CrossIcon from './icons/CrossIcon';
@@ -9,6 +10,8 @@ import ConversationListItem from './ConversationListItem';
 import ChatInput from './ChatInput';
 import CheckIcon from './icons/CheckIcon';
 import DoubleCheckIcon from './icons/DoubleCheckIcon';
+import EllipsisIcon from './icons/EllipsisIcon';
+import ActionsModal from './ActionsModal';
 
 
 interface PrivateChatModalProps {
@@ -39,6 +42,7 @@ const PrivateChatModal: React.FC<PrivateChatModalProps> = ({ user, onClose }) =>
     const [activeConversation, setActiveConversation] = useState<Conversation | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const [isActionsModalOpen, setIsActionsModalOpen] = useState(false);
     
     const fetchConversations = useCallback(async () => {
         setIsLoading(true);
@@ -103,6 +107,31 @@ const PrivateChatModal: React.FC<PrivateChatModalProps> = ({ user, onClose }) =>
         }
     };
 
+    const handleBlock = () => {
+        if (!activeConversation) return;
+        liveStreamService.blockUser(user.id, activeConversation.otherUserId);
+        setIsActionsModalOpen(false);
+        setActiveConversation(null); 
+        fetchConversations();
+    };
+    
+    const handleReport = () => {
+        if (!activeConversation) return;
+        liveStreamService.reportUser(user.id, activeConversation.otherUserId);
+        alert(`Denúncia sobre ${activeConversation.otherUserName} enviada.`);
+        setIsActionsModalOpen(false);
+    };
+
+    const otherUserProfileForModal: PublicProfile | null = activeConversation ? {
+        id: activeConversation.otherUserId,
+        name: activeConversation.otherUserName,
+        nickname: activeConversation.otherUserName,
+        avatarUrl: activeConversation.otherUserAvatarUrl,
+        age: null, gender: null, birthday: null, isLive: false, isFollowing: false, coverPhotoUrl: '',
+        stats: { value: 0, icon: 'coin' }, badges: [], protectors: [], achievements: [],
+        personalityTags: [], personalSignature: '',
+    } : null;
+
     const renderConversationList = () => (
         <>
             <header className="p-4 border-b border-white/10 flex items-center justify-center relative shrink-0">
@@ -136,7 +165,7 @@ const PrivateChatModal: React.FC<PrivateChatModalProps> = ({ user, onClose }) =>
             <header className="p-4 flex items-center justify-between bg-[#2c2c2e] shrink-0">
                 <button onClick={() => { setActiveConversation(null); fetchConversations(); }}><ArrowLeftIcon className="w-6 h-6" /></button>
                 <h2 className="font-semibold">{activeConversation?.otherUserName}</h2>
-                <button onClick={onClose}><CrossIcon className="w-6 h-6 text-gray-400" /></button>
+                <button onClick={() => setIsActionsModalOpen(true)}><EllipsisIcon className="w-6 h-6 text-gray-400" /></button>
             </header>
             <main className="flex-grow p-4 overflow-y-auto flex flex-col gap-3 bg-black/20 scrollbar-hide">
                 {isLoading && !activeConversation?.messages.length ? (
@@ -155,6 +184,7 @@ const PrivateChatModal: React.FC<PrivateChatModalProps> = ({ user, onClose }) =>
     );
 
     return (
+        <>
          <div className="fixed top-0 bottom-0 right-0 w-full max-w-md h-screen z-50 animate-slide-in-right">
             <div className="bg-[#212124] w-full h-full flex flex-col text-white shadow-2xl">
                 {activeConversation ? renderChatView() : renderConversationList()}
@@ -169,6 +199,16 @@ const PrivateChatModal: React.FC<PrivateChatModalProps> = ({ user, onClose }) =>
                 }
             `}</style>
          </div>
+         {otherUserProfileForModal && (
+            <ActionsModal
+                isOpen={isActionsModalOpen}
+                onClose={() => setIsActionsModalOpen(false)}
+                user={otherUserProfileForModal}
+                onBlock={handleBlock}
+                onReport={handleReport}
+            />
+        )}
+        </>
     );
 };
 

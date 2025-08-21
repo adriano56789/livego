@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import type { User, PkBattleState } from '../types';
 
@@ -10,8 +9,9 @@ interface PkResultModalProps {
 
 const PkResultModal: React.FC<PkResultModalProps> = ({ currentUser, battleData, onClose }) => {
     const isParticipant = currentUser.id === battleData.streamer_A_id || currentUser.id === battleData.streamer_B_id;
-    const isWinner = currentUser.id === battleData.vencedor_id;
-    const isDraw = battleData.resultado === 'empate';
+    const winnerId = battleData.pontuacao_A > battleData.pontuacao_B ? battleData.streamer_A_id : battleData.pontuacao_B > battleData.pontuacao_A ? battleData.streamer_B_id : null;
+    const isWinner = currentUser.id === winnerId;
+    const isDraw = !winnerId;
 
     useEffect(() => {
         const duration = 4000; // Show for 4 seconds
@@ -42,7 +42,7 @@ const PkResultModal: React.FC<PkResultModalProps> = ({ currentUser, battleData, 
             subText = "Você perdeu a batalha.";
         }
     } else { // Spectator
-        const winner = battleData.vencedor_id === battleData.streamer_A_id ? battleData.streamer_A : battleData.streamer_B;
+        const winner = winnerId === battleData.streamer_A_id ? battleData.streamer_A : battleData.streamer_B;
         resultText = 'FIM DA BATALHA';
         resultColor = 'text-white';
         subText = `Vencedor: ${winner.nickname}`;

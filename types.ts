@@ -125,6 +125,7 @@ export interface LiveStreamRecord {
   longitude?: number;
   camera_facing_mode?: FacingMode;
   voice_enabled?: boolean;
+  like_count?: number;
 }
 
 // This is the VIEW MODEL for the frontend, derived from LiveStreamRecord

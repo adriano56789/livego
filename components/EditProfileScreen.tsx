@@ -1,13 +1,15 @@
 
 import React, { useState, useEffect } from 'react';
-import type { User, AppView } from '../types';
-import { getGiftsReceived, getGiftsSent } from '../services/authService';
+import type { User, AppView, PublicProfile } from '../types';
+import { getGiftsReceived, getGiftsSent, getUserProfile } from '../services/authService';
+import * as liveStreamService from '../services/liveStreamService';
 
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
 import PencilIcon from './icons/PencilIcon';
 import EllipsisIcon from './icons/EllipsisIcon';
 import BrazilFlagIcon from './icons/BrazilFlagIcon';
 import MaleIcon from './icons/MaleIcon';
+import FemaleIcon from './icons/FemaleIcon';
 import StarIcon from './icons/StarIcon';
 import CopyIcon from './icons/CopyIcon';
 import LocationPinIcon from './icons/LocationPinIcon';
@@ -17,49 +19,189 @@ import ClockIcon from './icons/ClockIcon';
 import VideoIcon from './icons/VideoIcon';
 import MenuIcon from './icons/MenuIcon';
 import CheckIcon from './icons/CheckIcon';
+import UserPlaceholderIcon from './icons/UserPlaceholderIcon';
+import BlockScreen from './BlockScreen';
+import EmbeddedChatView from './EmbeddedChatView';
+import ShieldCheckIcon from './icons/ShieldCheckIcon';
+
 
 interface EditProfileScreenProps {
-  user: User;
-  onProfileComplete: (user: User) => void;
-  onNavigate: (view: AppView) => void;
+  user: User; // If isOwnProfile, this is the user data. If viewing another profile, this is the current logged-in user.
+  onNavigate?: (view: AppView) => void;
+  // New props for viewing other profiles
+  isViewingOtherProfile?: boolean;
+  viewedUserId?: number;
+  onExit?: () => void;
+  onFollowToggle?: (userId: number) => void;
+  onNavigateToChat?: (userId: number) => void;
 }
 
-const Stat: React.FC<{ value: string; label: string; icon?: React.ReactNode; onClick?: () => void; }> = ({ value, label, icon, onClick }) => (
-  <button onClick={onClick} disabled={!onClick} className="text-center w-full p-1 rounded-lg transition-colors hover:enabled:bg-gray-200 disabled:cursor-default">
-    <p className="font-bold text-lg text-gray-800">{value}</p>
+
+const Stat: React.FC<{ value: string; label: string; icon?: React.ReactNode; onClick?: () => void; disabled?: boolean; }> = ({ value, label, icon, onClick, disabled }) => (
+  <button onClick={onClick} disabled={disabled || !onClick} className="text-center w-full p-1 rounded-lg transition-colors hover:enabled:bg-gray-800 disabled:cursor-default">
+    <p className="font-bold text-lg text-white">{value}</p>
     <div className="flex items-center justify-center gap-1">
       {icon}
-      <p className="text-xs text-gray-500">{label}</p>
+      <p className="text-xs text-gray-400">{label}</p>
     </div>
   </button>
 );
 
-const Tab: React.FC<{ label: string; icon: React.ReactNode; active?: boolean }> = ({ label, icon, active }) => (
-  <button className="flex flex-col items-center gap-2 pb-2 relative w-full">
+const Tab: React.FC<{ label: string; icon: React.ReactNode; active?: boolean; onClick: () => void; }> = ({ label, icon, active, onClick }) => (
+  <button onClick={onClick} className="flex flex-col items-center gap-2 pb-2 relative w-full">
     {icon}
-    <span className={`text-sm font-semibold ${active ? 'text-purple-600' : 'text-gray-500'}`}>{label}</span>
-    {active && <div className="absolute bottom-0 w-1/2 h-1 bg-purple-600 rounded-full"></div>}
+    <span className={`text-sm font-semibold ${active ? 'text-purple-500' : 'text-gray-400'}`}>{label}</span>
+    {active && <div className="absolute bottom-0 w-1/2 h-1 bg-purple-500 rounded-full"></div>}
   </button>
 );
 
 const DetailRow: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
   <div className="flex justify-between items-center py-3">
-    <span className="text-gray-500">{label}</span>
-    <div className="text-gray-800 font-semibold">{children}</div>
+    <span className="text-gray-400">{label}</span>
+    <div className="text-white font-semibold">{children}</div>
   </div>
 );
 
+const ActionMenu: React.FC<{
+    isOpen: boolean;
+    onClose: () => void;
+    onBlock: () => void;
+    onReport: () => void;
+    onUnfollow: () => void;
+    isFollowing: boolean;
+}> = ({ isOpen, onClose, onBlock, onReport, onUnfollow, isFollowing }) => {
+    if (!isOpen) return null;
+    return (
+        <div 
+            className="fixed inset-0 bg-black/50 z-40"
+            onClick={onClose}
+        >
+            <div 
+                className="absolute bottom-0 left-0 right-0 bg-[#1c1c1e] rounded-t-xl p-2 animate-slide-up-fast"
+                onClick={e => e.stopPropagation()}
+            >
+                <div className="bg-[#2c2c2e] rounded-xl text-lg text-center">
+                    {isFollowing && (
+                         <>
+                            <button onClick={onUnfollow} className="w-full p-3.5 text-red-400">Cancelar amizade</button>
+                            <div className="h-px bg-gray-600/50 mx-4"></div>
+                         </>
+                    )}
+                    <button onClick={onBlock} className="w-full p-3.5 text-red-400">Adicionar à lista de bloqueio</button>
+                    <div className="h-px bg-gray-600/50 mx-4"></div>
+                    <button onClick={onReport} className="w-full p-3.5 text-white">Denunciar</button>
+                </div>
+                <button onClick={onClose} className="w-full mt-2 text-center p-3.5 bg-[#2c2c2e] rounded-xl text-blue-400 font-semibold">
+                    Cancelar
+                </button>
+            </div>
+             <style>{`
+                @keyframes slide-up-fast { from { transform: translateY(100%); } to { transform: translateY(0); } }
+                .animate-slide-up-fast { animation: slide-up-fast 0.25s ease-out forwards; }
+            `}</style>
+        </div>
+    );
+};
 
-const EditProfileScreen: React.FC<EditProfileScreenProps> = ({ user, onNavigate }) => {
+
+const EditProfileScreen: React.FC<EditProfileScreenProps> = ({ 
+    user, 
+    onNavigate,
+    isViewingOtherProfile,
+    viewedUserId,
+    onExit,
+    onFollowToggle,
+    onNavigateToChat
+}) => {
+  const isOwnProfile = !isViewingOtherProfile;
+  const loggedInUser = user;
+  
+  const [profileData, setProfileData] = useState<User | null>(isOwnProfile ? user : null);
+  const [isLoading, setIsLoading] = useState(!isOwnProfile);
+  const [isBlocked, setIsBlocked] = useState(false);
+
   const [idCopied, setIdCopied] = useState(false);
   const [giftsReceived, setGiftsReceived] = useState(0);
   const [giftsSent, setGiftsSent] = useState(0);
   const [isActionMenuOpen, setIsActionMenuOpen] = useState(false);
+  
+  const [isFollowing, setIsFollowing] = useState(loggedInUser.following.includes(viewedUserId || -1));
+  const [isFollowLoading, setIsFollowLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState<'obras' | 'curtidas' | 'detalhes'>('obras');
 
   useEffect(() => {
-    getGiftsReceived(user.id).then(data => setGiftsReceived(data.totalValue));
-    getGiftsSent(user.id).then(data => setGiftsSent(data.totalValue));
-  }, [user.id]);
+    setIsFollowing(loggedInUser.following.includes(viewedUserId || -1));
+  }, [loggedInUser.following, viewedUserId]);
+
+  useEffect(() => {
+      const fetchData = async () => {
+          if (!isOwnProfile && viewedUserId) {
+              setIsLoading(true);
+              try {
+                  const [userToView, received, sent, isBlockedStatus] = await Promise.all([
+                    getUserProfile(viewedUserId),
+                    getGiftsReceived(viewedUserId),
+                    getGiftsSent(viewedUserId),
+                    liveStreamService.isUserBlocked(loggedInUser.id, viewedUserId),
+                  ]);
+                  setIsBlocked(isBlockedStatus.isBlocked);
+                  setProfileData(userToView);
+                  setGiftsReceived(received.totalValue);
+                  setGiftsSent(sent.totalValue);
+              } catch (error) {
+                  console.error("Failed to fetch user profile", error);
+                  onExit?.();
+              } finally {
+                  setIsLoading(false);
+              }
+          } else if (isOwnProfile) {
+              setProfileData(user);
+              getGiftsReceived(user.id).then(data => setGiftsReceived(data.totalValue));
+              getGiftsSent(user.id).then(data => setGiftsSent(data.totalValue));
+          }
+      };
+      fetchData();
+  }, [isOwnProfile, viewedUserId, user, onExit, loggedInUser.id]);
+  
+  const handleFollowClick = async () => {
+    if (onFollowToggle && profileData) {
+        setIsFollowLoading(true);
+        await onFollowToggle(profileData.id);
+        setIsFollowLoading(false);
+    }
+  };
+
+  const handleBlock = async () => {
+    if (!profileData) return;
+    setIsActionMenuOpen(false);
+    await liveStreamService.blockUser(loggedInUser.id, profileData.id);
+    setIsBlocked(true);
+  };
+
+  const handleUnblock = async () => {
+      if (!profileData) return;
+      await liveStreamService.unblockUser(loggedInUser.id, profileData.id);
+      setIsBlocked(false);
+  };
+
+  const handleReport = async () => {
+    if (!profileData) return;
+    await liveStreamService.reportUser(loggedInUser.id, profileData.id);
+    alert(`Denúncia sobre ${profileData.nickname || profileData.name} foi enviada.`);
+    setIsActionMenuOpen(false);
+  };
+
+  const handleBackClick = () => {
+    if (onExit) {
+      onExit();
+    }
+  };
+
+  const handleStatClick = (view: AppView) => {
+    if (onNavigate) {
+        onNavigate(view);
+    }
+  };
 
   const formatStat = (num: number): string => {
     if (num >= 1000) {
@@ -69,115 +211,197 @@ const EditProfileScreen: React.FC<EditProfileScreenProps> = ({ user, onNavigate 
   };
 
   const handleCopyId = () => {
-    navigator.clipboard.writeText(String(user.id));
+    if (!profileData) return;
+    navigator.clipboard.writeText(String(profileData.id));
     setIdCopied(true);
     setTimeout(() => setIdCopied(false), 2000);
   };
+
+  if (isLoading || !profileData) {
+    return (
+        <div className="h-screen w-full bg-black flex items-center justify-center">
+            <div className="w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+        </div>
+    );
+  }
+
+  if (isBlocked) {
+    return (
+        <BlockScreen
+            userName={profileData.nickname || profileData.name}
+            onUnblock={handleUnblock}
+            onExit={onExit!}
+            bgColor="bg-black"
+        />
+    );
+  }
   
-  const formattedBirthday = user.birthday 
-    ? new Date(user.birthday + 'T00:00:00').toLocaleDateString('pt-BR')
+  const formattedBirthday = profileData.birthday 
+    ? new Date(profileData.birthday + 'T00:00:00').toLocaleDateString('pt-BR')
     : 'Não especificado';
 
-  const genderText = user.gender === 'male' ? 'Masculino' : user.gender === 'female' ? 'Feminino' : 'Não especificado';
+  const genderText = profileData.gender === 'male' ? 'Masculino' : profileData.gender === 'female' ? 'Feminino' : 'Não especificado';
 
   return (
     <>
-      <div className="h-screen w-full bg-gray-100 flex flex-col font-sans">
+      <div className="h-screen w-full bg-black flex flex-col font-sans">
         <header className="relative h-48 bg-purple-500 shrink-0">
           <div className="absolute top-6 left-4 right-4 flex justify-between items-center z-20">
-            <button onClick={() => onNavigate('profile')} className="p-2 -m-2 rounded-full hover:bg-black/10 transition-colors"><ArrowLeftIcon className="w-6 h-6 text-white" /></button>
+            <button onClick={handleBackClick} className="p-2 -m-2 rounded-full hover:bg-black/10 transition-colors"><ArrowLeftIcon className="w-6 h-6 text-white" /></button>
             <div className="flex items-center gap-3">
-              <button onClick={() => onNavigate('profile-editor')} className="p-2 -m-2 rounded-full hover:bg-black/10 transition-colors"><PencilIcon className="w-6 h-6 text-white" /></button>
-              <div className="relative">
-                <button onClick={() => setIsActionMenuOpen(prev => !prev)} className="p-2 -m-2 rounded-full hover:bg-black/10 transition-colors">
-                  <EllipsisIcon className="w-6 h-6 text-white" />
-                </button>
-                {isActionMenuOpen && (
-                  <div className="absolute top-full right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-30 ring-1 ring-black ring-opacity-5">
-                    <button
-                        onClick={() => {
-                            onNavigate('avatar-protection');
-                            setIsActionMenuOpen(false);
-                        }}
-                        className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                    >
-                        Proteção de avatar
-                    </button>
-                  </div>
+                {isOwnProfile && (
+                    <>
+                        <button onClick={() => onNavigate?.('avatar-protection')} className="p-2 -m-2 rounded-full hover:bg-black/10 transition-colors" title="Proteção de Avatar">
+                            <ShieldCheckIcon className="w-6 h-6 text-white" />
+                        </button>
+                        <button onClick={() => onNavigate?.('profile-editor')} className="p-2 -m-2 rounded-full hover:bg-black/10 transition-colors" title="Editar Perfil">
+                            <PencilIcon className="w-6 h-6 text-white" />
+                        </button>
+                    </>
                 )}
-              </div>
+                {!isOwnProfile && (
+                     <button onClick={() => setIsActionMenuOpen(true)} className="p-2 -m-2 rounded-full hover:bg-black/10 transition-colors">
+                        <EllipsisIcon className="w-6 h-6 text-white" />
+                     </button>
+                )}
             </div>
           </div>
           <div className="absolute -bottom-14 left-1/2 -translate-x-1/2 w-28 h-28 z-10">
-            <div className={`w-full h-full rounded-full p-1.5 bg-gradient-to-br from-purple-400 to-pink-400 ${user.is_avatar_protected ? 'animate-protection-glow' : ''}`}>
-                <div className="bg-white w-full h-full rounded-full p-1">
-                    <img src={user.avatar_url} alt={user.name} className="w-full h-full rounded-full object-cover"/>
+            <div className="relative w-full h-full rounded-full bg-gradient-to-tr from-purple-600 to-fuchsia-400 p-1.5 shadow-lg">
+                <div className="w-full h-full rounded-full bg-black overflow-hidden flex items-center justify-center">
+                   {profileData.avatar_url ? (
+                        <img src={profileData.avatar_url} alt={profileData.name} className="w-full h-full object-cover" />
+                    ) : (
+                        <UserPlaceholderIcon className="w-full h-full text-gray-500 p-1" />
+                    )}
                 </div>
-            </div>
-            <div className="absolute -bottom-1 -right-1">
-                <BrazilFlagIcon className="w-7 h-7"/>
+                 {profileData.is_avatar_protected ? (
+                    <div className="absolute -bottom-2 right-0 w-10 h-10 bg-sky-400 rounded-full flex items-center justify-center border-2 border-black animate-protection-glow">
+                        <ShieldCheckIcon className="w-7 h-7 text-black"/>
+                    </div>
+                ) : !isOwnProfile ? (
+                    <div className="absolute -bottom-1 -right-1">
+                        <BrazilFlagIcon className="w-8 h-8"/>
+                    </div>
+                ) : null}
             </div>
           </div>
         </header>
 
-        <main className="flex-grow pt-16 overflow-y-auto scrollbar-hide">
-          <section className="text-center px-4">
-            <h1 className="text-2xl font-bold text-gray-800">{user.nickname || user.name}</h1>
-            <div className="flex items-center justify-center gap-3 mt-2">
-                <span className="flex items-center gap-1.5 text-sm bg-blue-100 text-blue-600 font-semibold px-2 py-1 rounded-md">
-                    <MaleIcon className="w-4 h-4"/> 29
-                </span>
-                <span className="flex items-center gap-1.5 text-sm bg-yellow-100 text-yellow-600 font-semibold px-2 py-1 rounded-md">
-                    <StarIcon className="w-4 h-4"/> {user.level}
-                </span>
+        <main className="flex-grow pt-16 px-4 pb-4 overflow-y-auto scrollbar-hide">
+          <section className="text-center">
+            <h1 className="text-2xl font-bold text-white">{profileData.nickname || profileData.name}</h1>
+            <div className="flex justify-center items-center gap-2 mt-2">
+                {profileData.gender && <div className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-bold ${profileData.gender === 'female' ? 'bg-[#ff2d55]' : 'bg-[#007aff]'} text-white`}>
+                    {profileData.gender === 'female' ? <FemaleIcon className="w-3 h-3"/> : <MaleIcon className="w-3 h-3"/>}
+                    <span>{profileData.age || ''}</span>
+                </div>}
+                 <div className="flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-bold bg-yellow-400 text-black">
+                    <StarIcon className="w-3 h-3"/>
+                    <span>{profileData.level || 1}</span>
+                </div>
             </div>
-            <div className="flex items-center justify-center gap-2 text-sm text-gray-500 mt-2">
-                <span>ID: {user.id}</span>
-                <button onClick={handleCopyId}>
-                    {idCopied ? <CheckIcon className="w-4 h-4 text-green-500" /> : <CopyIcon className="w-4 h-4 text-gray-400" />}
+             <div className="flex items-center justify-center gap-2 text-sm text-gray-400 mt-2">
+                <span>ID: {profileData.id}</span>
+                <button onClick={handleCopyId} title="Copiar ID" className="flex items-center gap-1">
+                    {idCopied ? <CheckIcon className="w-4 h-4 text-green-500"/> : <CopyIcon className="w-4 h-4" />}
                 </button>
-                <LocationPinIcon className="w-4 h-4 text-gray-400 ml-2"/>
+                <LocationPinIcon className="w-4 h-4" />
                 <span>BR</span>
             </div>
           </section>
 
-          <section className="my-6 grid grid-cols-4 gap-2 px-4">
-             <Stat value={formatStat(user.followers)} label="Seguidos" onClick={() => onNavigate('followers')}/>
-             <Stat value={formatStat(user.followers)} label="Fãs" onClick={() => onNavigate('fans')}/>
-             <Stat value={formatStat(giftsReceived)} label="Recebir" icon={<CoinIcon className="w-3 h-3 text-yellow-500"/>}/>
-             <Stat value={formatStat(giftsSent)} label="Enviar" icon={<DiamondIcon className="w-3 h-3"/>}/>
+          <section className="grid grid-cols-4 my-4">
+              <Stat value={formatStat(profileData.followers)} label="Seguidores" onClick={() => handleStatClick('followers')} />
+              <Stat value={formatStat(profileData.followers)} label="Fãs" onClick={() => handleStatClick('fans')} />
+              <Stat value={formatStat(giftsReceived)} label="Recebidos" icon={<CoinIcon className="w-3 h-3 text-yellow-500"/>} />
+              <Stat value={formatStat(giftsSent)} label="Enviados" icon={<DiamondIcon className="w-3 h-3"/>} />
           </section>
-          
-          <nav className="grid grid-cols-4 gap-2 px-4 border-b border-gray-200">
-            <Tab label="Momentos" icon={<ClockIcon className="w-6 h-6 text-gray-500"/>} />
-            <Tab label="Vídeo" icon={<VideoIcon className="w-6 h-6 text-gray-500"/>} />
-            <Tab label="VIP" icon={<StarIcon className="w-6 h-6 text-gray-500"/>} />
-            <Tab label="Detalhes" icon={<MenuIcon className="w-6 h-6 text-purple-600"/>} active />
-          </nav>
-          
-          <section className="px-6 py-4">
-            <div className="inline-block bg-gray-200 text-gray-600 text-sm font-semibold px-3 py-1 rounded-md mb-4">“ LOL</div>
-            <div className="divide-y divide-gray-200">
-              <DetailRow label="Nome">
-                <span>{user.nickname || user.name}</span>
-              </DetailRow>
-              <DetailRow label="Aniversário">
-                <span>{formattedBirthday}</span>
-              </DetailRow>
-              <DetailRow label="Gênero">
-                <span>{genderText}</span>
-              </DetailRow>
-              <DetailRow label="Residência atual"><span>Brasil</span></DetailRow>
-              <DetailRow label="Intenção de fazer amigos">
-                <span>26+, País estrangeiro, Alma gêmea</span>
-              </DetailRow>
-              <DetailRow label="Peso corporal">
-                  <span>{user.weight ? `${user.weight}KG` : 'Não especificado'}</span>
-              </DetailRow>
-            </div>
+
+          <section className="border-t border-gray-800/50">
+             <div className="grid grid-cols-3">
+                 <Tab label="Obras" icon={<VideoIcon className="w-6 h-6"/>} active={activeTab === 'obras'} onClick={() => setActiveTab('obras')} />
+                 <Tab label="Curtidas" icon={<ClockIcon className="w-6 h-6"/>} active={activeTab === 'curtidas'} onClick={() => setActiveTab('curtidas')} />
+                 <Tab label="Detalhes" icon={<MenuIcon className="w-6 h-6"/>} active={activeTab === 'detalhes'} onClick={() => setActiveTab('detalhes')} />
+             </div>
+             <div className="pt-2">
+                {activeTab === 'obras' && (
+                    <div className="pt-10 text-center text-gray-500">
+                        Nenhuma obra publicada.
+                    </div>
+                )}
+                {activeTab === 'curtidas' && (
+                    <div className="pt-10 text-center text-gray-500">
+                        Nenhuma curtida encontrada.
+                    </div>
+                )}
+                {activeTab === 'detalhes' && (
+                    <div className="divide-y divide-gray-800/50">
+                        {profileData.personalSignature && (
+                            <div className="py-4">
+                                <p className="text-white font-medium">{profileData.personalSignature}</p>
+                            </div>
+                        )}
+                        <DetailRow label="Aniversário">{formattedBirthday}</DetailRow>
+                        <DetailRow label="Gênero">{genderText}</DetailRow>
+                        <DetailRow label="Residência atual">{profileData.country || 'Não especificado'}</DetailRow>
+                        <DetailRow label="Estado emocional">{profileData.emotionalState || 'Não especificado'}</DetailRow>
+                        {profileData.personalityTags && profileData.personalityTags.length > 0 && (
+                            <div className="py-4">
+                                <span className="text-gray-400">Tags de personalidade</span>
+                                <div className="flex flex-wrap gap-2 mt-2">
+                                    {profileData.personalityTags.map(tag => (
+                                        <span key={tag.id} className="bg-gray-700 text-gray-200 text-sm px-3 py-1 rounded-full">{tag.label}</span>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                        <DetailRow label="Profissão">{profileData.profession || 'Não especificado'}</DetailRow>
+                        <DetailRow label="Língua dominada">{(profileData.languages && profileData.languages.join(', ')) || 'Não especificado'}</DetailRow>
+                        <DetailRow label="Altura">{profileData.height ? `${profileData.height} cm` : 'Não especificado'}</DetailRow>
+                        <DetailRow label="Peso corporal">{profileData.weight ? `${profileData.weight} Kg` : 'Não especificado'}</DetailRow>
+                    </div>
+                )}
+             </div>
           </section>
         </main>
+        
+        {!isOwnProfile && (
+          <footer className="p-4 bg-black border-t border-gray-800/50 shrink-0">
+              <div className="flex items-center justify-center">
+                  {isFollowing ? (
+                      <button
+                          onClick={() => onNavigateToChat?.(profileData.id)}
+                          className="w-full max-w-sm py-3.5 rounded-full font-semibold transition-colors bg-[#2c2c2e] text-gray-300 hover:bg-gray-700"
+                      >
+                          Conversar
+                      </button>
+                  ) : (
+                      <button
+                          onClick={handleFollowClick}
+                          disabled={isFollowLoading}
+                          className="w-full max-w-sm py-3.5 rounded-full font-semibold transition-colors disabled:opacity-50 bg-[#34C759] text-black hover:opacity-90"
+                      >
+                          {isFollowLoading ? 'Seguindo...' : 'Seguir'}
+                      </button>
+                  )}
+              </div>
+          </footer>
+        )}
       </div>
+      {!isOwnProfile && (
+        <ActionMenu 
+            isOpen={isActionMenuOpen}
+            onClose={() => setIsActionMenuOpen(false)}
+            onBlock={handleBlock}
+            onReport={handleReport}
+            onUnfollow={() => {
+                setIsActionMenuOpen(false);
+                handleFollowClick();
+            }}
+            isFollowing={isFollowing}
+        />
+      )}
     </>
   );
 };

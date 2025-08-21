@@ -1,22 +1,20 @@
 
+
+
 import React, { useState, useEffect, useCallback } from 'react';
-import type { User, GeneralRankingStreamer, GeneralRankingUser, Stream, PkBattle } from '../types';
+import type { User, GeneralRankingStreamer, GeneralRankingUser } from '../types';
 import * as liveStreamService from '../services/liveStreamService';
 import { useApiViewer } from './ApiContext';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
 import PodiumCrownIcon from './icons/PodiumCrownIcon';
-import UserProfileModal from './UserProfileModal';
 
 interface RankingScreenProps {
   currentUser: User;
   onExit: () => void;
-  onUpdateUser: (user: User) => void;
-  onNavigateToChat: (userId: number) => void;
-  onViewProtectors: (userId: number) => void;
-  onViewStream: (stream: Stream | PkBattle) => void;
+  onViewProfile: (userId: number) => void;
 }
 
-const formatScore = (num: number) => num.toLocaleString('pt-BR');
+const formatScore = (num: number) => (num || 0).toLocaleString('pt-BR');
 
 const PodiumItem: React.FC<{ user: GeneralRankingStreamer | GeneralRankingUser; position: 1 | 2 | 3; onUserClick: (userId: number) => void; type: 'streamers' | 'users' }> = ({ user, position, onUserClick, type }) => {
     const isFirst = position === 1;
@@ -55,13 +53,12 @@ const UserRow: React.FC<{ user: GeneralRankingStreamer | GeneralRankingUser; onU
 };
 
 
-const RankingScreen: React.FC<RankingScreenProps> = ({ currentUser, onExit, onUpdateUser, onNavigateToChat, onViewProtectors, onViewStream }) => {
+const RankingScreen: React.FC<RankingScreenProps> = ({ currentUser, onExit, onViewProfile }) => {
     const [activeTab, setActiveTab] = useState<'streamers' | 'users'>('streamers');
     const [streamerRanking, setStreamerRanking] = useState<GeneralRankingStreamer[]>([]);
     const [userRanking, setUserRanking] = useState<GeneralRankingUser[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const { showApiResponse } = useApiViewer();
-    const [viewingUserId, setViewingUserId] = useState<number | null>(null);
 
     useEffect(() => {
         const fetchRanking = async () => {
@@ -84,10 +81,6 @@ const RankingScreen: React.FC<RankingScreenProps> = ({ currentUser, onExit, onUp
         };
         fetchRanking();
     }, [activeTab, showApiResponse]);
-    
-    const handleUserClick = (userId: number) => {
-        setViewingUserId(userId);
-    };
 
     const renderList = () => {
         const list = activeTab === 'streamers' ? streamerRanking : userRanking;
@@ -102,62 +95,48 @@ const RankingScreen: React.FC<RankingScreenProps> = ({ currentUser, onExit, onUp
         return (
             <>
                 <div className="h-48 flex justify-around items-end px-4 shrink-0">
-                    {top2 && <PodiumItem user={top2} position={2} onUserClick={handleUserClick} type={activeTab} />}
-                    {top1 && <PodiumItem user={top1} position={1} onUserClick={handleUserClick} type={activeTab} />}
-                    {top3user && <PodiumItem user={top3user} position={3} onUserClick={handleUserClick} type={activeTab} />}
+                    {top2 && <PodiumItem user={top2} position={2} onUserClick={onViewProfile} type={activeTab} />}
+                    {top1 && <PodiumItem user={top1} position={1} onUserClick={onViewProfile} type={activeTab} />}
+                    {top3user && <PodiumItem user={top3user} position={3} onUserClick={onViewProfile} type={activeTab} />}
                 </div>
                 <div className="flex-grow bg-black/20 rounded-t-2xl mt-4 p-2 space-y-1 overflow-y-auto scrollbar-hide">
-                    {rest.map(user => <UserRow key={user.userId} user={user} onUserClick={handleUserClick} type={activeTab} />)}
+                    {rest.map(user => <UserRow key={user.userId} user={user} onUserClick={onViewProfile} type={activeTab} />)}
                 </div>
             </>
         );
     };
 
     return (
-        <>
-            <div className="h-screen w-full bg-gradient-to-b from-[#1E1B4B] to-[#141026] text-white flex flex-col font-sans">
-                <header className="p-4 flex items-center justify-between shrink-0">
-                    <button onClick={onExit} className="p-2 -m-2"><ArrowLeftIcon className="w-6 h-6" /></button>
-                    <h1 className="font-bold text-lg">Central de Ranking</h1>
-                    <div className="w-6 h-6"></div>
-                </header>
+        <div className="h-screen w-full bg-gradient-to-b from-[#1E1B4B] to-[#141026] text-white flex flex-col font-sans">
+            <header className="p-4 flex items-center justify-between shrink-0">
+                <button onClick={onExit} className="p-2 -m-2"><ArrowLeftIcon className="w-6 h-6" /></button>
+                <h1 className="font-bold text-lg">Central de Ranking</h1>
+                <div className="w-6 h-6"></div>
+            </header>
 
-                <main className="flex-grow p-4 flex flex-col overflow-hidden">
-                    <div className="shrink-0 flex items-center justify-center p-1 bg-black/20 rounded-full my-2">
-                        <button onClick={() => setActiveTab('streamers')} className={`w-1/2 py-2 rounded-full text-sm font-bold transition-colors ${activeTab === 'streamers' ? 'bg-gradient-to-r from-purple-600 to-indigo-500' : 'text-gray-400'}`}>
-                            Ranking de Streamers
-                        </button>
-                        <button onClick={() => setActiveTab('users')} className={`w-1/2 py-2 rounded-full text-sm font-bold transition-colors ${activeTab === 'users' ? 'bg-gradient-to-r from-purple-600 to-indigo-500' : 'text-gray-400'}`}>
-                            Ranking de Usuários
-                        </button>
-                    </div>
+            <main className="flex-grow p-4 flex flex-col overflow-hidden">
+                <div className="shrink-0 flex items-center justify-center p-1 bg-black/20 rounded-full my-2">
+                    <button onClick={() => setActiveTab('streamers')} className={`w-1/2 py-2 rounded-full text-sm font-bold transition-colors ${activeTab === 'streamers' ? 'bg-gradient-to-r from-purple-600 to-indigo-500' : 'text-gray-400'}`}>
+                        Ranking de Streamers
+                    </button>
+                    <button onClick={() => setActiveTab('users')} className={`w-1/2 py-2 rounded-full text-sm font-bold transition-colors ${activeTab === 'users' ? 'bg-gradient-to-r from-purple-600 to-indigo-500' : 'text-gray-400'}`}>
+                        Ranking de Usuários
+                    </button>
+                </div>
 
-                    <div className="flex items-center text-sm text-gray-300 font-semibold py-2 px-2 mt-4">
-                        <p className="w-10 text-center">Posição</p>
-                        <p className="flex-1 ml-5">{activeTab === 'streamers' ? 'Streamer' : 'Usuário'}</p>
-                        <p>{activeTab === 'streamers' ? 'Seguidores' : 'XP'}</p>
-                    </div>
+                <div className="flex items-center text-sm text-gray-300 font-semibold py-2 px-2 mt-4">
+                    <p className="w-10 text-center">Posição</p>
+                    <p className="flex-1 ml-5">{activeTab === 'streamers' ? 'Streamer' : 'Usuário'}</p>
+                    <p>{activeTab === 'streamers' ? 'Seguidores' : 'XP'}</p>
+                </div>
 
-                    {isLoading ? (
-                        <div className="flex-grow flex items-center justify-center"><div className="w-8 h-8 border-4 border-white border-t-transparent rounded-full animate-spin"></div></div>
-                    ) : (
-                        renderList()
-                    )}
-                </main>
-            </div>
-
-            {viewingUserId && (
-                <UserProfileModal
-                    userId={viewingUserId}
-                    currentUser={currentUser}
-                    onUpdateUser={onUpdateUser}
-                    onClose={() => setViewingUserId(null)}
-                    onNavigateToChat={onNavigateToChat}
-                    onViewProtectors={onViewProtectors}
-                    onViewStream={onViewStream}
-                />
-            )}
-        </>
+                {isLoading ? (
+                    <div className="flex-grow flex items-center justify-center"><div className="w-8 h-8 border-4 border-white border-t-transparent rounded-full animate-spin"></div></div>
+                ) : (
+                    renderList()
+                )}
+            </main>
+        </div>
     );
 };
 

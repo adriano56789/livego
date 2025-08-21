@@ -17,7 +17,7 @@ import LinkedCirclesIcon from './icons/LinkedCirclesIcon';
 import CameraFlipIcon from './icons/CameraFlipIcon';
 import MuteIcon from './icons/MuteIcon';
 import RoomEffectsIcon from './icons/RoomEffectsIcon';
-import ChatBubbleIcon from './icons/ChatBubbleIcon';
+import MessageIcon from './icons/MessageIcon';
 import MirrorImageIcon from './icons/MirrorImageIcon';
 import RotateIcon from './icons/RotateIcon';
 
@@ -32,9 +32,9 @@ interface ArcoraToolModalProps {
   onOpenPrivateChat: () => void;
   isPrivateStream: boolean;
   onOpenPrivateInviteModal: () => void;
-  onOpenCohostInviteModal: () => void;
-  onOpenPkInviteModal: () => void;
+  onOpenPkStartModal: () => void;
   isPkBattleActive: boolean;
+  onOpenPkInviteModal: () => void;
 }
 
 const ToolButton: React.FC<{ icon: React.ReactNode; label: string; isNew?: boolean; notImplemented?: boolean; onClick?: () => void; isActive?: boolean; }> = ({ icon, label, isNew, notImplemented, onClick, isActive }) => (
@@ -80,9 +80,9 @@ const ArcoraToolModal: React.FC<ArcoraToolModalProps> = ({
     onOpenPrivateChat, 
     isPrivateStream,
     onOpenPrivateInviteModal,
-    onOpenCohostInviteModal,
+    onOpenPkStartModal,
+    isPkBattleActive,
     onOpenPkInviteModal,
-    isPkBattleActive
 }) => {
     const iconClass = "w-7 h-7 text-gray-200";
 
@@ -98,15 +98,15 @@ const ArcoraToolModal: React.FC<ArcoraToolModalProps> = ({
     }
 
     const pkTools = [
-        { icon: <LinkedCirclesIcon className="w-10 h-10" />, label: '+Hosts', onClick: onOpenCohostInviteModal },
-        { icon: <BoxingGlovesIcon className="w-10 h-10" />, label: 'Batalha', onClick: onOpenPkInviteModal },
-        { icon: <GroupWhiteIcon className="w-10 h-10" />, label: '+Conv', onClick: () => alert("Funcionalidade +Conv não implementada.") }
+        { icon: <LinkedCirclesIcon className="w-10 h-10" />, label: '+ Hosts', onClick: onOpenPkInviteModal },
+        { icon: <BoxingGlovesIcon className="w-10 h-10" />, label: 'Batalha', onClick: onOpenPkStartModal },
+        { icon: <GroupWhiteIcon className="w-10 h-10" />, label: '+Conv', notImplemented: true, onClick: () => alert("Funcionalidade +Conv não implementada.") }
     ];
 
     const basicTools = [
         { icon: <CameraFlipIcon className={iconClass} />, label: 'Giro', onClick: onSwitchCamera },
         { icon: <MuteIcon className={iconClass} />, label: 'Silenciamento', onClick: onOpenMuteModal },
-        { icon: <ChatBubbleIcon className={iconClass} />, label: 'Bate-papo', onClick: onOpenPrivateChat },
+        { icon: <MessageIcon className={iconClass} />, label: 'Bate-papo', onClick: onOpenPrivateChat },
         { icon: <MirrorImageIcon className={iconClass} />, label: 'Imagem espelhada', notImplemented: true },
         { icon: <RotateIcon className={iconClass} />, label: 'Girar', notImplemented: true },
     ];

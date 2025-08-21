@@ -3,7 +3,6 @@
 
 import type * as types from '../types';
 import * as levelService from './levelService';
-import { CURRENT_APP_VERSION } from './versionService';
 
 // --- SIMULATED ENVIRONMENT VARIABLES ---
 const SRS_URL_PUBLISH = 'rtmp://localhost/live';
@@ -43,7 +42,7 @@ const initialState = {
       has_completed_profile: true,
       is_avatar_protected: false,
       invite_code: 'A1B2C3D4',
-      following: [401, 402, 403, 405, 406],
+      following: [55218901, 66345102, 77123403, 99887705, 11223306],
       followers: 2200,
       visitors: 150,
       wallet_diamonds: 500,
@@ -55,35 +54,65 @@ const initialState = {
       country: 'BR' as types.User['country'],
       personalSignature: "Apenas boas vibrações!",
       personalityTags: [{id: 'gamer', label: 'Gamer'}, {id: 'music', label: 'Música'}],
+      emotionalState: null,
+      profession: null,
+      languages: null,
+      height: null,
+      weight: null,
+      pk_enabled_preference: true,
     },
-    { id: 401, name: 'Streamer 1', nickname: 'Lest Go 500 K...', avatar_url: 'https://images.pexels.com/photos/837358/pexels-photo-837358.jpeg?auto=compress&cs=tinysrgb&w=300&h=400&dpr=1', following: [10755083], followers: 680460, visitors: 12345, wallet_diamonds: 10000, wallet_earnings: 500000, level: 25, xp: 40000, country: 'BR', is_avatar_protected: true },
-    { id: 402, name: 'Streamer 2', nickname: 'PK Queen', avatar_url: 'https://images.pexels.com/photos/1130624/pexels-photo-1130624.jpeg?auto=compress&cs=tinysrgb&w=300&h=400&dpr=1', following: [], followers: 120000, visitors: 6789, wallet_diamonds: 5000, wallet_earnings: 250000, level: 18, xp: 25000, country: 'US' },
-    { id: 403, name: 'Streamer 3', nickname: 'Dancer Live', avatar_url: 'https://images.pexels.com/photos/1542085/pexels-photo-1542085.jpeg?auto=compress&cs=tinysrgb&w=300&h=400&dpr=1', following: [], followers: 50000, visitors: 1234, wallet_diamonds: 2000, wallet_earnings: 100000, level: 12, xp: 15000, country: 'PT' },
-    { id: 404, name: 'Streamer 4', nickname: 'Music Lover', avatar_url: 'https://images.pexels.com/photos/91227/pexels-photo-91227.jpeg?auto=compress&cs=tinysrgb&w=300&h=400&dpr=1', following: [], followers: 80000, visitors: 567, wallet_diamonds: 3000, wallet_earnings: 150000, level: 15, xp: 20000, country: 'BR' },
-    { id: 405, name: 'PK Pro', nickname: 'PK Pro ⚡', avatar_url: 'https://images.pexels.com/photos/2379004/pexels-photo-2379004.jpeg?auto=compress&cs=tinysrgb&w=400', following: [], followers: 95000, visitors: 876, wallet_diamonds: 4000, wallet_earnings: 180000, level: 16, xp: 22000, country: 'US', coHostHistory: 'Co-host com Você' },
-    { id: 406, name: 'New Challenger', nickname: 'New Challenger', avatar_url: 'https://images.pexels.com/photos/1043474/pexels-photo-1043474.jpeg?auto=compress&cs=tinysrgb&w=400', following: [], followers: 10000, visitors: 432, wallet_diamonds: 500, wallet_earnings: 5000, level: 5, xp: 1500, country: 'BR', coHostHistory: 'Última vez há 2 dias' },
+    { 
+        id: 55218901, 
+        name: 'Streamer 1', 
+        nickname: 'Lest Go 500 K...', 
+        avatar_url: 'https://images.pexels.com/photos/837358/pexels-photo-837358.jpeg?auto=compress&cs=tinysrgb&w=300&h=400&dpr=1', 
+        following: [10755083], 
+        followers: 680460, 
+        visitors: 12345, 
+        wallet_diamonds: 10000, 
+        wallet_earnings: 500000, 
+        level: 25, 
+        xp: 40000, 
+        country: 'BR', 
+        is_avatar_protected: true,
+        gender: 'male' as types.Gender,
+        birthday: '1990-01-01',
+        personalSignature: 'Rumo ao topo! Junte-se à minha jornada e vamos nos divertir.',
+        personalityTags: [{id: 'pro_player', label: 'Pro Player'}, {id: 'competitive', label: 'Competitivo'}, {id: 'funny', label: 'Engraçado'}],
+        emotionalState: 'Animado',
+        profession: 'Streamer',
+        languages: ['Português', 'Inglês'],
+        height: 180,
+        weight: 75
+    },
+    { id: 66345102, name: 'Streamer 2', nickname: 'PK Queen', avatar_url: 'https://images.pexels.com/photos/1130624/pexels-photo-1130624.jpeg?auto=compress&cs=tinysrgb&w=300&h=400&dpr=1', following: [], followers: 120000, visitors: 6789, wallet_diamonds: 5000, wallet_earnings: 250000, level: 18, xp: 25000, country: 'US', gender: 'female', birthday: '1998-10-20' },
+    { id: 77123403, name: 'Streamer 3', nickname: 'Dancer Live', avatar_url: 'https://images.pexels.com/photos/1542085/pexels-photo-1542085.jpeg?auto=compress&cs=tinysrgb&w=300&h=400&dpr=1', following: [], followers: 50000, visitors: 1234, wallet_diamonds: 2000, wallet_earnings: 100000, level: 12, xp: 15000, country: 'PT', gender: 'female', birthday: '2000-03-10' },
+    { id: 88567804, name: 'Streamer 4', nickname: 'Music Lover', avatar_url: 'https://images.pexels.com/photos/91227/pexels-photo-91227.jpeg?auto=compress&cs=tinysrgb&w=300&h=400&dpr=1', following: [], followers: 80000, visitors: 567, wallet_diamonds: 3000, wallet_earnings: 150000, level: 15, xp: 20000, country: 'BR', gender: 'male', birthday: '1992-12-01' },
+    { id: 99887705, name: 'PK Pro', nickname: 'PK Pro ⚡', avatar_url: 'https://images.pexels.com/photos/2379004/pexels-photo-2379004.jpeg?auto=compress&cs=tinysrgb&w=400', following: [], followers: 95000, visitors: 876, wallet_diamonds: 4000, wallet_earnings: 180000, level: 16, xp: 22000, country: 'US', coHostHistory: 'Co-host com Você', gender: 'male', birthday: '1994-08-25' },
+    { id: 11223306, name: 'New Challenger', nickname: 'New Challenger', avatar_url: 'https://images.pexels.com/photos/1043474/pexels-photo-1043474.jpeg?auto=compress&cs=tinysrgb&w=400', following: [], followers: 10000, visitors: 432, wallet_diamonds: 500, wallet_earnings: 5000, level: 5, xp: 1500, country: 'BR', coHostHistory: 'Última vez há 2 dias', gender: 'male', birthday: '2002-06-30' },
   ],
   lives: [
-      { id: 101, user_id: 401, titulo: "PK Challenge", nome_streamer: "Lest Go 500 K...", thumbnail_url: 'https://picsum.photos/seed/live1/400/600', espectadores: 6804, categoria: 'PK', ao_vivo: true, em_pk: true, is_private: false, entry_fee: null, meta: 'Evento de PK', inicio: new Date().toISOString(), permite_pk: true, received_gifts_value: 12500 },
-      { id: 102, user_id: 402, titulo: "Dance Party!", nome_streamer: "PK Queen", thumbnail_url: 'https://picsum.photos/seed/live2/400/600', espectadores: 1205, categoria: 'Dança', ao_vivo: true, em_pk: false, is_private: false, entry_fee: null, meta: 'Vem dançar!', inicio: new Date().toISOString(), permite_pk: true, received_gifts_value: 8300 },
-      { id: 103, user_id: 403, titulo: "Música ao vivo", nome_streamer: "Dancer Live", thumbnail_url: 'https://picsum.photos/seed/live3/400/600', espectadores: 523, categoria: 'Música', ao_vivo: true, em_pk: false, is_private: false, entry_fee: null, meta: 'Cantando sucessos', inicio: new Date().toISOString(), permite_pk: true, received_gifts_value: 4100 },
-      { id: 104, user_id: 404, titulo: "Just Chatting", nome_streamer: "Music Lover", thumbnail_url: 'https://picsum.photos/seed/live4/400/600', espectadores: 850, categoria: 'Popular', ao_vivo: true, em_pk: false, is_private: false, entry_fee: null, meta: '', inicio: new Date().toISOString(), permite_pk: true, received_gifts_value: 6200 },
-      { id: 105, user_id: 405, titulo: "Sessão Privada", nome_streamer: "PK Pro ⚡", thumbnail_url: 'https://picsum.photos/seed/live5/400/600', espectadores: 1, categoria: 'Privada', ao_vivo: true, em_pk: false, is_private: true, entry_fee: null, meta: 'Apenas para convidados', inicio: new Date().toISOString(), permite_pk: false, received_gifts_value: 1500, invited_users: [10755083] },
-      { id: 106, user_id: 406, titulo: "Training for PK", nome_streamer: "New Challenger", thumbnail_url: 'https://picsum.photos/seed/live6/400/600', espectadores: 50, categoria: 'Popular', ao_vivo: true, em_pk: false, is_private: false, entry_fee: null, meta: 'Let\'s go!', inicio: new Date().toISOString(), permite_pk: true, received_gifts_value: 200 },
+      { id: 101, user_id: 55218901, titulo: "PK Challenge", nome_streamer: "Lest Go 500 K...", thumbnail_url: 'https://picsum.photos/seed/live1/400/600', espectadores: 6804, categoria: 'PK', ao_vivo: true, em_pk: true, is_private: false, entry_fee: null, meta: 'Evento de PK', inicio: new Date().toISOString(), permite_pk: true, received_gifts_value: 12500, like_count: 12800 },
+      { id: 102, user_id: 66345102, titulo: "Dance Party!", nome_streamer: "PK Queen", thumbnail_url: 'https://picsum.photos/seed/live2/400/600', espectadores: 1205, categoria: 'Dança', ao_vivo: true, em_pk: false, is_private: false, entry_fee: null, meta: 'Vem dançar!', inicio: new Date().toISOString(), permite_pk: true, received_gifts_value: 8300, like_count: 3200 },
+      { id: 103, user_id: 77123403, titulo: "Música ao vivo", nome_streamer: "Dancer Live", thumbnail_url: 'https://picsum.photos/seed/live3/400/600', espectadores: 523, categoria: 'Música', ao_vivo: true, em_pk: false, is_private: false, entry_fee: null, meta: 'Cantando sucessos', inicio: new Date().toISOString(), permite_pk: true, received_gifts_value: 4100, like_count: 980 },
+      { id: 104, user_id: 88567804, titulo: "Just Chatting", nome_streamer: "Music Lover", thumbnail_url: 'https://picsum.photos/seed/live4/400/600', espectadores: 850, categoria: 'Popular', ao_vivo: true, em_pk: false, is_private: false, entry_fee: null, meta: '', inicio: new Date().toISOString(), permite_pk: true, received_gifts_value: 6200, like_count: 1500 },
+      { id: 105, user_id: 99887705, titulo: "Sessão Privada", nome_streamer: "PK Pro ⚡", thumbnail_url: 'https://picsum.photos/seed/live5/400/600', espectadores: 1, categoria: 'Privada', ao_vivo: true, em_pk: false, is_private: true, entry_fee: null, meta: 'Apenas para convidados', inicio: new Date().toISOString(), permite_pk: false, received_gifts_value: 1500, invited_users: [10755083], like_count: 50 },
+      { id: 106, user_id: 11223306, titulo: "Training for PK", nome_streamer: "New Challenger", thumbnail_url: 'https://picsum.photos/seed/live6/400/600', espectadores: 50, categoria: 'Popular', ao_vivo: true, em_pk: false, is_private: false, entry_fee: null, meta: 'Let\'s go!', inicio: new Date().toISOString(), permite_pk: true, received_gifts_value: 200, like_count: 120 },
   ] as types.LiveStreamRecord[],
+  chatMessages: {} as Record<string, types.ChatMessage[]>,
   pkBattles: [] as types.TabelaBatalhaPK[],
   pkInvitations: [] as types.ConvitePK[],
   sentGifts: [] as types.LogPresenteEnviado[],
   conversations: [
     {
       id: 'convo-1',
-      participantes: [10755083, 401],
+      participantes: [10755083, 55218901],
       ultima_mensagem_texto: 'Hey, great stream yesterday!',
       ultima_mensagem_timestamp: new Date(Date.now() - 3600 * 1000).toISOString(),
     },
     {
       id: 'convo-2',
-      participantes: [10755083, 402],
+      participantes: [10755083, 66345102],
       ultima_mensagem_texto: 'Thanks for the follow!',
       ultima_mensagem_timestamp: new Date(Date.now() - 86400 * 1000 * 2).toISOString(),
     }
@@ -93,11 +122,11 @@ const initialState = {
     {
       id: 'msg-1-1',
       conversa_id: 'convo-1',
-      remetente_id: 401,
+      remetente_id: 55218901,
       conteudo: 'Thanks for watching!',
       timestamp: new Date(Date.now() - 3600 * 1000 - 10000).toISOString(),
       tipo_conteudo: 'texto',
-      status_leitura: { 10755083: true, 401: true },
+      status_leitura: { 10755083: true, 55218901: true },
     },
     {
       id: 'msg-1-2',
@@ -106,31 +135,38 @@ const initialState = {
       conteudo: 'Hey, great stream yesterday!',
       timestamp: new Date(Date.now() - 3600 * 1000).toISOString(),
       tipo_conteudo: 'texto',
-      status_leitura: { 10755083: true, 401: false },
+      status_leitura: { 10755083: true, 55218901: false },
     },
      // Convo 2 (with unread for current user)
     {
       id: 'msg-2-1',
       conversa_id: 'convo-2',
-      remetente_id: 402,
+      remetente_id: 66345102,
       conteudo: 'Thanks for the follow!',
       timestamp: new Date(Date.now() - 86400 * 1000 * 2).toISOString(),
       tipo_conteudo: 'texto',
-      status_leitura: { 10755083: false, 402: true },
+      status_leitura: { 10755083: false, 66345102: true },
     },
   ] as types.TabelaMensagem[],
   gifts: [
-    { id: 1, name: 'Coração', price: 10, valor_pontos: 1, is_ativo: true, animationUrl: 'https://assets5.lottiefiles.com/packages/lf20_pkanqwys.json' },
-    { id: 2, name: 'Rosa', price: 20, valor_pontos: 2, is_ativo: true, animationUrl: 'https://assets2.lottiefiles.com/packages/lf20_x33a5M.json' },
-    { id: 3, name: 'Foguete', price: 100, valor_pontos: 10, is_ativo: true, animationUrl: 'https://assets8.lottiefiles.com/packages/lf20_o1b35g.json' },
-    { id: 4, name: 'Coroa', price: 500, valor_pontos: 50, is_ativo: true, animationUrl: 'https://assets1.lottiefiles.com/packages/lf20_t9nbbl.json' },
+    { id: 1, name: 'Coração', price: 10, valor_pontos: 1, is_ativo: true, animationUrl: 'https://lottie.host/8e4414d7-208b-4309-8446-c2a4b8682a85/q3sAhc01qX.json' },
+    { id: 2, name: 'Rosa', price: 20, valor_pontos: 2, is_ativo: true, animationUrl: 'https://lottie.host/7e2968a3-2287-4939-b939-f83193424168/vDAbQ562sY.json' },
+    { id: 3, name: 'Foguete', price: 100, valor_pontos: 10, is_ativo: true, animationUrl: 'https://lottie.host/e211832f-a681-4357-893f-561b69735414/jV4mBv3h6i.json' },
+    { id: 4, name: 'Coroa', price: 500, valor_pontos: 50, is_ativo: true, animationUrl: 'https://lottie.host/f712499d-122e-436f-8255-66113b593018/k2yHRWJk7N.json' },
   ],
-  diamondPackages: [],
-  purchaseOrders: [],
-  withdrawalTransactions: [],
+  diamondPackages: [
+    { id: 1, diamonds: 100, price: 1.99, currency: 'BRL' },
+    { id: 2, diamonds: 500, price: 8.99, currency: 'BRL' },
+    { id: 3, diamonds: 1000, price: 16.99, currency: 'BRL' },
+    { id: 4, diamonds: 2000, price: 32.99, currency: 'BRL' },
+    { id: 5, diamonds: 5000, price: 84.99, currency: 'BRL' },
+    { id: 6, diamonds: 10000, price: 169.99, currency: 'BRL' },
+  ] as types.DiamondPackage[],
+  purchaseOrders: [] as types.PurchaseOrder[],
+  withdrawalTransactions: [] as types.WithdrawalTransaction[],
   blockedUsers: [] as { blockerId: number, targetId: number }[],
   protectedAvatars: [
-    { hash: 'hash_https://images.pexels.com/photos/837358/pexels-photo-837358.jpeg?auto=compress&cs=tinysrgb&w=300&h=400&dpr=1', userId: 401 }
+    { hash: 'hash_https://images.pexels.com/photos/837358/pexels-photo-837358.jpeg?auto=compress&cs=tinysrgb&w=300&h=400&dpr=1', userId: 55218901 }
   ] as { hash: string; userId: number }[],
 };
 
@@ -172,6 +208,28 @@ const buildConversationViewModel = (convoRecord: types.TabelaConversa, currentUs
     };
 };
 
+// Function to initialize chat with some content if it's empty
+const initializeChatForLive = (liveId: number | string) => {
+    if (!db.chatMessages[liveId] || db.chatMessages[liveId].length === 0) {
+        const live = db.lives.find((l: types.LiveStreamRecord) => l.id === liveId);
+        if (live) {
+            const streamer = db.users.find((u: types.User) => u.id === live.user_id);
+            db.chatMessages[liveId] = [
+                {
+                    id: Date.now() - 10000,
+                    type: 'announcement',
+                    username: 'System',
+                    userId: 0,
+                    message: `Bem-vindo à live de ${streamer?.nickname || 'streamer'}!`,
+                    timestamp: new Date(Date.now() - 10000).toISOString(),
+                }
+            ];
+        } else {
+             db.chatMessages[liveId] = [];
+        }
+    }
+};
+
 // Router function that simulates a backend API
 export const handleApiRequest = async (method: string, path: string, body: any, query: URLSearchParams): Promise<any> => {
   console.log(`[Mock API] Handling: ${method} ${path}`);
@@ -201,10 +259,82 @@ export const handleApiRequest = async (method: string, path: string, body: any, 
   const privateChatMatch = path.match(/^\/api\/chat\/private\/(.+)$/);
   const privateLivesMatch = path.match(/^\/api\/lives\/private\/(\d+)$/);
   const avatarStatusMatch = path.match(/^\/api\/avatar\/protection\/status\/(\d+)$/);
+  const userPreferencesMatch = path.match(/^\/api\/users\/(\d+)\/live-preferences$/);
+
+  // New Matchers for refactoring
+  const blocksMatch = path.match(/^\/api\/blocks$/);
+  const blocksWithIdsMatch = path.match(/^\/api\/blocks\/(\d+)\/(\d+)$/);
+  const followsMatch = path.match(/^\/api\/follows$/);
+  const followsWithIdsMatch = path.match(/^\/api\/follows\/(\d+)\/(\d+)$/);
+  
+  // USER BLOCKING (NEW SPEC)
+  if (blocksMatch && method === 'POST') {
+      const { blockerId, blockedId } = body;
+      if (!db.blockedUsers.some((b: any) => b.blockerId === blockerId && b.targetId === blockedId)) {
+          db.blockedUsers.push({ blockerId, targetId: blockedId });
+      }
+      return { success: true };
+  }
+  if (blocksWithIdsMatch && method === 'GET') {
+      const blockerId = parseInt(blocksWithIdsMatch[1], 10);
+      const targetId = parseInt(blocksWithIdsMatch[2], 10);
+      const isBlocked = db.blockedUsers.some((b: any) => b.blockerId === blockerId && b.targetId === targetId);
+      return { isBlocked };
+  }
+  if (blocksWithIdsMatch && method === 'DELETE') {
+      const blockerId = parseInt(blocksWithIdsMatch[1], 10);
+      const targetId = parseInt(blocksWithIdsMatch[2], 10);
+      db.blockedUsers = db.blockedUsers.filter((b: any) => !(b.blockerId === blockerId && b.targetId === targetId));
+      return { success: true };
+  }
+  
+  // USER FOLLOWS (NEW SPEC)
+  if (followsMatch && method === 'POST') {
+      const { followerId, followingId } = body;
+      const currentUser = db.users.find((u: types.User) => u.id === followerId);
+      const targetUser = db.users.find((u: types.User) => u.id === followingId);
+      if (!currentUser || !targetUser) return notFound();
+
+      if (!currentUser.following.includes(followingId)) {
+          currentUser.following.push(followingId);
+          targetUser.followers = (targetUser.followers || 0) + 1;
+      }
+      return currentUser;
+  }
+  if (followsWithIdsMatch && method === 'DELETE') {
+      const followerId = parseInt(followsWithIdsMatch[1], 10);
+      const followingId = parseInt(followsWithIdsMatch[2], 10);
+      const currentUser = db.users.find((u: types.User) => u.id === followerId);
+      const targetUser = db.users.find((u: types.User) => u.id === followingId);
+      if (!currentUser || !targetUser) return notFound();
+
+      const index = currentUser.following.indexOf(followingId);
+      if (index > -1) {
+          currentUser.following.splice(index, 1);
+          targetUser.followers = Math.max(0, (targetUser.followers || 0) - 1);
+      }
+      return currentUser;
+  }
+  
+  // REPORTS
+  if (method === 'POST' && path === '/api/reports') {
+      console.log("[Mock API] Report received:", body);
+      return { success: true };
+  }
+
 
   // AUTH
   if (method === 'POST' && path === '/api/auth/google') {
     return db.users.find((u: types.User) => u.id === 10755083);
+  }
+
+  // --- STREAMING INFRASTRUCTURE (SIMULATED) ---
+  if (method === 'POST' && path === '/api/livekit/token') {
+    const { roomName, participantIdentity } = body;
+    console.log(`[Mock API] Generating fake LiveKit token for room: ${roomName}, user: ${participantIdentity}`);
+    // Simulate a JWT token: header.payload.signature
+    const fakeToken = `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.${btoa(JSON.stringify({ room: roomName, identity: participantIdentity }))}.${Math.random().toString(36).substring(2)}`;
+    return { token: fakeToken };
   }
 
   // VERSION
@@ -272,7 +402,7 @@ export const handleApiRequest = async (method: string, path: string, body: any, 
   }
 
   // CATEGORIES
-  if (method === 'GET' && path === '/api/categories') {
+  if (method === 'GET' && path === '/api/live/categories') {
     const categories: types.LiveCategory[] = [
         { id: '1', name: 'Popular', slug: 'popular' },
         { id: '2', name: 'Seguindo', slug: 'seguindo' },
@@ -326,6 +456,48 @@ export const handleApiRequest = async (method: string, path: string, body: any, 
   }
 
   // LIVES
+  if (method === 'POST' && path === '/api/live/start') {
+    const { userId, title, meta, category, isPrivate, isPkEnabled, thumbnailUrl, entryFee, cameraUsed } = body;
+    const user = db.users.find((u: any) => u.id === userId);
+    if (!user) {
+        throw new Error('User not found');
+    }
+
+    const newLiveStreamRecord: types.LiveStreamRecord = {
+        id: Math.floor(1000 + Math.random() * 9000),
+        user_id: userId,
+        titulo: title,
+        nome_streamer: user.nickname || user.name,
+        thumbnail_url: thumbnailUrl,
+        espectadores: 0,
+        categoria: category,
+        ao_vivo: true,
+        em_pk: false,
+        is_private: isPrivate,
+        entry_fee: entryFee || null,
+        meta: meta,
+        inicio: new Date().toISOString(),
+        permite_pk: isPkEnabled,
+        camera_facing_mode: cameraUsed,
+    };
+
+    db.lives.push(newLiveStreamRecord);
+    
+    user.last_camera_used = cameraUsed;
+    user.last_selected_category = category;
+
+    const response: types.StartLiveResponse = {
+        live: mapLiveRecordToStream(newLiveStreamRecord),
+        urls: {
+            rtmp: `${SRS_URL_PUBLISH}/${newLiveStreamRecord.id}`,
+            hls: `${SRS_URL_PLAY_HLS}/${newLiveStreamRecord.id}.m3u8`,
+            webrtc: `${SRS_URL_PLAY_WEBRTC}/${newLiveStreamRecord.id}`,
+            streamKey: `sk_${newLiveStreamRecord.id}_${Math.random().toString(36).substring(7)}`,
+        },
+    };
+
+    return response;
+  }
   if (method === 'GET' && path === '/api/lives/popular') {
     return db.lives.filter((l: types.LiveStreamRecord) => l.ao_vivo).map(mapLiveRecordToStream);
   }
@@ -390,48 +562,6 @@ export const handleApiRequest = async (method: string, path: string, body: any, 
     };
     return [pkBattle];
   }
-  if (method === 'POST' && path === '/api/lives/create') {
-      const { userId, title, meta, category, isPrivate, isPkEnabled, thumbnailUrl, entryFee, cameraUsed } = body;
-      const user = db.users.find((u: types.User) => u.id === userId);
-      if (!user) {
-          throw new Error('User not found');
-      }
-
-      const newLiveStreamRecord: types.LiveStreamRecord = {
-          id: Math.floor(1000 + Math.random() * 9000),
-          user_id: userId,
-          titulo: title,
-          nome_streamer: user.nickname || user.name,
-          thumbnail_url: thumbnailUrl,
-          espectadores: 0,
-          categoria: category,
-          ao_vivo: true,
-          em_pk: false,
-          is_private: isPrivate,
-          entry_fee: entryFee || null,
-          meta: meta,
-          inicio: new Date().toISOString(),
-          permite_pk: isPkEnabled,
-          camera_facing_mode: cameraUsed,
-      };
-
-      db.lives.push(newLiveStreamRecord);
-      
-      user.last_camera_used = cameraUsed;
-      user.last_selected_category = category;
-
-      const response: types.StartLiveResponse = {
-          live: mapLiveRecordToStream(newLiveStreamRecord),
-          urls: {
-              rtmp: `${SRS_URL_PUBLISH}/${newLiveStreamRecord.id}`,
-              hls: `${SRS_URL_PLAY_HLS}/${newLiveStreamRecord.id}.m3u8`,
-              webrtc: `${SRS_URL_PLAY_WEBRTC}/${newLiveStreamRecord.id}`,
-              streamKey: `sk_${newLiveStreamRecord.id}_${Math.random().toString(36).substring(7)}`,
-          },
-      };
-
-      return response;
-  }
    if (method === 'GET' && liveDetailsMatch) {
         const liveId = parseInt(liveDetailsMatch[1], 10);
         const live = db.lives.find((l: types.LiveStreamRecord) => l.id === liveId);
@@ -448,7 +578,7 @@ export const handleApiRequest = async (method: string, path: string, body: any, 
             receivedGiftsValue: live.received_gifts_value || 0,
             rankingPosition: 'Top 5',
             status: 'ao vivo',
-            likeCount: (live.espectadores || 0) * 3,
+            likeCount: live.like_count || 0,
             title: live.titulo,
             meta: live.meta,
         } as types.LiveDetails;
@@ -501,6 +631,7 @@ export const handleApiRequest = async (method: string, path: string, body: any, 
         const liveId = parseInt(likeMatch[1], 10);
         const live = db.lives.find((l: types.LiveStreamRecord) => l.id === liveId);
         if (live) {
+            live.like_count = (live.like_count || 0) + 1;
             return {
                 id: Date.now(),
                 userId: body.userId,
@@ -527,12 +658,9 @@ export const handleApiRequest = async (method: string, path: string, body: any, 
   
   // CHAT
   if (method === 'GET' && chatMatch) {
-      const messages: types.ChatMessage[] = [
-          { id: Date.now() - 3000, type: 'entry', username: 'PK Queen', userId: 402, message: 'entrou na sala', timestamp: new Date(Date.now() - 3000).toISOString() },
-          { id: Date.now() - 2000, type: 'message', level: 15, username: 'Music Lover', userId: 404, message: 'Olá a todos! 👋', timestamp: new Date(Date.now() - 2000).toISOString() },
-          { id: Date.now() - 1000, type: 'gift', username: 'Dancer Live', userId: 403, message: 'enviou um Presente!', giftName: 'Coração', giftValue: 10, giftAnimationUrl: 'https://assets5.lottiefiles.com/packages/lf20_pkanqwys.json', timestamp: new Date(Date.now() - 1000).toISOString() },
-      ];
-      return messages;
+    const liveId = parseInt(chatMatch[1], 10);
+    initializeChatForLive(liveId);
+    return db.chatMessages[liveId];
   }
 
   if (method === 'POST' && chatMatch) {
@@ -550,6 +678,12 @@ export const handleApiRequest = async (method: string, path: string, body: any, 
           message: message,
           timestamp: new Date().toISOString(),
       };
+      
+      initializeChatForLive(liveId);
+      db.chatMessages[liveId].push(newMessage);
+      if(db.chatMessages[liveId].length > 50) { // Keep chat history from growing too big
+          db.chatMessages[liveId].shift();
+      }
       return newMessage;
   }
   
@@ -635,6 +769,16 @@ export const handleApiRequest = async (method: string, path: string, body: any, 
   }
 
   // USERS
+  if (method === 'GET' && userPreferencesMatch) {
+    const userId = parseInt(userPreferencesMatch[1], 10);
+    const user = db.users.find((u: any) => u.id === userId);
+    if (!user) return notFound();
+    return {
+        isPkEnabled: user.pk_enabled_preference ?? true,
+        lastCameraUsed: user.last_camera_used || 'user',
+        lastSelectedCategory: user.last_selected_category || 'Popular',
+    };
+  }
   const userPathMatch = path.match(/^\/api\/users\/(\d+)(?:\/(.*))?$/);
   if (userPathMatch) {
     const userId = parseInt(userPathMatch[1], 10);
@@ -668,7 +812,20 @@ export const handleApiRequest = async (method: string, path: string, body: any, 
     }
 
     if (method === 'GET') {
-        if (!resource) return user;
+        if (!resource) {
+             // Calculate age before returning user
+             if (user.birthday) {
+                const birthDate = new Date(user.birthday);
+                const today = new Date();
+                let age = today.getFullYear() - birthDate.getFullYear();
+                const m = today.getMonth() - birthDate.getMonth();
+                if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+                    age--;
+                }
+                user.age = age;
+            }
+            return user;
+        }
         if (resource === 'fans') {
             const fans = db.users.filter((u: types.User) => u.following && u.following.includes(userId));
             return fans;
@@ -683,10 +840,18 @@ export const handleApiRequest = async (method: string, path: string, body: any, 
             return { totalValue: sentValue };
         }
         if (resource === 'cohost-friends') {
-            if (!user.following) return [];
-            // Return following users who are also live
+            if (!user.following) return [user];
+            
             const liveUserIds = new Set(db.lives.filter((l: types.LiveStreamRecord) => l.ao_vivo).map((l: types.LiveStreamRecord) => l.user_id));
             const friends = db.users.filter((u: types.User) => user.following.includes(u.id) && liveUserIds.has(u.id));
+            
+            // Add the current user to the list for self-invitation testing
+            const selfUser = db.users.find((u: types.User) => u.id === userId);
+            if (selfUser && !friends.some(f => f.id === selfUser.id)) {
+                const selfUserWithHistory = { ...selfUser, coHostHistory: "Convidar a si mesmo (Teste)" };
+                friends.unshift(selfUserWithHistory);
+            }
+            
             return friends;
         }
         if (resource === 'profile') {
@@ -755,88 +920,143 @@ export const handleApiRequest = async (method: string, path: string, body: any, 
         if (resource === 'pk-preference') {
             return { isPkEnabled: true };
         }
+        if (resource === 'withdrawal-balance') {
+            const pendingWithdrawals = db.withdrawalTransactions
+                .filter((tx: types.WithdrawalTransaction) => tx.userId === userId && tx.status === 'pending')
+                .reduce((sum: number, tx: types.WithdrawalTransaction) => sum + tx.earnings_withdrawn, 0);
+
+            const availableBalance = user.wallet_earnings - pendingWithdrawals;
+
+            const balance: types.WithdrawalBalance = {
+                totalEarnings: user.wallet_earnings,
+                pendingWithdrawals: pendingWithdrawals,
+                availableBalance: availableBalance
+            };
+            return balance;
+        }
+        if (resource === 'purchase-history') {
+            return db.purchaseOrders.filter((o: types.PurchaseOrder) => o.userId === userId)
+                .sort((a: types.PurchaseOrder, b: types.PurchaseOrder) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+        }
+        if (resource === 'withdrawal-history') {
+            return db.withdrawalTransactions.filter((tx: types.WithdrawalTransaction) => tx.userId === userId)
+                .sort((a: types.WithdrawalTransaction, b: types.WithdrawalTransaction) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+        }
     }
   }
 
-
-  // USER ACTIONS (FOLLOW/UNFOLLOW)
-    if (method === 'POST' && path === '/api/users/follow') {
-        const { currentUserId, targetUserId } = body;
-        const currentUser = db.users.find((u: types.User) => u.id === currentUserId);
-        const targetUser = db.users.find((u: types.User) => u.id === targetUserId);
-        if (!currentUser || !targetUser) return notFound();
-
-        if (!currentUser.following.includes(targetUserId)) {
-            currentUser.following.push(targetUserId);
-            targetUser.followers = (targetUser.followers || 0) + 1;
-        }
-        return currentUser;
-    }
-
-    if (method === 'POST' && path === '/api/users/unfollow') {
-        const { currentUserId, targetUserId } = body;
-        const currentUser = db.users.find((u: types.User) => u.id === currentUserId);
-        const targetUser = db.users.find((u: types.User) => u.id === targetUserId);
-        if (!currentUser || !targetUser) return notFound();
-
-        const index = currentUser.following.indexOf(targetUserId);
-        if (index > -1) {
-            currentUser.following.splice(index, 1);
-            targetUser.followers = Math.max(0, (targetUser.followers || 0) - 1);
-        }
-        return currentUser;
-    }
-
-  // USER BLOCKING
-    if (method === 'POST' && path === '/api/users/is-blocked') {
-        const { blockerId, targetId } = body;
-        const isBlocked = db.blockedUsers.some((b: any) => b.blockerId === blockerId && b.targetId === targetId);
-        return { isBlocked };
-    }
-    if (method === 'POST' && path === '/api/users/block') {
-        const { blockerId, targetId } = body;
-        if (!db.blockedUsers.some((b: any) => b.blockerId === blockerId && b.targetId === targetId)) {
-            db.blockedUsers.push({ blockerId, targetId });
-        }
-        return { success: true };
-    }
-    if (method === 'POST' && path === '/api/users/unblock') {
-        const { blockerId, targetId } = body;
-        db.blockedUsers = db.blockedUsers.filter((b: any) => !(b.blockerId === blockerId && b.targetId === targetId));
-        return { success: true };
-    }
-  
   // GIFTS
   if (method === 'GET' && path === '/api/gifts') {
       return db.gifts;
   }
   if (method === 'POST' && giftMatch) {
-      const liveId = parseInt(giftMatch[1], 10);
-      const { senderId, giftId } = body;
-      const sender = db.users.find((u: types.User) => u.id === senderId);
-      const gift = db.gifts.find((g: types.Gift) => g.id === giftId);
+    const roomLiveId = parseInt(giftMatch[1], 10);
+    const { senderId, giftId, receiverId } = body;
+    const sender = db.users.find((u: types.User) => u.id === senderId);
+    const gift = db.gifts.find((g: types.Gift) => g.id === giftId);
 
-      if (!sender || !gift) return notFound();
+    if (!sender || !gift) return notFound();
 
-      if (sender.wallet_diamonds < gift.price) {
-          return { success: false, updatedUser: null, message: 'Diamantes insuficientes. Por favor, recarregue.' };
-      }
-      sender.wallet_diamonds -= gift.price;
-      
-      return { success: true, updatedUser: sender, message: 'Presente enviado com sucesso!' } as types.SendGiftResponse;
+    if (sender.wallet_diamonds < gift.price) {
+        return { success: false, updatedUser: null, message: 'Diamantes insuficientes. Por favor, recarregue.' };
+    }
+    
+    sender.wallet_diamonds -= gift.price;
+    sender.xp += gift.valor_pontos; // Gain XP from sending gifts
+    sender.level = levelService.calculateLevelFromXp(sender.xp);
+
+    const streamInRoom = db.lives.find((l: types.LiveStreamRecord) => l.id === roomLiveId);
+    if (!streamInRoom) return notFound();
+    
+    const actualReceiverId = receiverId || streamInRoom.user_id;
+    const receiverUser = db.users.find((u: types.User) => u.id === actualReceiverId);
+    if (receiverUser) {
+        receiverUser.wallet_earnings = (receiverUser.wallet_earnings || 0) + gift.valor_pontos;
+        receiverUser.xp += gift.valor_pontos; // Receiver also gains XP
+        receiverUser.level = levelService.calculateLevelFromXp(receiverUser.xp);
+    }
+    
+    const receiverLive = db.lives.find((l: types.LiveStreamRecord) => l.user_id === actualReceiverId && l.ao_vivo);
+    if (receiverLive) {
+        receiverLive.received_gifts_value = (receiverLive.received_gifts_value || 0) + gift.valor_pontos;
+    }
+
+    const activePkBattle = db.pkBattles.find((b: types.TabelaBatalhaPK) => 
+        b.status === 'ativa' && (streamInRoom.user_id === b.streamer_A_id || streamInRoom.user_id === b.streamer_B_id)
+    );
+    
+    if (activePkBattle) {
+        if (activePkBattle.streamer_A_id === actualReceiverId) {
+            activePkBattle.pontuacao_A += gift.valor_pontos;
+        } else if (activePkBattle.streamer_B_id === actualReceiverId) {
+            activePkBattle.pontuacao_B += gift.valor_pontos;
+        }
+    }
+    
+    const giftMessage: types.ChatMessage = {
+        id: Date.now(),
+        type: 'gift',
+        username: sender.nickname || sender.name,
+        userId: sender.id,
+        message: `enviou um ${gift.name}!`,
+        giftName: gift.name,
+        giftValue: gift.price,
+        giftAnimationUrl: gift.animationUrl,
+        timestamp: new Date().toISOString(),
+    };
+    
+    initializeChatForLive(roomLiveId);
+    db.chatMessages[roomLiveId].push(giftMessage);
+    if(db.chatMessages[roomLiveId].length > 50) {
+        db.chatMessages[roomLiveId].shift();
+    }
+    
+    db.sentGifts.push({
+      id: Date.now(),
+      senderId,
+      receiverId: actualReceiverId,
+      liveId: roomLiveId,
+      giftId,
+      giftValue: gift.valor_pontos,
+      batalha_id: activePkBattle ? activePkBattle.id : undefined,
+      timestamp: new Date().toISOString()
+    });
+    
+    return { success: true, updatedUser: sender, message: 'Presente enviado com sucesso!' } as types.SendGiftResponse;
   }
 
 
   // DIAMONDS
   if (method === 'GET' && path === '/api/diamonds/packages') {
-      return [
-        { id: 1, diamonds: 100, price: 1.99, currency: 'BRL' },
-        { id: 2, diamonds: 500, price: 8.99, currency: 'BRL' },
-        { id: 3, diamonds: 1000, price: 16.99, currency: 'BRL' },
-        { id: 4, diamonds: 2000, price: 32.99, currency: 'BRL' },
-        { id: 5, diamonds: 5000, price: 84.99, currency: 'BRL' },
-        { id: 6, diamonds: 10000, price: 169.99, currency: 'BRL' },
-      ];
+      return db.diamondPackages;
+  }
+  if (method === 'POST' && path === '/api/purchase') {
+      const { userId, packageId, address, paymentDetails } = body;
+      const user = db.users.find((u: types.User) => u.id === userId);
+      const pkg = db.diamondPackages.find((p: types.DiamondPackage) => p.id === packageId);
+  
+      if (!user || !pkg) {
+          throw new Error("Usuário ou pacote não encontrado.");
+      }
+  
+      const order: types.PurchaseOrder = {
+          orderId: `ord_${Date.now()}`,
+          userId: userId,
+          package: pkg,
+          address: address,
+          paymentDetails: paymentDetails,
+          status: paymentDetails.method === 'transfer' ? 'pending' : 'completed',
+          timestamp: new Date().toISOString(),
+      };
+      db.purchaseOrders.push(order);
+  
+      if (order.status === 'completed') {
+          user.wallet_diamonds += pkg.diamonds;
+      }
+      
+      const updatedUser = { ...user };
+      
+      return { updatedUser, order };
   }
     
     // RANKING
@@ -962,8 +1182,11 @@ export const handleApiRequest = async (method: string, path: string, body: any, 
         const streamerB = db.users.find((u: types.User) => u.id === battle.streamer_B_id);
         const streamA = db.lives.find((l: types.LiveStreamRecord) => l.user_id === battle.streamer_A_id && l.ao_vivo);
         const streamB = db.lives.find((l: types.LiveStreamRecord) => l.user_id === battle.streamer_B_id && l.ao_vivo);
-        if (Math.random() > 0.5) battle.pontuacao_A += Math.floor(Math.random() * 50);
-        if (Math.random() > 0.5) battle.pontuacao_B += Math.floor(Math.random() * 50);
+        
+        // Smoother, more progressive point scoring to avoid shaking
+        battle.pontuacao_A = Math.max(0, battle.pontuacao_A + 10 + Math.floor(Math.random() * 5)); // Gains 10-14 points
+        battle.pontuacao_B = Math.max(0, battle.pontuacao_B + 8 + Math.floor(Math.random() * 5)); // Gains 8-12 points
+
         const battleState: types.PkBattleState = {
             ...battle,
             streamer_A: { ...streamerA, streamId: streamA?.id || 0 },
@@ -1082,7 +1305,7 @@ export const handleApiRequest = async (method: string, path: string, body: any, 
         
         return { success: true, invitation: invite, battle: battleViewModel };
     }
-     if (method === 'POST' && pkInviteDeclineMatch) {
+    if (method === 'POST' && pkInviteDeclineMatch) {
         const inviteId = pkInviteDeclineMatch[1];
         const invite = db.pkInvitations.find((i: types.ConvitePK) => i.id === inviteId);
         if (invite) invite.status = 'recusado';

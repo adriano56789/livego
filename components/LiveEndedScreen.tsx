@@ -59,7 +59,7 @@ const LiveEndedScreen: React.FC<LiveEndedScreenProps> = ({ summary, onExit }) =>
         <div className="w-full max-w-md grid grid-cols-3 gap-y-6">
           <StatItem value={summary.peakViewers} label="Número de espectadores" />
           <StatItemDuration value={formatDuration(summary.durationSeconds)} label="Duração ao vivo" />
-          <StatItem value={summary.totalEarnings.toLocaleString()} label="Moedas" />
+          <StatItem value={(summary.totalEarnings || 0).toLocaleString()} label="Moedas" />
           <StatItem value={summary.newFollowers} label="Seguidores" />
           <StatItem value={summary.newMembers} label="Membro" />
           <StatItem value={summary.newFans} label="Fãs" />

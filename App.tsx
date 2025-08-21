@@ -1,9 +1,10 @@
+
+
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import LoginScreen from './components/LoginScreen';
 import UploadPhotoScreen from './components/UploadPhotoScreen';
 import EditProfileScreen from './components/EditProfileScreen';
 import LiveFeedScreen from './components/LiveFeedScreen';
-import ProfileScreen from './components/ProfileScreen';
 import GoLiveSetupScreen from './components/GoLiveSetupScreen';
 import LiveStreamViewerScreen from './components/LiveStreamViewerScreen';
 import MessagesScreen from './components/MessagesScreen';
@@ -54,6 +55,7 @@ import * as versionService from './services/versionService';
 import * as soundService from './services/soundService';
 import type { User, AppView, Category, Stream, PkBattle, StartLiveResponse, Conversation, WithdrawalTransaction, AppEvent, VersionInfo, LiveEndSummary, PurchaseOrder, DiamondPackage, FacingMode, IncomingPrivateLiveInvite } from './types';
 import { ApiViewerProvider, useApiViewer } from './components/ApiContext';
+import ProfileScreen from './components/ProfileScreen';
 
 // AppContent component to access the context from the provider
 const AppContent: React.FC = () => {
@@ -66,7 +68,6 @@ const AppContent: React.FC = () => {
   const [viewingStream, setViewingStream] = useState<Stream | PkBattle | null>(null);
   const [viewingConversationId, setViewingConversationId] = useState<string | null>(null);
   const [isPurchaseOverlayVisible, setIsPurchaseOverlayVisible] = useState(false);
-  const [isEditingFromProfile, setIsEditingFromProfile] = useState(false);
   const [viewingProtectorsFor, setViewingProtectorsFor] = useState<number | null>(null);
   const [activeCategory, setActiveCategory] = useState<Category>('Popular');
   const [lastWithdrawal, setLastWithdrawal] = useState<WithdrawalTransaction | null>(null);
@@ -83,6 +84,7 @@ const AppContent: React.FC = () => {
     pkg?: DiamondPackage;
   } | null>(null);
   const [incomingPrivateLiveInvite, setIncomingPrivateLiveInvite] = useState<IncomingPrivateLiveInvite | null>(null);
+  const [viewingOtherProfileId, setViewingOtherProfileId] = useState<number | null>(null);
 
   useEffect(() => {
     const compareVersions = (v1: string, v2: string): number => {
@@ -177,6 +179,20 @@ const AppContent: React.FC = () => {
   const handleExitStream = useCallback(() => {
     setViewingStream(null);
   }, []);
+
+   const handleViewProfile = useCallback((userId: number) => {
+    if (user && userId === user.id) {
+      setCurrentView('profile');
+      return;
+    }
+    setViewingStream(null); // Close any open stream
+    setViewingOtherProfileId(userId);
+  }, [user]);
+
+  const handleExitProfileView = useCallback(() => {
+    setViewingOtherProfileId(null);
+    setCurrentView('feed');
+  }, []);
   
   const handleGoLiveClick = useCallback(async () => {
     if (!user) return;
@@ -267,13 +283,8 @@ const AppContent: React.FC = () => {
 
   const handleProfileComplete = useCallback((updatedUser: User) => {
     setUser(updatedUser);
-    if (isEditingFromProfile) {
-        setCurrentView('profile');
-        setIsEditingFromProfile(false); // Reset flag
-    } else {
-        setCurrentView('feed'); // Onboarding finished, go to feed
-    }
-  }, [isEditingFromProfile]);
+    setCurrentView('profile');
+  }, []);
 
   const handleAvatarProtectionSave = useCallback((updatedUser: User) => {
     setUser(updatedUser);
@@ -281,9 +292,12 @@ const AppContent: React.FC = () => {
   }, []);
   
   const handleNavigate = useCallback((view: AppView) => {
-    if (view === 'edit') {
-        setIsEditingFromProfile(true);
-    }
+    setCurrentView(view);
+  }, []);
+  
+  const handleNavigateFromStream = useCallback((view: AppView, userId: number) => {
+    setViewingStream(null);
+    setViewingOtherProfileId(userId);
     setCurrentView(view);
   }, []);
   
@@ -395,7 +409,7 @@ const AppContent: React.FC = () => {
   const handleShowPrivateLiveInvite = useCallback((invite: IncomingPrivateLiveInvite) => {
       setIncomingPrivateLiveInvite(invite);
   }, []);
-
+  
   const renderContent = () => {
     if (needsUpdate && versionInfo) {
       return <UpdateRequiredModal updateUrl={versionInfo.updateUrl} />;
@@ -420,6 +434,8 @@ const AppContent: React.FC = () => {
             onStopStream={handleStopStream}
             onNavigateToChat={handleNavigateToChat}
             onShowPrivateLiveInvite={handleShowPrivateLiveInvite}
+            onViewProfile={handleViewProfile}
+            onNavigateFromStream={handleNavigateFromStream}
         />
     }
 
@@ -427,7 +443,65 @@ const AppContent: React.FC = () => {
     if (viewingProtectorsFor) {
         return <ProtectorsScreen streamerId={viewingProtectorsFor} onExit={() => setViewingProtectorsFor(null)} />;
     }
+    
+    const targetUserIdForListView = viewingOtherProfileId || user.id;
 
+    const handleExitListView = () => {
+        if (viewingOtherProfileId) {
+            // This is the key fix: We were viewing another user's list,
+            // so we set the view back to a state that will render their profile.
+            // The profile renders when `viewingOtherProfileId` is set and `currentView` is NOT a list view.
+            // We set it back to `feed` as that's the default view when a profile is opened.
+            setCurrentView('feed');
+        } else {
+            // We were viewing our own list, go back to our own profile screen.
+            setCurrentView('profile');
+        }
+    };
+    
+    // Logic for list views (Followers, Following, etc.)
+    // This block is moved BEFORE the viewingOtherProfileId check to ensure it's reachable.
+    if (currentView === 'followers') {
+        return <FollowersScreen
+            currentUser={user}
+            viewedUserId={targetUserIdForListView}
+            onExit={handleExitListView}
+            onUpdateUser={setUser}
+            onViewProfile={handleViewProfile}
+        />;
+    }
+    if (currentView === 'following') {
+        return <FollowingScreen
+            currentUser={user}
+            viewedUserId={targetUserIdForListView}
+            onExit={handleExitListView}
+            onUpdateUser={setUser}
+            onViewProfile={handleViewProfile}
+        />;
+    }
+    if (currentView === 'fans') {
+        return <FansScreen
+            currentUser={user}
+            viewedUserId={targetUserIdForListView}
+            onExit={handleExitListView}
+            onUpdateUser={setUser}
+            onViewProfile={handleViewProfile}
+        />;
+    }
+    if (currentView === 'visitors') {
+        return <VisitorsScreen
+            currentUser={user}
+            viewedUserId={targetUserIdForListView}
+            onExit={handleExitListView}
+            onUpdateUser={setUser}
+            onViewProfile={handleViewProfile}
+        />;
+    }
+    
+    // **PRIORITY CHANGE**: Check for an active chat session *before* checking if we are viewing another profile.
+    // This ensures that when a chat is opened from a profile, the chat screen is shown.
+    // When the chat is closed (`viewingConversationId` becomes null), the logic will fall through
+    // to the `viewingOtherProfileId` check below, correctly returning the user to the profile.
     if (viewingConversationId) {
         return <ChatScreen
             conversationId={viewingConversationId}
@@ -442,13 +516,25 @@ const AppContent: React.FC = () => {
             }}
         />;
     }
+    
+    if (viewingOtherProfileId) {
+        return <EditProfileScreen
+            isViewingOtherProfile={true}
+            viewedUserId={viewingOtherProfileId}
+            user={user}
+            onExit={handleExitProfileView}
+            onFollowToggle={handleFollowToggle}
+            onNavigateToChat={handleNavigateToChat}
+            onNavigate={handleNavigate}
+        />
+    }
 
     // Onboarding and other full-screen views
     if (currentView === 'upload') {
         return <UploadPhotoScreen user={user} onPhotoUploaded={handlePhotoUploaded} />;
     }
     if (currentView === 'edit') {
-      return <EditProfileScreen user={user} onProfileComplete={handleProfileComplete} onNavigate={handleNavigate} />;
+      return <EditProfileScreen user={user} onNavigate={handleNavigate} onExit={() => setCurrentView('profile')} />;
     }
     if (currentView === 'profile-editor') {
         return <ProfileEditorScreen 
@@ -555,13 +641,7 @@ const AppContent: React.FC = () => {
         return <RankingScreen
             currentUser={user}
             onExit={() => setCurrentView('feed')}
-            onUpdateUser={setUser}
-            onNavigateToChat={handleNavigateToChat}
-            onViewProtectors={handleViewProtectors}
-            onViewStream={(stream) => {
-                setCurrentView('feed');
-                handleViewStream(stream);
-            }}
+            onViewProfile={handleViewProfile}
         />;
     }
     if (currentView === 'settings') {
@@ -609,13 +689,7 @@ const AppContent: React.FC = () => {
         return <SearchScreen
             currentUser={user}
             onExit={() => setCurrentView('feed')}
-            onUpdateUser={setUser}
-            onNavigateToChat={handleNavigateToChat}
-            onViewProtectors={handleViewProtectors}
-            onViewStream={(stream) => {
-                setCurrentView('feed');
-                handleViewStream(stream);
-            }}
+            onViewProfile={handleViewProfile}
         />;
     }
     if (currentView === 'app-version') {
@@ -643,58 +717,7 @@ const AppContent: React.FC = () => {
     if (currentView === 'documentation') {
         return <DocumentationScreen onExit={() => setCurrentView('settings')} />;
     }
-    if (currentView === 'followers') {
-        return <FollowersScreen
-            currentUser={user}
-            onExit={() => setCurrentView('profile')}
-            onUpdateUser={setUser}
-            onNavigateToChat={handleNavigateToChat}
-            onViewProtectors={handleViewProtectors}
-            onViewStream={(stream) => {
-                setCurrentView('profile');
-                handleViewStream(stream);
-            }}
-        />;
-    }
-    if (currentView === 'following') {
-        return <FollowingScreen
-            currentUser={user}
-            onExit={() => setCurrentView('profile')}
-            onUpdateUser={setUser}
-            onNavigateToChat={handleNavigateToChat}
-            onViewProtectors={handleViewProtectors}
-            onViewStream={(stream) => {
-                setCurrentView('profile');
-                handleViewStream(stream);
-            }}
-        />;
-    }
-    if (currentView === 'fans') {
-        return <FansScreen
-            currentUser={user}
-            onExit={() => setCurrentView('profile')}
-            onUpdateUser={setUser}
-            onNavigateToChat={handleNavigateToChat}
-            onViewProtectors={handleViewProtectors}
-            onViewStream={(stream) => {
-                setCurrentView('profile');
-                handleViewStream(stream);
-            }}
-        />;
-    }
-    if (currentView === 'visitors') {
-        return <VisitorsScreen
-            currentUser={user}
-            onExit={() => setCurrentView('profile')}
-            onUpdateUser={setUser}
-            onNavigateToChat={handleNavigateToChat}
-            onViewProtectors={handleViewProtectors}
-            onViewStream={(stream) => {
-                setCurrentView('profile');
-                handleViewStream(stream);
-            }}
-        />;
-    }
+
     if (currentView === 'avatar-protection') {
         return <AvatarProtectionScreen
             user={user}

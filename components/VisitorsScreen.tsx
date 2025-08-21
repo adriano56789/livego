@@ -1,31 +1,28 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
-import type { User, Stream, PkBattle } from '../types';
+import type { User } from '../types';
 import * as authService from '../services/authService';
 import * as liveStreamService from '../services/liveStreamService';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
 import UserListRow from './UserListRow';
-import UserProfileModal from './UserProfileModal';
 
 interface VisitorsScreenProps {
   currentUser: User;
+  viewedUserId: number;
   onExit: () => void;
   onUpdateUser: (user: User) => void;
-  onNavigateToChat: (userId: number) => void;
-  onViewProtectors: (userId: number) => void;
-  onViewStream: (stream: Stream | PkBattle) => void;
+  onViewProfile: (userId: number) => void;
 }
 
-const VisitorsScreen: React.FC<VisitorsScreenProps> = ({ currentUser, onExit, onUpdateUser, ...modalProps }) => {
+const VisitorsScreen: React.FC<VisitorsScreenProps> = ({ currentUser, viewedUserId, onExit, onUpdateUser, onViewProfile }) => {
     const [users, setUsers] = useState<User[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [viewingUserId, setViewingUserId] = useState<number | null>(null);
 
     useEffect(() => {
         const fetchData = async () => {
             setIsLoading(true);
             try {
-                const visitorUsers = await authService.getProfileVisitors(currentUser.id);
+                const visitorUsers = await authService.getProfileVisitors(viewedUserId);
                 setUsers(visitorUsers);
             } catch (error) {
                 console.error("Failed to fetch visitors:", error);
@@ -34,7 +31,7 @@ const VisitorsScreen: React.FC<VisitorsScreenProps> = ({ currentUser, onExit, on
             }
         };
         fetchData();
-    }, [currentUser.id]);
+    }, [viewedUserId]);
 
     const handleFollowToggle = async (userIdToToggle: number) => {
       const isCurrentlyFollowing = currentUser.following.includes(userIdToToggle);
@@ -59,7 +56,7 @@ const VisitorsScreen: React.FC<VisitorsScreenProps> = ({ currentUser, onExit, on
                         user={user} 
                         currentUser={currentUser}
                         onFollowToggle={handleFollowToggle}
-                        onUserClick={setViewingUserId}
+                        onUserClick={onViewProfile}
                     />
                 ))}
             </div>
@@ -67,27 +64,16 @@ const VisitorsScreen: React.FC<VisitorsScreenProps> = ({ currentUser, onExit, on
     };
 
     return (
-        <>
-            <div className="h-screen w-full bg-[#1C1F24] text-white flex flex-col font-sans">
-                <header className="p-4 flex items-center justify-between shrink-0 border-b border-gray-800 relative">
-                    <button onClick={onExit} className="p-2 -m-2"><ArrowLeftIcon className="w-6 h-6"/></button>
-                    <h1 className="font-bold text-lg absolute left-1/2 -translate-x-1/2">Visitantes</h1>
-                    <div className="w-6 h-6"></div>
-                </header>
-                <main className="flex-grow overflow-y-auto scrollbar-hide">
-                    {renderContent()}
-                </main>
-            </div>
-            {viewingUserId && (
-                <UserProfileModal
-                    userId={viewingUserId}
-                    currentUser={currentUser}
-                    onUpdateUser={onUpdateUser}
-                    onClose={() => setViewingUserId(null)}
-                    {...modalProps}
-                />
-            )}
-        </>
+        <div className="h-screen w-full bg-[#1C1F24] text-white flex flex-col font-sans">
+            <header className="p-4 flex items-center justify-between shrink-0 border-b border-gray-800 relative">
+                <button onClick={onExit} className="p-2 -m-2"><ArrowLeftIcon className="w-6 h-6"/></button>
+                <h1 className="font-bold text-lg absolute left-1/2 -translate-x-1/2">Visitantes</h1>
+                <div className="w-6 h-6"></div>
+            </header>
+            <main className="flex-grow overflow-y-auto scrollbar-hide">
+                {renderContent()}
+            </main>
+        </div>
     );
 };
 

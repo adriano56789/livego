@@ -117,7 +117,7 @@ const GiftPanel: React.FC<GiftPanelProps> = ({ user, liveId, onClose, onSendGift
         <footer className="p-3 flex items-center justify-between">
             <button onClick={onRechargeClick} className="flex items-center gap-2">
                 <DiamondIcon className="w-5 h-5"/>
-                <span className="font-bold text-lg">{user.wallet_diamonds.toLocaleString()}</span>
+                <span className="font-bold text-lg">{(user.wallet_diamonds || 0).toLocaleString()}</span>
                  <span className="text-gray-400 font-semibold text-lg ml-1">&gt;</span>
             </button>
             <button 

@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect, useMemo } from 'react';
 import type { User, PrivateLiveInviteSettings } from '../types';
 import * as liveStreamService from '../services/liveStreamService';
@@ -30,7 +29,7 @@ const FriendRow: React.FC<{
   return (
     <div className="flex items-center gap-4 py-2">
         <div className="w-14 h-14 rounded-full overflow-hidden shrink-0">
-          {friend.avatar_url ? <img src={friend.avatar_url} alt={friend.nickname} className="w-full h-full object-cover" /> : <UserPlaceholderIcon className="w-full h-full p-1 text-gray-500 bg-gray-700"/> }
+          {friend.avatar_url ? <img src={friend.avatar_url} alt={friend.nickname || ''} className="w-full h-full object-cover" /> : <UserPlaceholderIcon className="w-full h-full p-1 text-gray-500 bg-gray-700"/> }
         </div>
         <div className="flex-grow overflow-hidden">
             <p className="font-semibold text-white truncate">{friend.nickname}</p>

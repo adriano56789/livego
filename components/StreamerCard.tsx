@@ -12,10 +12,11 @@ interface StreamerCardProps {
 const StreamerCard: React.FC<StreamerCardProps> = ({ stream, onViewStream }) => {
     // Format viewer count to K
     const formatViewers = (num: number): string => {
-        if (num >= 1000) {
-            return (num / 1000).toFixed(2).replace('.00', '') + 'K';
+        const value = num || 0;
+        if (value >= 1000) {
+            return (value / 1000).toFixed(2).replace('.00', '') + 'K';
         }
-        return num.toString();
+        return value.toString();
     };
 
     const colors = ['bg-pink-500/50', 'bg-blue-500/50', 'bg-green-500/50', 'bg-purple-500/50', 'bg-red-500/50', 'bg-orange-500/50'];

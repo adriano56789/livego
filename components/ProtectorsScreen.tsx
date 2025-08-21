@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect } from 'react';
 import type { User, ProtectorDetails } from '../types';
 import * as liveStreamService from '../services/liveStreamService';
@@ -15,7 +16,7 @@ interface ProtectorsScreenProps {
   onExit: () => void;
 }
 
-const formatValue = (value: number) => value.toLocaleString('pt-BR');
+const formatValue = (value: number) => (value || 0).toLocaleString('pt-BR');
 
 const ProtectorsScreen: React.FC<ProtectorsScreenProps> = ({ streamerId, onExit }) => {
   const [streamer, setStreamer] = useState<User | null>(null);

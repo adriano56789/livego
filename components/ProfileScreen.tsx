@@ -19,6 +19,7 @@ import ProfileBadge from './ProfileBadge';
 import MaleIcon from './icons/MaleIcon';
 import FemaleIcon from './icons/FemaleIcon';
 import UserPlaceholderIcon from './icons/UserPlaceholderIcon';
+import ShieldCheckIcon from './icons/ShieldCheckIcon';
 
 interface ProfileScreenProps {
   user: User;
@@ -81,6 +82,12 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onNavigate, onGoLiv
                     <div className="text-center">
                         <h1 className="text-2xl font-bold">{user.nickname || user.name}</h1>
                         <div className="flex items-center justify-center gap-2 mt-2">
+                           {user.is_avatar_protected && (
+                               <div className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-bold bg-sky-500 text-white animate-protection-glow`}>
+                                   <ShieldCheckIcon className="w-3.5 h-3.5"/>
+                                   <span>Protegido</span>
+                               </div>
+                           )}
                            <ProfileBadge badge={{ text: String(user.level), type: 'level' }} />
                             {userAge && user.gender && (
                                <div className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-bold ${user.gender === 'female' ? 'bg-[#ff2d55]' : 'bg-[#007aff]'} text-white`}>
@@ -98,10 +105,10 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onNavigate, onGoLiv
 
                 {/* Stats */}
                 <div className="grid grid-cols-4 mb-6">
-                    <StatItem value={user.followers.toLocaleString('pt-BR')} label="Seguidores" onClick={() => onNavigate('followers')} />
-                    <StatItem value={user.following.length.toLocaleString('pt-BR')} label="Seguindo" onClick={() => onNavigate('following')} />
-                    <StatItem value={user.followers.toLocaleString('pt-BR')} label="Fãs" onClick={() => onNavigate('fans')} />
-                    <StatItem value={user.visitors.toLocaleString('pt-BR')} label="Visitantes" onClick={() => onNavigate('visitors')} />
+                    <StatItem value={(user.followers || 0).toLocaleString('pt-BR')} label="Seguidores" onClick={() => onNavigate('followers')} />
+                    <StatItem value={(user.following || []).length.toLocaleString('pt-BR')} label="Seguindo" onClick={() => onNavigate('following')} />
+                    <StatItem value={(user.followers || 0).toLocaleString('pt-BR')} label="Fãs" onClick={() => onNavigate('fans')} />
+                    <StatItem value={(user.visitors || 0).toLocaleString('pt-BR')} label="Visitantes" onClick={() => onNavigate('visitors')} />
                 </div>
 
                 <div className="bg-[#1C1F24] rounded-2xl">
@@ -117,11 +124,11 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onNavigate, onGoLiv
                         <div className="flex items-center gap-4">
                             <div className="flex items-center gap-1.5">
                                 <UpArrowDiamondIcon className="w-5 h-5 text-cyan-400"/>
-                                <span className="font-semibold text-sm text-white">{user.wallet_diamonds.toLocaleString()}</span>
+                                <span className="font-semibold text-sm text-white">{(user.wallet_diamonds || 0).toLocaleString()}</span>
                             </div>
                             <div className="flex items-center gap-1.5">
                                 <CoinIcon className="w-5 h-5"/>
-                                <span className="font-semibold text-sm text-white">{user.wallet_earnings.toLocaleString('pt-BR', { minimumFractionDigits: 3 }).replace(/,/, '.')}</span>
+                                <span className="font-semibold text-sm text-white">{(user.wallet_earnings || 0).toLocaleString('pt-BR', { minimumFractionDigits: 3 }).replace(/,/, '.')}</span>
                             </div>
                             <span className="text-gray-600 text-lg">&gt;</span>
                         </div>

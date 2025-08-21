@@ -168,7 +168,7 @@ const DiamondPurchaseScreen: React.FC<DiamondPurchaseScreenProps> = ({
                 </button>
             </div>
              <p className="text-xs text-gray-500 mb-4">
-                Disponível para saque: {balance.availableBalance.toLocaleString('pt-BR')} Ganhos
+                Disponível para saque: {(balance.availableBalance || 0).toLocaleString('pt-BR')} Ganhos
             </p>
             
             <div className="space-y-2 text-sm pt-4 mt-4 border-t border-gray-800">
@@ -219,7 +219,7 @@ const DiamondPurchaseScreen: React.FC<DiamondPurchaseScreenProps> = ({
                     {history.map(tx => (
                         <div key={tx.id} className="py-3 border-b border-gray-800 last:border-b-0 text-sm">
                             <div className="flex justify-between">
-                                <span className="font-semibold text-white">Saque de {tx.earnings_withdrawn.toLocaleString('pt-BR')} Ganhos</span>
+                                <span className="font-semibold text-white">Saque de {(tx.earnings_withdrawn || 0).toLocaleString('pt-BR')} Ganhos</span>
                                 <span className="font-bold text-green-400">{formatCurrency(tx.net_amount_brl)}</span>
                             </div>
                             <div className="flex justify-between text-gray-400 mt-1">
@@ -283,7 +283,7 @@ const DiamondPurchaseScreen: React.FC<DiamondPurchaseScreenProps> = ({
                     </div>
                     <div className="flex items-center justify-start gap-2 mt-1">
                         <DiamondIcon className="w-8 h-8"/>
-                        <span className="text-2xl font-bold text-white">{user.wallet_diamonds.toLocaleString()}</span>
+                        <span className="text-2xl font-bold text-white">{(user.wallet_diamonds || 0).toLocaleString()}</span>
                     </div>
                 </div>
                 <div className="text-center px-2">
@@ -311,7 +311,7 @@ const DiamondPurchaseScreen: React.FC<DiamondPurchaseScreenProps> = ({
                     </div>
                      <div className="flex items-center justify-start gap-2 mt-1">
                         <CoinIcon className="w-8 h-8"/>
-                        <span className="text-2xl font-bold text-white">{user.wallet_earnings.toLocaleString()}</span>
+                        <span className="text-2xl font-bold text-white">{(user.wallet_earnings || 0).toLocaleString()}</span>
                     </div>
                 </div>
             </div>

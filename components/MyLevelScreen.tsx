@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import type { User, UserLevelInfo } from '../types';
 import * as levelService from '../services/levelService';
@@ -192,7 +193,7 @@ const MyLevelScreen: React.FC<MyLevelScreenProps> = ({ user, onExit }) => {
             </div>
             <div className="flex justify-between items-center text-lg font-bold mt-2">
                 <span className="text-white">Lv.{levelInfo.currentLevel}</span>
-                <span className="text-gray-400">{levelInfo.currentXp.toLocaleString()}/{levelInfo.xpForNextLevel.toLocaleString()}</span>
+                <span className="text-gray-400">{(levelInfo.currentXp || 0).toLocaleString()}/{(levelInfo.xpForNextLevel || 0).toLocaleString()}</span>
             </div>
             <BottomTimeline />
         </div>

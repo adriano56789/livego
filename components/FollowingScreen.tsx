@@ -1,37 +1,34 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
-import type { User, Stream, PkBattle } from '../types';
+import type { User } from '../types';
 import * as authService from '../services/authService';
 import * as liveStreamService from '../services/liveStreamService';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
 import UserListRow from './UserListRow';
-import UserProfileModal from './UserProfileModal';
 
 interface FollowingScreenProps {
   currentUser: User;
+  viewedUserId: number;
   onExit: () => void;
   onUpdateUser: (user: User) => void;
-  onNavigateToChat: (userId: number) => void;
-  onViewProtectors: (userId: number) => void;
-  onViewStream: (stream: Stream | PkBattle) => void;
+  onViewProfile: (userId: number) => void;
 }
 
-const FollowingScreen: React.FC<FollowingScreenProps> = ({ currentUser, onExit, onUpdateUser, ...modalProps }) => {
+const FollowingScreen: React.FC<FollowingScreenProps> = ({ currentUser, viewedUserId, onExit, onUpdateUser, onViewProfile }) => {
     const [users, setUsers] = useState<User[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [viewingUserId, setViewingUserId] = useState<number | null>(null);
 
     const fetchData = useCallback(async () => {
         setIsLoading(true);
         try {
-            const followingUsers = await authService.getFollowingUsers(currentUser.id);
+            const followingUsers = await authService.getFollowingUsers(viewedUserId);
             setUsers(followingUsers);
         } catch (error) {
             console.error("Failed to fetch following users:", error);
         } finally {
             setIsLoading(false);
         }
-    }, [currentUser.id]);
+    }, [viewedUserId]);
 
     useEffect(() => {
         fetchData();
@@ -62,7 +59,7 @@ const FollowingScreen: React.FC<FollowingScreenProps> = ({ currentUser, onExit, 
                         user={user} 
                         currentUser={currentUser}
                         onFollowToggle={handleFollowToggle}
-                        onUserClick={setViewingUserId}
+                        onUserClick={onViewProfile}
                     />
                 ))}
             </div>
@@ -70,27 +67,16 @@ const FollowingScreen: React.FC<FollowingScreenProps> = ({ currentUser, onExit, 
     };
 
     return (
-        <>
-            <div className="h-screen w-full bg-[#1C1F24] text-white flex flex-col font-sans">
-                <header className="p-4 flex items-center justify-between shrink-0 border-b border-gray-800 relative">
-                    <button onClick={onExit} className="p-2 -m-2"><ArrowLeftIcon className="w-6 h-6"/></button>
-                    <h1 className="font-bold text-lg absolute left-1/2 -translate-x-1/2">Seguindo</h1>
-                    <div className="w-6 h-6"></div>
-                </header>
-                <main className="flex-grow overflow-y-auto scrollbar-hide">
-                    {renderContent()}
-                </main>
-            </div>
-            {viewingUserId && (
-                <UserProfileModal
-                    userId={viewingUserId}
-                    currentUser={currentUser}
-                    onUpdateUser={onUpdateUser}
-                    onClose={() => setViewingUserId(null)}
-                    {...modalProps}
-                />
-            )}
-        </>
+        <div className="h-screen w-full bg-[#1C1F24] text-white flex flex-col font-sans">
+            <header className="p-4 flex items-center justify-between shrink-0 border-b border-gray-800 relative">
+                <button onClick={onExit} className="p-2 -m-2"><ArrowLeftIcon className="w-6 h-6"/></button>
+                <h1 className="font-bold text-lg absolute left-1/2 -translate-x-1/2">Seguindo</h1>
+                <div className="w-6 h-6"></div>
+            </header>
+            <main className="flex-grow overflow-y-auto scrollbar-hide">
+                {renderContent()}
+            </main>
+        </div>
     );
 };
 

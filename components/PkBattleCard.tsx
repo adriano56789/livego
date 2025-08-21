@@ -1,4 +1,5 @@
 
+
 import React from 'react';
 import type { PkBattle, Stream, PkBattleStreamer } from '../types';
 import UserPlaceholderIcon from './icons/UserPlaceholderIcon';
@@ -29,14 +30,15 @@ const StreamerImage: React.FC<{ streamer: PkBattleStreamer; gradient: string }> 
 const PkBattleCard: React.FC<PkBattleCardProps> = ({ battle, onViewStream }) => {
     const { streamer1, streamer2 } = battle;
 
-    const totalScore = streamer1.score + streamer2.score;
-    const streamer1Percent = totalScore > 0 ? (streamer1.score / totalScore) * 100 : 50;
+    const totalScore = (streamer1.score || 0) + (streamer2.score || 0);
+    const streamer1Percent = totalScore > 0 ? ((streamer1.score || 0) / totalScore) * 100 : 50;
 
     const formatScore = (num: number): string => {
-        if (num >= 10000) {
-            return (num / 1000).toFixed(1) + 'k';
+        const value = num || 0;
+        if (value >= 10000) {
+            return (value / 1000).toFixed(1) + 'k';
         }
-        return num.toLocaleString('en-US');
+        return value.toLocaleString('en-US');
     };
 
     return (

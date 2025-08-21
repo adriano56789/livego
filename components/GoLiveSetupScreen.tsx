@@ -45,24 +45,6 @@ const CategorySelectionModal: React.FC<{
 const ToolItem: React.FC<{ icon: React.ReactNode; label: string; onClick?: () => void; children?: React.ReactNode }> = ({ icon, label, onClick, children }) => {
   const handleClick = onClick || (() => alert(`Funcionalidade "${label}" não implementada.`));
   
-  // If there are interactive children, render a div to avoid conflicting clicks.
-  // The interactive child (e.g., ToggleSwitch) will handle its own events.
-  if (children) {
-    return (
-      <div className="flex items-center justify-between py-3">
-        <div className="flex items-center gap-4">
-          {icon}
-          <span className="font-semibold text-gray-200">{label}</span>
-        </div>
-        <div className="flex items-center gap-2">
-            {children}
-            <span className="text-gray-500 text-lg font-bold">&gt;</span>
-        </div>
-      </div>
-    );
-  }
-
-  // If there are no children, the whole row is a button.
   return (
     <button 
         onClick={handleClick}
@@ -72,7 +54,8 @@ const ToolItem: React.FC<{ icon: React.ReactNode; label: string; onClick?: () =>
             {icon}
             <span className="font-semibold text-gray-200">{label}</span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2" onClick={e => children && e.stopPropagation()}>
+            {children}
             <span className="text-gray-500 text-lg font-bold">&gt;</span>
         </div>
     </button>
@@ -85,10 +68,10 @@ const GoLiveSetupScreen: React.FC<GoLiveSetupScreenProps> = ({ user, onStartStre
   
   const [cameraStatus, setCameraStatus] = useState<CameraStatus>('loading');
   const [mediaStream, setMediaStream] = useState<MediaStream | null>(null);
-  const [facingMode, setFacingMode] = useState<FacingMode>(user.last_camera_used || 'user');
+  const [facingMode, setFacingMode] = useState<FacingMode>('user');
   const [title, setTitle] = useState('');
   const [meta, setMeta] = useState('');
-  const [category, setCategory] = useState<Category>(user.last_selected_category || 'Popular');
+  const [category, setCategory] = useState<Category>('Popular');
   const [thumbnailBase64, setThumbnailBase64] = useState<string | undefined>(undefined);
   const [isStarting, setIsStarting] = useState(false);
   const [isLiveStreamPrivate, setIsLiveStreamPrivate] = useState(false);
@@ -115,7 +98,15 @@ const GoLiveSetupScreen: React.FC<GoLiveSetupScreenProps> = ({ user, onStartStre
         
       setCameraStatus('loading');
       try {
-        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode }, audio: true });
+        const constraints = {
+            audio: true,
+            video: {
+                facingMode,
+                width: { ideal: 640 },
+                height: { ideal: 480 }
+            }
+        };
+        stream = await navigator.mediaDevices.getUserMedia(constraints);
         if (isMounted) {
           setMediaStream(stream);
           setCameraStatus('success');
@@ -133,6 +124,7 @@ const GoLiveSetupScreen: React.FC<GoLiveSetupScreenProps> = ({ user, onStartStre
                 setCameraStatus('denied');
                 break;
               case 'NotReadableError':
+              case 'OverconstrainedError': // Can happen if ideal resolution isn't available
                 setCameraStatus('in-use');
                 break;
               case 'NotFoundError':
@@ -184,14 +176,21 @@ const GoLiveSetupScreen: React.FC<GoLiveSetupScreenProps> = ({ user, onStartStre
     const fetchSettings = async () => {
         setIsSettingsLoading(true);
         try {
-            const [pkSettings, fetchedCategories] = await Promise.all([
-              liveStreamService.getUserPkPreference(user.id),
-              liveStreamService.getLiveCategories()
+            const [preferences, fetchedCategories] = await Promise.all([
+                liveStreamService.getUserLivePreferences(user.id),
+                liveStreamService.getLiveCategories()
             ]);
-            setIsPkEnabled(pkSettings.isPkEnabled);
+            
+            setIsPkEnabled(preferences.isPkEnabled);
+            setFacingMode(preferences.lastCameraUsed || 'user');
+            setCategory(preferences.lastSelectedCategory || 'Popular');
+            
             setCategories(fetchedCategories);
+
         } catch (error) {
             console.error("Failed to fetch settings:", error);
+            // Set defaults on error
+            setIsPkEnabled(true);
         } finally {
             setIsSettingsLoading(false);
         }

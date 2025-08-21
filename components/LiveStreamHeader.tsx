@@ -70,7 +70,7 @@ const LiveStreamHeader: React.FC<LiveStreamHeaderProps> = ({
                 <CoinBIcon className="w-5 h-5" />
                 <span className="text-sm font-semibold text-white">{coins}</span>
             </button>
-            <button onClick={onCoinsClick} className="flex items-center gap-1.5 bg-black/40 backdrop-blur-sm px-2.5 py-1 rounded-full pointer-events-auto">
+            <button className="flex items-center gap-1.5 bg-black/40 backdrop-blur-sm px-2.5 py-1 rounded-full pointer-events-auto">
                 <PinkHeartIcon className="w-5 h-5" />
                 <span className="text-sm font-semibold text-white">{likes}</span>
             </button>
@@ -136,7 +136,7 @@ const LiveStreamHeader: React.FC<LiveStreamHeaderProps> = ({
               <CoinBIcon className="w-5 h-5" />
               <span className="text-sm font-semibold text-white">{coins}</span>
           </button>
-          <button onClick={onCoinsClick} className="flex items-center gap-1.5 bg-black/40 backdrop-blur-sm px-2.5 py-1 rounded-full pointer-events-auto">
+          <button className="flex items-center gap-1.5 bg-black/40 backdrop-blur-sm px-2.5 py-1 rounded-full pointer-events-auto">
               <PinkHeartIcon className="w-5 h-5" />
               <span className="text-sm font-semibold text-white">{likes}</span>
           </button>

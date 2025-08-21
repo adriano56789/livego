@@ -1,3 +1,4 @@
+
 import React from 'react';
 import type { PublicProfile } from '../types';
 
@@ -15,7 +16,7 @@ const ActionsModal: React.FC<ActionsModalProps> = ({ isOpen, onClose, user, onBl
 
   return (
     <div 
-      className="fixed inset-0 bg-black/60 flex items-end justify-center z-50 animate-fade-in-fast"
+      className="fixed inset-0 flex items-end justify-center z-[70]"
       onClick={onClose}
     >
       <div 

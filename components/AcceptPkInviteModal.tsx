@@ -1,7 +1,5 @@
-
 import React, { useState } from 'react';
 import type { PkInvitation, User } from '../types';
-import SparkleIcon from './icons/SparkleIcon';
 import PkBlobsIcon from './icons/PkBlobsIcon';
 
 interface AcceptPkInviteModalProps {
@@ -28,22 +26,19 @@ const AcceptPkInviteModal: React.FC<AcceptPkInviteModalProps> = ({ currentUser, 
         <h2 className="text-center font-bold text-lg">Convite para disputa</h2>
         
         <div className="relative p-3 rounded-xl bg-gradient-to-r from-pink-50 via-purple-50 to-blue-50">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-center gap-4">
             {/* Inviter */}
-            <div className="flex items-center gap-2">
-              <SparkleIcon className="w-4 h-4 text-yellow-500" />
-              <span className="text-sm font-semibold">{invitation.inviterName}</span>
-              <img src={invitation.inviterAvatarUrl} alt={invitation.inviterName} className="w-12 h-12 rounded-full object-cover"/>
-            </div>
+            <div className="flex-1 text-right font-semibold truncate">{invitation.inviterName}</div>
+            <img src={invitation.inviterAvatarUrl} alt={invitation.inviterName} className="w-12 h-12 rounded-full object-cover shrink-0"/>
             
-            {/* Invitee */}
-            <div className="flex items-center gap-2">
-              <img src={currentUser.avatar_url} alt={currentUser.nickname || ''} className="w-12 h-12 rounded-full object-cover"/>
-              <span className="text-sm font-semibold">{currentUser.nickname}</span>
+            {/* vs icon */}
+            <div className="shrink-0">
+               <PkBlobsIcon />
             </div>
-          </div>
-          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
-             <PkBlobsIcon />
+
+            {/* Current User (Invitee) */}
+            <img src={currentUser.avatar_url} alt={currentUser.nickname || ''} className="w-12 h-12 rounded-full object-cover shrink-0"/>
+            <div className="flex-1 text-left font-semibold truncate">{currentUser.nickname}</div>
           </div>
         </div>
 

@@ -1,4 +1,5 @@
 
+
 import React from 'react';
 import type { Conversation } from '../types';
 
@@ -8,7 +9,8 @@ interface ConversationListItemProps {
 }
 
 const ConversationListItem: React.FC<ConversationListItemProps> = ({ conversation, onClick }) => {
-  const lastMessage = conversation.messages[conversation.messages.length - 1];
+  const messages = conversation.messages || [];
+  const lastMessage = messages.length > 0 ? messages[messages.length - 1] : null;
 
   const formatTimestamp = (timestamp: string) => {
     if (!timestamp) return '';

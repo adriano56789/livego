@@ -1,6 +1,7 @@
 
+
 import React, { useState, useEffect } from 'react';
-import type { User, AppView, PublicProfile } from '../types';
+import type { User, AppView, PublicProfile, Stream, PkBattle } from '../types';
 import { getGiftsReceived, getGiftsSent, getUserProfile } from '../services/authService';
 import * as liveStreamService from '../services/liveStreamService';
 
@@ -34,6 +35,7 @@ interface EditProfileScreenProps {
   onExit?: () => void;
   onFollowToggle?: (userId: number) => void;
   onNavigateToChat?: (userId: number) => void;
+  onViewStream?: (stream: Stream | PkBattle) => void;
 }
 
 
@@ -111,12 +113,13 @@ const EditProfileScreen: React.FC<EditProfileScreenProps> = ({
     viewedUserId,
     onExit,
     onFollowToggle,
-    onNavigateToChat
+    onNavigateToChat,
+    onViewStream
 }) => {
   const isOwnProfile = !isViewingOtherProfile;
   const loggedInUser = user;
   
-  const [profileData, setProfileData] = useState<User | null>(isOwnProfile ? user : null);
+  const [profileData, setProfileData] = useState<User | PublicProfile | null>(isOwnProfile ? user : null);
   const [isLoading, setIsLoading] = useState(!isOwnProfile);
   const [isBlocked, setIsBlocked] = useState(false);
 
@@ -125,12 +128,12 @@ const EditProfileScreen: React.FC<EditProfileScreenProps> = ({
   const [giftsSent, setGiftsSent] = useState(0);
   const [isActionMenuOpen, setIsActionMenuOpen] = useState(false);
   
-  const [isFollowing, setIsFollowing] = useState(loggedInUser.following.includes(viewedUserId || -1));
+  const [isFollowing, setIsFollowing] = useState((loggedInUser.following || []).includes(viewedUserId || -1));
   const [isFollowLoading, setIsFollowLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'obras' | 'curtidas' | 'detalhes'>('obras');
 
   useEffect(() => {
-    setIsFollowing(loggedInUser.following.includes(viewedUserId || -1));
+    setIsFollowing((loggedInUser.following || []).includes(viewedUserId || -1));
   }, [loggedInUser.following, viewedUserId]);
 
   useEffect(() => {
@@ -139,7 +142,7 @@ const EditProfileScreen: React.FC<EditProfileScreenProps> = ({
               setIsLoading(true);
               try {
                   const [userToView, received, sent, isBlockedStatus] = await Promise.all([
-                    getUserProfile(viewedUserId),
+                    liveStreamService.getPublicProfile(viewedUserId),
                     getGiftsReceived(viewedUserId),
                     getGiftsSent(viewedUserId),
                     liveStreamService.isUserBlocked(loggedInUser.id, viewedUserId),
@@ -202,6 +205,30 @@ const EditProfileScreen: React.FC<EditProfileScreenProps> = ({
         onNavigate(view);
     }
   };
+    
+  const handleEnterLive = async () => {
+    if (!profileData || !('isLive' in profileData && profileData.isLive) || !onViewStream) return;
+
+    try {
+        const activeStream = await liveStreamService.getActiveStreamForUser(profileData.id);
+        if (activeStream) {
+            const pkBattleDb = await liveStreamService.findActivePkBattleForStream(activeStream.id);
+            if (pkBattleDb) {
+                const pkBattle = await liveStreamService.getPkBattleDetails(Number(pkBattleDb.id));
+                onViewStream(pkBattle);
+            } else {
+                onViewStream(activeStream);
+            }
+            onExit?.();
+        } else {
+            alert("Não foi possível encontrar a live ativa para este usuário.");
+        }
+    } catch (error) {
+        console.error("Failed to enter live stream from profile:", error);
+        alert("Ocorreu um erro ao tentar entrar na live.");
+    }
+  };
+
 
   const formatStat = (num: number): string => {
     if (num >= 1000) {
@@ -235,12 +262,18 @@ const EditProfileScreen: React.FC<EditProfileScreenProps> = ({
         />
     );
   }
+
+  // Type-safe accessors for properties that differ or might not exist
+  const avatarUrl = 'avatarUrl' in profileData ? profileData.avatarUrl : profileData.avatar_url;
+  const isAvatarProtected = 'is_avatar_protected' in profileData && !!profileData.is_avatar_protected;
+  const level = 'level' in profileData ? profileData.level : parseInt(profileData.badges.find(b => b.type === 'level')?.text || '1', 10);
   
   const formattedBirthday = profileData.birthday 
     ? new Date(profileData.birthday + 'T00:00:00').toLocaleDateString('pt-BR')
     : 'Não especificado';
 
   const genderText = profileData.gender === 'male' ? 'Masculino' : profileData.gender === 'female' ? 'Feminino' : 'Não especificado';
+  const followersCount = 'followers' in profileData ? profileData.followers : 0;
 
   return (
     <>
@@ -269,13 +302,13 @@ const EditProfileScreen: React.FC<EditProfileScreenProps> = ({
           <div className="absolute -bottom-14 left-1/2 -translate-x-1/2 w-28 h-28 z-10">
             <div className="relative w-full h-full rounded-full bg-gradient-to-tr from-purple-600 to-fuchsia-400 p-1.5 shadow-lg">
                 <div className="w-full h-full rounded-full bg-black overflow-hidden flex items-center justify-center">
-                   {profileData.avatar_url ? (
-                        <img src={profileData.avatar_url} alt={profileData.name} className="w-full h-full object-cover" />
+                   {avatarUrl ? (
+                        <img src={avatarUrl} alt={profileData.name} className="w-full h-full object-cover" />
                     ) : (
                         <UserPlaceholderIcon className="w-full h-full text-gray-500 p-1" />
                     )}
                 </div>
-                 {profileData.is_avatar_protected ? (
+                 {isAvatarProtected ? (
                     <div className="absolute -bottom-2 right-0 w-10 h-10 bg-sky-400 rounded-full flex items-center justify-center border-2 border-black animate-protection-glow">
                         <ShieldCheckIcon className="w-7 h-7 text-black"/>
                     </div>
@@ -298,7 +331,7 @@ const EditProfileScreen: React.FC<EditProfileScreenProps> = ({
                 </div>}
                  <div className="flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-bold bg-yellow-400 text-black">
                     <StarIcon className="w-3 h-3"/>
-                    <span>{profileData.level || 1}</span>
+                    <span>{level}</span>
                 </div>
             </div>
              <div className="flex items-center justify-center gap-2 text-sm text-gray-400 mt-2">
@@ -311,9 +344,17 @@ const EditProfileScreen: React.FC<EditProfileScreenProps> = ({
             </div>
           </section>
 
+          {'isLive' in profileData && profileData.isLive && (
+            <div className="mt-4">
+                <button onClick={handleEnterLive} className="w-full bg-gradient-to-r from-red-500 to-orange-500 text-white font-bold py-3.5 rounded-full text-lg shadow-lg animate-pulse-glow" style={{'--glow-color': 'rgba(239, 68, 68, 0.6)'} as React.CSSProperties}>
+                    Entrar na Live
+                </button>
+            </div>
+           )}
+
           <section className="grid grid-cols-4 my-4">
-              <Stat value={formatStat(profileData.followers)} label="Seguidores" onClick={() => handleStatClick('followers')} />
-              <Stat value={formatStat(profileData.followers)} label="Fãs" onClick={() => handleStatClick('fans')} />
+              <Stat value={formatStat(followersCount)} label="Seguidores" onClick={() => handleStatClick('followers')} />
+              <Stat value={formatStat(followersCount)} label="Fãs" onClick={() => handleStatClick('fans')} />
               <Stat value={formatStat(giftsReceived)} label="Recebidos" icon={<CoinIcon className="w-3 h-3 text-yellow-500"/>} />
               <Stat value={formatStat(giftsSent)} label="Enviados" icon={<DiamondIcon className="w-3 h-3"/>} />
           </section>
@@ -344,8 +385,8 @@ const EditProfileScreen: React.FC<EditProfileScreenProps> = ({
                         )}
                         <DetailRow label="Aniversário">{formattedBirthday}</DetailRow>
                         <DetailRow label="Gênero">{genderText}</DetailRow>
-                        <DetailRow label="Residência atual">{profileData.country || 'Não especificado'}</DetailRow>
-                        <DetailRow label="Estado emocional">{profileData.emotionalState || 'Não especificado'}</DetailRow>
+                        {isOwnProfile && <DetailRow label="Residência atual">{(profileData as User).country || 'Não especificado'}</DetailRow>}
+                        {isOwnProfile && <DetailRow label="Estado emocional">{(profileData as User).emotionalState || 'Não especificado'}</DetailRow>}
                         {profileData.personalityTags && profileData.personalityTags.length > 0 && (
                             <div className="py-4">
                                 <span className="text-gray-400">Tags de personalidade</span>
@@ -356,10 +397,10 @@ const EditProfileScreen: React.FC<EditProfileScreenProps> = ({
                                 </div>
                             </div>
                         )}
-                        <DetailRow label="Profissão">{profileData.profession || 'Não especificado'}</DetailRow>
-                        <DetailRow label="Língua dominada">{(profileData.languages && profileData.languages.join(', ')) || 'Não especificado'}</DetailRow>
-                        <DetailRow label="Altura">{profileData.height ? `${profileData.height} cm` : 'Não especificado'}</DetailRow>
-                        <DetailRow label="Peso corporal">{profileData.weight ? `${profileData.weight} Kg` : 'Não especificado'}</DetailRow>
+                        {isOwnProfile && <DetailRow label="Profissão">{(profileData as User).profession || 'Não especificado'}</DetailRow>}
+                        {isOwnProfile && <DetailRow label="Língua dominada">{((profileData as User).languages && (profileData as User).languages?.join(', ')) || 'Não especificado'}</DetailRow>}
+                        {isOwnProfile && <DetailRow label="Altura">{(profileData as User).height ? `${(profileData as User).height} cm` : 'Não especificado'}</DetailRow>}
+                        {isOwnProfile && <DetailRow label="Peso corporal">{(profileData as User).weight ? `${(profileData as User).weight} Kg` : 'Não especificado'}</DetailRow>}
                     </div>
                 )}
              </div>

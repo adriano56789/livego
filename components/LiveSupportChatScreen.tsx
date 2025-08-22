@@ -45,7 +45,7 @@ const LiveSupportChatScreen: React.FC<LiveSupportChatScreenProps> = ({ user, onE
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [conversation?.messages.length]);
+  }, [(conversation?.messages || []).length]);
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -82,7 +82,7 @@ const LiveSupportChatScreen: React.FC<LiveSupportChatScreenProps> = ({ user, onE
              <div className="flex-grow flex items-center justify-center">
                 <div className="w-8 h-8 border-4 border-white border-t-transparent rounded-full animate-spin"></div>
             </div>
-        ) : conversation?.messages.map(msg => (
+        ) : (conversation?.messages || []).map(msg => (
           <ChatBubble key={msg.id} message={msg} isSender={msg.senderId === user.id} />
         ))}
          <div ref={messagesEndRef} />
@@ -91,13 +91,17 @@ const LiveSupportChatScreen: React.FC<LiveSupportChatScreenProps> = ({ user, onE
       <footer className="p-2 bg-[#1c1c1c] shrink-0">
         <form onSubmit={handleSendMessage} className="flex items-center gap-2">
             <input
-              type="text"
-              value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
-              placeholder="Digite sua mensagem..."
-              className="flex-grow h-10 bg-[#373738] rounded-full px-4 text-sm placeholder-gray-400 focus:outline-none"
+                type="text"
+                value={newMessage}
+                onChange={(e) => setNewMessage(e.target.value)}
+                placeholder="Digite sua mensagem..."
+                className="flex-grow h-10 bg-[#373738] rounded-full px-4 text-sm placeholder-gray-400 focus:outline-none"
             />
-            <button type="submit" disabled={isSending || !newMessage.trim()} className="bg-green-500 text-black font-semibold px-6 py-2 rounded-full disabled:opacity-50">
+            <button
+                type="submit"
+                disabled={isSending || !newMessage.trim()}
+                className="bg-green-500 text-black font-semibold px-6 py-2 rounded-full disabled:opacity-50"
+            >
                 {isSending ? 'Enviando...' : 'Enviar'}
             </button>
         </form>

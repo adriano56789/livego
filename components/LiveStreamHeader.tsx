@@ -1,3 +1,4 @@
+
 import React from 'react';
 import AudioVisualizer from './AudioVisualizer';
 import ViewersIcon from './icons/ViewersIcon';
@@ -6,6 +7,8 @@ import CoinBIcon from './icons/CoinBIcon';
 import PinkHeartIcon from './icons/PinkHeartIcon';
 import type { Viewer } from '../types';
 import UserPlaceholderIcon from './icons/UserPlaceholderIcon';
+import PlusIcon from './icons/PlusIcon';
+import CheckIcon from './icons/CheckIcon';
 
 interface LiveStreamHeaderProps {
   variant: 'single' | 'pk-left' | 'pk-right';
@@ -20,6 +23,9 @@ interface LiveStreamHeaderProps {
   onViewersClick?: () => void;
   onExitClick?: () => void;
   onCoinsClick?: () => void;
+  isCurrentUserHost: boolean;
+  isFollowing: boolean;
+  onFollowToggle: () => void;
 }
 
 const Avatar: React.FC<{ src?: string; alt: string; className: string; }> = ({ src, alt, className }) => (
@@ -46,25 +52,39 @@ const LiveStreamHeader: React.FC<LiveStreamHeaderProps> = ({
   onViewersClick,
   onExitClick,
   onCoinsClick,
+  isCurrentUserHost,
+  isFollowing,
+  onFollowToggle,
 }) => {
   const isSingle = variant === 'single';
   const isPkLeft = variant === 'pk-left';
   const isPkRight = variant === 'pk-right';
   const alignment = isPkRight ? 'items-end' : 'items-start';
 
+  const FollowButton: React.FC = () => (
+      !isCurrentUserHost ? (
+        <button onClick={onFollowToggle} className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 transition-colors ${isFollowing ? 'bg-gray-500/80' : 'bg-pink-500/80'}`}>
+            {isFollowing ? <CheckIcon className="w-5 h-5 text-white" /> : <PlusIcon className="w-5 h-5 text-white" />}
+        </button>
+      ) : null
+  );
+
   if (isSingle) {
     return (
       <div className="flex justify-between items-start w-full">
         {/* Left section */}
         <div className="flex flex-col items-start gap-2">
-          <button onClick={onUserClick} className="flex items-center gap-2 bg-black/40 backdrop-blur-sm p-1 pr-3 rounded-full pointer-events-auto">
-            <Avatar src={avatarUrl} alt={name} className="w-9 h-9" />
-            <div>
-              <p className="font-semibold text-sm text-white">{name}</p>
-              <p className="text-xs text-gray-300">{followers} seguidores</p>
+            <div className="flex items-center gap-2 pointer-events-auto">
+                <button onClick={onUserClick} className="flex items-center gap-2 bg-black/40 backdrop-blur-sm p-1 pr-3 rounded-full">
+                    <Avatar src={avatarUrl} alt={name} className="w-9 h-9" />
+                    <div>
+                    <p className="font-semibold text-sm text-white">{name}</p>
+                    <p className="text-xs text-gray-300">{followers} seguidores</p>
+                    </div>
+                    <AudioVisualizer />
+                </button>
+                <FollowButton />
             </div>
-            <AudioVisualizer />
-          </button>
           <div className="flex items-center gap-2">
              <button onClick={onCoinsClick} className="flex items-center gap-1.5 bg-black/40 backdrop-blur-sm px-2.5 py-1 rounded-full pointer-events-auto">
                 <CoinBIcon className="w-5 h-5" />
@@ -102,14 +122,17 @@ const LiveStreamHeader: React.FC<LiveStreamHeaderProps> = ({
   return (
     <div className={`w-full flex flex-col ${alignment} gap-1.5`}>
       <div className={`flex items-start gap-2 ${isPkRight ? 'flex-row-reverse' : ''}`}>
-        <button onClick={onUserClick} className={`flex items-center gap-2 bg-black/40 backdrop-blur-sm p-1 ${isPkRight ? 'pl-3' : 'pr-3'} rounded-full pointer-events-auto ${isPkRight ? 'flex-row-reverse' : ''}`}>
-            <Avatar src={avatarUrl} alt={name} className="w-8 h-8" />
-            <div className={`${isPkRight ? 'text-right' : 'text-left'}`}>
-                <p className="font-semibold text-sm text-white truncate max-w-[100px]">{name}</p>
-                <p className="text-xs text-gray-300">{followers} seguidores</p>
-            </div>
-            <AudioVisualizer />
-        </button>
+        <div className={`flex items-center gap-2 pointer-events-auto ${isPkRight ? 'flex-row-reverse' : ''}`}>
+            <button onClick={onUserClick} className={`flex items-center gap-2 bg-black/40 backdrop-blur-sm p-1 rounded-full ${isPkRight ? 'flex-row-reverse pl-3' : 'pr-3'}`}>
+                <Avatar src={avatarUrl} alt={name} className="w-8 h-8" />
+                <div className={`${isPkRight ? 'text-right' : 'text-left'}`}>
+                    <p className="font-semibold text-sm text-white truncate max-w-[100px]">{name}</p>
+                    <p className="text-xs text-gray-300">{followers} seguidores</p>
+                </div>
+                <AudioVisualizer />
+            </button>
+            <FollowButton />
+        </div>
         {isPkRight && onExitClick && (
             <button onClick={onExitClick} className="w-9 h-9 flex-shrink-0 items-center justify-center bg-black/40 backdrop-blur-sm rounded-full pointer-events-auto">
                 <CrossIcon className="w-5 h-5" />

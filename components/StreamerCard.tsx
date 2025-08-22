@@ -3,6 +3,7 @@ import type { Stream } from '../types';
 import ViewersIcon from './icons/ViewersIcon';
 import LockClosedIcon from './icons/LockSolidIcon';
 import DiamondIcon from './icons/DiamondIcon';
+import Flag from './Flag';
 
 interface StreamerCardProps {
     stream: Stream;
@@ -67,9 +68,12 @@ const StreamerCard: React.FC<StreamerCardProps> = ({ stream, onViewStream }) => 
                     </div>
                 )}
                 <h3 className="font-semibold truncate drop-shadow-sm">{stream.nomeStreamer}</h3>
-                <div className="flex items-center gap-1 text-xs text-gray-200">
-                    <ViewersIcon className="w-3 h-3" />
-                    <span className="drop-shadow-sm">{formatViewers(stream.espectadores)}</span>
+                <div className="flex items-center justify-between text-xs text-gray-200 mt-1">
+                    <div className="flex items-center gap-1">
+                        <ViewersIcon className="w-3 h-3" />
+                        <span className="drop-shadow-sm">{formatViewers(stream.espectadores)}</span>
+                    </div>
+                    {stream.countryCode && <Flag code={stream.countryCode} className="w-5 h-auto rounded-sm" />}
                 </div>
             </div>
 

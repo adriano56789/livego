@@ -1,5 +1,5 @@
 import { apiClient } from './apiClient';
-import type { User, LiveDetails, ChatMessage, Gift, Viewer, RankingContributor, Like, PkBattle, PkBattleState, PublicProfile, PkEventDetails, Conversation, SendGiftResponse, ProtectorDetails, WithdrawalTransaction, WithdrawalMethod, InventoryItem, AppEvent, LiveEndSummary, UserLevelInfo, GeneralRankingStreamer, GeneralRankingUser, WithdrawalBalance, EventStatus, PkRankingData, Stream, Category, StartLiveResponse, ConvitePK, LiveFollowUpdate, PrivateLiveInviteSettings, NotificationSettings, FacingMode, SoundEffectName, UniversalRankingData, UserListRankingPeriod, PkSettings, LiveCategory, StreamUpdateListener, MuteStatusListener, UserKickedListener, SoundEffectListener, MuteStatusUpdate, UserKickedUpdate, SoundEffectUpdate, UserBlockedUpdate, UserUnblockedUpdate, UserBlockedListener, UserUnblockedListener } from '../types';
+import type { User, LiveDetails, ChatMessage, Gift, Viewer, RankingContributor, Like, PkBattle, PkBattleState, PublicProfile, PkEventDetails, Conversation, SendGiftResponse, ProtectorDetails, WithdrawalTransaction, WithdrawalMethod, InventoryItem, AppEvent, LiveEndSummary, UserLevelInfo, GeneralRankingStreamer, GeneralRankingUser, WithdrawalBalance, EventStatus, PkRankingData, Stream, Category, StartLiveResponse, ConvitePK, LiveFollowUpdate, PrivateLiveInviteSettings, NotificationSettings, FacingMode, SoundEffectName, UniversalRankingData, UserListRankingPeriod, PkSettings, LiveCategory, StreamUpdateListener, MuteStatusListener, UserKickedListener, SoundEffectListener, MuteStatusUpdate, UserKickedUpdate, SoundEffectUpdate, UserBlockedUpdate, UserUnblockedUpdate, UserBlockedListener, UserUnblockedListener, Region, PrivacySettings } from '../types';
 
 // --- Listener Infrastructure ---
 type Listener<T> = (data: T) => void;
@@ -47,6 +47,8 @@ export const removeUserUnblockedListener = (listener: UserUnblockedListener) => 
 
 // --- STREAMING API FUNCTIONS ---
 
+export const getRegions = (): Promise<Region[]> => apiClient('/api/regions');
+
 export const getLiveKitToken = (roomName: string, participantIdentity: string): Promise<{ token: string }> => {
     return apiClient('/api/livekit/token', {
         method: 'POST',
@@ -54,12 +56,12 @@ export const getLiveKitToken = (roomName: string, participantIdentity: string): 
     });
 };
 
-export const getPopularStreams = (): Promise<Stream[]> => apiClient<Stream[]>('/api/lives/popular').then(d => { streamUpdateManager.dispatch(d); return d; });
-export const getFollowingStreams = (userId: number): Promise<Stream[]> => apiClient<Stream[]>(`/api/lives/seguindo/${userId}`).then(d => { streamUpdateManager.dispatch(d); return d; });
-export const getNewStreams = (): Promise<Stream[]> => apiClient<Stream[]>('/api/lives/novas').then(d => { streamUpdateManager.dispatch(d); return d; });
-export const getStreamsForCategory = (category: Category): Promise<Stream[]> => apiClient<Stream[]>(`/api/lives/categoria/${category.toLowerCase()}`).then(d => { streamUpdateManager.dispatch(d); return d; });
-export const getPrivateStreams = (userId: number): Promise<Stream[]> => apiClient<Stream[]>(`/api/lives/private/${userId}`).then(d => { streamUpdateManager.dispatch(d); return d; });
-export const getPkBattles = (): Promise<PkBattle[]> => apiClient<PkBattle[]>('/api/lives/pk');
+export const getPopularStreams = (regionCode: string): Promise<Stream[]> => apiClient<Stream[]>(`/api/lives?category=popular&region=${regionCode}`).then(d => { streamUpdateManager.dispatch(d); return d; });
+export const getFollowingStreams = (userId: number, regionCode: string): Promise<Stream[]> => apiClient<Stream[]>(`/api/lives?category=seguindo&userId=${userId}&region=${regionCode}`).then(d => { streamUpdateManager.dispatch(d); return d; });
+export const getNewStreams = (regionCode: string): Promise<Stream[]> => apiClient<Stream[]>(`/api/lives?category=novo&region=${regionCode}`).then(d => { streamUpdateManager.dispatch(d); return d; });
+export const getStreamsForCategory = (category: Category, regionCode: string): Promise<Stream[]> => apiClient<Stream[]>(`/api/lives?category=${category.toLowerCase()}&region=${regionCode}`).then(d => { streamUpdateManager.dispatch(d); return d; });
+export const getPrivateStreams = (userId: number, regionCode: string): Promise<Stream[]> => apiClient<Stream[]>(`/api/lives?category=privada&userId=${userId}&region=${regionCode}`).then(d => { streamUpdateManager.dispatch(d); return d; });
+export const getPkBattles = (regionCode: string): Promise<PkBattle[]> => apiClient<PkBattle[]>(`/api/lives/pk?region=${regionCode}`);
 export const getPkBattleDetails = (pkId: number): Promise<PkBattle> => apiClient(`/api/pk-battles/${pkId}`);
 export const getActivePkBattle = (pkBattleId: number | string): Promise<PkBattleState> => apiClient(`/api/batalhas-pk/${pkBattleId}`);
 export const findActivePkBattleForStream = (streamId: number): Promise<PkBattleState | null> => apiClient(`/api/streams/${streamId}/batalha-pk`);
@@ -116,12 +118,12 @@ export const cancelPrivateLiveInvite = (liveId: number, inviteeId: number): Prom
     });
 };
 
-export const getLiveStreamDetails = (liveId: number): Promise<LiveDetails> => apiClient(`/api/lives/${liveId}/details`);
+export const getLiveStreamDetails = (liveId: number): Promise<LiveDetails> => apiClient(`/api/lives/${liveId}`);
 export const getChatMessages = (liveId: number): Promise<ChatMessage[]> => apiClient(`/api/chat/live/${liveId}`);
-export const sendChatMessage = async (liveId: number, userId: number, message: string): Promise<ChatMessage> => {
+export const sendChatMessage = async (liveId: number, userId: number, message: string, imageUrl?: string): Promise<ChatMessage> => {
     const newMsg = await apiClient<ChatMessage>(`/api/chat/live/${liveId}`, {
         method: 'POST',
-        body: JSON.stringify({ userId, message })
+        body: JSON.stringify({ userId, message, imageUrl }),
     });
     // After sending, refetch all messages to simulate update and dispatch
     const updatedMessages = await getChatMessages(liveId);
@@ -182,11 +184,18 @@ export const getConversationById = (conversationId: string, currentUserId: numbe
 export const getOrCreateConversationWithUser = (currentUserId: number, otherUserId: number): Promise<Conversation> => {
     return apiClient('/api/chat/private/get-or-create', { method: 'POST', body: JSON.stringify({ currentUserId, otherUserId }) });
 };
-export const sendMessageToConversation = (conversationId: string, senderId: number, text: string): Promise<Conversation> => {
-    return apiClient(`/api/chat/private/${conversationId}`, { method: 'POST', body: JSON.stringify({ senderId, text }) });
+export const sendMessageToConversation = (conversationId: string, senderId: number, content: { text?: string; imageUrl?: string }): Promise<Conversation> => {
+    return apiClient(`/api/chat/private/${conversationId}`, { method: 'POST', body: JSON.stringify({ senderId, ...content }) });
 };
 export const markMessagesAsSeen = (conversationId: string, viewerId: number): Promise<{ success: boolean }> => {
     return apiClient('/api/chat/viewed', { method: 'POST', body: JSON.stringify({ conversationId, viewerId }) });
+};
+
+export const uploadChatImage = (imageDataUrl: string): Promise<{ url: string }> => {
+    return apiClient('/api/chat/upload', {
+        method: 'POST',
+        body: JSON.stringify({ imageDataUrl })
+    });
 };
 
 export const getProtectorsList = (streamerId: number): Promise<ProtectorDetails[]> => apiClient(`/api/users/${streamerId}/protectors`);
@@ -197,6 +206,10 @@ export const followUser = (followerId: number, followingId: number): Promise<Use
 
 export const unfollowUser = (followerId: number, followingId: number): Promise<User> => {
     return apiClient(`/api/follows/${followerId}/${followingId}`, { method: 'DELETE' });
+};
+
+export const getFriendRequests = (userId: number): Promise<User[]> => {
+    return apiClient(`/api/users/${userId}/friend-requests`);
 };
 
 export const saveWithdrawalMethod = (userId: number, method: 'pix' | 'mercado_pago', account: string): Promise<User> => {
@@ -333,3 +346,43 @@ export const blockAvatarAttempt = (userId: number, avatarImage: string): Promise
 export const acceptPkInvitation = (invitationId: string): Promise<{ success: boolean, invitation: ConvitePK, battle?: PkBattle }> => apiClient(`/api/pk/invites/${invitationId}/accept`, { method: 'POST' });
 export const declinePkInvitation = (invitationId: string): Promise<{ success: boolean }> => apiClient(`/api/pk/invites/${invitationId}/decline`, { method: 'POST' });
 export const cancelPkInvitation = (invitationId: string): Promise<{ success: boolean }> => apiClient(`/api/pk/invites/${invitationId}/cancel`, { method: 'POST' });
+
+// --- LOCATION SERVICES (NEW) ---
+export const requestLocationPermission = (accuracy: 'exact' | 'approximate'): Promise<{ permission: 'granted', location: { lat: number, lon: number } }> => {
+    console.log(`[Mock API] Simulating request for ${accuracy} location permission.`);
+    // Simulate getting a location in Brazil
+    return Promise.resolve({
+        permission: 'granted',
+        location: {
+            lat: -23.5505,
+            lon: -46.6333
+        }
+    });
+};
+
+export const saveUserLocationPreference = (userId: number, accuracy: 'exact' | 'approximate'): Promise<{ success: boolean }> => {
+    console.log(`[Mock API] Saving location preference for user ${userId}: ${accuracy}`);
+    return Promise.resolve({ success: true });
+};
+
+export const getNearbyStreams = (userId: number, accuracy: 'exact' | 'approximate'): Promise<Stream[]> => {
+    console.log(`[Mock API] Fetching nearby streams for user ${userId} with ${accuracy} accuracy.`);
+    // Simulate nearby streams by just shuffling popular streams and maybe changing a few details
+    return apiClient<Stream[]>('/api/lives?category=popular&region=BR').then(streams => {
+        return streams
+            .map(stream => ({ ...stream, titulo: `Perto: ${stream.titulo}` }))
+            .sort(() => Math.random() - 0.5);
+    });
+};
+
+// --- PRIVACY SETTINGS (NEW) ---
+export const getPrivacySettings = (userId: number): Promise<PrivacySettings> => {
+    return apiClient(`/api/users/${userId}/privacy-settings`);
+};
+
+export const updatePrivacySettings = (userId: number, settings: Partial<Omit<PrivacySettings, 'userId'>>): Promise<PrivacySettings> => {
+    return apiClient(`/api/users/${userId}/privacy-settings`, {
+        method: 'PATCH',
+        body: JSON.stringify(settings)
+    });
+};

@@ -26,7 +26,13 @@ const ChatBubble: React.FC<{ message: ConversationMessage; isSender: boolean }> 
   return (
     <div className={`flex flex-col max-w-xs md:max-w-md ${isSender ? 'self-end' : 'self-start'}`}>
       <div className={`px-3 py-2 rounded-2xl ${bubbleClass}`}>
-        <p className="text-white text-base break-words">{message.text}</p>
+        {message.type === 'image' && message.imageUrl ? (
+            <a href={message.imageUrl} target="_blank" rel="noopener noreferrer" className="block">
+                <img src={message.imageUrl} alt="Imagem enviada" className="rounded-lg max-w-full h-auto" style={{ maxHeight: '200px', minWidth: '150px' }} />
+            </a>
+        ) : (
+            <p className="text-white text-base break-words">{message.text}</p>
+        )}
         <div className="flex items-center justify-end gap-1.5 mt-1 pt-1">
           <span className="text-xs text-gray-200/80">{formatTimestamp(message.timestamp)}</span>
           {isSender && message.status === 'sent' && <CheckIcon className="w-4 h-4 text-gray-200/80" />}
@@ -41,6 +47,7 @@ const PrivateChatModal: React.FC<PrivateChatModalProps> = ({ user, onClose }) =>
     const [conversations, setConversations] = useState<Conversation[]>([]);
     const [activeConversation, setActiveConversation] = useState<Conversation | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [isUploading, setIsUploading] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const [isActionsModalOpen, setIsActionsModalOpen] = useState(false);
     
@@ -86,7 +93,7 @@ const PrivateChatModal: React.FC<PrivateChatModalProps> = ({ user, onClose }) =>
             const updatedConversation = await liveStreamService.sendMessageToConversation(
                 activeConversation.id,
                 user.id,
-                message
+                { text: message }
             );
             setActiveConversation(updatedConversation);
             // also update in the main list
@@ -95,15 +102,42 @@ const PrivateChatModal: React.FC<PrivateChatModalProps> = ({ user, onClose }) =>
                 ? { ...c, messages: updatedConversation.messages, unreadCount: 0 } 
                 : c
             ).sort((a, b) => {
-                const lastMsgA = a.messages[a.messages.length - 1];
-                const lastMsgB = b.messages[b.messages.length - 1];
-                if (!lastMsgA) return 1;
-                if (!lastMsgB) return -1;
+                const messagesA = a.messages || [];
+                const messagesB = b.messages || [];
+                if ((messagesA).length === 0) return 1;
+                if ((messagesB).length === 0) return -1;
+                const lastMsgA = messagesA[messagesA.length - 1];
+                const lastMsgB = messagesB[messagesB.length - 1];
                 return new Date(lastMsgB.timestamp).getTime() - new Date(lastMsgA.timestamp).getTime();
             }));
 
         } catch(error) {
             console.error("Failed to send message", error);
+        }
+    };
+
+    const handleImageSelected = async (file: File) => {
+        if (!activeConversation) return;
+        setIsUploading(true);
+        try {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = async (event) => {
+                const imageDataUrl = event.target?.result as string;
+                const { url } = await liveStreamService.uploadChatImage(imageDataUrl);
+                const updatedConversation = await liveStreamService.sendMessageToConversation(
+                    activeConversation.id,
+                    user.id,
+                    { imageUrl: url }
+                );
+                setActiveConversation(updatedConversation);
+                 setConversations(convos => convos.map(c => c.id === updatedConversation.id ? { ...c, messages: updatedConversation.messages } : c));
+            };
+        } catch (error) {
+            console.error("Failed to send image", error);
+            alert("Erro ao enviar imagem.");
+        } finally {
+            setIsUploading(false);
         }
     };
 
@@ -168,17 +202,21 @@ const PrivateChatModal: React.FC<PrivateChatModalProps> = ({ user, onClose }) =>
                 <button onClick={() => setIsActionsModalOpen(true)}><EllipsisIcon className="w-6 h-6 text-gray-400" /></button>
             </header>
             <main className="flex-grow p-4 overflow-y-auto flex flex-col gap-3 bg-black/20 scrollbar-hide">
-                {isLoading && !activeConversation?.messages.length ? (
+                {isLoading && (!activeConversation || !activeConversation.messages || (activeConversation.messages || []).length === 0) ? (
                     <div className="flex-grow flex items-center justify-center"><div className="w-8 h-8 border-4 border-white border-t-transparent rounded-full animate-spin"></div></div>
                 ) : (
-                    activeConversation?.messages.map(msg => (
+                    (activeConversation?.messages || []).map(msg => (
                       <ChatBubble key={msg.id} message={msg} isSender={msg.senderId === user.id} />
                     ))
                 )}
                 <div ref={messagesEndRef} />
             </main>
             <footer className="p-2 bg-[#2c2c2e] shrink-0">
-                <ChatInput onSendMessage={handleSendMessage} />
+                <ChatInput 
+                    onSendMessage={handleSendMessage} 
+                    onImageSelected={handleImageSelected}
+                    isUploading={isUploading}
+                />
             </footer>
         </>
     );

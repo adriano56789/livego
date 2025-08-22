@@ -1,8 +1,7 @@
-
-
 import React from 'react';
 import type { PkBattle, Stream, PkBattleStreamer } from '../types';
 import UserPlaceholderIcon from './icons/UserPlaceholderIcon';
+import Flag from './Flag';
 
 interface PkBattleCardProps {
     battle: PkBattle;
@@ -63,12 +62,18 @@ const PkBattleCard: React.FC<PkBattleCardProps> = ({ battle, onViewStream }) => 
             <div className="relative z-10 flex justify-between items-end p-3 flex-grow">
                 {/* Streamer 1 Info */}
                 <div className="flex flex-col items-start">
-                    <h3 className="font-bold text-lg drop-shadow-md truncate max-w-[120px]">{streamer1.name}</h3>
+                    <div className="flex items-center gap-2">
+                        {streamer1.countryCode && <Flag code={streamer1.countryCode} className="w-5 h-auto rounded-sm" />}
+                        <h3 className="font-bold text-lg drop-shadow-md truncate max-w-[100px]">{streamer1.name}</h3>
+                    </div>
                 </div>
 
                 {/* Streamer 2 Info */}
                 <div className="flex flex-col items-end">
-                    <h3 className="font-bold text-lg drop-shadow-md truncate max-w-[120px]">{streamer2.name}</h3>
+                    <div className="flex items-center gap-2">
+                        <h3 className="font-bold text-lg drop-shadow-md truncate max-w-[100px]">{streamer2.name}</h3>
+                        {streamer2.countryCode && <Flag code={streamer2.countryCode} className="w-5 h-auto rounded-sm" />}
+                    </div>
                 </div>
             </div>
             

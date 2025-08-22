@@ -10,6 +10,7 @@ import CodeBracketIcon from './icons/CodeBracketIcon';
 import DocumentTextIcon from './icons/DocumentTextIcon';
 import BellIcon from './icons/BellIcon';
 import MailIcon from './icons/MailIcon';
+import LockSolidIcon from './icons/LockSolidIcon';
 
 const SettingsMenuItem: React.FC<{
   icon: React.ReactNode;
@@ -49,6 +50,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onExit, onLogout,
     { icon: <UsersIcon className="w-6 h-6" />, label: "Contas Conectadas", onClick: () => onNavigate('connected-accounts') },
     { icon: <BellIcon className="w-6 h-6" />, label: "Configurações de Notificação", onClick: () => onNavigate('notification-settings') },
     { icon: <MailIcon className="w-6 h-6" />, label: "Convite privado ao vivo", onClick: () => onNavigate('private-live-invite-settings') },
+    { icon: <LockSolidIcon className="w-6 h-6" />, label: "Configurações de Privacidade", onClick: () => onNavigate('privacy-settings') },
     { icon: <DollarIcon className="w-6 h-6" />, label: "Informações de Ganhos", onClick: () => onNavigate('earnings-info') },
     { icon: <CopyrightIcon className="w-6 h-6" />, label: "Direitos Autorais", onClick: () => onNavigate('copyright') },
     { icon: <InfoIcon className="w-6 h-6" />, label: "Versão do App", onClick: () => onNavigate('app-version') },

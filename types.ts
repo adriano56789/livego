@@ -1,10 +1,9 @@
 
-
 // Basic types
-export type AppView = 'login' | 'upload' | 'edit' | 'feed' | 'profile' | 'go-live-setup' | 'messages' | 'diamond-purchase' | 'video' | 'protectors' | 'blocked-list' | 'withdrawal' | 'withdrawal-method-setup' | 'withdrawal-confirmation' | 'customer-service' | 'backpack' | 'help-article' | 'live-support-chat' | 'report-and-suggestion' | 'event-center' | 'event-detail' | 'settings' | 'copyright' | 'earnings-info' | 'connected-accounts' | 'search' | 'app-version' | 'live-ended' | 'my-level' | 'developer-tools' | 'ranking' | 'documentation' | 'purchase-history' | 'notification-settings' | 'push-settings' | 'private-live-invite-settings' | 'followers' | 'following' | 'visitors' | 'live-stream-viewer' | 'chat' | 'purchase-confirmation' | 'ranking-list' | 'profile-editor' | 'fans' | 'avatar-protection';
+export type AppView = 'login' | 'upload' | 'edit' | 'feed' | 'profile' | 'go-live-setup' | 'messages' | 'diamond-purchase' | 'video' | 'protectors' | 'blocked-list' | 'withdrawal' | 'withdrawal-method-setup' | 'withdrawal-confirmation' | 'customer-service' | 'backpack' | 'help-article' | 'live-support-chat' | 'report-and-suggestion' | 'event-center' | 'event-detail' | 'settings' | 'copyright' | 'earnings-info' | 'connected-accounts' | 'search' | 'app-version' | 'live-ended' | 'my-level' | 'developer-tools' | 'ranking' | 'documentation' | 'purchase-history' | 'notification-settings' | 'push-settings' | 'private-live-invite-settings' | 'followers' | 'following' | 'visitors' | 'live-stream-viewer' | 'chat' | 'purchase-confirmation' | 'ranking-list' | 'profile-editor' | 'fans' | 'avatar-protection' | 'friend-requests' | 'privacy-settings';
 export type Gender = 'male' | 'female';
-export type Category = 'Popular' | 'Seguindo' | 'Perto' | 'Privada' | 'PK' | 'Novo' | 'Música' | 'Dança';
-export type CameraStatus = 'idle' | 'loading' | 'success' | 'denied' | 'error' | 'not-found' | 'in-use' | 'insecure';
+export type Category = 'Popular' | 'Seguindo' | 'Perto' | 'Atualizado' | 'Privada' | 'PK' | 'Novo' | 'Música' | 'Dança';
+export type CameraStatus = 'idle' | 'loading' | 'success' | 'denied' | 'error' | 'not-found' | 'in-use' | 'insecure' | 'timeout';
 export type EventStatus = 'ongoing' | 'upcoming' | 'past';
 export type InventoryCategory = 'gift' | 'decoration';
 export type InventorySubType = 'profile_frame' | 'entry_effect';
@@ -19,6 +18,11 @@ export interface SelectableOption {
   label: string;
 }
 
+export interface Region {
+  name: string;
+  code: string;
+}
+
 // User and Profile types
 export interface WithdrawalMethod {
     method: 'pix' | 'mercado_pago';
@@ -30,6 +34,7 @@ export interface User {
   name: string;
   email: string;
   avatar_url?: string;
+  photo_gallery?: string[];
   nickname: string | null;
   gender: Gender | null;
   birthday: string | null;
@@ -126,6 +131,7 @@ export interface LiveStreamRecord {
   camera_facing_mode?: FacingMode;
   voice_enabled?: boolean;
   like_count?: number;
+  country_code?: string;
 }
 
 // This is the VIEW MODEL for the frontend, derived from LiveStreamRecord
@@ -147,6 +153,7 @@ export interface Stream {
   isParty?: boolean;
   cameraFacingMode?: FacingMode;
   voiceEnabled?: boolean;
+  countryCode?: string;
 }
 
 // Listener function type for real-time stream updates.
@@ -182,6 +189,7 @@ export interface PkBattleStreamer {
   isVerified: boolean;
   winMultiplier?: number;
   status?: 'win' | 'lose';
+  countryCode?: string;
 }
 
 export interface PkBattle {
@@ -262,25 +270,28 @@ export interface TabelaMensagem {
   id: string;
   conversa_id: string;
   remetente_id: number;
-  conteudo: string;
+  conteudo: string; // Can be text or an image URL
   timestamp: string;
-  tipo_conteudo: 'texto';
+  tipo_conteudo: 'texto' | 'imagem' | 'sistema'; // Expanded type
   status_leitura: { [userId: number]: boolean };
 }
 
 // This is a VIEW MODEL for the frontend. The API will construct this from the tables above.
 export interface ConversationMessage {
-  id: string; // From TabelaMensagem.id
-  senderId: number; // From TabelaMensagem.remetente_id
-  text: string; // From TabelaMensagem.conteudo
-  timestamp: string; // From TabelaMensagem.timestamp
+  id: string;
+  senderId: number;
+  type: 'text' | 'image' | 'system';
+  text: string | null;
+  imageUrl: string | null;
+  timestamp: string;
   status: 'sent' | 'seen';
-  seenBy: number[]; // Derived from TabelaMensagem.status_leitura
+  seenBy: number[];
 }
 
 // This is a VIEW MODEL for the frontend. The API will construct this from the tables above.
 export interface Conversation {
   id: string; // From TabelaConversa.id
+  type?: 'chat' | 'friend_requests_summary';
   participants: number[]; // From TabelaConversa.participantes
   otherUserId: number; // Derived
   otherUserName: string; // Derived from Users table
@@ -291,11 +302,12 @@ export interface Conversation {
 
 export interface ChatMessage {
   id: number;
-  type: 'message' | 'entry' | 'gift' | 'special_entry' | 'levelup' | 'announcement';
+  type: 'message' | 'entry' | 'gift' | 'special_entry' | 'levelup' | 'announcement' | 'image';
   level?: number;
   username: string;
   userId: number;
   message: string;
+  imageUrl?: string;
   emojis?: string;
   color?: string;
   giftName?: string;
@@ -303,6 +315,9 @@ export interface ChatMessage {
   giftAnimationUrl?: string;
   timestamp: string;
   badgeText?: string;
+  avatarUrl?: string;
+  age?: number;
+  gender?: Gender | null;
 }
 
 // Purchase and Wallet types
@@ -715,3 +730,10 @@ export interface UserUnblockedUpdate {
     targetId: number;
 }
 export type UserUnblockedListener = (data: UserUnblockedUpdate) => void;
+
+export interface PrivacySettings {
+  userId: number;
+  showLocation: boolean;
+  showActiveStatus: boolean;
+  showInNearby: boolean;
+}

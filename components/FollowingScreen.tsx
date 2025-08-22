@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useCallback } from 'react';
 import type { User } from '../types';
 import * as authService from '../services/authService';
@@ -35,7 +36,7 @@ const FollowingScreen: React.FC<FollowingScreenProps> = ({ currentUser, viewedUs
     }, [fetchData]);
 
     const handleFollowToggle = async (userIdToToggle: number) => {
-      const isCurrentlyFollowing = currentUser.following.includes(userIdToToggle);
+      const isCurrentlyFollowing = (currentUser.following || []).includes(userIdToToggle);
       const updatedUser = isCurrentlyFollowing
         ? await liveStreamService.unfollowUser(currentUser.id, userIdToToggle)
         : await liveStreamService.followUser(currentUser.id, userIdToToggle);

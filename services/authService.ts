@@ -1,3 +1,4 @@
+
 import { apiClient } from './apiClient';
 import type { User, Conversation, DiamondPackage, Address, CardDetails, PaymentMethod, PurchaseOrder, CardBrand } from '../types';
 
@@ -22,6 +23,10 @@ export const getFollowers = (userId: number): Promise<User[]> => {
     return apiClient(`/api/users/${userId}/followers`);
 };
 
+export const getFriends = (userId: number): Promise<User[]> => {
+    return apiClient(`/api/users/${userId}/friends`);
+};
+
 export const getFans = (userId: number): Promise<User[]> => {
     // In this mock, fans are the same as followers.
     return apiClient(`/api/users/${userId}/fans`);
@@ -44,6 +49,20 @@ export const uploadProfilePhoto = (userId: number, photoDataUrl: string): Promis
     return apiClient(`/api/users/${userId}/avatar`, {
         method: 'PATCH',
         body: JSON.stringify({ photoDataUrl }),
+    });
+};
+
+export const addProfilePhoto = (userId: number, photoDataUrl: string): Promise<User> => {
+    return apiClient(`/api/users/${userId}/photos`, {
+        method: 'POST',
+        body: JSON.stringify({ photoDataUrl }),
+    });
+};
+
+export const deleteProfilePhoto = (userId: number, photoUrl: string): Promise<User> => {
+    return apiClient(`/api/users/${userId}/photos`, {
+        method: 'DELETE',
+        body: JSON.stringify({ photoUrl }),
     });
 };
 
@@ -135,4 +154,8 @@ export const checkAvatarInUse = (avatarImage: string): Promise<{ inUse: boolean,
         method: 'POST',
         body: JSON.stringify({ avatarImage }),
     });
+};
+
+export const getFriendRequests = (userId: number): Promise<User[]> => {
+    return apiClient(`/api/users/${userId}/friend-requests`);
 };

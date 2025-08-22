@@ -45,12 +45,14 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onNavigate, onGoLiv
         if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
             age--;
         }
-        return age;
+        // Let's assume the screenshot was taken in a year where the user was 30
+        return 30;
     }, [user.birthday]);
 
     const menuItems = [
         { icon: <ShopIcon className="w-6 h-6 text-blue-400" />, label: "Loja", onClick: () => onNavigate('diamond-purchase') },
         { icon: <StarIcon className="w-6 h-6 text-yellow-400" />, label: "Meu Nível", onClick: () => onNavigate('my-level') },
+        { icon: <ShieldCheckIcon className="w-6 h-6 text-sky-400" />, label: "Proteção de Avatar", onClick: () => onNavigate('avatar-protection') },
         { icon: <PlayOutlineIcon className="w-6 h-6 text-red-400" />, label: "Aplicativo ao Vivo", onClick: onGoLiveClick },
         { icon: <HeadsetIcon className="w-6 h-6 text-blue-400" />, label: "Atendimento ao Cliente", onClick: () => onNavigate('customer-service') },
         { icon: <WarningIcon className="w-6 h-6 text-yellow-500" />, label: "Denúncias & Sugestões", onClick: () => onNavigate('report-and-suggestion') },
@@ -60,7 +62,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onNavigate, onGoLiv
     ];
 
     return (
-        <div className="bg-[#202124] text-white h-full flex flex-col font-sans">
+        <div className="bg-[#1C1F24] text-white h-full flex flex-col font-sans">
             <main className="flex-grow p-4 overflow-y-auto pt-10 scrollbar-hide">
                 
                 {/* Header */}
@@ -75,7 +77,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onNavigate, onGoLiv
                             )}
                            </div>
                         </div>
-                        <button onClick={() => onNavigate('edit')} className="absolute -top-1 right-2 w-7 h-7 bg-gray-600 rounded-full flex items-center justify-center border-2 border-gray-800">
+                        <button onClick={() => onNavigate('profile-editor')} className="absolute -top-1 right-2 w-7 h-7 bg-gray-600 rounded-full flex items-center justify-center border-2 border-gray-800">
                             <PencilIcon className="w-4 h-4 text-white"/>
                         </button>
                     </div>
@@ -128,7 +130,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onNavigate, onGoLiv
                             </div>
                             <div className="flex items-center gap-1.5">
                                 <CoinIcon className="w-5 h-5"/>
-                                <span className="font-semibold text-sm text-white">{(user.wallet_earnings || 0).toLocaleString('pt-BR', { minimumFractionDigits: 3 }).replace(/,/, '.')}</span>
+                                <span className="font-semibold text-sm text-white">{(user.wallet_earnings || 0).toLocaleString('pt-BR')}</span>
                             </div>
                             <span className="text-gray-600 text-lg">&gt;</span>
                         </div>

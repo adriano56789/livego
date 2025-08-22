@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import type { User, Category, CameraStatus, FacingMode, LiveCategory } from '../types';
 import * as liveStreamService from '../services/liveStreamService';
@@ -130,6 +131,9 @@ const GoLiveSetupScreen: React.FC<GoLiveSetupScreenProps> = ({ user, onStartStre
               case 'NotFoundError':
               case 'DevicesNotFoundError':
                 setCameraStatus('not-found');
+                break;
+              case 'TimeoutError':
+                setCameraStatus('timeout');
                 break;
               default:
                 setCameraStatus('error');
@@ -380,6 +384,9 @@ const GoLiveSetupScreen: React.FC<GoLiveSetupScreenProps> = ({ user, onStartStre
         <footer className="shrink-0 flex flex-col items-center pb-4 pt-4 mt-auto">
             {cameraStatus === 'denied' && (
                 <p className="text-red-400 text-center text-sm mb-4">Acesso à câmera negado. Verifique as permissões do navegador.</p>
+            )}
+            {cameraStatus === 'timeout' && (
+                <p className="text-yellow-400 text-center text-sm mb-4">A câmera demorou para responder. Verifique suas conexões e tente novamente.</p>
             )}
             {cameraStatus === 'in-use' && (
                 <p className="text-yellow-400 text-center text-sm mb-4">Sua câmera parece estar em uso por outro aplicativo. Por favor, feche-o e tente novamente.</p>

@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useRef } from 'react';
 import type { User, Conversation, ConversationMessage, PublicProfile } from '../types';
 import * as liveStreamService from '../services/liveStreamService';
@@ -23,18 +24,24 @@ const ChatBubble: React.FC<ChatBubbleProps> = ({ message, isSender }) => {
 
   return (
     <div className={`flex flex-col max-w-xs md:max-w-md ${isSender ? 'self-end' : 'self-start'}`}>
-      <div className={`px-3 py-2 rounded-2xl ${bubbleClass}`}>
-        <p className="text-white text-base break-words">{message.text}</p>
-        <div className="flex items-center justify-end gap-1.5 mt-1 pt-1">
-          <span className="text-xs text-gray-200/80">{formatTimestamp(message.timestamp)}</span>
-          {isSender && message.status === 'sent' && (
-            <CheckIcon className="w-4 h-4 text-gray-200/80" />
-          )}
-          {isSender && message.status === 'seen' && (
-            <DoubleCheckIcon className="w-4 h-4 text-green-300" />
-          )}
+        <div className={`px-3 py-2 rounded-2xl ${bubbleClass}`}>
+            {message.type === 'image' && message.imageUrl ? (
+                <a href={message.imageUrl} target="_blank" rel="noopener noreferrer" className="block">
+                    <img src={message.imageUrl} alt="Imagem enviada" className="rounded-lg max-w-full h-auto" style={{ maxHeight: '200px', minWidth: '150px' }} />
+                </a>
+            ) : (
+                <p className="text-white text-base break-words">{message.text}</p>
+            )}
+            <div className="flex items-center justify-end gap-1.5 mt-1 pt-1">
+                <span className="text-xs text-gray-200/80">{formatTimestamp(message.timestamp)}</span>
+                {isSender && message.status === 'sent' && (
+                    <CheckIcon className="w-4 h-4 text-gray-200/80" />
+                )}
+                {isSender && message.status === 'seen' && (
+                    <DoubleCheckIcon className="w-4 h-4 text-green-300" />
+                )}
+            </div>
         </div>
-      </div>
     </div>
   );
 };
@@ -49,6 +56,7 @@ interface EmbeddedChatViewProps {
 const EmbeddedChatView: React.FC<EmbeddedChatViewProps> = ({ currentUser, otherUser, onClose }) => {
   const [conversation, setConversation] = useState<Conversation | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isUploading, setIsUploading] = useState(false);
   const [isActionsModalOpen, setIsActionsModalOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -75,8 +83,8 @@ const EmbeddedChatView: React.FC<EmbeddedChatViewProps> = ({ currentUser, otherU
     const interval = setInterval(async () => {
         try {
             const latestConvo = await liveStreamService.getConversationById(conversation.id, currentUser.id);
-            const lastKnownMessageId = conversation.messages[conversation.messages.length - 1]?.id;
-            const lastFetchedMessageId = latestConvo.messages[latestConvo.messages.length - 1]?.id;
+            const lastKnownMessageId = (conversation.messages || [])[(conversation.messages || []).length - 1]?.id;
+            const lastFetchedMessageId = (latestConvo.messages || [])[(latestConvo.messages || []).length - 1]?.id;
 
             if (lastFetchedMessageId && lastFetchedMessageId !== lastKnownMessageId) {
                 setConversation(latestConvo);
@@ -100,12 +108,36 @@ const EmbeddedChatView: React.FC<EmbeddedChatViewProps> = ({ currentUser, otherU
         const updatedConversation = await liveStreamService.sendMessageToConversation(
             conversation.id,
             currentUser.id,
-            message
+            { text: message }
         );
         setConversation(updatedConversation);
     } catch(error) {
         console.error("Failed to send message", error);
         alert("Erro ao enviar mensagem.");
+    }
+  };
+
+   const handleImageSelected = async (file: File) => {
+    if (!conversation) return;
+    setIsUploading(true);
+    try {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = async (event) => {
+            const imageDataUrl = event.target?.result as string;
+            const { url } = await liveStreamService.uploadChatImage(imageDataUrl);
+            const updatedConversation = await liveStreamService.sendMessageToConversation(
+                conversation.id,
+                currentUser.id,
+                { imageUrl: url }
+            );
+            setConversation(updatedConversation);
+        };
+    } catch (error) {
+        console.error("Failed to send image", error);
+        alert("Erro ao enviar imagem.");
+    } finally {
+        setIsUploading(false);
     }
   };
 
@@ -138,12 +170,12 @@ const EmbeddedChatView: React.FC<EmbeddedChatViewProps> = ({ currentUser, otherU
           </header>
 
           <main className="flex-grow p-4 overflow-y-auto flex flex-col gap-3 scrollbar-hide">
-            {isLoading && (!conversation || conversation.messages.length === 0) ? (
+            {isLoading && (!conversation || (conversation.messages || []).length === 0) ? (
                 <div className="flex-grow flex items-center justify-center">
                     <div className="w-8 h-8 border-4 border-white border-t-transparent rounded-full animate-spin"></div>
                 </div>
             ) : (
-                conversation?.messages.map(msg => (
+                (conversation?.messages || []).map(msg => (
                     <ChatBubble key={msg.id} message={msg} isSender={msg.senderId === currentUser.id} />
                 ))
             )}
@@ -151,7 +183,11 @@ const EmbeddedChatView: React.FC<EmbeddedChatViewProps> = ({ currentUser, otherU
           </main>
 
           <footer className="p-2 bg-[#1c1c1c] shrink-0">
-            <ChatInput onSendMessage={handleSendMessage} />
+            <ChatInput 
+              onSendMessage={handleSendMessage} 
+              onImageSelected={handleImageSelected}
+              isUploading={isUploading}
+            />
           </footer>
         </div>
       </div>

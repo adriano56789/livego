@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import type { Conversation, ConversationMessage, PublicProfile, Stream, PkBattle, User } from '../types';
 import * as liveStreamService from '../services/liveStreamService';
@@ -21,6 +22,14 @@ interface ChatScreenProps {
 }
 
 const ChatBubble: React.FC<{ message: ConversationMessage; isSender: boolean }> = ({ message, isSender }) => {
+  if (message.type === 'system') {
+    return (
+      <div className="self-center text-center text-xs text-gray-400 bg-gray-800/50 rounded-full py-1 px-3 my-2">
+        {message.text}
+      </div>
+    );
+  }
+
   const bubbleClass = isSender
     ? 'bg-green-600 self-end rounded-br-none'
     : 'bg-[#373738] self-start rounded-bl-none';
@@ -29,18 +38,24 @@ const ChatBubble: React.FC<{ message: ConversationMessage; isSender: boolean }> 
 
   return (
     <div className={`flex flex-col max-w-xs md:max-w-md ${isSender ? 'self-end' : 'self-start'}`}>
-      <div className={`px-3 py-2 rounded-2xl ${bubbleClass}`}>
-        <p className="text-white text-base break-words">{message.text}</p>
-        <div className="flex items-center justify-end gap-1.5 mt-1 pt-1">
-          <span className="text-xs text-gray-200/80">{formatTimestamp(message.timestamp)}</span>
-          {isSender && message.status === 'sent' && (
-            <CheckIcon className="w-4 h-4 text-gray-200/80" />
-          )}
-          {isSender && message.status === 'seen' && (
-            <DoubleCheckIcon className="w-4 h-4 text-green-300" />
-          )}
+        <div className={`px-3 py-2 rounded-2xl ${bubbleClass}`}>
+            {message.type === 'image' && message.imageUrl ? (
+                <a href={message.imageUrl} target="_blank" rel="noopener noreferrer" className="block">
+                    <img src={message.imageUrl} alt="Imagem enviada" className="rounded-lg max-w-full h-auto" style={{ maxHeight: '200px', minWidth: '150px' }} />
+                </a>
+            ) : (
+                <p className="text-white text-base break-words">{message.text}</p>
+            )}
+            <div className="flex items-center justify-end gap-1.5 mt-1 pt-1">
+                <span className="text-xs text-gray-200/80">{formatTimestamp(message.timestamp)}</span>
+                {isSender && message.status === 'sent' && (
+                    <CheckIcon className="w-4 h-4 text-gray-200/80" />
+                )}
+                {isSender && message.status === 'seen' && (
+                    <DoubleCheckIcon className="w-4 h-4 text-green-300" />
+                )}
+            </div>
         </div>
-      </div>
     </div>
   );
 };
@@ -52,6 +67,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ conversationId, currentUserId, 
   const [isActionsModalOpen, setIsActionsModalOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isBlocked, setIsBlocked] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -81,12 +97,50 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ conversationId, currentUserId, 
         const updatedConversation = await liveStreamService.sendMessageToConversation(
             conversation.id,
             currentUserId,
-            message
+            { text: message }
         );
         setConversation(updatedConversation);
     } catch(error) {
         console.error("Failed to send message", error);
         alert("Erro ao enviar mensagem.");
+    }
+  };
+
+  const handleImageSelected = async (file: File) => {
+    if (!conversation) return;
+    setIsUploading(true);
+    try {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = async (event) => {
+            try {
+                const imageDataUrl = event.target?.result as string;
+                if (!imageDataUrl) {
+                    throw new Error("Não foi possível ler o arquivo de imagem.");
+                }
+                const { url } = await liveStreamService.uploadChatImage(imageDataUrl);
+                const updatedConversation = await liveStreamService.sendMessageToConversation(
+                    conversation.id,
+                    currentUserId,
+                    { imageUrl: url }
+                );
+                setConversation(updatedConversation);
+            } catch (err) {
+                 console.error("Failed to send image", err);
+                 alert(err instanceof Error ? err.message : "Erro ao enviar imagem.");
+            } finally {
+                setIsUploading(false);
+            }
+        };
+        reader.onerror = (error) => {
+            console.error("Erro ao ler o arquivo:", error);
+            alert("Erro ao processar a imagem.");
+            setIsUploading(false);
+        };
+    } catch (error) {
+        console.error("Failed to prepare image", error);
+        alert("Erro ao preparar a imagem.");
+        setIsUploading(false);
     }
   };
 
@@ -177,7 +231,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ conversationId, currentUserId, 
       </main>
 
       <footer className="p-2 bg-[#1c1c1c] shrink-0">
-        <ChatInput onSendMessage={handleSendMessage} />
+        <ChatInput onSendMessage={handleSendMessage} onImageSelected={handleImageSelected} isUploading={isUploading} />
       </footer>
 
       {otherUserProfileForModal && (

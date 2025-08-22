@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect } from 'react';
 import type { PublicProfile, Stream, PkBattle, User } from '../types';
 import * as liveStreamService from '../services/liveStreamService';
@@ -61,7 +62,7 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ userId, currentUser
     const [isActionsModalOpen, setIsActionsModalOpen] = useState(false);
     const [isBlocked, setIsBlocked] = useState(false);
     const [idCopied, setIdCopied] = useState(false);
-    const [isFollowing, setIsFollowing] = useState(currentUser.following.includes(userId));
+    const [isFollowing, setIsFollowing] = useState((currentUser.following || []).includes(userId));
     const [isFollowLoading, setIsFollowLoading] = useState(false);
     const [isChatOpen, setIsChatOpen] = useState(false);
 
@@ -73,7 +74,7 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ userId, currentUser
             try {
                 const data = await liveStreamService.getPublicProfile(userId);
                 setProfile(data);
-                setIsFollowing(currentUser.following.includes(data.id));
+                setIsFollowing((currentUser.following || []).includes(data.id));
             } catch (error) {
                 console.error(`Failed to fetch profile for user ${userId}:`, error);
                 onClose(); // Close if profile not found

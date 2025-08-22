@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import type { User, Stream, PkBattle, ChatMessage, LiveDetails, PkInvitation, SoundEffectName, MuteStatusListener, UserKickedListener, SoundEffectListener, PublicProfile, PkBattleState, ConvitePK, IncomingPrivateLiveInvite, UserBlockedListener, UserUnblockedListener, Viewer, PkBattleStreamer, AppView } from '../types';
 import * as liveStreamService from '../services/liveStreamService';
@@ -120,6 +119,7 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
     const [chatUserProfiles, setChatUserProfiles] = useState<Record<number, { avatarUrl: string }>>({});
     const [headerViewers, setHeaderViewers] = useState<Record<number, Viewer[]>>({});
     const [viewingProfileId, setViewingProfileId] = useState<number | null>(null);
+    const [isUploading, setIsUploading] = useState(false);
     
     // Modal states
     const [isGiftPanelOpen, setIsGiftPanelOpen] = useState(false);
@@ -167,7 +167,7 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
     }, [initialStream]);
     
     const handleFollowToggle = async (userIdToToggle: number) => {
-        const isCurrentlyFollowing = user.following.includes(userIdToToggle);
+        const isCurrentlyFollowing = (user.following || []).includes(userIdToToggle);
         const updatedUser = isCurrentlyFollowing
           ? await liveStreamService.unfollowUser(user.id, userIdToToggle)
           : await liveStreamService.followUser(user.id, userIdToToggle);
@@ -205,12 +205,14 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
               if (newGift && newGift.id !== lastGiftIdRef.current) {
                   lastGiftIdRef.current = newGift.id;
                   setLastPkGift(newGift); 
-                  if (!chatUserProfiles[newGift.userId]) {
-                      try {
-                          const profile = await authService.getUserProfile(newGift.userId);
-                          setChatUserProfiles(prev => ({ ...prev, [newGift.userId]: { avatarUrl: profile.avatar_url || '' } }));
-                      } catch(e) { console.error("Failed to fetch gift sender profile", e); }
-                  }
+                  setChatUserProfiles(profiles => {
+                      if (!profiles[newGift.userId]) {
+                           authService.getUserProfile(newGift.userId).then(profile => {
+                              setChatUserProfiles(prev => ({ ...prev, [newGift.userId]: { avatarUrl: profile.avatar_url || '' } }));
+                          }).catch(e => console.error("Failed to fetch gift sender profile", e));
+                      }
+                      return profiles;
+                  });
               }
               
               if (new Date() > new Date(battleState.data_fim)) {
@@ -243,22 +245,31 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
           console.error("Stream might have ended:", error);
           onStreamEnded(liveId);
       }
-    }, [initialStream, isPkBattle, onStreamEnded, liveId, isPkViewActive, chatUserProfiles]);
+    }, [initialStream, isPkBattle, onStreamEnded, liveId, isPkViewActive]);
     
     useEffect(() => {
-      const getSimulatedToken = async () => {
-        try {
-            const roomName = `live-${liveId}`;
-            const { token } = await liveStreamService.getLiveKitToken(roomName, String(user.id));
-            console.log(`[SIMULAÇÃO] Token LiveKit recebido para a sala ${roomName}:`, token);
-            showApiResponse('POST /api/livekit/token', { token });
-        } catch(e) {
-            console.error("Falha ao obter token simulado do LiveKit", e);
-        }
-      };
+        const getSimulatedToken = async () => {
+            try {
+                const roomName = `live-${liveId}`;
+                const { token } = await liveStreamService.getLiveKitToken(roomName, String(user.id));
+                console.log(`[SIMULAÇÃO] Token LiveKit recebido para a sala ${roomName}:`, token);
+                showApiResponse('POST /api/livekit/token', { token });
+            } catch(e) {
+                console.error("Falha ao obter token simulado do LiveKit", e);
+            }
+        };
 
-      getSimulatedToken();
-      fetchLiveDetails();
+        getSimulatedToken();
+        liveStreamService.joinLiveStream(user.id, liveId);
+        
+        // Polling for real-time updates
+        const intervalId = setInterval(fetchLiveDetails, 4000);
+        fetchLiveDetails(); // Initial fetch
+
+        return () => {
+            clearInterval(intervalId);
+            liveStreamService.leaveLiveStream(user.id, liveId);
+        };
     }, [liveId, user.id, fetchLiveDetails, showApiResponse]);
 
     useEffect(() => {
@@ -310,6 +321,38 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
             alert((error as Error).message);
         }
     }, [liveId, user.id, fetchLiveDetails, isPkViewActive, activePkBattle]);
+
+    const handleImageSelected = useCallback(async (file: File) => {
+        setIsUploading(true);
+        try {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = async (event) => {
+                try {
+                    const imageDataUrl = event.target?.result as string;
+                    if (!imageDataUrl) throw new Error("Could not read image file.");
+
+                    const { url } = await liveStreamService.uploadChatImage(imageDataUrl);
+                    showApiResponse('POST /api/chat/upload', { url });
+
+                    const currentLiveId = isPkViewActive && activePkBattle ? activePkBattle.streamer_A.streamId : liveId;
+                    await liveStreamService.sendChatMessage(currentLiveId, user.id, '', url);
+                    fetchLiveDetails();
+                } catch (err) {
+                    alert(err instanceof Error ? err.message : "Failed to send image.");
+                } finally {
+                    setIsUploading(false);
+                }
+            };
+            reader.onerror = () => {
+                alert("Failed to read file.");
+                setIsUploading(false);
+            }
+        } catch (error) {
+            alert("An error occurred while preparing the image.");
+            setIsUploading(false);
+        }
+    }, [user.id, liveId, showApiResponse, fetchLiveDetails, isPkViewActive, activePkBattle]);
 
     const handleSendGift = async (giftId: number, receiverId?: number) => {
         try {
@@ -485,6 +528,9 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
                             onUserClick={() => setViewingProfileId(streamer1.id)}
                             onViewersClick={() => setOnlineUsersModalLiveId(activePkBattle.streamer_A.streamId)}
                             onCoinsClick={() => setHourlyRankingModalInfo({ liveId: activePkBattle.streamer_A.streamId, streamer: { id: streamer1.id, name: streamer1.nickname || streamer1.name, avatarUrl: streamer1.avatar_url || '' } })}
+                            isCurrentUserHost={user.id === streamer1.id}
+                            isFollowing={(user.following || []).includes(streamer1.id)}
+                            onFollowToggle={() => handleFollowToggle(streamer1.id)}
                         />
                         <LiveStreamHeader 
                             variant="pk-right" 
@@ -498,6 +544,9 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
                             onExitClick={handleExitClick}
                             onViewersClick={() => setOnlineUsersModalLiveId(activePkBattle.streamer_B.streamId)}
                             onCoinsClick={() => setHourlyRankingModalInfo({ liveId: activePkBattle.streamer_B.streamId, streamer: { id: streamer2.id, name: streamer2.nickname || streamer2.name, avatarUrl: streamer2.avatar_url || '' } })}
+                            isCurrentUserHost={user.id === streamer2.id}
+                            isFollowing={(user.following || []).includes(streamer2.id)}
+                            onFollowToggle={() => handleFollowToggle(streamer2.id)}
                         />
                     </header>
 
@@ -547,7 +596,7 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
                     <footer className="p-3 flex flex-col items-start gap-4">
                         <div className="w-full max-w-md"><ChatArea messages={chatMessages} onUserClick={setViewingProfileId} /></div>
                         <div className="w-full flex items-center gap-2 pointer-events-auto">
-                            <ChatInput onSendMessage={handleSendMessage} disabled={isBlockedByHost} />
+                            <ChatInput onSendMessage={handleSendMessage} isUploading={isUploading} disabled={isBlockedByHost} allowImageUpload={false} />
                             <div className="flex items-center gap-2 shrink-0">
                                 {isHost && (
                                     <>
@@ -596,6 +645,9 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
                       onViewersClick={() => setOnlineUsersModalLiveId(liveId)}
                       onExitClick={handleExitClick}
                       onCoinsClick={() => setHourlyRankingModalInfo({ liveId, streamer: { id: streamerId, name: liveDetails?.streamerName || '', avatarUrl: liveDetails?.streamerAvatarUrl || '' } })}
+                      isCurrentUserHost={isHost}
+                      isFollowing={(user.following || []).includes(streamerId)}
+                      onFollowToggle={() => handleFollowToggle(streamerId)}
                   />
               </header>
               
@@ -606,7 +658,7 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
               <footer className="p-3 flex flex-col items-start gap-4">
                   <div className="w-full max-w-md"><ChatArea messages={chatMessages} onUserClick={setViewingProfileId} /></div>
                   <div className="w-full flex items-center gap-2 pointer-events-auto">
-                      <ChatInput onSendMessage={handleSendMessage} disabled={isBlockedByHost} />
+                      <ChatInput onSendMessage={handleSendMessage} isUploading={isUploading} disabled={isBlockedByHost} allowImageUpload={false} />
                       <div className="flex items-center gap-2 shrink-0">
                           {isHost ? (
                               <>

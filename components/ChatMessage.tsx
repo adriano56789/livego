@@ -1,6 +1,11 @@
+
+
 import React from 'react';
 import type { ChatMessage } from '../types';
 import { Player } from '@lottiefiles/react-lottie-player';
+import FancyChatBubble from './FancyChatBubble';
+import ProfileBadge from './ProfileBadge';
+import UserPlaceholderIcon from './icons/UserPlaceholderIcon';
 
 interface ChatMessageItemProps {
   message: ChatMessage;
@@ -9,104 +14,105 @@ interface ChatMessageItemProps {
 
 const ChatMessageItem: React.FC<ChatMessageItemProps> = ({ message, onUserClick }) => {
   if (message.type === 'entry') {
-     if (message.badgeText) {
-        return (
-            <div className="relative py-1 self-start animate-slide-in-bottom">
-                <div className="relative z-10 bg-gradient-to-r from-purple-600/80 to-red-500/80 px-3 py-1.5 rounded-2xl flex items-center gap-2">
-                    <div className="bg-purple-900/50 px-2 py-1 rounded-md text-sm font-bold flex items-center gap-1.5 text-white">
-                        <span className="w-4 h-4 bg-purple-400 rounded-sm inline-block"></span>
-                        {message.badgeText}
-                    </div>
-                    <button onClick={() => onUserClick(message.userId)} className="font-semibold text-white">{message.username}</button>
-                    <span className="text-gray-200 text-sm">{message.message}</span>
-                </div>
-            </div>
-        )
-    }
     return (
-      <div className="bg-black/50 backdrop-blur-sm px-4 py-1.5 rounded-full self-start text-sm shadow-lg animate-slide-in-bottom">
-        <button onClick={() => onUserClick(message.userId)} className="font-semibold text-cyan-300">{message.username}</button>
-        <span className="text-gray-200 ml-1.5">{message.message}</span>
-      </div>
+        <div className="p-1.5 self-start animate-slide-in-bottom">
+            <button 
+                onClick={() => onUserClick(message.userId)} 
+                className="bg-black/40 backdrop-blur-sm rounded-full p-1 pr-4 flex items-center gap-2"
+            >
+                <div className="w-8 h-8 rounded-full bg-gray-700 overflow-hidden shrink-0">
+                    {message.avatarUrl ? <img src={message.avatarUrl} alt={message.username} className="w-full h-full object-cover" /> : <UserPlaceholderIcon className="w-full h-full p-1 text-gray-500"/>}
+                </div>
+                <span className="font-semibold text-sm text-white truncate max-w-[120px]">{message.username}</span>
+                {message.level && <ProfileBadge badge={{ text: String(message.level), type: 'level' }} />}
+                {message.age && message.gender && <ProfileBadge badge={{ text: String(message.age), type: 'gender_age', icon: message.gender }} />}
+                <span className="text-sm text-gray-300 ml-1">entrou</span>
+            </button>
+        </div>
     );
   }
 
   if (message.type === 'special_entry') {
     return (
-      <div className="w-full max-w-sm self-start my-1 animate-slide-in-bottom">
-        <div className="bg-gradient-to-r from-purple-600 via-pink-500 to-red-500 p-0.5 rounded-xl shadow-lg">
-          <div className="bg-gray-900/80 backdrop-blur-sm rounded-[10px] p-2 flex items-center gap-3">
-            {message.giftAnimationUrl && (
-              <img src={message.giftAnimationUrl} alt={message.giftName || 'Effect'} className="w-12 h-12" />
-            )}
-            <p className="text-sm">
-              <span className="font-bold text-white drop-shadow-sm">{message.username}</span>
-              <span className="text-gray-200"> {message.message}</span>
-            </p>
-          </div>
+        <div className="text-sm text-center py-1 self-center animate-fade-in-fast">
+            <FancyChatBubble>
+                <div className="flex items-center gap-2">
+                    <span className="text-white font-semibold">Bem-vindo </span>
+                    <button onClick={() => onUserClick(message.userId)} className="font-bold text-yellow-300">{message.username}</button>
+                    <span className="text-white">à sala!</span>
+                </div>
+            </FancyChatBubble>
         </div>
-      </div>
-    );
+    )
   }
 
   if (message.type === 'gift') {
     return (
-       <div className="bg-gradient-to-r from-yellow-500 via-amber-400 to-yellow-500/80 border-2 border-yellow-300 backdrop-blur-sm p-2 rounded-xl self-start shadow-lg flex items-center gap-3 w-auto max-w-sm animate-slide-in-bottom">
-        <button onClick={() => onUserClick(message.userId)} className="font-semibold text-yellow-900 drop-shadow-sm">{message.username}</button>
-        <span className="text-sm text-yellow-800 drop-shadow-sm">{message.message}</span>
+      <div className="text-sm flex items-center gap-2 self-start animate-slide-in-bottom">
+        <button onClick={() => onUserClick(message.userId)} className="font-semibold text-cyan-300">{message.username}</button>
+        <span className="text-gray-300">{message.message}</span>
         {message.giftAnimationUrl && (
-            <Player
+             <Player
                 src={message.giftAnimationUrl}
-                className="w-12 h-12 ml-auto"
+                className="w-8 h-8"
                 autoplay
                 loop
             />
         )}
       </div>
-    )
+    );
   }
-  
-  if (message.type === 'levelup') {
+
+  if (message.type === 'image') {
     return (
-      <div className="w-full max-w-sm self-start my-1 animate-slide-in-bottom">
-        <div className="bg-gradient-to-r from-teal-400 via-cyan-500 to-blue-500 p-0.5 rounded-xl shadow-lg">
-          <div className="bg-gray-900/80 backdrop-blur-sm rounded-[10px] p-2 flex items-center justify-center gap-3">
-            <span className="text-2xl">🎉</span>
-            <p className="text-sm font-bold text-center">
-              <span className="text-white drop-shadow-sm">{message.username}</span>
-              <span className="text-cyan-200"> {message.message}</span>
-            </p>
-             <span className="text-2xl">🎉</span>
-          </div>
+      <div className="p-1.5 self-start animate-slide-in-bottom max-w-[70%] sm:max-w-[50%] flex items-start gap-2">
+        <button onClick={() => onUserClick(message.userId)} className="w-10 h-10 rounded-full bg-gray-700 overflow-hidden shrink-0">
+            {message.avatarUrl ? <img src={message.avatarUrl} alt={message.username} className="w-full h-full object-cover" /> : <UserPlaceholderIcon className="w-full h-full p-1 text-gray-500"/>}
+        </button>
+        <div className="bg-black/40 backdrop-blur-sm rounded-xl p-2 flex-grow">
+            <div className="flex items-center gap-2 mb-1">
+                <button onClick={() => onUserClick(message.userId)} className="font-semibold text-sm text-gray-300 truncate">{message.username}</button>
+                {message.level && <ProfileBadge badge={{ text: String(message.level), type: 'level' }} />}
+                {message.age && message.gender && <ProfileBadge badge={{ text: String(message.age), type: 'gender_age', icon: message.gender }} />}
+            </div>
+            <a href={message.imageUrl} target="_blank" rel="noopener noreferrer">
+                <img src={message.imageUrl} alt="Imagem enviada" className="rounded-lg max-w-full h-auto max-h-48" />
+            </a>
         </div>
       </div>
     );
   }
-
+  
   if (message.type === 'announcement') {
-    return (
-        <div className="relative py-1 self-start animate-slide-in-bottom">
-            <div className="relative z-10 bg-gradient-to-r from-blue-500/80 to-pink-500/80 px-3 py-1.5 rounded-full">
-                <p className="text-white text-sm">{message.message}</p>
-            </div>
-        </div>
-    )
+      return (
+          <div className="text-sm text-center text-yellow-300 bg-yellow-900/40 py-1 px-3 rounded-full self-center my-1 animate-fade-in-fast">
+              📢 {message.message}
+          </div>
+      );
   }
 
+  if (message.type === 'levelup') {
+      return (
+          <div className="text-sm text-center text-green-300 bg-green-900/40 py-1 px-3 rounded-full self-center my-1 animate-fade-in-fast">
+              🎉 <button onClick={() => onUserClick(message.userId)} className="font-semibold">{message.username}</button> alcançou o nível {message.level}!
+          </div>
+      );
+  }
+
+  // Default 'message' type
   return (
-     <div className="relative py-1 self-start animate-slide-in-bottom max-w-[80%]">
-        <div className="relative z-10 bg-gradient-to-r from-purple-600/70 to-fuchsia-500/70 px-3 py-1.5 rounded-2xl backdrop-blur-sm">
-            <div className="flex items-center gap-2">
-                {message.level && (
-                    <div className="bg-orange-500/90 px-1.5 py-0.5 rounded-md text-xs font-bold flex items-center gap-1 text-white shrink-0">
-                        Nv. {message.level}
-                    </div>
-                )}
-                <button onClick={() => onUserClick(message.userId)} className="font-bold text-sm text-white truncate">{message.username}</button>
-                {message.emojis && <span className="text-sm -ml-1">{message.emojis}</span>}
-            </div>
-            <p className="text-white mt-1 break-words text-base pl-1">{message.message}</p>
-        </div>
+    <div className="p-1.5 self-start animate-slide-in-bottom max-w-[85%] sm:max-w-[70%] flex items-start gap-2">
+      <button onClick={() => onUserClick(message.userId)} className="w-10 h-10 rounded-full bg-gray-700 overflow-hidden shrink-0">
+          {message.avatarUrl ? <img src={message.avatarUrl} alt={message.username} className="w-full h-full object-cover" /> : <UserPlaceholderIcon className="w-full h-full p-1 text-gray-500"/>}
+      </button>
+      <div className="bg-black/40 backdrop-blur-sm rounded-xl p-2 flex-grow">
+          <div className="flex items-center gap-2 mb-1">
+              <button onClick={() => onUserClick(message.userId)} className="font-semibold text-sm text-gray-300 truncate">{message.username}</button>
+              {message.level && <ProfileBadge badge={{ text: String(message.level), type: 'level' }} />}
+              {message.age && message.gender && <ProfileBadge badge={{ text: String(message.age), type: 'gender_age', icon: message.gender }} />}
+          </div>
+          <p className="text-white text-base break-words">{message.message}</p>
+      </div>
     </div>
   );
 };

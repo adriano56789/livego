@@ -8,7 +8,6 @@ import GiftIcon from './icons/GiftIcon';
 interface GiftPanelProps {
   user: User;
   liveId: number;
-  streamerId: number;
   onClose: () => void;
   onSendGift: (giftId: number, receiverId?: number) => void;
   onRechargeClick: () => void;
@@ -18,10 +17,10 @@ interface GiftPanelProps {
   };
 }
 
-const GiftPanel: React.FC<GiftPanelProps> = ({ user, liveId, streamerId, onClose, onSendGift, onRechargeClick, pkBattleStreamers }) => {
+const GiftPanel: React.FC<GiftPanelProps> = ({ user, liveId, onClose, onSendGift, onRechargeClick, pkBattleStreamers }) => {
   const [gifts, setGifts] = useState<Gift[]>([]);
   const [selectedGiftId, setSelectedGiftId] = useState<number | null>(null);
-  const [selectedReceiverId, setSelectedReceiverId] = useState<number | null>(pkBattleStreamers ? null : streamerId);
+  const [selectedReceiverId, setSelectedReceiverId] = useState<number | null>(pkBattleStreamers ? null : user.id);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {

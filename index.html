@@ -140,6 +140,23 @@
       .animate-protection-glow {
         animation: protection-glow 2.5s ease-in-out infinite;
       }
+
+      /* Gift Display Animation */
+      @keyframes gift-display-fade-in {
+        0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+        100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+      }
+      @keyframes gift-display-fade-out {
+        0% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+        100% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+      }
+      .animate-gift-display-in {
+        animation: gift-display-fade-in 0.5s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+      }
+      .animate-gift-display-out {
+        animation: gift-display-fade-out 0.5s ease-in forwards;
+      }
+
     </style>
   <script type="importmap">
 {

@@ -1,5 +1,6 @@
 
 
+
 import React, { useState, useEffect } from 'react';
 import type { User, AppView, PublicProfile, Stream, PkBattle } from '../types';
 import { getGiftsReceived, getGiftsSent, getUserProfile } from '../services/authService';
@@ -24,6 +25,7 @@ import UserPlaceholderIcon from './icons/UserPlaceholderIcon';
 import BlockScreen from './BlockScreen';
 import EmbeddedChatView from './EmbeddedChatView';
 import ShieldCheckIcon from './icons/ShieldCheckIcon';
+import LockSolidIcon from './icons/LockSolidIcon';
 
 
 interface EditProfileScreenProps {
@@ -266,6 +268,7 @@ const EditProfileScreen: React.FC<EditProfileScreenProps> = ({
   // Type-safe accessors for properties that differ or might not exist
   const avatarUrl = 'avatarUrl' in profileData ? profileData.avatarUrl : profileData.avatar_url;
   const isAvatarProtected = 'is_avatar_protected' in profileData && !!profileData.is_avatar_protected;
+  const isProfileProtected = 'privacy' in profileData && !!profileData.privacy?.protectionEnabled;
   const level = 'level' in profileData ? profileData.level : parseInt(profileData.badges.find(b => b.type === 'level')?.text || '1', 10);
   
   const formattedBirthday = profileData.birthday 
@@ -325,6 +328,12 @@ const EditProfileScreen: React.FC<EditProfileScreenProps> = ({
           <section className="text-center">
             <h1 className="text-2xl font-bold text-white">{profileData.nickname || profileData.name}</h1>
             <div className="flex justify-center items-center gap-2 mt-2">
+                {isProfileProtected && (
+                  <div className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-bold bg-blue-500 text-white`}>
+                      <LockSolidIcon className="w-3.5 h-3.5"/>
+                      <span>Protegido</span>
+                  </div>
+                )}
                 {profileData.gender && <div className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-bold ${profileData.gender === 'female' ? 'bg-[#ff2d55]' : 'bg-[#007aff]'} text-white`}>
                     {profileData.gender === 'female' ? <FemaleIcon className="w-3 h-3"/> : <MaleIcon className="w-3 h-3"/>}
                     <span>{profileData.age || ''}</span>

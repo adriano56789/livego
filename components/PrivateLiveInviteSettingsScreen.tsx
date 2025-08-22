@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
 import ToggleSwitch from './ToggleSwitch';
@@ -54,6 +53,7 @@ const PrivateLiveInviteSettingsScreen: React.FC<PrivateLiveInviteSettingsScreenP
     }, [user.id, showApiResponse]);
 
     const handleSettingChange = async (key: keyof typeof settings, value: boolean) => {
+        if (!settings) return;
         const oldSettings = { ...settings };
         const newSettings = { ...settings, [key]: value };
         
@@ -61,7 +61,7 @@ const PrivateLiveInviteSettingsScreen: React.FC<PrivateLiveInviteSettingsScreenP
 
         try {
             const updatedSettings = await liveStreamService.updatePrivateLiveInviteSettings(user.id, { [key]: value });
-            showApiResponse(`PUT /api/users/${user.id}/private-live-invite-settings`, updatedSettings);
+            showApiResponse(`PATCH /api/users/${user.id}/private-live-invite-settings`, updatedSettings);
             setSettings({
                 privateInvites: updatedSettings.privateInvites,
                 onlyFollowing: updatedSettings.onlyFollowing,

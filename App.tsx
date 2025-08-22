@@ -88,6 +88,7 @@ const AppContent: React.FC = () => {
   const [incomingPrivateLiveInvite, setIncomingPrivateLiveInvite] = useState<IncomingPrivateLiveInvite | null>(null);
   const [viewingOtherProfileId, setViewingOtherProfileId] = useState<number | null>(null);
   const [locationPermission, setLocationPermission] = useState<LocationPermission>('prompt');
+  const [walletSuccessMessage, setWalletSuccessMessage] = useState<string | null>(null);
 
   useEffect(() => {
     const compareVersions = (v1: string, v2: string): number => {
@@ -294,9 +295,12 @@ const AppContent: React.FC = () => {
   }, []);
 
   const handleNavigate = useCallback((view: AppView) => {
+    if (currentView === 'diamond-purchase' && view !== 'diamond-purchase') {
+      setWalletSuccessMessage(null);
+    }
     setViewingOtherProfileId(null); // Reset profile view on main navigation
     setCurrentView(view);
-  }, []);
+  }, [currentView]);
   
   const handleNavigateFromStream = useCallback((view: AppView, userId: number) => {
     setViewingStream(null);
@@ -331,12 +335,13 @@ const AppContent: React.FC = () => {
   const handlePurchaseComplete = useCallback((updatedUser: User, order: PurchaseOrder) => {
       setUser(updatedUser);
       setPurchaseOverlay(null);
-      alert(`Compra de ${order.package.diamonds} diamantes concluída!`);
+      setWalletSuccessMessage(`+${order.package.diamonds.toLocaleString()} diamantes adicionados à sua carteira!`);
   }, []);
   
   const handleWithdrawalComplete = useCallback((transaction: WithdrawalTransaction) => {
     setLastWithdrawal(transaction);
     setCurrentView('withdrawal-confirmation');
+    setWalletSuccessMessage(`Saque de ${transaction.earnings_withdrawn.toLocaleString()} ganhos solicitado com sucesso.`);
   }, []);
 
   const handleLogout = useCallback(() => {
@@ -422,7 +427,7 @@ const AppContent: React.FC = () => {
         mainContent = <GoLiveSetupScreen user={user} onStartStream={handleStartStream} onExit={() => setCurrentView('feed')} />;
         break;
       case 'diamond-purchase':
-        mainContent = <DiamondPurchaseScreen user={user} onExit={() => setCurrentView('profile')} onPurchase={handlePurchaseComplete} onNavigate={handleNavigate} onConfirmPurchase={handleConfirmPurchase} onUpdateUser={handleUpdateUser} onNavigateToSetup={() => setCurrentView('withdrawal-method-setup')} onWithdrawalComplete={handleWithdrawalComplete} />;
+        mainContent = <DiamondPurchaseScreen user={user} onExit={() => { setCurrentView('profile'); setWalletSuccessMessage(null); }} onPurchase={handlePurchaseComplete} onNavigate={handleNavigate} onConfirmPurchase={handleConfirmPurchase} onUpdateUser={handleUpdateUser} onNavigateToSetup={() => setCurrentView('withdrawal-method-setup')} onWithdrawalComplete={handleWithdrawalComplete} successMessage={walletSuccessMessage} clearSuccessMessage={() => setWalletSuccessMessage(null)} />;
         break;
       case 'protectors':
         if(viewingProtectorsFor) {
@@ -560,6 +565,27 @@ const AppContent: React.FC = () => {
             setLiveNotification(null);
           }}
         />
+      )}
+      {purchaseOverlay?.step === 'purchase' && (
+          <DiamondPurchaseScreen 
+              user={user}
+              onExit={() => setPurchaseOverlay(null)}
+              onPurchase={handlePurchaseComplete}
+              onConfirmPurchase={handleConfirmPurchase}
+              isOverlay
+              onUpdateUser={handleUpdateUser}
+              onNavigateToSetup={() => {
+                  setPurchaseOverlay(null);
+                  setCurrentView('withdrawal-method-setup');
+              }}
+              onWithdrawalComplete={(t) => {
+                  setPurchaseOverlay(null);
+                  handleWithdrawalComplete(t);
+              }}
+              successMessage={walletSuccessMessage}
+              clearSuccessMessage={() => setWalletSuccessMessage(null)}
+              onNavigate={handleNavigate}
+          />
       )}
       {purchaseOverlay?.step === 'confirm' && purchaseOverlay.pkg && (
           <PurchaseConfirmationScreen 

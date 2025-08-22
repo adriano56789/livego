@@ -284,7 +284,7 @@ export const updateNotificationSettings = (userId: number, settings: Partial<Omi
 export const getPushSettings = (userId: number): Promise<Record<number, boolean>> => apiClient(`/api/users/${userId}/push-settings`);
 export const updatePushSetting = (userId: number, followedUserId: number, enabled: boolean): Promise<{ success: boolean }> => apiClient(`/api/users/${userId}/push-settings`, { method: 'PATCH', body: JSON.stringify({ followedUserId, enabled }) });
 export const getPrivateLiveInviteSettings = (userId: number): Promise<PrivateLiveInviteSettings> => apiClient(`/api/users/${userId}/private-live-invite-settings`);
-export const updatePrivateLiveInviteSettings = (userId: number, settings: Partial<Omit<PrivateLiveInviteSettings, 'userId'>>): Promise<PrivateLiveInviteSettings> => apiClient(`/api/users/${userId}/private-live-invite-settings`, { method: 'PUT', body: JSON.stringify(settings) });
+export const updatePrivateLiveInviteSettings = (userId: number, settings: Partial<Omit<PrivateLiveInviteSettings, 'userId'>>): Promise<PrivateLiveInviteSettings> => apiClient(`/api/users/${userId}/private-live-invite-settings`, { method: 'PATCH', body: JSON.stringify(settings) });
 
 export const getUserLivePreferences = (userId: number): Promise<{ isPkEnabled: boolean; lastCameraUsed: FacingMode; lastSelectedCategory: Category }> => {
     return apiClient(`/api/users/${userId}/live-preferences`);
@@ -350,29 +350,27 @@ export const cancelPkInvitation = (invitationId: string): Promise<{ success: boo
 // --- LOCATION SERVICES (NEW) ---
 export const requestLocationPermission = (accuracy: 'exact' | 'approximate'): Promise<{ permission: 'granted', location: { lat: number, lon: number } }> => {
     console.log(`[Mock API] Simulating request for ${accuracy} location permission.`);
-    // Simulate getting a location in Brazil
+    // Simulate getting a location in Salvador, Bahia, Brazil for the main user
     return Promise.resolve({
         permission: 'granted',
         location: {
-            lat: -23.5505,
-            lon: -46.6333
+            lat: -12.9777,
+            lon: -38.5016
         }
     });
 };
 
 export const saveUserLocationPreference = (userId: number, accuracy: 'exact' | 'approximate'): Promise<{ success: boolean }> => {
     console.log(`[Mock API] Saving location preference for user ${userId}: ${accuracy}`);
+    // In a real app, you would save this to the user's profile in the DB.
+    // The mock DB will handle location lookup based on the user's hardcoded coordinates.
     return Promise.resolve({ success: true });
 };
 
 export const getNearbyStreams = (userId: number, accuracy: 'exact' | 'approximate'): Promise<Stream[]> => {
-    console.log(`[Mock API] Fetching nearby streams for user ${userId} with ${accuracy} accuracy.`);
-    // Simulate nearby streams by just shuffling popular streams and maybe changing a few details
-    return apiClient<Stream[]>('/api/lives?category=popular&region=BR').then(streams => {
-        return streams
-            .map(stream => ({ ...stream, titulo: `Perto: ${stream.titulo}` }))
-            .sort(() => Math.random() - 0.5);
-    });
+    console.log(`[LiveStreamService] Fetching nearby streams for user ${userId} with ${accuracy} accuracy.`);
+    // The backend will use the userId to find their location and return nearby streams.
+    return apiClient<Stream[]>(`/api/lives?category=perto&userId=${userId}`);
 };
 
 // --- PRIVACY SETTINGS (NEW) ---

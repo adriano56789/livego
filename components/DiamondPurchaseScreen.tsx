@@ -9,6 +9,7 @@ import CoinIcon from './icons/CoinIcon';
 import ReportIcon from './icons/ReportIcon';
 import QuestionMarkIcon from './icons/QuestionMarkIcon';
 import GoldCoinIcon from './icons/GoldCoinIcon';
+import CrossIcon from './icons/CrossIcon';
 
 interface DiamondPurchaseScreenProps {
   user: User;
@@ -20,6 +21,8 @@ interface DiamondPurchaseScreenProps {
   onUpdateUser: (user: User) => void;
   onNavigateToSetup: () => void;
   onWithdrawalComplete: (transaction: WithdrawalTransaction) => void;
+  successMessage: string | null;
+  clearSuccessMessage: () => void;
 }
 
 const EARNING_TO_BRL_RATE = 0.0115;
@@ -35,6 +38,8 @@ const DiamondPurchaseScreen: React.FC<DiamondPurchaseScreenProps> = ({
     onUpdateUser,
     onNavigateToSetup,
     onWithdrawalComplete,
+    successMessage,
+    clearSuccessMessage,
 }) => {
   const [packages, setPackages] = useState<DiamondPackage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -49,6 +54,16 @@ const DiamondPurchaseScreen: React.FC<DiamondPurchaseScreenProps> = ({
   const [isWithdrawalLoading, setIsWithdrawalLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (successMessage) {
+      const timer = setTimeout(() => {
+        clearSuccessMessage();
+      }, 5000); // Display for 5 seconds
+
+      return () => clearTimeout(timer);
+    }
+  }, [successMessage, clearSuccessMessage]);
 
   useEffect(() => {
     if (activeTab === 'diamonds') {
@@ -270,6 +285,17 @@ const DiamondPurchaseScreen: React.FC<DiamondPurchaseScreenProps> = ({
             </button>
         </div>
       </header>
+
+       {successMessage && (
+        <div className="relative mx-4 mt-2">
+            <div className="bg-green-500/20 border border-green-500/30 text-green-300 text-sm font-medium p-3 rounded-lg flex justify-between items-center animate-fade-in-fast">
+                <span>{successMessage}</span>
+                <button onClick={clearSuccessMessage} className="p-1 -m-1">
+                    <CrossIcon className="w-4 h-4" />
+                </button>
+            </div>
+        </div>
+      )}
 
       <main className="flex-grow p-4 overflow-y-auto scrollbar-hide">
         <div className="border-b border-gray-800 pb-6 mb-6">

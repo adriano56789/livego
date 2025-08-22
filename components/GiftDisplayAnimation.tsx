@@ -76,7 +76,7 @@ const GiftDisplayAnimation: React.FC<GiftDisplayAnimationProps> = ({ triggeredGi
   return (
     <div
       className={`fixed top-1/2 left-1/2 z-30 pointer-events-none flex flex-col items-center gap-4 ${isVisible ? 'animate-gift-display-in' : 'animate-gift-display-out'}`}
-      style={{ transform: 'translate(-50%, -50%)' }} // Initial position for animation
+      style={{ transform: 'translate(-50%, -50%)' }}
     >
       <Player
         src={currentGift.animationUrl}

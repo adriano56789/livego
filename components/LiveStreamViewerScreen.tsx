@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import type { User, Stream, PkBattle, ChatMessage, LiveDetails, PkInvitation, SoundEffectName, MuteStatusListener, UserKickedListener, SoundEffectListener, PublicProfile, PkBattleState, ConvitePK, IncomingPrivateLiveInvite, UserBlockedListener, UserUnblockedListener, Viewer, PkBattleStreamer, AppView } from '../types';
 import * as liveStreamService from '../services/liveStreamService';
@@ -33,6 +34,7 @@ import PkTopSupporter from './PkTopSupporter';
 import PkGiftNotification from './PkGiftNotification';
 import EditProfileScreen from './EditProfileScreen';
 import EmbeddedChatView from './EmbeddedChatView';
+import GiftDisplayAnimation from './GiftDisplayAnimation';
 
 // Icon Imports
 import SwordsIcon from './icons/SwordsIcon';
@@ -114,8 +116,9 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
     const [liveDetails2, setLiveDetails2] = useState<LiveDetails | null>(null); // For PK opponent
     const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
     const [isBlockedByHost, setIsBlockedByHost] = useState(false);
-    const lastGiftIdRef = useRef<number | null>(null);
+    const lastProcessedGiftIdRef = useRef<number | null>(null);
     const [lastPkGift, setLastPkGift] = useState<ChatMessage | null>(null);
+    const [triggeredGiftAnimation, setTriggeredGiftAnimation] = useState<ChatMessage | null>(null);
     const [chatUserProfiles, setChatUserProfiles] = useState<Record<number, { avatarUrl: string }>>({});
     const [headerViewers, setHeaderViewers] = useState<Record<number, Viewer[]>>({});
     const [viewingProfileId, setViewingProfileId] = useState<number | null>(null);
@@ -202,9 +205,10 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
               });
 
               const newGift = messages.slice().reverse().find(m => m.type === 'gift');
-              if (newGift && newGift.id !== lastGiftIdRef.current) {
-                  lastGiftIdRef.current = newGift.id;
+              if (newGift && newGift.id !== lastProcessedGiftIdRef.current) {
+                  lastProcessedGiftIdRef.current = newGift.id;
                   setLastPkGift(newGift); 
+                  soundService.playSound('gift');
                   setChatUserProfiles(profiles => {
                       if (!profiles[newGift.userId]) {
                            authService.getUserProfile(newGift.userId).then(profile => {
@@ -240,6 +244,14 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
                   }
                   return messages;
               });
+
+              // Check for new gifts in single-stream view
+              const newGift = messages.slice().reverse().find(m => m.type === 'gift');
+              if (newGift && newGift.id !== lastProcessedGiftIdRef.current) {
+                  lastProcessedGiftIdRef.current = newGift.id;
+                  setTriggeredGiftAnimation(newGift);
+                  soundService.playSound('gift');
+              }
           }
       } catch (error) {
           console.error("Stream might have ended:", error);
@@ -531,6 +543,7 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
                             isCurrentUserHost={user.id === streamer1.id}
                             isFollowing={(user.following || []).includes(streamer1.id)}
                             onFollowToggle={() => handleFollowToggle(streamer1.id)}
+                            streamerIsAvatarProtected={liveDetails?.streamerIsAvatarProtected}
                         />
                         <LiveStreamHeader 
                             variant="pk-right" 
@@ -547,6 +560,7 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
                             isCurrentUserHost={user.id === streamer2.id}
                             isFollowing={(user.following || []).includes(streamer2.id)}
                             onFollowToggle={() => handleFollowToggle(streamer2.id)}
+                            streamerIsAvatarProtected={liveDetails2?.streamerIsAvatarProtected}
                         />
                     </header>
 
@@ -623,7 +637,7 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
       <>
           <div className="absolute inset-0 z-0">
               <img
-                  src="https://images.pexels.com/photos/1763075/pexels-photo-1763075.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2"
+                  src="https://i.pravatar.cc/800?u=background"
                   alt="Stream background"
                   className="w-full h-full object-cover"
               />
@@ -648,11 +662,12 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
                       isCurrentUserHost={isHost}
                       isFollowing={(user.following || []).includes(streamerId)}
                       onFollowToggle={() => handleFollowToggle(streamerId)}
+                      streamerIsAvatarProtected={liveDetails?.streamerIsAvatarProtected}
                   />
               </header>
               
               <div className="flex-grow pointer-events-none">
-                {/* Floating gift animation removed as per user request */}
+                <GiftDisplayAnimation triggeredGift={triggeredGiftAnimation} />
               </div>
 
               <footer className="p-3 flex flex-col items-start gap-4">
@@ -746,7 +761,15 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
             )}
     
             {isGiftPanelOpen && (
-                <GiftPanel user={user} liveId={liveId} onClose={() => setIsGiftPanelOpen(false)} onSendGift={handleSendGift} onRechargeClick={onRequirePurchase} pkBattleStreamers={pkBattleStreamersProp} />
+                <GiftPanel
+                  user={user}
+                  liveId={liveId}
+                  streamerId={streamerId}
+                  onClose={() => setIsGiftPanelOpen(false)}
+                  onSendGift={handleSendGift}
+                  onRechargeClick={onRequirePurchase}
+                  pkBattleStreamers={pkBattleStreamersProp}
+                />
             )}
     
             {isArcoraToolModalOpen && (

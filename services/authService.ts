@@ -1,4 +1,3 @@
-
 import { apiClient } from './apiClient';
 import type { User, Conversation, DiamondPackage, Address, CardDetails, PaymentMethod, PurchaseOrder, CardBrand } from '../types';
 
@@ -158,4 +157,20 @@ export const checkAvatarInUse = (avatarImage: string): Promise<{ inUse: boolean,
 
 export const getFriendRequests = (userId: number): Promise<User[]> => {
     return apiClient(`/api/users/${userId}/friend-requests`);
+};
+
+// --- Settings Screen Services ---
+export const getConnectedAccounts = (userId: number): Promise<{ provider: string, email: string }[]> => {
+    return apiClient(`/api/users/${userId}/connected-accounts`);
+};
+
+export const updateConnectedAccounts = (userId: number, accounts: { provider: string, email: string }[]): Promise<{ success: boolean }> => {
+    return apiClient(`/api/users/${userId}/connected-accounts`, {
+        method: 'PATCH',
+        body: JSON.stringify({ accounts }),
+    });
+};
+
+export const getEarningsInfo = (userId: number): Promise<{ total: number, lastMonth: number, conversionRate: number, feeRate: number }> => {
+    return apiClient(`/api/users/${userId}/earnings`);
 };

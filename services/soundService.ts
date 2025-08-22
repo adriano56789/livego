@@ -1,4 +1,5 @@
 
+
 import type { SoundEffectName } from '../types';
 
 let audioContext: AudioContext | null = null;
@@ -152,6 +153,11 @@ export const playSound = (effectName: SoundEffectName) => {
             break;
         case 'sorriso': // Smile
             playTone(1046, 0.3); // C6
+            break;
+        case 'gift': // Gift sound
+            playTone(1046.50, 0.1, 'triangle'); // C6
+            setTimeout(() => playTone(1318.51, 0.1, 'triangle'), 100); // E6
+            setTimeout(() => playTone(1567.98, 0.2, 'triangle'), 200); // G6
             break;
     }
 };

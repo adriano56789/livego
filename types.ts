@@ -1,4 +1,5 @@
 
+
 // Basic types
 export type AppView = 'login' | 'upload' | 'edit' | 'feed' | 'profile' | 'go-live-setup' | 'messages' | 'diamond-purchase' | 'video' | 'protectors' | 'blocked-list' | 'withdrawal' | 'withdrawal-method-setup' | 'withdrawal-confirmation' | 'customer-service' | 'backpack' | 'help-article' | 'live-support-chat' | 'report-and-suggestion' | 'event-center' | 'event-detail' | 'settings' | 'copyright' | 'earnings-info' | 'connected-accounts' | 'search' | 'app-version' | 'live-ended' | 'my-level' | 'developer-tools' | 'ranking' | 'documentation' | 'purchase-history' | 'notification-settings' | 'push-settings' | 'private-live-invite-settings' | 'followers' | 'following' | 'visitors' | 'live-stream-viewer' | 'chat' | 'purchase-confirmation' | 'ranking-list' | 'profile-editor' | 'fans' | 'avatar-protection' | 'friend-requests' | 'privacy-settings';
 export type Gender = 'male' | 'female';
@@ -9,7 +10,7 @@ export type InventoryCategory = 'gift' | 'decoration';
 export type InventorySubType = 'profile_frame' | 'entry_effect';
 export type PaymentMethod = 'transfer' | 'card';
 export type FacingMode = 'user' | 'environment';
-export type SoundEffectName = 'riso' | 'aplausos' | 'animar' | 'beijar' | 'estranho' | 'resposta_errada' | 'sorriso';
+export type SoundEffectName = 'riso' | 'aplausos' | 'animar' | 'beijar' | 'estranho' | 'resposta_errada' | 'sorriso' | 'gift';
 export type CardBrand = 'visa' | 'mastercard' | 'amex' | 'elo' | null;
 export type UserListRankingPeriod = 'daily' | 'weekly' | 'total';
 
@@ -65,6 +66,8 @@ export interface User {
   height: number | null;
   weight: number | null;
   emotionalState: string | null;
+  latitude?: number;
+  longitude?: number;
 }
 
 export interface AchievementFrame {
@@ -104,6 +107,8 @@ export interface PublicProfile {
   achievements: Achievement[];
   personalityTags: { id: string, label: string }[];
   personalSignature: string;
+  is_avatar_protected?: boolean;
+  privacy?: { protectionEnabled?: boolean };
 }
 
 // Stream-related types
@@ -240,6 +245,7 @@ export interface LiveDetails {
   rankingPosition: string;
   status: 'ao vivo' | 'finalizada' | 'pausada';
   likeCount?: number;
+  streamerIsAvatarProtected?: boolean;
   title?: string;
   meta?: string;
 }
@@ -736,4 +742,5 @@ export interface PrivacySettings {
   showLocation: boolean;
   showActiveStatus: boolean;
   showInNearby: boolean;
+  protectionEnabled: boolean;
 }

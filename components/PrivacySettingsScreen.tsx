@@ -1,3 +1,5 @@
+
+
 import React, { useState, useEffect } from 'react';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
 import ToggleSwitch from './ToggleSwitch';
@@ -41,7 +43,7 @@ const PrivacySettingsScreen: React.FC<PrivacySettingsScreenProps> = ({ user, onE
                 setSettings(data);
             } catch (error) {
                 console.error("Failed to load privacy settings:", error);
-                setSettings({ showLocation: true, showActiveStatus: true, showInNearby: true });
+                setSettings({ showLocation: true, showActiveStatus: true, showInNearby: true, protectionEnabled: false });
             } finally {
                 setIsLoading(false);
             }
@@ -110,6 +112,13 @@ const PrivacySettingsScreen: React.FC<PrivacySettingsScreenProps> = ({ user, onE
                             enabled={settings.showInNearby}
                             onToggle={(value) => handleSettingChange('showInNearby', value)}
                             ariaLabel="Mostrar em Pessoas Próximas"
+                        />
+                        <SettingRow
+                            title="Proteção de Perfil"
+                            description="Outros usuários verão um selo de 'Proteção ativada' em seu perfil."
+                            enabled={settings.protectionEnabled}
+                            onToggle={(value) => handleSettingChange('protectionEnabled', value)}
+                            ariaLabel="Ativar Proteção de Perfil"
                         />
                     </>
                 )}

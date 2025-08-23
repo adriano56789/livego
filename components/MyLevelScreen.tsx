@@ -1,10 +1,8 @@
 
-
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import type { User, UserLevelInfo } from '../types';
 import * as levelService from '../services/levelService';
 import * as liveStreamService from '../services/liveStreamService';
-import { useApiViewer } from './ApiContext';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
 import LevelBadge60Icon from './icons/LevelBadge60Icon';
 import LevelBadge70Icon from './icons/LevelBadge70Icon';
@@ -103,7 +101,6 @@ const BottomTimeline = () => (
 const MyLevelScreen: React.FC<MyLevelScreenProps> = ({ user, onExit }) => {
   const [levelInfo, setLevelInfo] = useState<UserLevelInfo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const { showApiResponse } = useApiViewer();
   const timelineRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -111,7 +108,6 @@ const MyLevelScreen: React.FC<MyLevelScreenProps> = ({ user, onExit }) => {
       setIsLoading(true);
       try {
         const data = await liveStreamService.getUserLevelInfo(user.id);
-        showApiResponse(`/api/users/${user.id}/level`, data);
         setLevelInfo(data);
       } catch (error) {
         console.error("Failed to fetch level info:", error);
@@ -120,7 +116,7 @@ const MyLevelScreen: React.FC<MyLevelScreenProps> = ({ user, onExit }) => {
       }
     };
     fetchLevelInfo();
-  }, [user.id, showApiResponse]);
+  }, [user.id]);
 
   const { progressPercent, centralMilestoneLevel } = useMemo(() => {
     if (!levelInfo) return { progressPercent: 0, centralMilestoneLevel: milestones[2].level };

@@ -4,7 +4,6 @@ import ArrowLeftIcon from './icons/ArrowLeftIcon';
 import ToggleSwitch from './ToggleSwitch';
 import type { AppView, User, NotificationSettings } from '../types';
 import { getNotificationSettings, updateNotificationSettings } from '../services/liveStreamService';
-import { useApiViewer } from './ApiContext';
 
 interface NotificationSettingsScreenProps {
     user: User;
@@ -41,14 +40,12 @@ const NavItem: React.FC<{ label: string; onClick: () => void; }> = ({ label, onC
 const NotificationSettingsScreen: React.FC<NotificationSettingsScreenProps> = ({ user, onExit, onNavigate }) => {
     const [settings, setSettings] = useState<Omit<NotificationSettings, 'userId'> | null>(null);
     const [isLoading, setIsLoading] = useState(true);
-    const { showApiResponse } = useApiViewer();
 
     useEffect(() => {
         const fetchSettings = async () => {
             setIsLoading(true);
             try {
                 const data = await getNotificationSettings(user.id);
-                showApiResponse(`GET /api/users/${user.id}/notification-settings`, data);
                 setSettings(data);
             } catch (error) {
                 console.error("Failed to load notification settings:", error);
@@ -65,7 +62,7 @@ const NotificationSettingsScreen: React.FC<NotificationSettingsScreenProps> = ({
             }
         };
         fetchSettings();
-    }, [user.id, showApiResponse]);
+    }, [user.id]);
     
     const handleSettingChange = async (key: keyof Omit<NotificationSettings, 'userId'>, value: boolean) => {
         if (!settings) return;
@@ -76,7 +73,6 @@ const NotificationSettingsScreen: React.FC<NotificationSettingsScreenProps> = ({
 
         try {
             const updatedSettings = await updateNotificationSettings(user.id, { [key]: value });
-            showApiResponse(`PATCH /api/users/${user.id}/notification-settings`, updatedSettings);
             setSettings(updatedSettings);
         } catch (error) {
             console.error("Failed to update setting:", error);

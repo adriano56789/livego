@@ -142,19 +142,36 @@
       }
 
       /* Gift Display Animation */
-      @keyframes gift-display-fade-in {
-        0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
-        100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+      @keyframes gift-banner-in {
+        from { transform: translateX(-110%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
       }
-      @keyframes gift-display-fade-out {
-        0% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-        100% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+      @keyframes gift-banner-out {
+        from { opacity: 1; transform: translateY(0); }
+        to { opacity: 0; transform: translateY(20px); }
       }
-      .animate-gift-display-in {
-        animation: gift-display-fade-in 0.5s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+      .animate-gift-banner-in {
+        animation: gift-banner-in 0.5s cubic-bezier(0.21, 1.02, 0.73, 1) forwards;
       }
-      .animate-gift-display-out {
-        animation: gift-display-fade-out 0.5s ease-in forwards;
+      .animate-gift-banner-out {
+        animation: gift-banner-out 0.5s ease-out forwards;
+      }
+      @keyframes combo-thump {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.5); }
+        100% { transform: scale(1); }
+      }
+      .animate-combo-thump {
+        animation: combo-thump 0.3s ease-out;
+      }
+      
+      /* Keyframes for slide-up-fast animation */
+      @keyframes slide-up-fast {
+        from { transform: translateY(100%); }
+        to { transform: translateY(0); }
+      }
+      .animate-slide-up-fast {
+        animation: slide-up-fast 0.25s ease-out forwards;
       }
 
     </style>

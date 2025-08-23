@@ -3,7 +3,6 @@ import React, { useState, useEffect } from 'react';
 import type { User, AppView, Conversation } from '../types';
 import { getConversations, getFriends } from '../services/authService';
 import * as liveStreamService from '../services/liveStreamService';
-import { useApiViewer } from './ApiContext';
 import SearchIcon from './icons/SearchIcon';
 import PlusIcon from './icons/PlusIcon';
 import ConversationListItem from './ConversationListItem';
@@ -37,15 +36,12 @@ const MessagesScreen: React.FC<MessagesScreenProps> = ({ user, onNavigate, onNav
   const [friends, setFriends] = useState<User[]>([]);
   const [isFriendsLoading, setIsFriendsLoading] = useState(false);
 
-  const { showApiResponse } = useApiViewer();
-
   const fetchConversations = async () => {
     try {
       setIsLoading(true);
       setError(null);
       const convos = await getConversations(user.id);
       setConversations(convos);
-      showApiResponse(`GET /api/conversations/${user.id}`, convos);
     } catch (err) {
       setError("Não foi possível carregar as mensagens.");
       console.error(err);
@@ -58,7 +54,6 @@ const MessagesScreen: React.FC<MessagesScreenProps> = ({ user, onNavigate, onNav
     setIsFriendsLoading(true);
     try {
         const friendsData = await getFriends(user.id);
-        showApiResponse(`/api/users/${user.id}/friends`, friendsData);
         setFriends(friendsData);
     } catch (err) {
         console.error(err);
@@ -74,7 +69,7 @@ const MessagesScreen: React.FC<MessagesScreenProps> = ({ user, onNavigate, onNav
     } else if (activeTab === 'friends') {
         fetchFriends();
     }
-  }, [user.id, showApiResponse, activeTab]);
+  }, [user.id, activeTab]);
 
   const handleUnfriend = async (friendId: number) => {
     if (window.confirm(`Deixar de seguir ${friends.find(f => f.id === friendId)?.nickname}? Isto irá desfazer a amizade.`)) {

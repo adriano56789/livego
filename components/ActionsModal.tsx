@@ -44,12 +44,6 @@ const ActionsModal: React.FC<ActionsModalProps> = ({ isOpen, onClose, user, onBl
             Cancelar
         </button>
       </div>
-      <style>{`
-        @keyframes fade-in-fast { from { opacity: 0; } to { opacity: 1; } }
-        .animate-fade-in-fast { animation: fade-in-fast 0.2s ease-out forwards; }
-        @keyframes slide-up-fast { from { transform: translateY(100%); } to { transform: translateY(0); } }
-        .animate-slide-up-fast { animation: slide-up-fast 0.25s ease-out forwards; }
-      `}</style>
     </div>
   );
 };

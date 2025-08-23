@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import type { User, PrivateLiveInviteSettings } from '../types';
 import * as liveStreamService from '../services/liveStreamService';
@@ -107,7 +106,7 @@ const PkInviteModal: React.FC<PkInviteModalProps> = ({ user, onClose, onEnterFri
     }, [friends, query]);
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/70 flex items-end" onClick={onClose}>
+    <div className="fixed inset-0 z-50 bg-transparent flex items-end" onClick={onClose}>
       <div
         className="bg-[#1C1F24] w-full h-[85vh] max-h-[700px] rounded-t-2xl flex flex-col text-white animate-slide-up-fast"
         onClick={e => e.stopPropagation()}
@@ -167,10 +166,6 @@ const PkInviteModal: React.FC<PkInviteModalProps> = ({ user, onClose, onEnterFri
             )}
         </main>
       </div>
-       <style>{`
-        @keyframes slide-up-fast { from { transform: translateY(100%); } to { transform: translateY(0); } }
-        .animate-slide-up-fast { animation: slide-up-fast 0.25s ease-out forwards; }
-      `}</style>
     </div>
   );
 };

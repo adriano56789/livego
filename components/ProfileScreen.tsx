@@ -107,8 +107,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onNavigate, onGoLiv
                 </header>
 
                 {/* Stats */}
-                <div className="grid grid-cols-4 mb-6">
-                    <StatItem value={(user.followers || 0).toLocaleString('pt-BR')} label="Seguidores" onClick={() => onNavigate('followers')} />
+                <div className="grid grid-cols-3 mb-6">
                     <StatItem value={(user.following || []).length.toLocaleString('pt-BR')} label="Seguindo" onClick={() => onNavigate('following')} />
                     <StatItem value={(user.followers || 0).toLocaleString('pt-BR')} label="Fãs" onClick={() => onNavigate('fans')} />
                     <StatItem value={(user.visitors || 0).toLocaleString('pt-BR')} label="Visitantes" onClick={() => onNavigate('visitors')} />

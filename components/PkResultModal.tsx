@@ -52,7 +52,7 @@ const PkResultModal: React.FC<PkResultModalProps> = ({ currentUser, battleData, 
     const streamer2Score = battleData.pontuacao_B;
 
     return (
-        <div className="fixed inset-0 z-[70] bg-black/70 flex items-center justify-center p-4 font-sans text-white animate-fade-in-fast backdrop-blur-sm">
+        <div className="fixed inset-0 z-[70] bg-transparent flex items-center justify-center p-4 font-sans text-white animate-fade-in-fast backdrop-blur-sm">
             <div className="bg-[#1C1F24]/90 rounded-2xl w-full max-w-xs p-6 flex flex-col items-center shadow-lg">
                 <h1 className={`text-3xl font-black tracking-wider ${resultColor} drop-shadow-[0_0_10px_rgba(255,255,255,0.2)] animate-thump`}>
                     {resultText}

@@ -1,6 +1,6 @@
+
 import React, { useState, useRef } from 'react';
 import * as liveStreamService from '../services/liveStreamService';
-import { useApiViewer } from './ApiContext';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
 import PaperClipIcon from './icons/PaperClipIcon';
 import SuccessIcon from './icons/SuccessIcon';
@@ -27,7 +27,6 @@ const ReportAndSuggestionScreen: React.FC<ReportAndSuggestionScreenProps> = ({ u
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const { showApiResponse } = useApiViewer();
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -57,7 +56,6 @@ const ReportAndSuggestionScreen: React.FC<ReportAndSuggestionScreenProps> = ({ u
         }
         const payload = { reporterId: user.id, reportedId, reportReason, reportDetails, fileName };
         await liveStreamService.submitReport(payload);
-        showApiResponse('POST /api/reports', { success: true, payload });
         setSubmitSuccess('Sua denúncia foi enviada com sucesso!');
         resetReportForm();
       } else {
@@ -68,7 +66,6 @@ const ReportAndSuggestionScreen: React.FC<ReportAndSuggestionScreenProps> = ({ u
         }
         const payload = { suggesterId: user.id, suggestion };
         await liveStreamService.submitSuggestion(payload);
-        showApiResponse('POST /api/suggestions', { success: true, payload });
         setSubmitSuccess('Sua sugestão foi enviada com sucesso!');
         setSuggestion('');
       }

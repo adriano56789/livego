@@ -1,8 +1,8 @@
+
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import type { User, DiamondPackage, AppView, PurchaseOrder, WithdrawalTransaction, WithdrawalBalance } from '../types';
 import { getDiamondPackages } from '../services/authService';
 import * as liveStreamService from '../services/liveStreamService';
-import { useApiViewer } from './ApiContext';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
 import DiamondIcon from './icons/DiamondIcon';
 import CoinIcon from './icons/CoinIcon';
@@ -44,7 +44,6 @@ const DiamondPurchaseScreen: React.FC<DiamondPurchaseScreenProps> = ({
   const [packages, setPackages] = useState<DiamondPackage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'diamonds' | 'earnings'>('diamonds');
-  const { showApiResponse } = useApiViewer();
   const [isEarningsTooltipVisible, setIsEarningsTooltipVisible] = useState(false);
 
   // Withdrawal State
@@ -71,14 +70,11 @@ const DiamondPurchaseScreen: React.FC<DiamondPurchaseScreenProps> = ({
           setIsLoading(true);
           const diamondPackages = await getDiamondPackages();
           setPackages(diamondPackages);
-          if (!isOverlay) {
-            showApiResponse('GET /api/diamonds/packages', diamondPackages);
-          }
           setIsLoading(false);
         };
         fetchData();
     }
-  }, [showApiResponse, isOverlay, activeTab]);
+  }, [activeTab]);
   
   const fetchWithdrawalData = useCallback(async () => {
     setIsWithdrawalLoading(true);
@@ -88,10 +84,6 @@ const DiamondPurchaseScreen: React.FC<DiamondPurchaseScreenProps> = ({
         liveStreamService.getWithdrawalBalance(user.id),
         liveStreamService.getWithdrawalHistory(user.id)
       ]);
-      if (!isOverlay) {
-        showApiResponse(`GET /api/withdrawals/balance/${user.id}`, balanceData);
-        showApiResponse(`GET /api/users/${user.id}/withdrawal-history`, historyData);
-      }
       setBalance(balanceData);
       setHistory(historyData);
     } catch (err) {
@@ -100,7 +92,7 @@ const DiamondPurchaseScreen: React.FC<DiamondPurchaseScreenProps> = ({
     } finally {
       setIsWithdrawalLoading(false);
     }
-  }, [user.id, showApiResponse, isOverlay]);
+  }, [user.id]);
 
   useEffect(() => {
     if (activeTab === 'earnings') {
@@ -137,7 +129,6 @@ const DiamondPurchaseScreen: React.FC<DiamondPurchaseScreenProps> = ({
     setIsSubmitting(true);
     try {
         const { updatedUser, transaction } = await liveStreamService.initiateWithdrawal(user.id, numericEarnings);
-        showApiResponse(`POST /api/withdrawals/initiate`, { earningsToWithdraw: numericEarnings, success: true, transaction });
         onUpdateUser(updatedUser);
         onWithdrawalComplete(transaction);
         setEarningsToWithdraw('');

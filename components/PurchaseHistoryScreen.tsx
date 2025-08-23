@@ -1,7 +1,7 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import type { User, PurchaseOrder } from '../types';
 import * as authService from '../services/authService';
-import { useApiViewer } from './ApiContext';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
 import DiamondIcon from './icons/DiamondIcon';
 
@@ -21,20 +21,18 @@ const PurchaseHistoryScreen: React.FC<PurchaseHistoryScreenProps> = ({ user, onE
   const [orders, setOrders] = useState<PurchaseOrder[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [checkingStatusId, setCheckingStatusId] = useState<string | null>(null);
-  const { showApiResponse } = useApiViewer();
 
   const fetchHistory = useCallback(async () => {
     setIsLoading(true);
     try {
       const historyData = await authService.getPurchaseHistory(user.id);
-      showApiResponse(`GET /api/users/${user.id}/purchase-history`, historyData);
       setOrders(historyData);
     } catch (error) {
       console.error('Failed to fetch purchase history:', error);
     } finally {
       setIsLoading(false);
     }
-  }, [user.id, showApiResponse]);
+  }, [user.id]);
 
   useEffect(() => {
     fetchHistory();
@@ -44,7 +42,6 @@ const PurchaseHistoryScreen: React.FC<PurchaseHistoryScreenProps> = ({ user, onE
     setCheckingStatusId(orderId);
     try {
         const { order } = await authService.checkOrderStatus(orderId);
-        showApiResponse(`GET /api/purchase/${orderId}/status`, { order });
         if (order) {
             setOrders(prevOrders => prevOrders.map(o => o.orderId === orderId ? order : o));
             // If the order completed, we might need to update the user's diamond balance

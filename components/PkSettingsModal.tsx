@@ -1,7 +1,7 @@
+
 import React, { useState, useEffect } from 'react';
 import CrossIcon from './icons/CrossIcon';
 import * as liveStreamService from '../services/liveStreamService';
-import { useApiViewer } from './ApiContext';
 
 interface PkSettingsModalProps {
   userId: number;
@@ -19,14 +19,12 @@ const PkSettingsModal: React.FC<PkSettingsModalProps> = ({ userId, onClose }) =>
   const [selectedTime, setSelectedTime] = useState(300); // Default to 5 mins
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const { showApiResponse } = useApiViewer();
 
   useEffect(() => {
     const fetchSettings = async () => {
         setIsLoading(true);
         try {
             const settings = await liveStreamService.getPkSettings(userId);
-            showApiResponse(`GET /api/pk-settings/${userId}`, settings);
             setSelectedTime(settings.durationSeconds);
         } catch (error) {
             console.error("Failed to fetch PK settings", error);
@@ -36,13 +34,12 @@ const PkSettingsModal: React.FC<PkSettingsModalProps> = ({ userId, onClose }) =>
         }
     };
     fetchSettings();
-  }, [userId, showApiResponse]);
+  }, [userId]);
 
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      const response = await liveStreamService.updatePkSettings(userId, selectedTime);
-      showApiResponse(`POST /api/pk-settings/${userId}`, { durationSeconds: selectedTime, ...response });
+      await liveStreamService.updatePkSettings(userId, selectedTime);
       onClose();
     } catch (error) {
         console.error("Failed to save PK settings", error);

@@ -238,10 +238,11 @@ const HourlyRankingModal: React.FC<UniversalRankingScreenProps> = ({ liveId, onC
     const thirdPlace = podiumUsers.find(u => u.rank === 3);
 
     return (
-        <div className="fixed inset-0 z-50 bg-black flex flex-col font-sans animate-fade-in-fast text-white">
-            <div className="absolute inset-0 bg-gradient-to-b from-[#1C1F24] to-black"></div>
-            
-            <main className="relative z-10 flex flex-col h-full overflow-hidden">
+        <div className="fixed inset-0 z-50 bg-transparent flex items-end justify-center" onClick={onClose}>
+            <div 
+                className="bg-gradient-to-b from-[#1E1B4B] to-[#141026] w-full max-w-lg h-[85vh] rounded-t-2xl flex flex-col shadow-lg animate-slide-up-fast"
+                onClick={e => e.stopPropagation()}
+            >
                 <header className="flex-shrink-0 pt-6 relative">
                      <button onClick={onClose} className="absolute top-4 right-4 p-2 z-20 bg-black/20 rounded-full hover:bg-white/20 transition-colors" aria-label="Fechar">
                         <CrossIcon className="w-6 h-6 text-gray-300" />
@@ -290,14 +291,14 @@ const HourlyRankingModal: React.FC<UniversalRankingScreenProps> = ({ liveId, onC
                         </div>
                     </div>
                 ) : data ? (
-                    <>
+                    <div className="flex-grow flex flex-col overflow-hidden">
                         {mainTab === 'hourly' && data.countdown && (
-                            <div className="px-4 py-2 flex justify-between items-center text-sm text-gray-200">
+                            <div className="px-4 py-2 flex justify-between items-center text-sm text-gray-200 shrink-0">
                                 <HourlyCountdown endTime={data.countdown} />
                                 <button onClick={onNavigateToList} className="flex items-center gap-1">A lista horária <span className="font-bold">&gt;</span></button>
                             </div>
                         )}
-                        <div className="flex items-end justify-center px-4 mt-8 pt-4">
+                        <div className="flex items-end justify-center px-4 mt-8 pt-4 shrink-0">
                             {secondPlace && <PodiumItem user={secondPlace} position={2} type={mainTab} onUserClick={onUserClick} />}
                             {firstPlace && <PodiumItem user={firstPlace} position={1} type={mainTab} onUserClick={onUserClick} />}
                             {thirdPlace && <PodiumItem user={thirdPlace} position={3} type={mainTab} onUserClick={onUserClick} />}
@@ -305,7 +306,7 @@ const HourlyRankingModal: React.FC<UniversalRankingScreenProps> = ({ liveId, onC
                         <div className="flex-grow bg-black/20 rounded-t-2xl mt-4 overflow-y-auto">
                             {data.list.map(user => <RankingListItem key={user.userId} user={user} onUserClick={onUserClick} />)}
                         </div>
-                    </>
+                    </div>
                 ) : (
                     <div className="flex-grow flex items-center justify-center text-gray-500">
                         <p>Nenhum ranking encontrado.</p>
@@ -313,7 +314,7 @@ const HourlyRankingModal: React.FC<UniversalRankingScreenProps> = ({ liveId, onC
                 )}
 
                 {mainTab === 'hourly' && data?.footerButtons && !isLoading && (
-                    <footer className="p-3 grid grid-cols-2 gap-3 bg-black/40">
+                    <footer className="p-3 grid grid-cols-2 gap-3 bg-black/40 shrink-0">
                          <button onClick={() => handleHelpClick('first_place')} className="bg-gradient-to-r from-pink-500 to-fuchsia-600 rounded-full p-2 text-center">
                             <p className="font-semibold text-sm">{data.footerButtons.primary.text}</p>
                             <p className="flex items-center justify-center gap-1 font-bold"><PresentIcon className="w-4 h-4"/>{data.footerButtons.primary.value}</p>
@@ -324,7 +325,7 @@ const HourlyRankingModal: React.FC<UniversalRankingScreenProps> = ({ liveId, onC
                          </button>
                     </footer>
                 )}
-            </main>
+            </div>
             {helpModalInfo && (
                 <HelpRankingModal
                     currentUser={currentUser}

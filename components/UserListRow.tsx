@@ -1,4 +1,5 @@
 
+
 import React, { useState } from 'react';
 import type { User } from '../types';
 import UserPlaceholderIcon from './icons/UserPlaceholderIcon';
@@ -9,9 +10,33 @@ interface UserListRowProps {
     onFollowToggle: (userId: number) => void;
     onUserClick: (userId: number) => void;
     onAvatarClick?: (userId: number) => void;
+    visitDate?: string;
 }
 
-const UserListRow: React.FC<UserListRowProps> = ({ user, currentUser, onFollowToggle, onUserClick, onAvatarClick }) => {
+const formatVisitDate = (dateString?: string): string | null => {
+    if (!dateString) return null;
+    const visitDate = new Date(dateString);
+    const today = new Date();
+    const yesterday = new Date();
+    yesterday.setDate(today.getDate() - 1);
+
+    if (visitDate.getFullYear() === today.getFullYear() &&
+        visitDate.getMonth() === today.getMonth() &&
+        visitDate.getDate() === today.getDate()) {
+        return 'Hoje';
+    }
+
+    if (visitDate.getFullYear() === yesterday.getFullYear() &&
+        visitDate.getMonth() === yesterday.getMonth() &&
+        visitDate.getDate() === yesterday.getDate()) {
+        return 'Ontem';
+    }
+    
+    return visitDate.toLocaleDateString('pt-BR');
+};
+
+
+const UserListRow: React.FC<UserListRowProps> = ({ user, currentUser, onFollowToggle, onUserClick, onAvatarClick, visitDate }) => {
     const [isFollowLoading, setIsFollowLoading] = useState(false);
     const isFollowing = (currentUser.following || []).includes(user.id);
     const isCurrentUser = currentUser.id === user.id;
@@ -35,6 +60,8 @@ const UserListRow: React.FC<UserListRowProps> = ({ user, currentUser, onFollowTo
             onUserClick(user.id);
         }
     };
+    
+    const formattedDate = formatVisitDate(visitDate);
 
     return (
         <div className="flex items-center px-4 py-3">
@@ -48,7 +75,11 @@ const UserListRow: React.FC<UserListRowProps> = ({ user, currentUser, onFollowTo
                 </button>
                 <button onClick={() => onUserClick(user.id)} className="flex-grow text-left overflow-hidden">
                     <p className="font-semibold text-white truncate">{user.nickname || user.name}</p>
-                    <p className="text-sm text-gray-400">ID: {user.id}</p>
+                     {formattedDate ? (
+                        <p className="text-sm text-gray-400">Visitou: {formattedDate}</p>
+                    ) : (
+                        <p className="text-sm text-gray-400">ID: {user.id}</p>
+                    )}
                 </button>
             </div>
             {!isCurrentUser && (

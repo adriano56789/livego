@@ -51,13 +51,8 @@ const ChatMessageItem: React.FC<ChatMessageItemProps> = ({ message, onUserClick 
       <div className="text-sm flex items-center gap-2 self-start animate-slide-in-bottom">
         <button onClick={() => onUserClick(message.userId)} className="font-semibold text-cyan-300">{message.username}</button>
         <span className="text-gray-300">{message.message}</span>
-        {message.giftAnimationUrl && (
-             <Player
-                src={message.giftAnimationUrl}
-                className="w-8 h-8"
-                autoplay
-                loop
-            />
+        {message.giftImageUrl && (
+             <img src={message.giftImageUrl} alt={message.giftName} className="w-8 h-8" />
         )}
       </div>
     );

@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useMemo } from 'react';
 import type { User } from '../types';
 import * as authService from '../services/authService';
@@ -86,9 +87,9 @@ const InviteToPrivateLiveModal: React.FC<InviteToPrivateLiveModalProps> = ({ str
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/70 flex items-end" onClick={onClose}>
+    <div className="fixed inset-0 z-50 bg-transparent flex items-end" onClick={onClose}>
       <div 
-        className="bg-[#1C1F24] w-full h-[60vh] max-h-[500px] rounded-t-2xl flex flex-col"
+        className="bg-[#1C1F24] w-full h-[60vh] max-h-[500px] rounded-t-2xl flex flex-col animate-slide-up-fast"
         onClick={e => e.stopPropagation()}
       >
         <header className="p-4 flex items-center justify-between border-b border-white/10 shrink-0">

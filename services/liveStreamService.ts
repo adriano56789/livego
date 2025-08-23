@@ -1,5 +1,7 @@
+
+
 import { apiClient } from './apiClient';
-import type { User, LiveDetails, ChatMessage, Gift, Viewer, RankingContributor, Like, PkBattle, PkBattleState, PublicProfile, PkEventDetails, Conversation, SendGiftResponse, ProtectorDetails, WithdrawalTransaction, WithdrawalMethod, InventoryItem, AppEvent, LiveEndSummary, UserLevelInfo, GeneralRankingStreamer, GeneralRankingUser, WithdrawalBalance, EventStatus, PkRankingData, Stream, Category, StartLiveResponse, ConvitePK, LiveFollowUpdate, PrivateLiveInviteSettings, NotificationSettings, FacingMode, SoundEffectName, UniversalRankingData, UserListRankingPeriod, PkSettings, LiveCategory, StreamUpdateListener, MuteStatusListener, UserKickedListener, SoundEffectListener, MuteStatusUpdate, UserKickedUpdate, SoundEffectUpdate, UserBlockedUpdate, UserUnblockedUpdate, UserBlockedListener, UserUnblockedListener, Region, PrivacySettings } from '../types';
+import type { User, LiveDetails, ChatMessage, Gift, Viewer, RankingContributor, Like, PkBattle, PkBattleState, PublicProfile, PkEventDetails, Conversation, SendGiftResponse, ProtectorDetails, WithdrawalTransaction, WithdrawalMethod, InventoryItem, AppEvent, LiveEndSummary, UserLevelInfo, GeneralRankingStreamer, GeneralRankingUser, WithdrawalBalance, EventStatus, PkRankingData, Stream, Category, StartLiveResponse, ConvitePK, LiveFollowUpdate, PrivateLiveInviteSettings, NotificationSettings, FacingMode, SoundEffectName, UniversalRankingData, UserListRankingPeriod, PkSettings, LiveCategory, StreamUpdateListener, MuteStatusListener, UserKickedListener, SoundEffectListener, MuteStatusUpdate, UserKickedUpdate, SoundEffectUpdate, UserBlockedUpdate, UserUnblockedUpdate, UserBlockedListener, UserUnblockedListener, Region, PrivacySettings, IncomingPrivateLiveInvite } from '../types';
 
 // --- Listener Infrastructure ---
 type Listener<T> = (data: T) => void;
@@ -22,6 +24,7 @@ const userKickedManager = createListenerManager<UserKickedUpdate>();
 const soundEffectManager = createListenerManager<SoundEffectUpdate>();
 const userBlockedManager = createListenerManager<UserBlockedUpdate>();
 const userUnblockedManager = createListenerManager<UserUnblockedUpdate>();
+const liveUpdateManager = createListenerManager<number>(); // dispatches liveId
 
 export const addStreamListener = (listener: StreamUpdateListener) => streamUpdateManager.add(listener);
 export const removeStreamListener = (listener: StreamUpdateListener) => streamUpdateManager.remove(listener);
@@ -43,6 +46,9 @@ export const removeUserBlockedListener = (listener: UserBlockedListener) => user
 
 export const addUserUnblockedListener = (listener: UserUnblockedListener) => userUnblockedManager.add(listener);
 export const removeUserUnblockedListener = (listener: UserUnblockedListener) => userUnblockedManager.remove(listener);
+
+export const addLiveUpdateListener = (listener: Listener<number>) => liveUpdateManager.add(listener);
+export const removeLiveUpdateListener = (listener: Listener<number>) => liveUpdateManager.remove(listener);
 
 
 // --- STREAMING API FUNCTIONS ---
@@ -125,17 +131,20 @@ export const sendChatMessage = async (liveId: number, userId: number, message: s
         method: 'POST',
         body: JSON.stringify({ userId, message, imageUrl }),
     });
-    // After sending, refetch all messages to simulate update and dispatch
-    const updatedMessages = await getChatMessages(liveId);
-    chatListeners.forEach(l => l(liveId, updatedMessages));
+    liveUpdateManager.dispatch(liveId);
     return newMsg;
 };
 
 export const getGiftCatalog = (): Promise<Gift[]> => apiClient('/api/gifts');
 export const sendGift = (liveId: number, senderId: number, giftId: number, receiverId?: number): Promise<SendGiftResponse> => {
-    return apiClient(`/api/lives/${liveId}/gift`, {
+    return apiClient<SendGiftResponse>(`/api/lives/${liveId}/gift`, {
         method: 'POST',
         body: JSON.stringify({ senderId, giftId, receiverId })
+    }).then(response => {
+        if (response.success) {
+            liveUpdateManager.dispatch(liveId);
+        }
+        return response;
     });
 };
 
@@ -153,11 +162,14 @@ export const getUserListRanking = (period: UserListRankingPeriod): Promise<Unive
 };
 
 export const sendLike = (liveId: number, userId: number): Promise<Like> => {
-    return apiClient(`/api/lives/${liveId}/like`, { method: 'POST', body: JSON.stringify({ userId }) });
+    return apiClient<Like>(`/api/lives/${liveId}/like`, { method: 'POST', body: JSON.stringify({ userId }) }).then(like => {
+        liveUpdateManager.dispatch(liveId);
+        return like;
+    });
 };
 
 export const getLiveEndSummary = (liveId: number): Promise<LiveEndSummary> => apiClient(`/api/lives/${liveId}/summary`);
-export const getPublicProfile = (userId: number): Promise<PublicProfile> => apiClient(`/api/users/${userId}/profile`);
+export const getPublicProfile = (userId: number, viewerId?: number): Promise<PublicProfile> => apiClient(`/api/users/${userId}/profile${viewerId ? `?viewerId=${viewerId}` : ''}`);
 export const getPkRankingInfo = (): Promise<PkEventDetails> => apiClient('/api/pk-event/details');
 
 export const blockUser = (blockerId: number, targetId: number): Promise<{ success: boolean }> => {
@@ -254,8 +266,14 @@ export const getUserLevelInfo = (userId: number): Promise<UserLevelInfo> => apiC
 export const getStreamerRanking = (): Promise<GeneralRankingStreamer[]> => apiClient('/api/ranking/streamers');
 export const getUserRanking = (): Promise<GeneralRankingUser[]> => apiClient('/api/ranking/users');
 
-export const joinLiveStream = (userId: number, liveId: number): Promise<{ success: boolean }> => apiClient(`/api/lives/${liveId}/join`, { method: 'POST', body: JSON.stringify({ userId }) });
-export const leaveLiveStream = (userId: number, liveId: number): Promise<{ success: boolean }> => apiClient(`/api/lives/${liveId}/leave`, { method: 'POST', body: JSON.stringify({ userId }) });
+export const joinLiveStream = (userId: number, liveId: number): Promise<{ success: boolean }> => apiClient<{ success: boolean }>(`/api/lives/${liveId}/join`, { method: 'POST', body: JSON.stringify({ userId }) }).then(response => {
+    if (response.success) liveUpdateManager.dispatch(liveId);
+    return response;
+});
+export const leaveLiveStream = (userId: number, liveId: number): Promise<{ success: boolean }> => apiClient<{ success: boolean }>(`/api/lives/${liveId}/leave`, { method: 'POST', body: JSON.stringify({ userId }) }).then(response => {
+    if (response.success) liveUpdateManager.dispatch(liveId);
+    return response;
+});
 export const muteUser = (liveId: number, targetUserId: number, mute: boolean, durationMinutes: number = 5): Promise<{ success: boolean }> => apiClient<{ success: boolean }>(`/api/lives/${liveId}/mute`, { method: 'POST', body: JSON.stringify({ targetUserId, mute, durationMinutes }) }).then(res => {
     if(res.success) muteStatusManager.dispatch({ liveId, userId: targetUserId, isMuted: mute, mutedUntil: new Date(Date.now() + durationMinutes * 60000).toISOString() });
     return res;
@@ -265,122 +283,153 @@ export const kickUser = (liveId: number, targetUserId: number): Promise<{ succes
     return res;
 });
 export const playSoundEffect = (liveId: number, triggeredBy: number, effectName: SoundEffectName): Promise<{ success: boolean }> => apiClient<{ success: boolean }>(`/api/lives/${liveId}/sound-effect`, { method: 'POST', body: JSON.stringify({ triggeredBy, effectName }) }).then(res => {
-    if(res.success) soundEffectManager.dispatch({ liveId, triggeredBy, effectName });
+    if(res.success) soundEffectManager.dispatch({ liveId, effectName, triggeredBy });
     return res;
 });
-export const reportUser = (reporterId: number, reportedId: number): Promise<{ success: boolean }> => {
-    const reportData = {
-        reporterId,
-        reportedId: String(reportedId),
-        reason: "Denúncia do perfil",
-        reportDetails: `Usuário ${reporterId} denunciou o usuário ${reportedId} a partir de seu perfil.`,
-        fileName: ''
-    };
-    return apiClient('/api/reports', { method: 'POST', body: JSON.stringify(reportData) });
+
+export const getNearbyStreams = async (userId: number, accuracy: 'exact' | 'approximate'): Promise<Stream[]> => {
+    return apiClient(`/api/lives/nearby?userId=${userId}&accuracy=${accuracy}`);
 };
 
-export const getNotificationSettings = (userId: number): Promise<NotificationSettings> => apiClient(`/api/users/${userId}/notification-settings`);
-export const updateNotificationSettings = (userId: number, settings: Partial<Omit<NotificationSettings, 'userId'>>): Promise<NotificationSettings> => apiClient(`/api/users/${userId}/notification-settings`, { method: 'PATCH', body: JSON.stringify(settings) });
-export const getPushSettings = (userId: number): Promise<Record<number, boolean>> => apiClient(`/api/users/${userId}/push-settings`);
-export const updatePushSetting = (userId: number, followedUserId: number, enabled: boolean): Promise<{ success: boolean }> => apiClient(`/api/users/${userId}/push-settings`, { method: 'PATCH', body: JSON.stringify({ followedUserId, enabled }) });
-export const getPrivateLiveInviteSettings = (userId: number): Promise<PrivateLiveInviteSettings> => apiClient(`/api/users/${userId}/private-live-invite-settings`);
-export const updatePrivateLiveInviteSettings = (userId: number, settings: Partial<Omit<PrivateLiveInviteSettings, 'userId'>>): Promise<PrivateLiveInviteSettings> => apiClient(`/api/users/${userId}/private-live-invite-settings`, { method: 'PATCH', body: JSON.stringify(settings) });
-
-export const getUserLivePreferences = (userId: number): Promise<{ isPkEnabled: boolean; lastCameraUsed: FacingMode; lastSelectedCategory: Category }> => {
-    return apiClient(`/api/users/${userId}/live-preferences`);
-};
-
-export const updateUserPkPreference = (userId: number, isPkEnabled: boolean): Promise<{ success: boolean }> => {
-    return apiClient(`/api/users/${userId}/pk-preference`, { method: 'PUT', body: JSON.stringify({ isPkEnabled }) });
-};
-
-export const getCoHostFriends = (currentUserId: number): Promise<User[]> => apiClient(`/api/users/${currentUserId}/cohost-friends`);
-export const getInvitableOpponents = (currentUserId: number): Promise<User[]> => apiClient(`/api/lives/invitable/${currentUserId}`);
-
-export const sendDisputeInvitation = (inviterId: number, inviteeId: number): Promise<ConvitePK> => {
-    return apiClient('/api/pk/dispute/invite', {
-        method: 'POST',
-        body: JSON.stringify({ inviterId, inviteeId }),
-    });
-};
-
-export const getPendingPkInvitation = (userId: number): Promise<ConvitePK | null> => apiClient(`/api/pk/invites/pending/${userId}`);
-export const getPkInvitationStatus = (invitationId: string): Promise<{ invitation: ConvitePK, battle?: PkBattle }> => apiClient(`/api/pk/invites/status/${invitationId}`);
-
-export const joinPkMatchmakingQueue = (userId: number): Promise<{ success: boolean }> => apiClient('/api/pk/matchmaking/join', { method: 'POST', body: JSON.stringify({ userId }) });
-export const leavePkMatchmakingQueue = (userId: number): Promise<{ success: boolean }> => apiClient('/api/pk/matchmaking/leave', { method: 'POST', body: JSON.stringify({ userId }) });
-export const checkPkMatchmakingStatus = (userId: number): Promise<{ status: 'aguardando' | 'pareado', battle?: PkBattle }> => apiClient(`/api/pk/matchmaking/status/${userId}`);
-
-export const getPkSettings = (userId: number): Promise<{ durationSeconds: number }> => apiClient(`/api/pk-settings/${userId}`);
-export const updatePkSettings = (userId: number, durationSeconds: number): Promise<{ success: boolean }> => apiClient(`/api/pk-settings/${userId}`, { method: 'POST', body: JSON.stringify({ durationSeconds }) });
-export const helpHostRankUp = (helperId: number, hostId: number, giftValue: number): Promise<{ updatedUser: User | null; success: boolean; message: string }> => apiClient('/api/ranking/help-host', { method: 'POST', body: JSON.stringify({ helperId, hostId, giftValue }) });
-
-export const simulateReceivePkGift = (pkBattleId: number | string, receiverId: number, giftValue: number): Promise<PkBattleState> => {
-    return apiClient(`/api/batalhas-pk/${pkBattleId}/simulate-gift`, {
-        method: 'POST',
-        body: JSON.stringify({ receiverId, giftValue })
-    });
-};
-
-export const sendCoHostInvitation = (inviterId: number, inviteeId: number): Promise<ConvitePK> => {
-    return apiClient('/api/pk/cohost/send-invite', {
-        method: 'POST',
-        body: JSON.stringify({ inviterId, inviteeId }),
-    });
-};
-
-export const inviteToCoHostPk = (inviterId: number, inviteeId: number): Promise<PkBattle> => {
-    return apiClient('/api/pk/cohost/invite', {
-        method: 'POST',
-        body: JSON.stringify({ inviterId, inviteeId }),
-    });
-};
-
-export const blockAvatarAttempt = (userId: number, avatarImage: string): Promise<{ success: boolean }> => {
-    return apiClient('/api/avatar/protection/block', {
-        method: 'POST',
-        body: JSON.stringify({ userId, avatarImage }),
-    });
-};
-
-export const acceptPkInvitation = (invitationId: string): Promise<{ success: boolean, invitation: ConvitePK, battle?: PkBattle }> => apiClient(`/api/pk/invites/${invitationId}/accept`, { method: 'POST' });
-export const declinePkInvitation = (invitationId: string): Promise<{ success: boolean }> => apiClient(`/api/pk/invites/${invitationId}/decline`, { method: 'POST' });
-export const cancelPkInvitation = (invitationId: string): Promise<{ success: boolean }> => apiClient(`/api/pk/invites/${invitationId}/cancel`, { method: 'POST' });
-
-// --- LOCATION SERVICES (NEW) ---
-export const requestLocationPermission = (accuracy: 'exact' | 'approximate'): Promise<{ permission: 'granted', location: { lat: number, lon: number } }> => {
-    console.log(`[Mock API] Simulating request for ${accuracy} location permission.`);
-    // Simulate getting a location in Salvador, Bahia, Brazil for the main user
-    return Promise.resolve({
-        permission: 'granted',
-        location: {
-            lat: -12.9777,
-            lon: -38.5016
-        }
+export const requestLocationPermission = async (accuracy: 'exact' | 'approximate'): Promise<{ latitude: number, longitude: number }> => {
+    // This is a placeholder for a native call that would request permissions.
+    // In a web environment, we could use navigator.geolocation.
+    console.log(`[Mock Service] Requesting location with accuracy: ${accuracy}`);
+    return new Promise((resolve, reject) => {
+        // Simulate a successful permission grant with mock coordinates.
+        setTimeout(() => resolve({ latitude: -23.5505, longitude: -46.6333 }), 500);
     });
 };
 
 export const saveUserLocationPreference = (userId: number, accuracy: 'exact' | 'approximate'): Promise<{ success: boolean }> => {
-    console.log(`[Mock API] Saving location preference for user ${userId}: ${accuracy}`);
-    // In a real app, you would save this to the user's profile in the DB.
-    // The mock DB will handle location lookup based on the user's hardcoded coordinates.
-    return Promise.resolve({ success: true });
+    return apiClient('/api/users/location-preference', {
+        method: 'POST',
+        body: JSON.stringify({ userId, accuracy })
+    });
 };
 
-export const getNearbyStreams = (userId: number, accuracy: 'exact' | 'approximate'): Promise<Stream[]> => {
-    console.log(`[LiveStreamService] Fetching nearby streams for user ${userId} with ${accuracy} accuracy.`);
-    // The backend will use the userId to find their location and return nearby streams.
-    return apiClient<Stream[]>(`/api/lives?category=perto&userId=${userId}`);
+export const getNotificationSettings = (userId: number): Promise<NotificationSettings> => apiClient(`/api/users/${userId}/notification-settings`);
+export const updateNotificationSettings = (userId: number, settings: Partial<Omit<NotificationSettings, 'userId'>>): Promise<NotificationSettings> => {
+    return apiClient(`/api/users/${userId}/notification-settings`, {
+        method: 'PATCH',
+        body: JSON.stringify(settings)
+    });
 };
 
-// --- PRIVACY SETTINGS (NEW) ---
-export const getPrivacySettings = (userId: number): Promise<PrivacySettings> => {
-    return apiClient(`/api/users/${userId}/privacy-settings`);
+export const getPushSettings = (userId: number): Promise<Record<number, boolean>> => apiClient(`/api/users/${userId}/push-settings`);
+export const updatePushSetting = (userId: number, followedUserId: number, enabled: boolean): Promise<{ success: boolean }> => {
+    return apiClient(`/api/users/${userId}/push-settings`, {
+        method: 'PATCH',
+        body: JSON.stringify({ followedUserId, enabled })
+    });
 };
 
+export const getPrivateLiveInviteSettings = (userId: number): Promise<PrivateLiveInviteSettings> => apiClient(`/api/users/${userId}/private-live-invite-settings`);
+export const updatePrivateLiveInviteSettings = (userId: number, settings: Partial<Omit<PrivateLiveInviteSettings, 'userId'>>): Promise<PrivateLiveInviteSettings> => {
+    return apiClient(`/api/users/${userId}/private-live-invite-settings`, {
+        method: 'PATCH',
+        body: JSON.stringify(settings)
+    });
+};
+
+export const getPrivacySettings = (userId: number): Promise<PrivacySettings> => apiClient(`/api/users/${userId}/privacy-settings`);
 export const updatePrivacySettings = (userId: number, settings: Partial<Omit<PrivacySettings, 'userId'>>): Promise<PrivacySettings> => {
     return apiClient(`/api/users/${userId}/privacy-settings`, {
         method: 'PATCH',
         body: JSON.stringify(settings)
     });
+};
+
+export const getPendingPrivateLiveInvites = (userId: number): Promise<{ invite: IncomingPrivateLiveInvite | null }> => {
+    return apiClient(`/api/users/${userId}/pending-invites`);
+};
+
+export const getCoHostFriends = (userId: number): Promise<User[]> => apiClient(`/api/users/${userId}/cohost-friends`);
+
+export const getPkSettings = (userId: number): Promise<PkSettings> => apiClient(`/api/pk-settings/${userId}`);
+export const updatePkSettings = (userId: number, durationSeconds: number): Promise<{success: boolean}> => {
+    return apiClient(`/api/pk-settings/${userId}`, {
+        method: 'POST',
+        body: JSON.stringify({ durationSeconds })
+    });
+};
+
+export const getUserLivePreferences = (userId: number): Promise<{isPkEnabled: boolean, lastCameraUsed: FacingMode, lastSelectedCategory: Category}> => {
+    return apiClient(`/api/users/${userId}/live-preferences`);
+};
+export const updateUserPkPreference = (userId: number, isPkEnabled: boolean): Promise<{success: boolean}> => {
+    return apiClient(`/api/users/${userId}/pk-preference`, {
+        method: 'POST',
+        body: JSON.stringify({ isPkEnabled })
+    });
+};
+
+export const helpHostRankUp = (senderId: number, hostId: number, giftValue: number): Promise<{success: boolean, message: string, updatedUser: User | null}> => {
+    return apiClient(`/api/ranking/help-host`, {
+        method: 'POST',
+        body: JSON.stringify({ senderId, hostId, giftValue })
+    });
+}
+
+// --- NEWLY ADDED FUNCTIONS TO FIX ERRORS ---
+
+export const getInvitableOpponents = (userId: number): Promise<User[]> => {
+    return apiClient(`/api/pk/opponents/${userId}`);
+};
+
+export const inviteToCoHostPk = (inviterId: number, inviteeId: number): Promise<PkBattle> => {
+    return apiClient('/api/pk/cohost-invite', {
+        method: 'POST',
+        body: JSON.stringify({ inviterId, inviteeId })
+    });
+};
+
+export const getPendingPkInvitation = (userId: number): Promise<ConvitePK | null> => {
+    return apiClient(`/api/pk/invites/pending/${userId}`);
+};
+
+export const getPkInvitationStatus = (inviteId: string): Promise<{ invitation: ConvitePK, battle: PkBattle | null }> => {
+    return apiClient(`/api/pk/invites/status/${inviteId}`);
+};
+
+export const acceptPkInvitation = (inviteId: string): Promise<{ battle: PkBattle }> => {
+    return apiClient(`/api/pk/invites/${inviteId}/accept`, { method: 'POST' });
+};
+
+export const declinePkInvitation = (inviteId: string): Promise<{ success: boolean }> => {
+    return apiClient(`/api/pk/invites/${inviteId}/decline`, { method: 'POST' });
+};
+
+export const cancelPkInvitation = (inviteId: string): Promise<{ success: boolean }> => {
+    return apiClient(`/api/pk/invites/${inviteId}/cancel`, { method: 'POST' });
+};
+
+export const joinPkMatchmakingQueue = (userId: number): Promise<{ success: boolean }> => {
+    return apiClient('/api/pk/matchmaking/join', { method: 'POST', body: JSON.stringify({ userId }) });
+};
+
+export const leavePkMatchmakingQueue = (userId: number): Promise<{ success: boolean }> => {
+    return apiClient('/api/pk/matchmaking/leave', { method: 'POST', body: JSON.stringify({ userId }) });
+};
+
+export const checkPkMatchmakingStatus = (userId: number): Promise<{ status: 'aguardando' | 'em_pareamento' | 'pareado', battle: PkBattle | null }> => {
+    return apiClient(`/api/pk/matchmaking/status/${userId}`);
+};
+
+export const blockAvatarAttempt = (userId: number, avatarImage: string): Promise<{ success: boolean }> => {
+    return apiClient('/api/avatar/protection/block-attempt', {
+        method: 'POST',
+        body: JSON.stringify({ userId, avatarImage })
+    });
+};
+
+export const reportUser = (reporterId: number, reportedId: number): Promise<{ success: boolean }> => {
+    return apiClient('/api/reports/user', {
+        method: 'POST',
+        body: JSON.stringify({ reporterId, reportedId })
+    });
+};
+
+export const flipCamera = (liveId: number): Promise<{ success: boolean, newFacingMode: FacingMode }> => {
+    return apiClient(`/api/lives/${liveId}/flip-camera`, { method: 'POST' });
 };

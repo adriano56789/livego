@@ -277,7 +277,7 @@ const GoLiveSetupScreen: React.FC<GoLiveSetupScreenProps> = ({ user, onStartStre
       )}
       <div className="absolute inset-0 z-0">
         {cameraStatus === 'success' ? (
-          <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
+          <video ref={videoRef} autoPlay playsInline muted className={`w-full h-full object-cover ${facingMode === 'user' ? 'transform scale-x-[-1]' : ''}`} />
         ) : (
           <div className="w-full h-full bg-gray-900 flex items-center justify-center p-4">
             {cameraStatus === 'loading' && (

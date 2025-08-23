@@ -1,5 +1,4 @@
 
-
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import LoginScreen from './components/LoginScreen';
 import UploadPhotoScreen from './components/UploadPhotoScreen';
@@ -66,7 +65,7 @@ const AppContent: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { apiResponse, showApiResponse, hideApiResponse } = useApiViewer();
+  const { apiResponse, hideApiResponse } = useApiViewer();
   const [currentView, setCurrentView] = useState<AppView>('login');
   const [isUserLive, setIsUserLive] = useState(false);
   const [viewingStream, setViewingStream] = useState<Stream | PkBattle | null>(null);
@@ -165,12 +164,31 @@ const AppContent: React.FC = () => {
     return () => clearInterval(intervalId);
   }, [user, liveNotification]);
 
+  useEffect(() => {
+    if (!user) return;
+
+    const pollPrivateInvites = async () => {
+      if (document.visibilityState !== 'visible' || incomingPrivateLiveInvite) return;
+      try {
+        const { invite } = await liveStreamService.getPendingPrivateLiveInvites(user.id);
+        if (invite) {
+          setIncomingPrivateLiveInvite(invite);
+        }
+      } catch (e) {
+        console.error("Failed to poll for private live invites:", e);
+      }
+    };
+    
+    const intervalId = setInterval(pollPrivateInvites, 6000); // Poll every 6 seconds
+    return () => clearInterval(intervalId);
+  }, [user, incomingPrivateLiveInvite]);
+
+
   const handleLogin = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
         const loggedInUser = await loginWithGoogle();
-        showApiResponse('POST /api/auth/google', loggedInUser);
         setUser(loggedInUser);
     } catch (err) {
         const errorMessage = err instanceof Error ? err.message : "Ocorreu um erro desconhecido";
@@ -179,7 +197,7 @@ const AppContent: React.FC = () => {
     } finally {
         setIsLoading(false);
     }
-  }, [showApiResponse]);
+  }, []);
 
   const handlePhotoUploaded = useCallback((updatedUser: User) => {
     setUser(updatedUser);
@@ -213,21 +231,40 @@ const AppContent: React.FC = () => {
     setCurrentView('feed');
   }, []);
 
-  const handleFollowToggle = async (userIdToToggle: number) => {
+  const handleFollowToggle = async (userIdToToggle: number, optimisticCallback?: (action: 'follow' | 'unfollow') => void) => {
     if (!user) return;
+
+    const originalUser = { ...user, following: [...(user.following || [])] };
+    const isCurrentlyFollowing = originalUser.following.includes(userIdToToggle);
+    const action = isCurrentlyFollowing ? 'unfollow' : 'follow';
+
+    // 1. Optimistic UI update for the current user's following list
+    const optimisticallyUpdatedUser = {
+        ...user,
+        following: isCurrentlyFollowing
+            ? user.following.filter(id => id !== userIdToToggle)
+            : [...(user.following || []), userIdToToggle],
+    };
+    setUser(optimisticallyUpdatedUser);
     
-    const isCurrentlyFollowing = (user.following || []).includes(userIdToToggle);
-    
+    // 2. Trigger optimistic callback for other components (e.g., EditProfileScreen's follower count)
+    optimisticCallback?.(action);
+
     try {
-        const updatedUser = isCurrentlyFollowing
+        // 3. Make the API call
+        const updatedUserFromServer = isCurrentlyFollowing
           ? await liveStreamService.unfollowUser(user.id, userIdToToggle)
           : await liveStreamService.followUser(user.id, userIdToToggle);
         
-        showApiResponse(isCurrentlyFollowing ? 'DELETE /api/follows' : 'POST /api/follows', updatedUser);
-        setUser(updatedUser);
+        // 4. Final state sync with the server's response
+        setUser(updatedUserFromServer);
     } catch (error) {
         console.error("Failed to toggle follow state", error);
         alert(`Ocorreu um erro: ${error instanceof Error ? error.message : 'Tente novamente.'}`);
+        
+        // 5. Revert UI on error
+        setUser(originalUser);
+        optimisticCallback?.(isCurrentlyFollowing ? 'follow' : 'unfollow'); // Revert the callback action
     }
   };
   
@@ -255,23 +292,21 @@ const AppContent: React.FC = () => {
         delete (streamDetails as any).thumbnailBase64;
 
         const response = await liveStreamService.startLiveStream(user, streamDetails);
-        showApiResponse('POST /api/live/start', response);
         
         setIsUserLive(true);
+        setActiveCategory(details.category); // Set the category of the new stream
         handleViewStream(response.live);
         setCurrentView('feed');
     } catch (error) {
         console.error("Failed to start stream:", error);
         setError(error instanceof Error ? error.message : "Could not start stream");
     }
-  }, [user, showApiResponse, handleViewStream]);
+  }, [user, handleViewStream]);
 
   const handleStopStream = useCallback(async (streamerId: number, streamId: number) => {
     try {
         const summary = await liveStreamService.getLiveEndSummary(streamId);
-        showApiResponse(`GET /api/lives/${streamId}/summary`, summary);
         await liveStreamService.stopLiveStream(streamerId);
-        showApiResponse(`POST /api/users/${streamerId}/stop-live`, { success: true });
         setIsUserLive(false);
         setViewingStream(null);
         setViewingEndedStreamSummary(summary);
@@ -281,7 +316,7 @@ const AppContent: React.FC = () => {
         setViewingStream(null);
         setCurrentView('feed');
     }
-  }, [showApiResponse]);
+  }, []);
 
   const handleStreamEnded = useCallback((streamId: number) => {
     if (viewingStream && viewingStream.id === streamId) {
@@ -305,7 +340,7 @@ const AppContent: React.FC = () => {
   const handleNavigateFromStream = useCallback((view: AppView, userId: number) => {
     setViewingStream(null);
     setViewingOtherProfileId(null);
-    if (['followers', 'following', 'fans', 'visitors'].includes(view)) {
+    if (['following', 'fans', 'visitors'].includes(view)) {
         setViewingOtherProfileId(userId); // Keep this to pass to the list screens
     }
     setCurrentView(view);
@@ -352,9 +387,8 @@ const AppContent: React.FC = () => {
   const handleDeleteAccount = useCallback(async () => {
     if (!user) return;
     await deleteAccount(user.id);
-    showApiResponse(`DELETE /api/users/${user.id}`, { success: true });
     handleLogout();
-  }, [user, showApiResponse, handleLogout]);
+  }, [user, handleLogout]);
 
   // Main Render Logic
   if (needsUpdate && versionInfo) {
@@ -389,13 +423,14 @@ const AppContent: React.FC = () => {
           onStopStream={handleStopStream}
           onShowPrivateLiveInvite={(invite) => setIncomingPrivateLiveInvite(invite)}
           onViewProfile={handleViewProfile}
+          onFollowToggle={handleFollowToggle}
           onNavigateFromStream={handleNavigateFromStream}
         />
       );
     }
     
-    if (viewingOtherProfileId && !['followers', 'following', 'visitors', 'fans'].includes(currentView)) {
-        return <EditProfileScreen user={user} isViewingOtherProfile viewedUserId={viewingOtherProfileId} onExit={handleExitProfileView} onFollowToggle={handleFollowToggle} onNavigateToChat={handleNavigateToChat} onViewStream={handleViewStream} />;
+    if (viewingOtherProfileId && !['following', 'visitors', 'fans'].includes(currentView)) {
+        return <EditProfileScreen user={user} isViewingOtherProfile viewedUserId={viewingOtherProfileId} onExit={handleExitProfileView} onFollowToggle={handleFollowToggle} onNavigateToChat={handleNavigateToChat} onViewStream={handleViewStream} onNavigate={handleNavigate} />;
     }
 
     if (viewingEndedStreamSummary) {
@@ -514,9 +549,6 @@ const AppContent: React.FC = () => {
         break;
       case 'privacy-settings':
         mainContent = <PrivacySettingsScreen user={user} onExit={() => setCurrentView('settings')} />;
-        break;
-      case 'followers':
-        mainContent = <FollowersScreen currentUser={user} viewedUserId={viewingOtherProfileId || user.id} onExit={() => setCurrentView('profile')} onUpdateUser={handleUpdateUser} onViewProfile={handleViewProfile} />;
         break;
       case 'following':
         mainContent = <FollowingScreen currentUser={user} viewedUserId={viewingOtherProfileId || user.id} onExit={() => setCurrentView('profile')} onUpdateUser={handleUpdateUser} onViewProfile={handleViewProfile} />;

@@ -43,7 +43,7 @@ const PkStartDisputeModal: React.FC<PkStartDisputeModalProps> = ({ currentUser, 
     };
 
     return (
-        <div className="fixed inset-0 z-[80] bg-black/50 flex items-end" onClick={onClose}>
+        <div className="fixed inset-0 z-[80] bg-transparent flex items-end" onClick={onClose}>
             <div
                 className="bg-white w-full rounded-t-2xl p-4 pt-6 text-black animate-slide-up-fast flex flex-col gap-4"
                 onClick={e => e.stopPropagation()}
@@ -90,10 +90,6 @@ const PkStartDisputeModal: React.FC<PkStartDisputeModalProps> = ({ currentUser, 
                     </button>
                 </div>
             </div>
-            <style>{`
-                @keyframes slide-up-fast { from { transform: translateY(100%); } to { transform: translateY(0); } }
-                .animate-slide-up-fast { animation: slide-up-fast 0.25s ease-out forwards; }
-                `}</style>
         </div>
     );
 };

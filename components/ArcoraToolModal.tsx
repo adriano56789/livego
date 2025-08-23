@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import CrossIcon from './icons/CrossIcon';
 
 // Anchor Tool Icons
@@ -20,6 +20,7 @@ import RoomEffectsIcon from './icons/RoomEffectsIcon';
 import MessageIcon from './icons/MessageIcon';
 import MirrorImageIcon from './icons/MirrorImageIcon';
 import RotateIcon from './icons/RotateIcon';
+import { FacingMode } from '../types';
 
 
 interface ArcoraToolModalProps {
@@ -27,6 +28,7 @@ interface ArcoraToolModalProps {
   onOpenMuteModal: () => void;
   onOpenSoundEffectModal: () => void;
   onSwitchCamera: () => void;
+  cameraFacingMode: FacingMode;
   onToggleVoice: () => void;
   isVoiceEnabled: boolean;
   onOpenPrivateChat: () => void;
@@ -35,9 +37,10 @@ interface ArcoraToolModalProps {
   onOpenPkStartModal: () => void;
   isPkBattleActive: boolean;
   onOpenPkInviteModal: () => void;
+  mediaStream: MediaStream | null;
 }
 
-const ToolButton: React.FC<{ icon: React.ReactNode; label: string; isNew?: boolean; notImplemented?: boolean; onClick?: () => void; isActive?: boolean; }> = ({ icon, label, isNew, notImplemented, onClick, isActive }) => (
+const ToolButton: React.FC<{ icon: React.ReactNode; label: string; subLabel?: string; isNew?: boolean; notImplemented?: boolean; onClick?: () => void; isActive?: boolean; }> = ({ icon, label, subLabel, isNew, notImplemented, onClick, isActive }) => (
     <button 
         className="flex flex-col items-center justify-start gap-2 text-center relative h-24" 
         onClick={onClick || (() => alert(notImplemented ? `Funcionalidade "${label}" não implementada.` : `${label} clicado!`))}
@@ -46,6 +49,7 @@ const ToolButton: React.FC<{ icon: React.ReactNode; label: string; isNew?: boole
         {icon}
         </div>
         <span className="text-xs text-gray-300 w-full truncate">{label}</span>
+        {subLabel && <span className="text-[10px] text-green-400 font-semibold -mt-1">{subLabel}</span>}
         {isNew && (
         <span className="absolute top-[-2px] right-2 bg-red-500 text-white text-[9px] font-bold px-1.5 rounded-full shadow-md">new</span>
         )}
@@ -75,6 +79,7 @@ const ArcoraToolModal: React.FC<ArcoraToolModalProps> = ({
     onOpenMuteModal, 
     onOpenSoundEffectModal, 
     onSwitchCamera, 
+    cameraFacingMode,
     onToggleVoice, 
     isVoiceEnabled, 
     onOpenPrivateChat, 
@@ -83,7 +88,27 @@ const ArcoraToolModal: React.FC<ArcoraToolModalProps> = ({
     onOpenPkStartModal,
     isPkBattleActive,
     onOpenPkInviteModal,
+    mediaStream,
 }) => {
+    const videoRef = useRef<HTMLVideoElement>(null);
+
+    useEffect(() => {
+        const videoElement = videoRef.current;
+        if (videoElement && mediaStream) {
+            if (videoElement.srcObject !== mediaStream) {
+                videoElement.srcObject = mediaStream;
+            }
+            const playPromise = videoElement.play();
+            if (playPromise !== undefined) {
+                playPromise.catch(error => {
+                    if (error.name !== 'AbortError') {
+                        console.error("Modal video play failed", error);
+                    }
+                });
+            }
+        }
+    }, [mediaStream]);
+
     const iconClass = "w-7 h-7 text-gray-200";
 
     const anchorTools = [
@@ -104,7 +129,7 @@ const ArcoraToolModal: React.FC<ArcoraToolModalProps> = ({
     ];
 
     const basicTools = [
-        { icon: <CameraFlipIcon className={iconClass} />, label: 'Giro', onClick: onSwitchCamera },
+        { icon: <CameraFlipIcon className={iconClass} />, label: 'Giro', onClick: onSwitchCamera, subLabel: cameraFacingMode === 'user' ? 'Frontal' : 'Traseira' },
         { icon: <MuteIcon className={iconClass} />, label: 'Silenciamento', onClick: onOpenMuteModal },
         { icon: <MessageIcon className={iconClass} />, label: 'Bate-papo', onClick: onOpenPrivateChat },
         { icon: <MirrorImageIcon className={iconClass} />, label: 'Imagem espelhada', notImplemented: true },
@@ -121,7 +146,7 @@ const ArcoraToolModal: React.FC<ArcoraToolModalProps> = ({
       onClick={onClose}
     >
       <div 
-        className="bg-[#212124]/95 backdrop-blur-md w-full rounded-t-2xl flex flex-col text-white animate-slide-up-fast max-h-[65vh]"
+        className="bg-[#212124]/95 backdrop-blur-md w-full rounded-t-2xl flex flex-col text-white animate-slide-up-fast max-h-[80vh]"
         onClick={e => e.stopPropagation()}
       >
         <header className="p-4 border-b border-white/10 flex items-center justify-center relative shrink-0">
@@ -131,6 +156,14 @@ const ArcoraToolModal: React.FC<ArcoraToolModalProps> = ({
             </button>
         </header>
         <div className="p-6 overflow-y-auto scrollbar-hide">
+             <div className="bg-black rounded-lg aspect-video mb-6 overflow-hidden flex items-center justify-center">
+                {mediaStream ? (
+                    <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
+                ) : (
+                    <div className="text-gray-500 text-sm">Câmera indisponível</div>
+                )}
+            </div>
+
              <Section title="Ferramentas de Co-host e PK">
                 {pkTools.map(tool => <ToolButton key={tool.label} {...tool} />)}
             </Section>

@@ -2,7 +2,6 @@
 
 import React from 'react';
 import type { ChatMessage } from '../types';
-import { Player } from '@lottiefiles/react-lottie-player';
 import FancyChatBubble from './FancyChatBubble';
 import ProfileBadge from './ProfileBadge';
 import UserPlaceholderIcon from './icons/UserPlaceholderIcon';
@@ -51,13 +50,8 @@ const ChatMessageItem: React.FC<ChatMessageItemProps> = ({ message, onUserClick 
       <div className="text-sm flex items-center gap-2 self-start animate-slide-in-bottom">
         <button onClick={() => onUserClick(message.userId)} className="font-semibold text-cyan-300">{message.username}</button>
         <span className="text-gray-300">{message.message}</span>
-        {message.giftAnimationUrl && (
-             <Player
-                src={message.giftAnimationUrl}
-                className="w-8 h-8"
-                autoplay
-                loop
-            />
+        {message.giftImageUrl && (
+             <img src={message.giftImageUrl} alt={message.giftName} className="w-8 h-8" />
         )}
       </div>
     );
@@ -79,7 +73,7 @@ const ChatMessageItem: React.FC<ChatMessageItemProps> = ({ message, onUserClick 
                 <img src={message.imageUrl} alt="Imagem enviada" className="rounded-lg max-w-full h-auto max-h-48" />
             </a>
         </div>
-    </div>
+      </div>
     );
   }
   

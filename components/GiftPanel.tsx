@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import type { User, Gift, PkBattleStreamer } from '../types';
 import * as liveStreamService from '../services/liveStreamService';
 import DiamondIcon from './icons/DiamondIcon';
-import { Player } from '@lottiefiles/react-lottie-player';
 import GiftIcon from './icons/GiftIcon';
 
 interface GiftPanelProps {
@@ -93,11 +92,10 @@ const GiftPanel: React.FC<GiftPanelProps> = ({ user, liveId, streamerId, onClose
                         onClick={() => setSelectedGiftId(gift.id)}
                         className={`flex flex-col items-center gap-2 p-2 rounded-lg transition-all ${selectedGiftId === gift.id ? 'bg-white/20 scale-105' : 'bg-black/20'}`}
                     >
-                        <Player
-                            src={gift.animationUrl}
-                            className="w-12 h-12"
-                            autoplay
-                            loop
+                        <img
+                            src={gift.imageUrl}
+                            alt={gift.name}
+                            className="w-12 h-12 object-contain"
                         />
                         <span className="text-xs">{gift.name}</span>
                         <div className="flex items-center gap-1 text-xs text-yellow-400">

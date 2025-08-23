@@ -1,7 +1,7 @@
 
 
 // Basic types
-export type AppView = 'login' | 'upload' | 'edit' | 'feed' | 'profile' | 'go-live-setup' | 'messages' | 'diamond-purchase' | 'video' | 'protectors' | 'blocked-list' | 'withdrawal' | 'withdrawal-method-setup' | 'withdrawal-confirmation' | 'customer-service' | 'backpack' | 'help-article' | 'live-support-chat' | 'report-and-suggestion' | 'event-center' | 'event-detail' | 'settings' | 'copyright' | 'earnings-info' | 'connected-accounts' | 'search' | 'app-version' | 'live-ended' | 'my-level' | 'developer-tools' | 'ranking' | 'documentation' | 'purchase-history' | 'notification-settings' | 'push-settings' | 'private-live-invite-settings' | 'followers' | 'following' | 'visitors' | 'live-stream-viewer' | 'chat' | 'purchase-confirmation' | 'ranking-list' | 'profile-editor' | 'fans' | 'avatar-protection' | 'friend-requests' | 'privacy-settings';
+export type AppView = 'login' | 'upload' | 'edit' | 'feed' | 'profile' | 'go-live-setup' | 'messages' | 'diamond-purchase' | 'video' | 'protectors' | 'blocked-list' | 'withdrawal' | 'withdrawal-method-setup' | 'withdrawal-confirmation' | 'customer-service' | 'backpack' | 'help-article' | 'live-support-chat' | 'report-and-suggestion' | 'event-center' | 'event-detail' | 'settings' | 'copyright' | 'earnings-info' | 'connected-accounts' | 'search' | 'app-version' | 'live-ended' | 'my-level' | 'developer-tools' | 'ranking' | 'documentation' | 'purchase-history' | 'notification-settings' | 'push-settings' | 'private-live-invite-settings' | 'following' | 'visitors' | 'live-stream-viewer' | 'chat' | 'purchase-confirmation' | 'ranking-list' | 'profile-editor' | 'fans' | 'avatar-protection' | 'friend-requests' | 'privacy-settings';
 export type Gender = 'male' | 'female';
 export type Category = 'Popular' | 'Seguindo' | 'Perto' | 'Atualizado' | 'Privada' | 'PK' | 'Novo' | 'Música' | 'Dança';
 export type CameraStatus = 'idle' | 'loading' | 'success' | 'denied' | 'error' | 'not-found' | 'in-use' | 'insecure' | 'timeout';
@@ -68,6 +68,8 @@ export interface User {
   emotionalState: string | null;
   latitude?: number;
   longitude?: number;
+  pk_enabled_preference?: boolean;
+  last_visit_date?: string;
 }
 
 export interface AchievementFrame {
@@ -316,9 +318,14 @@ export interface ChatMessage {
   imageUrl?: string;
   emojis?: string;
   color?: string;
+  // Gift-specific properties
+  giftId?: number; // For combo detection
   giftName?: string;
   giftValue?: number;
   giftAnimationUrl?: string;
+  giftImageUrl?: string; // Static image for chat
+  recipientName?: string; // Who received the gift
+  //
   timestamp: string;
   badgeText?: string;
   avatarUrl?: string;
@@ -334,6 +341,7 @@ export interface Gift {
   valor_pontos: number;
   is_ativo: boolean;
   animationUrl: string;
+  imageUrl: string;
 }
 
 export interface DiamondPackage {

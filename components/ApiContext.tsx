@@ -1,5 +1,7 @@
-import React, { createContext, useState, useContext, useCallback, ReactNode } from 'react';
+
+import React, { createContext, useState, useContext, useCallback, ReactNode, useEffect } from 'react';
 import type { ApiLogEntry } from '../types';
+import { apiLogger } from '../services/apiLogger';
 
 interface ApiViewerContextType {
   showApiResponse: (title: string, data: object) => void;
@@ -39,9 +41,12 @@ export const ApiViewerProvider: React.FC<{ children: ReactNode }> = ({ children 
   const showApiResponse = useCallback((title: string, data: object) => {
     console.log(`[API Sim] ${title}`, data);
     const sanitizedData = sanitizeDataForViewer(data);
+    
+    // This now serves two purposes:
+    // 1. It powers the pop-up modal viewer.
+    // 2. It populates the persistent API Log in Developer Tools.
     setApiResponse({ title, data: sanitizedData });
 
-    // Add to log
     setApiLog(prevLog => {
         const newLogEntry: ApiLogEntry = {
             id: Date.now(),
@@ -49,15 +54,21 @@ export const ApiViewerProvider: React.FC<{ children: ReactNode }> = ({ children 
             title,
             data: sanitizedData,
         };
-        // Keep the log from getting too big
         const updatedLog = [newLogEntry, ...prevLog];
         if (updatedLog.length > 50) {
             updatedLog.pop();
         }
         return updatedLog;
     });
-
   }, []);
+
+  useEffect(() => {
+    // Register the context's show function with the global logger
+    apiLogger.setListener(showApiResponse);
+    
+    // On unmount, clear the listener to prevent memory leaks
+    return () => apiLogger.setListener(() => {});
+  }, [showApiResponse]);
 
   const hideApiResponse = useCallback(() => {
     setApiResponse(null);

@@ -1,10 +1,7 @@
 
-
-
 import React, { useState, useEffect, useCallback } from 'react';
 import type { User, GeneralRankingStreamer, GeneralRankingUser } from '../types';
 import * as liveStreamService from '../services/liveStreamService';
-import { useApiViewer } from './ApiContext';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
 import PodiumCrownIcon from './icons/PodiumCrownIcon';
 
@@ -58,7 +55,6 @@ const RankingScreen: React.FC<RankingScreenProps> = ({ currentUser, onExit, onVi
     const [streamerRanking, setStreamerRanking] = useState<GeneralRankingStreamer[]>([]);
     const [userRanking, setUserRanking] = useState<GeneralRankingUser[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    const { showApiResponse } = useApiViewer();
 
     useEffect(() => {
         const fetchRanking = async () => {
@@ -66,11 +62,9 @@ const RankingScreen: React.FC<RankingScreenProps> = ({ currentUser, onExit, onVi
             try {
                 if (activeTab === 'streamers') {
                     const data = await liveStreamService.getStreamerRanking();
-                    showApiResponse('GET /api/ranking/streamers', data);
                     setStreamerRanking(data);
                 } else {
                     const data = await liveStreamService.getUserRanking();
-                    showApiResponse('GET /api/ranking/users', data);
                     setUserRanking(data);
                 }
             } catch (error) {
@@ -80,7 +74,7 @@ const RankingScreen: React.FC<RankingScreenProps> = ({ currentUser, onExit, onVi
             }
         };
         fetchRanking();
-    }, [activeTab, showApiResponse]);
+    }, [activeTab]);
 
     const renderList = () => {
         const list = activeTab === 'streamers' ? streamerRanking : userRanking;

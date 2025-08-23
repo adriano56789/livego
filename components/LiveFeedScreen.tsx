@@ -253,7 +253,7 @@ export const LiveFeedScreen: React.FC<LiveFeedScreenProps> = ({
                             'streamer1' in stream ? (
                                 <PkBattleCard key={`pk-${stream.id}`} battle={stream} onViewStream={onViewStream} />
                             ) : (
-                                <StreamerCard key={`stream-${stream.id}`} stream={stream} onViewStream={onViewStream} />
+                                <StreamerCard key={`stream-${stream.id}`} stream={stream} onViewStream={onViewStream} currentUser={user} />
                             )
                         )}
                     </div>

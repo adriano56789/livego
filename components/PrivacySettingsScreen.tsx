@@ -1,11 +1,9 @@
 
-
 import React, { useState, useEffect } from 'react';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
 import ToggleSwitch from './ToggleSwitch';
 import type { User, PrivacySettings } from '../types';
 import { getPrivacySettings, updatePrivacySettings } from '../services/liveStreamService';
-import { useApiViewer } from './ApiContext';
 
 interface PrivacySettingsScreenProps {
     user: User;
@@ -32,14 +30,12 @@ const SettingRow: React.FC<{
 const PrivacySettingsScreen: React.FC<PrivacySettingsScreenProps> = ({ user, onExit }) => {
     const [settings, setSettings] = useState<Omit<PrivacySettings, 'userId'> | null>(null);
     const [isLoading, setIsLoading] = useState(true);
-    const { showApiResponse } = useApiViewer();
 
     useEffect(() => {
         const fetchSettings = async () => {
             setIsLoading(true);
             try {
                 const data = await getPrivacySettings(user.id);
-                showApiResponse(`GET /api/users/${user.id}/privacy-settings`, data);
                 setSettings(data);
             } catch (error) {
                 console.error("Failed to load privacy settings:", error);
@@ -49,7 +45,7 @@ const PrivacySettingsScreen: React.FC<PrivacySettingsScreenProps> = ({ user, onE
             }
         };
         fetchSettings();
-    }, [user.id, showApiResponse]);
+    }, [user.id]);
 
     const handleSettingChange = async (key: keyof Omit<PrivacySettings, 'userId'>, value: boolean) => {
         if (!settings) return;
@@ -60,7 +56,6 @@ const PrivacySettingsScreen: React.FC<PrivacySettingsScreenProps> = ({ user, onE
 
         try {
             const updatedSettings = await updatePrivacySettings(user.id, { [key]: value });
-            showApiResponse(`PATCH /api/users/${user.id}/privacy-settings`, updatedSettings);
             setSettings(updatedSettings);
         } catch (error) {
             console.error("Failed to update setting:", error);

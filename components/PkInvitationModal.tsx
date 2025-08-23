@@ -71,48 +71,38 @@ const PkInvitationModal: React.FC<PkInvitationModalProps> = ({ currentUser, oppo
     }
 
     return (
-        <div className="fixed inset-0 z-[70] bg-black/70 backdrop-blur-sm flex flex-col items-center justify-center font-sans text-white p-8 animate-fade-in-fast">
+        <div className="fixed inset-0 z-[70] bg-transparent flex flex-col items-center justify-end p-4 font-sans text-white" onClick={onClose}>
             <div 
-                className="absolute inset-0 bg-cover bg-center opacity-30 blur-sm"
-                style={{ backgroundImage: "url('https://images.pexels.com/photos/1190297/pexels-photo-1190297.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2')" }}
-            ></div>
-
-            <div className="relative z-10 flex flex-col items-center">
+                className="relative z-10 flex flex-col items-center bg-[#1c1c1e] rounded-2xl p-4 w-full max-w-md animate-slide-up-fast"
+                onClick={e => e.stopPropagation()}
+            >
                 <div className="flex items-center justify-center gap-4">
                     {/* Current User */}
                     <div className="flex flex-col items-center gap-2">
-                        <img src={currentUser.avatar_url} alt={currentUser.nickname || ''} className="w-24 h-24 rounded-full object-cover border-2 border-blue-400/50" />
+                        <img src={currentUser.avatar_url} alt={currentUser.nickname || ''} className="w-20 h-20 rounded-full object-cover border-2 border-blue-400/50" />
                         <p className="font-semibold text-gray-200 truncate w-24 text-center">{currentUser.nickname}</p>
                     </div>
 
-                    <VsCrossedIcon className="w-12 h-12 shrink-0 mx-4" />
+                    <VsCrossedIcon className="w-10 h-10 shrink-0 mx-2" />
 
                     {/* Opponent */}
                     <div className="flex flex-col items-center gap-2">
-                        <img src={opponent.avatar_url} alt={opponent.nickname || ''} className="w-24 h-24 rounded-full object-cover border-2 border-pink-400/50" />
+                        <img src={opponent.avatar_url} alt={opponent.nickname || ''} className="w-20 h-20 rounded-full object-cover border-2 border-pink-400/50" />
                         <p className="font-semibold text-gray-200 truncate w-24 text-center">{opponent.nickname}</p>
                     </div>
                 </div>
 
-                <p className="text-lg text-gray-200 mt-8 animate-pulse">
+                <p className="text-base text-gray-200 mt-4 animate-pulse">
                     Aguardando resposta...
                 </p>
 
                 <button
                     onClick={handleCancelClick}
-                    className="mt-12 bg-black/50 border border-gray-600 font-semibold py-3 px-12 rounded-full transition-colors hover:bg-black/70"
+                    className="mt-6 w-full bg-black/50 border border-gray-600 font-semibold py-3 px-12 rounded-full transition-colors hover:bg-black/70"
                 >
                     Cancelar
                 </button>
             </div>
-            
-             <style>{`
-                @keyframes fade-in-fast { 
-                    from { opacity: 0; } 
-                    to { opacity: 1; } 
-                }
-                .animate-fade-in-fast { animation: fade-in-fast 0.3s ease-out forwards; }
-             `}</style>
         </div>
     );
 };

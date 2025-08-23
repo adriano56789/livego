@@ -1,5 +1,6 @@
 
 
+
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import type { User, Conversation, ConversationMessage, PublicProfile } from '../types';
 import * as liveStreamService from '../services/liveStreamService';
@@ -223,29 +224,23 @@ const PrivateChatModal: React.FC<PrivateChatModalProps> = ({ user, onClose }) =>
 
     return (
         <>
-         <div className="fixed top-0 bottom-0 right-0 w-full max-w-md h-screen z-50 animate-slide-in-right">
-            <div className="bg-[#212124] w-full h-full flex flex-col text-white shadow-2xl">
-                {activeConversation ? renderChatView() : renderConversationList()}
+            <div className="fixed inset-0 z-50 bg-transparent flex items-end justify-center" onClick={onClose}>
+                <div 
+                    className="bg-[#212124] w-full max-w-lg h-[85vh] rounded-t-2xl flex flex-col text-white shadow-2xl animate-slide-up-fast"
+                    onClick={e => e.stopPropagation()}
+                >
+                    {activeConversation ? renderChatView() : renderConversationList()}
+                </div>
             </div>
-             <style>{`
-                @keyframes slide-in-right { 
-                    from { transform: translateX(100%); } 
-                    to { transform: translateX(0); } 
-                }
-                .animate-slide-in-right { 
-                    animation: slide-in-right 0.3s ease-out forwards; 
-                }
-            `}</style>
-         </div>
-         {otherUserProfileForModal && (
-            <ActionsModal
-                isOpen={isActionsModalOpen}
-                onClose={() => setIsActionsModalOpen(false)}
-                user={otherUserProfileForModal}
-                onBlock={handleBlock}
-                onReport={handleReport}
-            />
-        )}
+            {otherUserProfileForModal && (
+                <ActionsModal
+                    isOpen={isActionsModalOpen}
+                    onClose={() => setIsActionsModalOpen(false)}
+                    user={otherUserProfileForModal}
+                    onBlock={handleBlock}
+                    onReport={handleReport}
+                />
+            )}
         </>
     );
 };

@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useCallback } from 'react';
 import type { User } from '../types';
 import { uploadProfilePhoto, checkAvatarInUse } from '../services/authService';
@@ -5,7 +6,6 @@ import * as liveStreamService from '../services/liveStreamService';
 import CheckIcon from './icons/CheckIcon';
 import CrossIcon from './icons/CrossIcon';
 import CameraIcon from './icons/CameraIcon';
-import { useApiViewer } from './ApiContext';
 
 interface UploadPhotoScreenProps {
   user: User;
@@ -30,7 +30,6 @@ const UploadPhotoScreen: React.FC<UploadPhotoScreenProps> = ({ user, onPhotoUplo
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const { showApiResponse } = useApiViewer();
 
     const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
@@ -62,20 +61,17 @@ const UploadPhotoScreen: React.FC<UploadPhotoScreenProps> = ({ user, onPhotoUplo
         try {
             // Step 1: Check if the photo is already in use by another protected profile
             const { inUse } = await checkAvatarInUse(previewUrl);
-            showApiResponse('POST /api/avatar/protection/check', { inUse });
 
             if (inUse) {
                 setError("Esta foto já está protegida por outro usuário. Por favor, escolha outra.");
                 // Log the block attempt
                 await liveStreamService.blockAvatarAttempt(user.id, previewUrl);
-                showApiResponse('POST /api/avatar/protection/block', { success: true });
                 setIsLoading(false);
                 return;
             }
 
             // Step 2: If not in use, proceed with upload
             const updatedUser = await uploadProfilePhoto(user.id, previewUrl);
-            showApiResponse(`PATCH /api/users/${user.id}/avatar`, updatedUser);
             onPhotoUploaded(updatedUser);
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : "Falha no upload da foto. Tente novamente.";
@@ -84,7 +80,7 @@ const UploadPhotoScreen: React.FC<UploadPhotoScreenProps> = ({ user, onPhotoUplo
         } finally {
             setIsLoading(false);
         }
-    }, [previewUrl, user, onPhotoUploaded, showApiResponse]);
+    }, [previewUrl, user, onPhotoUploaded]);
 
     const buttonText = isLoading ? 'Validando...' : (previewUrl ? 'Confirmar e Continuar' : 'Enviar foto');
 

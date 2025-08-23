@@ -1,9 +1,7 @@
 
-
 import React, { useState, useEffect, useCallback } from 'react';
 import type { AppEvent, EventStatus } from '../types';
 import * as liveStreamService from '../services/liveStreamService';
-import { useApiViewer } from './ApiContext';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
 
 interface EventCenterScreenProps {
@@ -80,14 +78,12 @@ const EventCenterScreen: React.FC<EventCenterScreenProps> = ({ onExit, onViewEve
   const [activeTab, setActiveTab] = useState<EventTab>('ongoing');
   const [events, setEvents] = useState<AppEvent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const { showApiResponse } = useApiViewer();
 
   useEffect(() => {
     const fetchData = async () => {
       setIsLoading(true);
       try {
         const data = await liveStreamService.getEventsByStatus(activeTab);
-        showApiResponse(`GET /api/events?status=${activeTab}`, data);
         setEvents(data);
       } catch (error) {
         console.error("Failed to fetch events", error);
@@ -96,7 +92,7 @@ const EventCenterScreen: React.FC<EventCenterScreenProps> = ({ onExit, onViewEve
       }
     };
     fetchData();
-  }, [activeTab, showApiResponse]);
+  }, [activeTab]);
 
   
   const TABS: { key: EventTab, label: string }[] = [

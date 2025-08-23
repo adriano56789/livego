@@ -26,6 +26,7 @@ const mapLiveRecordToStream = (record: types.LiveStreamRecord): types.Stream => 
     inicio: record.inicio,
     permitePk: record.permite_pk,
     countryCode: record.country_code,
+    cameraFacingMode: record.camera_facing_mode,
 });
 
 const regions: types.Region[] = [
@@ -139,12 +140,12 @@ const initialState = {
     },
   ],
   lives: [
-      { id: 101, user_id: 55218901, titulo: "PK Challenge", nome_streamer: "Lest Go 500 K...", thumbnail_url: 'https://i.pravatar.cc/400?u=55218901', espectadores: 6804, categoria: 'PK', ao_vivo: true, em_pk: true, is_private: false, entry_fee: null, meta: 'Evento de PK', inicio: new Date().toISOString(), permite_pk: true, received_gifts_value: 12500, like_count: 12800, country_code: 'BR' },
-      { id: 102, user_id: 66345102, titulo: "Dance Party!", nome_streamer: "PK Queen", thumbnail_url: 'https://i.pravatar.cc/400?u=66345102', espectadores: 1205, categoria: 'Dança', ao_vivo: true, em_pk: true, is_private: false, entry_fee: null, meta: 'Vem dançar!', inicio: new Date().toISOString(), permite_pk: true, received_gifts_value: 8300, like_count: 3200, country_code: 'US' },
-      { id: 103, user_id: 77123403, titulo: "Música ao vivo", nome_streamer: "Dancer Live", thumbnail_url: 'https://i.pravatar.cc/400?u=77123403', espectadores: 523, categoria: 'Música', ao_vivo: true, em_pk: false, is_private: false, entry_fee: null, meta: 'Cantando sucessos', inicio: new Date().toISOString(), permite_pk: true, received_gifts_value: 4100, like_count: 980, country_code: 'ES' },
-      { id: 104, user_id: 88567804, titulo: "Just Chatting", nome_streamer: "Music Lover", thumbnail_url: 'https://i.pravatar.cc/400?u=88567804', espectadores: 850, categoria: 'Popular', ao_vivo: true, em_pk: false, is_private: false, entry_fee: null, meta: '', inicio: new Date().toISOString(), permite_pk: true, received_gifts_value: 6200, like_count: 1500, country_code: 'BR' },
-      { id: 105, user_id: 99887705, titulo: "Sessão Privada", nome_streamer: "PK Pro ⚡", thumbnail_url: 'https://i.pravatar.cc/400?u=99887705', espectadores: 1, categoria: 'Privada', ao_vivo: true, em_pk: false, is_private: true, entry_fee: null, meta: 'Apenas para convidados', inicio: new Date().toISOString(), permite_pk: false, received_gifts_value: 1500, invited_users: [10755083], like_count: 50, country_code: 'US' },
-      { id: 106, user_id: 11223306, titulo: "Training for PK", nome_streamer: "New Challenger", thumbnail_url: 'https://i.pravatar.cc/400?u=11223306', espectadores: 50, categoria: 'Popular', ao_vivo: true, em_pk: false, is_private: false, entry_fee: null, meta: 'Let\'s go!', inicio: new Date().toISOString(), permite_pk: true, received_gifts_value: 200, like_count: 120, country_code: 'BR' },
+      { id: 101, user_id: 55218901, titulo: "PK Challenge", nome_streamer: "Lest Go 500 K...", thumbnail_url: 'https://i.pravatar.cc/400?u=55218901', espectadores: 6804, categoria: 'PK', ao_vivo: true, em_pk: true, is_private: false, entry_fee: null, meta: 'Evento de PK', inicio: new Date().toISOString(), permite_pk: true, received_gifts_value: 12500, like_count: 12800, country_code: 'BR', camera_facing_mode: 'user' },
+      { id: 102, user_id: 66345102, titulo: "Dance Party!", nome_streamer: "PK Queen", thumbnail_url: 'https://i.pravatar.cc/400?u=66345102', espectadores: 1205, categoria: 'Dança', ao_vivo: true, em_pk: true, is_private: false, entry_fee: null, meta: 'Vem dançar!', inicio: new Date().toISOString(), permite_pk: true, received_gifts_value: 8300, like_count: 3200, country_code: 'US', camera_facing_mode: 'user' },
+      { id: 103, user_id: 77123403, titulo: "Música ao vivo", nome_streamer: "Dancer Live", thumbnail_url: 'https://i.pravatar.cc/400?u=77123403', espectadores: 523, categoria: 'Música', ao_vivo: true, em_pk: false, is_private: false, entry_fee: null, meta: 'Cantando sucessos', inicio: new Date().toISOString(), permite_pk: true, received_gifts_value: 4100, like_count: 980, country_code: 'ES', camera_facing_mode: 'user' },
+      { id: 104, user_id: 88567804, titulo: "Just Chatting", nome_streamer: "Music Lover", thumbnail_url: 'https://i.pravatar.cc/400?u=88567804', espectadores: 850, categoria: 'Popular', ao_vivo: true, em_pk: false, is_private: false, entry_fee: null, meta: '', inicio: new Date().toISOString(), permite_pk: true, received_gifts_value: 6200, like_count: 1500, country_code: 'BR', camera_facing_mode: 'user' },
+      { id: 105, user_id: 99887705, titulo: "Sessão Privada", nome_streamer: "PK Pro ⚡", thumbnail_url: 'https://i.pravatar.cc/400?u=99887705', espectadores: 1, categoria: 'Privada', ao_vivo: true, em_pk: false, is_private: true, entry_fee: null, meta: 'Apenas para convidados', inicio: new Date().toISOString(), permite_pk: false, received_gifts_value: 1500, invited_users: [10755083], like_count: 50, country_code: 'US', camera_facing_mode: 'user' },
+      { id: 106, user_id: 11223306, titulo: "Training for PK", nome_streamer: "New Challenger", thumbnail_url: 'https://i.pravatar.cc/400?u=11223306', espectadores: 50, categoria: 'Popular', ao_vivo: true, em_pk: false, is_private: false, entry_fee: null, meta: 'Let\'s go!', inicio: new Date().toISOString(), permite_pk: true, received_gifts_value: 200, like_count: 120, country_code: 'BR', camera_facing_mode: 'user' },
   ] as types.LiveStreamRecord[],
   chatMessages: {} as Record<string, types.ChatMessage[]>,
   pkBattles: [
@@ -161,7 +162,14 @@ const initialState = {
       }
   ] as types.TabelaBatalhaPK[],
   pkInvitations: [] as types.ConvitePK[],
+  privateLiveInvites: [] as any[],
   sentGifts: [] as types.LogPresenteEnviado[],
+  profileVisits: [
+    { id: 'v1', visitante_id: 55218901, perfil_visitado_id: 10755083, data_visita: new Date(Date.now() - 1000 * 60 * 30).toISOString() },
+    { id: 'v2', visitante_id: 66345102, perfil_visitado_id: 10755083, data_visita: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString() },
+    { id: 'v3', visitante_id: 77123403, perfil_visitado_id: 10755083, data_visita: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString() },
+    { id: 'v4', visitante_id: 10755083, perfil_visitado_id: 55218901, data_visita: new Date(Date.now() - 1000 * 60 * 60 * 5).toISOString() },
+  ] as types.VisitaPerfil[],
   conversations: [
     {
       id: 'convo-1',
@@ -208,14 +216,14 @@ const initialState = {
     },
   ] as types.TabelaMensagem[],
   gifts: [
-    { id: 1, name: 'Coração', price: 10, valor_pontos: 1, is_ativo: true, animationUrl: 'https://lottie.host/8e4414d7-208b-4309-8446-c2a4b8682a85/q3sAhc01qX.json' },
-    { id: 2, name: 'Rosa', price: 20, valor_pontos: 2, is_ativo: true, animationUrl: 'https://lottie.host/7e2968a3-2287-4939-b939-f83193424168/vDAbQ562sY.json' },
-    { id: 3, name: 'Foguete', price: 100, valor_pontos: 10, is_ativo: true, animationUrl: 'https://lottie.host/e211832f-a681-4357-893f-561b69735414/jV4mBv3h6i.json' },
-    { id: 4, name: 'Coroa', price: 500, valor_pontos: 50, is_ativo: true, animationUrl: 'https://lottie.host/f712499d-122e-436f-8255-66113b593018/k2yHRWJk7N.json' },
-    { id: 5, name: 'Carro Esportivo', price: 1000, valor_pontos: 100, is_ativo: true, animationUrl: 'https://lottie.host/a0740939-2169-4258-a551-344c2111c1d8/u8j53sV9wV.json' },
-    { id: 6, name: 'Castelo', price: 5000, valor_pontos: 500, is_ativo: true, animationUrl: 'https://lottie.host/9902e86d-f39b-469b-8919-9c4281313e63/l4Xn4q93An.json' },
-    { id: 7, name: 'Iate', price: 10000, valor_pontos: 1000, is_ativo: true, animationUrl: 'https://lottie.host/28b8c252-2518-48b4-9388-348574d64233/yT25s9Pz9x.json' },
-    { id: 8, name: 'Leão', price: 20000, valor_pontos: 2000, is_ativo: true, animationUrl: 'https://lottie.host/f70b4202-12f5-47e0-91a5-48b7a66b57e4/14G421Wk3L.json' },
+    { id: 1, name: 'Coração', price: 10, valor_pontos: 1, is_ativo: true, animationUrl: 'https://lottie.host/8e4414d7-208b-4309-8446-c2a4b8682a85/q3sAhc01qX.json', imageUrl: 'https://storage.googleapis.com/genai-assets/livego/heart_gift.png' },
+    { id: 2, name: 'Rosa', price: 20, valor_pontos: 2, is_ativo: true, animationUrl: 'https://lottie.host/7e2968a3-2287-4939-b939-f83193424168/vDAbQ562sY.json', imageUrl: 'https://storage.googleapis.com/genai-assets/livego/rose_gift.png' },
+    { id: 3, name: 'Foguete', price: 100, valor_pontos: 10, is_ativo: true, animationUrl: 'https://lottie.host/e211832f-a681-4357-893f-561b69735414/jV4mBv3h6i.json', imageUrl: 'https://storage.googleapis.com/genai-assets/livego/rocket_gift.png' },
+    { id: 4, name: 'Coroa', price: 500, valor_pontos: 50, is_ativo: true, animationUrl: 'https://lottie.host/f712499d-122e-436f-8255-66113b593018/k2yHRWJk7N.json', imageUrl: 'https://storage.googleapis.com/genai-assets/livego/crown_gift.png' },
+    { id: 5, name: 'Carro Esportivo', price: 1000, valor_pontos: 100, is_ativo: true, animationUrl: 'https://lottie.host/a0740939-2169-4258-a551-344c2111c1d8/u8j53sV9wV.json', imageUrl: 'https://storage.googleapis.com/genai-assets/livego/car_gift.png' },
+    { id: 6, name: 'Castelo', price: 5000, valor_pontos: 500, is_ativo: true, animationUrl: 'https://lottie.host/9902e86d-f39b-469b-8919-9c4281313e63/l4Xn4q93An.json', imageUrl: 'https://storage.googleapis.com/genai-assets/livego/castle_gift.png' },
+    { id: 7, name: 'Iate', price: 10000, valor_pontos: 1000, is_ativo: true, animationUrl: 'https://lottie.host/28b8c252-2518-48b4-9388-348574d64233/yT25s9Pz9x.json', imageUrl: 'https://storage.googleapis.com/genai-assets/livego/yacht_gift.png' },
+    { id: 8, name: 'Leão', price: 20000, valor_pontos: 2000, is_ativo: true, animationUrl: 'https://lottie.host/f70b4202-12f5-47e0-91a5-48b7a66b57e4/14G421Wk3L.json', imageUrl: 'https://storage.googleapis.com/genai-assets/livego/lion_gift.png' },
   ],
   diamondPackages: [
     { id: 1, diamonds: 100, price: 1.99, currency: 'BRL' },
@@ -254,6 +262,8 @@ const initialState = {
         acceptOnlyFriendPkInvites: false,
     }
   ],
+  pkMatchmakingQueue: [] as types.FilaPK[],
+  reports: [] as types.Denuncia[],
 };
 
 
@@ -322,26 +332,54 @@ const initializeChatForLive = (liveId: number | string) => {
 // Helper function to generate mock ranking data
 const generateMockRankingUsers = (count: number, scoreMultiplier: number): types.UniversalRankingUser[] => {
     return db.users
-        .filter((u: any) => u.id !== 999 && u.id !== 10755083) // Exclude system and self
+        .filter((u: types.User) => u.id !== 999 && u.id !== 10755083) // Exclude system and self
         .slice(0, count)
-        .map((user: any, index: number) => ({
-            rank: index + 1,
-            userId: user.id,
-            avatarUrl: user.avatar_url || '',
-            name: user.nickname || user.name,
-            score: Math.floor((10 - index) * scoreMultiplier * (Math.random() * 0.5 + 0.8)),
-            level: user.level,
-            gender: user.gender,
-            badges: [
+        .map((user: types.User, index: number) => {
+            const badges: { type: 'flag' | 'v_badge' | 'gender' | 'level', value: string | number }[] = [
                 { type: 'flag', value: user.country === 'BR' ? '🇧🇷' : '🇺🇸' },
-                ...(user.is_avatar_protected ? [{ type: 'v_badge', value: 'V' }] : []),
+                ...(user.is_avatar_protected ? [{ type: 'v_badge' as const, value: 'V' }] : []),
                 { type: 'level', value: user.level },
-                ...(user.gender ? [{ type: 'gender', value: user.gender }] : []),
-            ]
-        }))
-        .sort((a: any, b: any) => b.score - a.score)
-        .map((u: any, i: number) => ({ ...u, rank: i + 1 }));
+                ...(user.gender ? [{ type: 'gender' as const, value: user.gender }] : []),
+            ];
+            return {
+                rank: index + 1,
+                userId: user.id,
+                avatarUrl: user.avatar_url || '',
+                name: user.nickname || user.name,
+                score: Math.floor((10 - index) * scoreMultiplier * (Math.random() * 0.5 + 0.8)),
+                level: user.level,
+                gender: user.gender,
+                badges,
+            };
+        })
+        .sort((a, b) => b.score - a.score)
+        .map((u, i) => ({ ...u, rank: i + 1 }));
 };
+
+// Helper to get a user object with dynamically calculated stats
+const getDynamicUser = (userId: number): types.User | undefined => {
+    const user = db.users.find((u: types.User) => u.id === userId);
+    if (!user) {
+        return undefined;
+    }
+
+    // Calculate dynamic "followers" count
+    const followersCount = db.users.filter((u: types.User) => (u.following || []).includes(userId)).length;
+
+    // Calculate dynamic "visitors" count for the last 7 days
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const recentVisitors = db.profileVisits.filter((v: types.VisitaPerfil) => 
+        v.perfil_visitado_id === userId && new Date(v.data_visita) > sevenDaysAgo
+    );
+    const uniqueVisitorIds = new Set(recentVisitors.map((v: types.VisitaPerfil) => v.visitante_id));
+    const visitorsCount = uniqueVisitorIds.size;
+
+    return {
+        ...user,
+        followers: followersCount,
+        visitors: visitorsCount,
+    };
+}
 
 
 // Router function that simulates a backend API
@@ -361,12 +399,60 @@ export const handleApiRequest = async (method: string, path: string, body: any, 
   if (method === 'GET' && path === '/api/regions') {
     return regions;
   }
+  
+  if (method === 'POST' && path === '/api/users/location-preference') {
+    const { userId, accuracy } = body;
+    console.log(`[Mock API] User ${userId} saved location preference: ${accuracy}`);
+    // No actual state change is needed in the mock DB for this,
+    // just acknowledging the call is enough to fix the error.
+    return { success: true };
+  }
+  
+    if (method === 'GET' && path === '/api/lives/nearby') {
+        const userId = query.get('userId') ? parseInt(query.get('userId')!, 10) : null;
+        if (!userId) {
+            throw new Error("userId is required for nearby streams");
+        }
+        
+        // Simulate nearby by returning all live streams except the user's own, shuffled.
+        const otherLives = db.lives.filter((l: types.LiveStreamRecord) => l.ao_vivo && l.user_id !== userId);
+        const shuffled = otherLives.sort(() => 0.5 - Math.random());
+        
+        return shuffled.map(mapLiveRecordToStream);
+    }
+
+    if (method === 'POST' && path === '/api/chat/private/get-or-create') {
+        const { currentUserId, otherUserId } = body;
+
+        let convoRecord = db.conversations.find((c: types.TabelaConversa) => 
+            c.participantes.sort().join(',') === [currentUserId, otherUserId].sort().join(',')
+        );
+
+        if (!convoRecord) {
+            console.log(`[Mock API] Creating new conversation between ${currentUserId} and ${otherUserId}`);
+            convoRecord = {
+                id: `convo-${currentUserId}-${otherUserId}-${Date.now()}`,
+                participantes: [currentUserId, otherUserId],
+                ultima_mensagem_texto: "", // Start with no message
+                ultima_mensagem_timestamp: new Date().toISOString(),
+            };
+            db.conversations.push(convoRecord);
+        } else {
+            console.log(`[Mock API] Found existing conversation: ${convoRecord.id}`);
+        }
+        
+        return buildConversationViewModel(convoRecord, currentUserId);
+    }
 
   // Use regex for paths with params
   const liveListMatch = path.match(/^\/api\/lives$/);
   const liveByIdMatch = path.match(/^\/api\/lives\/(\d+)$/);
+  const flipCameraMatch = path.match(/^\/api\/lives\/(\d+)\/flip-camera$/);
   const liveSummaryMatch = path.match(/^\/api\/lives\/(\d+)\/summary$/);
   const viewersMatch = path.match(/^\/api\/lives\/(\d+)\/viewers$/);
+  const privateInviteMatch = path.match(/^\/api\/lives\/(\d+)\/invite$/);
+  const privateInviteCancelMatch = path.match(/^\/api\/lives\/(\d+)\/cancel-invite$/);
+  const userPendingInvitesMatch = path.match(/^\/api\/users\/(\d+)\/pending-invites$/);
   const chatMatch = path.match(/^\/api\/chat\/live\/(\d+)$/);
   const likeMatch = path.match(/^\/api\/lives\/(\d+)\/like$/);
   const giftMatch = path.match(/^\/api\/lives\/(\d+)\/gift$/);
@@ -397,6 +483,8 @@ export const handleApiRequest = async (method: string, path: string, body: any, 
   const userGiftsReceivedMatch = path.match(/^\/api\/users\/(\d+)\/gifts\/received$/);
   const userGiftsSentMatch = path.match(/^\/api\/users\/(\d+)\/gifts\/sent$/);
   const userPurchaseHistoryMatch = path.match(/^\/api\/users\/(\d+)\/purchase-history$/);
+  const pkOpponentsMatch = path.match(/^\/api\/pk\/opponents\/(\d+)$/);
+  const matchmakingStatusMatch = path.match(/^\/api\/pk\/matchmaking\/status\/(\d+)$/);
 
   // New Matchers for refactoring
   const blocksMatch = path.match(/^\/api\/blocks$/);
@@ -412,8 +500,308 @@ export const handleApiRequest = async (method: string, path: string, body: any, 
   const withdrawalBalanceMatch = path.match(/^\/api\/users\/(\d+)\/withdrawal-balance$/);
   const userWithdrawalHistoryMatch = path.match(/^\/api\/users\/(\d+)\/withdrawal-history$/);
   const userCohostFriendsMatch = path.match(/^\/api\/users\/(\d+)\/cohost-friends$/);
+  const stopLiveMatch = path.match(/^\/api\/users\/(\d+)\/stop-live$/);
+  const userPrivacySettingsMatch = path.match(/^\/api\/users\/(\d+)\/privacy-settings$/);
 
   // --- NEW HANDLERS ---
+    if (method === 'POST' && path === '/api/live/start') {
+        const { userId, title, meta, category, isPrivate, isPkEnabled, thumbnailUrl, entryFee, cameraUsed } = body;
+        const user = db.users.find((u: any) => u.id === userId);
+        if (!user) {
+            throw new Error('User not found');
+        }
+
+        const newLiveStreamRecord: types.LiveStreamRecord = {
+            id: Math.floor(1000 + Math.random() * 9000),
+            user_id: userId,
+            titulo: title,
+            nome_streamer: user.nickname || user.name,
+            thumbnail_url: thumbnailUrl,
+            espectadores: 0,
+            categoria: category,
+            ao_vivo: true,
+            em_pk: false,
+            is_private: isPrivate,
+            entry_fee: entryFee || null,
+            meta: meta,
+            inicio: new Date().toISOString(),
+            permite_pk: isPkEnabled,
+            camera_facing_mode: cameraUsed,
+            country_code: user.country,
+            like_count: 0,
+            received_gifts_value: 0
+        };
+
+        db.lives.push(newLiveStreamRecord);
+        
+        user.last_camera_used = cameraUsed;
+        user.last_selected_category = category;
+
+        const response: types.StartLiveResponse = {
+            live: mapLiveRecordToStream(newLiveStreamRecord),
+            urls: {
+                rtmp: `${SRS_URL_PUBLISH}/${newLiveStreamRecord.id}`,
+                hls: `${SRS_URL_PLAY_HLS}/${newLiveStreamRecord.id}.m3u8`,
+                webrtc: `${SRS_URL_PLAY_WEBRTC}/${newLiveStreamRecord.id}`,
+                streamKey: `sk_${newLiveStreamRecord.id}_${Math.random().toString(36).substring(7)}`,
+            },
+        };
+
+        return response;
+    }
+
+    if (method === 'POST' && path === '/api/avatar/protection/block-attempt') {
+        const { userId, avatarImage } = body;
+        console.log(`[Mock API] Block attempt logged for user ${userId} trying to use image: ${avatarImage.substring(0, 30)}...`);
+        return { success: true };
+    }
+
+    if (method === 'POST' && path === '/api/reports/user') {
+        const { reporterId, reportedId } = body;
+        const report: types.Denuncia = {
+            id: `report-${Date.now()}`,
+            usuario_denunciante_id: reporterId,
+            usuario_denunciado_id: String(reportedId),
+            motivo_denuncia: 'User Report from Profile/Chat',
+            comentarios: 'No details provided.',
+            status_revisao: 'Pendente',
+            data_denuncia: new Date().toISOString(),
+        };
+        db.reports.push(report);
+        console.log(`[Mock API] User report received from ${reporterId} against ${reportedId}`);
+        return { success: true };
+    }
+
+    if (pkOpponentsMatch && method === 'GET') {
+        const userId = parseInt(pkOpponentsMatch[1], 10);
+        const user = db.users.find((u: types.User) => u.id === userId);
+        if (!user) return [];
+        // Return friends who are currently live
+        const friends = db.users.filter((u: any) => 
+            (user.following || []).includes(u.id) && 
+            (u.following || []).includes(userId) &&
+            db.lives.some((l: types.LiveStreamRecord) => l.user_id === u.id && l.ao_vivo)
+        );
+        return friends;
+    }
+
+    if (method === 'POST' && path === '/api/pk/cohost-invite') {
+        const { inviterId, inviteeId } = body;
+        const streamerA = db.users.find((u: types.User) => u.id === inviterId);
+        const streamerB = db.users.find((u: types.User) => u.id === inviteeId);
+        const streamA = db.lives.find((l: types.LiveStreamRecord) => l.user_id === inviterId && l.ao_vivo);
+        const streamB = db.lives.find((l: types.LiveStreamRecord) => l.user_id === inviteeId && l.ao_vivo);
+        if (!streamerA || !streamerB || !streamA || !streamB) {
+            throw new Error("One or both users are not live and cannot battle.");
+        }
+        
+        const newBattle: types.TabelaBatalhaPK = {
+            id: `pk-${Date.now()}`,
+            streamer_A_id: inviterId,
+            streamer_B_id: inviteeId,
+            pontuacao_A: 0,
+            pontuacao_B: 0,
+            status: 'ativa',
+            data_inicio: new Date().toISOString(),
+            data_fim: new Date(Date.now() + 300 * 1000).toISOString(), // 5 mins
+            duracao_segundos: 300,
+        };
+        db.pkBattles.push(newBattle);
+        streamA.em_pk = true;
+        streamB.em_pk = true;
+
+        const battleViewModel: types.PkBattle = {
+            id: newBattle.id as any,
+            title: "Batalha Épica",
+            streamer1: { userId: streamerA.id, streamId: streamA.id, name: streamerA.nickname || streamerA.name, score: 0, avatarUrl: streamerA.avatar_url!, isVerified: true, countryCode: streamerA.country },
+            streamer2: { userId: streamerB.id, streamId: streamB.id, name: streamerB.nickname || streamerB.name, score: 0, avatarUrl: streamerB.avatar_url!, isVerified: false, countryCode: streamerB.country }
+        };
+
+        return battleViewModel;
+    }
+
+    if (pendingPkInvitesMatch && method === 'GET') {
+        const userId = parseInt(pendingPkInvitesMatch[1], 10);
+        const now = new Date();
+        const invite = db.pkInvitations.find((inv: types.ConvitePK) => inv.destinatario_id === userId && inv.status === 'pendente' && new Date(inv.data_expiracao) > now);
+        return invite || null;
+    }
+    
+    if (pkInviteStatusMatch && method === 'GET') {
+        const inviteId = pkInviteStatusMatch[1];
+        const invite = db.pkInvitations.find((inv: types.ConvitePK) => inv.id === inviteId);
+        if (!invite) return notFound();
+        let battle: types.PkBattle | null = null;
+        if (invite.status === 'aceito' && invite.batalha_id) {
+             const battleRecord = db.pkBattles.find((b: types.TabelaBatalhaPK) => b.id === invite.batalha_id);
+             if(battleRecord) {
+                const streamerA = db.users.find((u: types.User) => u.id === battleRecord.streamer_A_id)!;
+                const streamerB = db.users.find((u: types.User) => u.id === battleRecord.streamer_B_id)!;
+                const streamA = db.lives.find((l: types.LiveStreamRecord) => l.user_id === streamerA.id && l.ao_vivo)!;
+                const streamB = db.lives.find((l: types.LiveStreamRecord) => l.user_id === streamerB.id && l.ao_vivo)!;
+                battle = {
+                    id: battleRecord.id as any,
+                    title: "Batalha Épica",
+                    streamer1: { userId: streamerA.id, streamId: streamA.id, name: streamerA.nickname || streamerA.name, score: battleRecord.pontuacao_A, avatarUrl: streamerA.avatar_url!, isVerified: true, countryCode: streamerA.country },
+                    streamer2: { userId: streamerB.id, streamId: streamB.id, name: streamerB.nickname || streamerB.name, score: battleRecord.pontuacao_B, avatarUrl: streamerB.avatar_url!, isVerified: false, countryCode: streamerB.country }
+                };
+             }
+        }
+        return { invitation: invite, battle };
+    }
+
+    if (pkInviteAcceptMatch && method === 'POST') {
+        const inviteId = pkInviteAcceptMatch[1];
+        const invite = db.pkInvitations.find((inv: types.ConvitePK) => inv.id === inviteId);
+        if (!invite || invite.status !== 'pendente') throw new Error("Convite inválido ou já respondido.");
+        
+        invite.status = 'aceito';
+        
+        const battle = await handleApiRequest('POST', '/api/pk/cohost-invite', { inviterId: invite.remetente_id, inviteeId: invite.destinatario_id }, new URLSearchParams());
+        invite.batalha_id = battle.id;
+
+        return { battle };
+    }
+    
+    if (pkInviteDeclineMatch && method === 'POST') {
+        const inviteId = pkInviteDeclineMatch[1];
+        const invite = db.pkInvitations.find((inv: types.ConvitePK) => inv.id === inviteId);
+        if (invite) invite.status = 'recusado';
+        return { success: true };
+    }
+    
+    if (pkInviteCancelMatch && method === 'POST') {
+        const inviteId = pkInviteCancelMatch[1];
+        const invite = db.pkInvitations.find((inv: types.ConvitePK) => inv.id === inviteId);
+        if (invite) invite.status = 'cancelado';
+        return { success: true };
+    }
+    
+    // PK Matchmaking
+    if (method === 'POST' && path === '/api/pk/matchmaking/join') {
+        const { userId } = body;
+        if (!db.pkMatchmakingQueue.some((q: types.FilaPK) => q.streamer_id === userId)) {
+            db.pkMatchmakingQueue.push({ streamer_id: userId, data_entrada: new Date().toISOString(), status: 'aguardando' });
+        }
+        return { success: true };
+    }
+
+    if (method === 'POST' && path === '/api/pk/matchmaking/leave') {
+        const { userId } = body;
+        db.pkMatchmakingQueue = db.pkMatchmakingQueue.filter((q: types.FilaPK) => q.streamer_id !== userId);
+        return { success: true };
+    }
+
+    if (matchmakingStatusMatch && method === 'GET') {
+        const userId = parseInt(matchmakingStatusMatch[1], 10);
+        const userInQueue = db.pkMatchmakingQueue.find((q: types.FilaPK) => q.streamer_id === userId);
+        if (!userInQueue) return { status: 'aguardando', battle: null };
+        
+        const opponent = db.pkMatchmakingQueue.find((q: types.FilaPK) => q.streamer_id !== userId);
+        if (opponent) {
+            db.pkMatchmakingQueue = db.pkMatchmakingQueue.filter((q: types.FilaPK) => q.streamer_id !== userId && q.streamer_id !== opponent.streamer_id);
+            const battle = await handleApiRequest('POST', '/api/pk/cohost-invite', { inviterId: userId, inviteeId: opponent.streamer_id }, new URLSearchParams());
+            return { status: 'pareado', battle };
+        }
+        
+        return { status: 'aguardando', battle: null };
+    }
+
+    if (flipCameraMatch && method === 'POST') {
+        const liveId = parseInt(flipCameraMatch[1], 10);
+        const live = db.lives.find((l: types.LiveStreamRecord) => l.id === liveId);
+        if (!live) {
+            return notFound();
+        }
+        
+        const currentMode = live.camera_facing_mode || 'user';
+        const newFacingMode: types.FacingMode = currentMode === 'user' ? 'environment' : 'user';
+        live.camera_facing_mode = newFacingMode;
+        
+        const user = db.users.find((u: types.User) => u.id === live.user_id);
+        if (user) {
+            user.last_camera_used = newFacingMode;
+        }
+        
+        return { success: true, newFacingMode };
+    }
+
+    if (privateInviteMatch && method === 'POST') {
+        const liveId = parseInt(privateInviteMatch[1], 10);
+        const { inviteeId } = body;
+        const live = db.lives.find((l: types.LiveStreamRecord) => l.id === liveId);
+        if (!live) return notFound();
+        if (!live.is_private) {
+            throw new Error("Cannot invite to a public live stream.");
+        }
+
+        if (!live.invited_users) {
+            live.invited_users = [];
+        }
+        if (!live.invited_users.includes(inviteeId)) {
+            live.invited_users.push(inviteeId);
+        }
+        
+        // Remove any existing pending invite for this user to this live
+        db.privateLiveInvites = db.privateLiveInvites.filter((inv: any) => !(inv.liveId === liveId && inv.inviteeId === inviteeId));
+
+        db.privateLiveInvites.push({
+            id: `pli-${Date.now()}`,
+            liveId: liveId,
+            inviterId: live.user_id,
+            inviteeId: inviteeId,
+            status: 'pending',
+            timestamp: new Date().toISOString(),
+        });
+
+        return { success: true };
+    }
+  
+    if (privateInviteCancelMatch && method === 'POST') {
+        const liveId = parseInt(privateInviteCancelMatch[1], 10);
+        const { inviteeId } = body;
+        const live = db.lives.find((l: types.LiveStreamRecord) => l.id === liveId);
+        if (!live) return notFound();
+
+        if (live.invited_users) {
+            live.invited_users = live.invited_users.filter(id => id !== inviteeId);
+        }
+
+        db.privateLiveInvites = db.privateLiveInvites.filter((inv: any) => !(inv.liveId === liveId && inv.inviteeId === inviteeId));
+        
+        return { success: true };
+    }
+
+    if (userPendingInvitesMatch && method === 'GET') {
+        const userId = parseInt(userPendingInvitesMatch[1], 10);
+        const invite = db.privateLiveInvites.find((inv: any) => inv.inviteeId === userId && inv.status === 'pending');
+
+        if (!invite) {
+            return { invite: null };
+        }
+
+        // "Consume" the invite by changing its status
+        invite.status = 'delivered';
+
+        const liveRecord = db.lives.find((l: types.LiveStreamRecord) => l.id === invite.liveId);
+        const inviter = db.users.find((u: types.User) => u.id === invite.inviterId);
+        const invitee = db.users.find((u: types.User) => u.id === invite.inviteeId);
+
+        if (!liveRecord || !inviter || !invitee) {
+            // clean up bad invite
+            db.privateLiveInvites = db.privateLiveInvites.filter((i: any) => i.id !== invite.id);
+            return { invite: null }; // Invalid invite data
+        }
+
+        const fullInvite: types.IncomingPrivateLiveInvite = {
+            stream: mapLiveRecordToStream(liveRecord),
+            inviter,
+            invitee,
+        };
+        
+        return { invite: fullInvite };
+    }
+
   if (method === 'GET' && path === '/api/gifts') {
       return db.gifts;
   }
@@ -425,30 +813,78 @@ export const handleApiRequest = async (method: string, path: string, body: any, 
       return userOrders;
   }
 
-  if (method === 'GET' && path === '/api/ranking/hourly') {
-    const rankingUsers = generateMockRankingUsers(15, 1000);
-    const currentUser = db.users.find((u: any) => u.id === 10755083);
-    const data: types.UniversalRankingData = {
-        podium: rankingUsers.slice(0, 3),
-        list: rankingUsers.slice(3),
-        currentUserRanking: {
-            rank: 55,
+    if (method === 'GET' && path === '/api/ranking/hourly') {
+        const liveId = query.get('liveId') ? parseInt(query.get('liveId')!, 10) : null;
+        if (!liveId) throw new Error("liveId is required for hourly ranking");
+
+        const giftsInLive = db.sentGifts.filter((g: types.LogPresenteEnviado) => {
+            const pkBattle = db.pkBattles.find((b: types.TabelaBatalhaPK) => String(b.id) === String(g.batalha_id));
+            if (pkBattle) {
+                const streamA = db.lives.find((l: types.LiveStreamRecord) => l.user_id === pkBattle.streamer_A_id && l.ao_vivo);
+                const streamB = db.lives.find((l: types.LiveStreamRecord) => l.user_id === pkBattle.streamer_B_id && l.ao_vivo);
+                return streamA?.id === liveId || streamB?.id === liveId;
+            }
+            return g.liveId === liveId;
+        });
+
+        const scoresBySender: Record<number, number> = {};
+        for (const gift of giftsInLive) {
+            scoresBySender[gift.senderId] = (scoresBySender[gift.senderId] || 0) + gift.giftValue;
+        }
+
+        const rankingUsers: types.UniversalRankingUser[] = Object.entries(scoresBySender)
+            .map(([userIdStr, score]) => {
+                const userId = parseInt(userIdStr, 10);
+                const user = db.users.find((u: types.User) => u.id === userId);
+                if (!user) return null;
+                
+                const badges: { type: 'flag' | 'v_badge' | 'gender' | 'level', value: string | number }[] = [
+                    { type: 'flag', value: user.country === 'BR' ? '🇧🇷' : '🇺🇸' },
+                    ...(user.is_avatar_protected ? [{ type: 'v_badge' as const, value: 'V' }] : []),
+                    { type: 'level', value: user.level },
+                    ...(user.gender ? [{ type: 'gender' as const, value: user.gender }] : []),
+                ];
+                
+                return {
+                    userId,
+                    score,
+                    rank: 0 as (number | string),
+                    avatarUrl: user.avatar_url || '',
+                    name: user.nickname || user.name,
+                    level: user.level,
+                    gender: user.gender,
+                    badges,
+                };
+            })
+            .filter((u): u is types.UniversalRankingUser => u !== null)
+            .sort((a, b) => b.score - a.score)
+            .map((u, index) => ({ ...u, rank: index + 1 }));
+
+        const currentUser = db.users.find((u: any) => u.id === 10755083);
+        const currentUserRanking = rankingUsers.find(u => u.userId === currentUser.id) || {
+            rank: '>99',
             userId: currentUser.id,
             avatarUrl: currentUser.avatar_url || '',
             name: currentUser.nickname || currentUser.name,
-            score: 12345,
+            score: scoresBySender[currentUser.id] || 0,
             level: currentUser.level,
             gender: currentUser.gender,
             badges: [{ type: 'flag', value: '🇧🇷' }, { type: 'level', value: currentUser.level }]
-        },
-        countdown: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
-        footerButtons: {
-            primary: { text: "Ajudar o anfitrião a obter o 1º lugar", value: "1060" },
-            secondary: { text: "Ajudar o anfitrião a entrar na lista", value: "203" }
-        }
-    };
-    return data;
-  }
+        };
+
+        const data: types.UniversalRankingData = {
+            podium: rankingUsers.slice(0, 3),
+            list: rankingUsers.slice(3, 15),
+            currentUserRanking: currentUserRanking,
+            countdown: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+            footerButtons: {
+                primary: { text: "Ajudar o anfitrião a obter o 1º lugar", value: "1060" },
+                secondary: { text: "Ajudar o anfitrião a entrar na lista", value: "203" }
+            }
+        };
+        return data;
+    }
+
 
   if (method === 'GET' && path === '/api/ranking/user-list') {
     const period = query.get('period') as types.UserListRankingPeriod || 'daily';
@@ -705,7 +1141,7 @@ export const handleApiRequest = async (method: string, path: string, body: any, 
           ]
       };
   }
-
+  
   // USER BLOCKING (NEW SPEC)
   if (blocksMatch && method === 'POST') {
       const { blockerId, blockedId } = body;
@@ -789,7 +1225,7 @@ export const handleApiRequest = async (method: string, path: string, body: any, 
             convoRecord.ultima_mensagem_timestamp = systemMessage.timestamp;
         }
         
-        return currentUser;
+        return getDynamicUser(currentUser.id);
   }
   if (followsWithIdsMatch && method === 'DELETE') {
       const followerId = parseInt(followsWithIdsMatch[1], 10);
@@ -804,7 +1240,7 @@ export const handleApiRequest = async (method: string, path: string, body: any, 
           currentUser.following.splice(index, 1);
           targetUser.followers = Math.max(0, (targetUser.followers || 0) - 1);
       }
-      return currentUser;
+      return getDynamicUser(currentUser.id);
   }
   
   // REPORTS
@@ -827,7 +1263,25 @@ export const handleApiRequest = async (method: string, path: string, body: any, 
 
   // AUTH
   if (method === 'POST' && path === '/api/auth/google') {
-    return db.users.find((u: types.User) => u.id === 10755083);
+    const { id, email } = body || {};
+
+    let userToFindId: number | undefined;
+
+    if (id) {
+        userToFindId = id;
+    } else if (email) {
+        const foundUser = db.users.find((u: types.User) => u.email === email);
+        userToFindId = foundUser?.id;
+    } else {
+        // Default behavior: log in as the main user if no id/email is provided
+        userToFindId = 10755083;
+    }
+
+    if (!userToFindId) {
+        throw new Error('Usuário não encontrado');
+    }
+
+    return getDynamicUser(userToFindId);
   }
 
   // --- STREAMING INFRASTRUCTURE (SIMULATED) ---
@@ -965,50 +1419,6 @@ export const handleApiRequest = async (method: string, path: string, body: any, 
     ] as types.SelectableOption[];
   }
 
-  // LIVES
-  if (method === 'POST' && path === '/api/live/start') {
-    const { userId, title, meta, category, isPrivate, isPkEnabled, thumbnailUrl, entryFee, cameraUsed } = body;
-    const user = db.users.find((u: any) => u.id === userId);
-    if (!user) {
-        throw new Error('User not found');
-    }
-
-    const newLiveStreamRecord: types.LiveStreamRecord = {
-        id: Math.floor(1000 + Math.random() * 9000),
-        user_id: userId,
-        titulo: title,
-        nome_streamer: user.nickname || user.name,
-        thumbnail_url: thumbnailUrl,
-        espectadores: 0,
-        categoria: category,
-        ao_vivo: true,
-        em_pk: false,
-        is_private: isPrivate,
-        entry_fee: entryFee || null,
-        meta: meta,
-        inicio: new Date().toISOString(),
-        permite_pk: isPkEnabled,
-        camera_facing_mode: cameraUsed,
-    };
-
-    db.lives.push(newLiveStreamRecord);
-    
-    user.last_camera_used = cameraUsed;
-    user.last_selected_category = category;
-
-    const response: types.StartLiveResponse = {
-        live: mapLiveRecordToStream(newLiveStreamRecord),
-        urls: {
-            rtmp: `${SRS_URL_PUBLISH}/${newLiveStreamRecord.id}`,
-            hls: `${SRS_URL_PLAY_HLS}/${newLiveStreamRecord.id}.m3u8`,
-            webrtc: `${SRS_URL_PLAY_WEBRTC}/${newLiveStreamRecord.id}`,
-            streamKey: `sk_${newLiveStreamRecord.id}_${Math.random().toString(36).substring(7)}`,
-        },
-    };
-
-    return response;
-  }
-  
   if (liveListMatch && method === 'GET') {
     const category = (query.get('category') || 'popular').toLowerCase();
     const userId = query.get('userId') ? parseInt(query.get('userId')!, 10) : null;
@@ -1016,7 +1426,6 @@ export const handleApiRequest = async (method: string, path: string, body: any, 
 
     switch (category) {
         case 'popular':
-        case 'perto': // Map Perto to popular as a fallback
             results.sort((a, b) => b.espectadores - a.espectadores);
             break;
         case 'novo':
@@ -1178,7 +1587,92 @@ if (liveByIdMatch && method === 'GET') {
         }
         return notFound();
     }
-     if (joinLeaveMatch) {
+
+    if (giftMatch && method === 'POST') {
+        const liveId = parseInt(giftMatch[1], 10);
+        const { senderId, giftId, receiverId } = body;
+
+        const sender = db.users.find((u: types.User) => u.id === senderId);
+        const gift = db.gifts.find((g: types.Gift) => g.id === giftId);
+        const live = db.lives.find((l: types.LiveStreamRecord) => l.id === liveId);
+
+        if (!sender || !gift || !live) {
+            throw new Error('Usuário, presente ou live não encontrado.');
+        }
+
+        if ((sender.wallet_diamonds || 0) < gift.price) {
+            return {
+                success: false,
+                updatedUser: null,
+                message: 'Diamantes insuficientes para enviar este presente.',
+            } as types.SendGiftResponse;
+        }
+
+        // --- Transaction Logic ---
+        sender.wallet_diamonds -= gift.price;
+
+        const actualReceiverId = receiverId || live.user_id;
+        const receiver = db.users.find((u: types.User) => u.id === actualReceiverId);
+        if (receiver) {
+            receiver.wallet_earnings = (receiver.wallet_earnings || 0) + gift.price;
+        }
+
+        live.received_gifts_value = (live.received_gifts_value || 0) + gift.price;
+
+        const liveStreamerId = live.user_id;
+        const pkBattle = db.pkBattles.find((b: types.TabelaBatalhaPK) => 
+            b.status === 'ativa' && (b.streamer_A_id === liveStreamerId || b.streamer_B_id === liveStreamerId)
+        );
+
+        let pkBattleForGiftLog: number | undefined = undefined;
+        if (pkBattle) {
+            pkBattleForGiftLog = Number(pkBattle.id);
+            if (actualReceiverId === pkBattle.streamer_A_id) {
+                pkBattle.pontuacao_A += gift.price;
+            } else if (actualReceiverId === pkBattle.streamer_B_id) {
+                pkBattle.pontuacao_B += gift.price;
+            }
+        }
+        
+        initializeChatForLive(liveId);
+        const giftMessage: types.ChatMessage = {
+            id: Date.now(),
+            type: 'gift',
+            userId: sender.id,
+            username: sender.nickname || sender.name,
+            message: `enviou ${gift.name} para ${receiver.nickname || receiver.name}!`,
+            giftId: gift.id,
+            giftName: gift.name,
+            giftValue: gift.price,
+            giftAnimationUrl: gift.animationUrl,
+            giftImageUrl: gift.imageUrl,
+            recipientName: receiver.nickname || receiver.name,
+            timestamp: new Date().toISOString(),
+            level: sender.level,
+            avatarUrl: sender.avatar_url,
+        };
+        db.chatMessages[liveId].push(giftMessage);
+
+        const giftLog: types.LogPresenteEnviado = {
+            id: Date.now(),
+            senderId: sender.id,
+            receiverId: actualReceiverId,
+            liveId: liveId,
+            giftId: gift.id,
+            giftValue: gift.price,
+            batalha_id: pkBattleForGiftLog,
+            timestamp: new Date().toISOString(),
+        };
+        db.sentGifts.push(giftLog);
+
+        return {
+            success: true,
+            updatedUser: sender,
+            message: 'Presente enviado com sucesso!',
+        } as types.SendGiftResponse;
+    }
+     
+    if (joinLeaveMatch) {
         const liveId = parseInt(joinLeaveMatch[1], 10);
         const action = joinLeaveMatch[2];
         const live = db.lives.find((l: types.LiveStreamRecord) => l.id === liveId);
@@ -1221,12 +1715,12 @@ if (liveByIdMatch && method === 'GET') {
     const userAvatarMatch = path.match(/^\/api\/users\/(\d+)\/avatar$/);
     const userFollowersMatch = path.match(/^\/api\/users\/(\d+)\/followers$/);
     const userFollowingMatch = path.match(/^\/api\/users\/(\d+)\/following$/);
+    const userVisitorsMatch = path.match(/^\/api\/users\/(\d+)\/visitors$/);
     const userLiveStatusMatch = path.match(/^\/api\/users\/(\d+)\/live-status$/);
     const followingLiveStatusMatch = path.match(/^\/api\/users\/(\d+)\/following-live-status$/);
     const activeStreamMatch = path.match(/^\/api\/users\/(\d+)\/active-stream$/);
     const userLevelMatch = path.match(/^\/api\/users\/(\d+)\/level$/);
     const userBlockedListMatch = path.match(/^\/api\/users\/(\d+)\/blocked$/);
-    const userPrivacySettingsMatch = path.match(/^\/api\/users\/(\d+)\/privacy-settings$/);
     
     if (userPrivacySettingsMatch) {
         const userId = parseInt(userPrivacySettingsMatch[1], 10);
@@ -1254,9 +1748,11 @@ if (liveByIdMatch && method === 'GET') {
 
     if (userProfileMatch && method === 'GET') {
       const userId = parseInt(userProfileMatch[1], 10);
+      const viewerId = query.get('viewerId') ? parseInt(query.get('viewerId')!, 10) : 10755083; // Default to main user
       const user = db.users.find((u: any) => u.id === userId);
       if (!user) return notFound();
       const live = db.lives.find((l: types.LiveStreamRecord) => l.user_id === userId && l.ao_vivo);
+      const viewer = db.users.find((u: types.User) => u.id === viewerId);
       
       const publicProfile: types.PublicProfile = {
         id: user.id,
@@ -1267,7 +1763,7 @@ if (liveByIdMatch && method === 'GET') {
         gender: user.gender,
         birthday: user.birthday,
         isLive: !!live,
-        isFollowing: (db.users.find((u: any) => u.id === 10755083)?.following || []).includes(userId),
+        isFollowing: (viewer?.following || []).includes(userId),
         coverPhotoUrl: 'https://i.pravatar.cc/800?u=cover' + user.id,
         stats: {
           value: user.wallet_earnings,
@@ -1291,7 +1787,7 @@ if (liveByIdMatch && method === 'GET') {
 
     if (userByIdMatch && method === 'GET') {
       const userId = parseInt(userByIdMatch[1], 10);
-      const user = db.users.find((u: any) => u.id === userId);
+      const user = getDynamicUser(userId);
       return user || notFound();
     }
     
@@ -1301,7 +1797,7 @@ if (liveByIdMatch && method === 'GET') {
         if (userIndex === -1) return notFound();
         const updatedUser = { ...db.users[userIndex], ...body, has_completed_profile: true };
         db.users[userIndex] = updatedUser;
-        return updatedUser;
+        return getDynamicUser(userId);
     }
 
     if (userAvatarMatch && method === 'PATCH') {
@@ -1311,7 +1807,7 @@ if (liveByIdMatch && method === 'GET') {
         
         const updatedUser = { ...db.users[userIndex], avatar_url: body.photoDataUrl, has_uploaded_real_photo: true };
         db.users[userIndex] = updatedUser;
-        return updatedUser;
+        return getDynamicUser(userId);
     }
 
     if (userFollowersMatch && method === 'GET') {
@@ -1338,10 +1834,44 @@ if (liveByIdMatch && method === 'GET') {
         return followingUsers;
     }
 
+    if (userVisitorsMatch && method === 'GET') {
+        const userId = parseInt(userVisitorsMatch[1], 10);
+        const visits = db.profileVisits
+            .filter((v: types.VisitaPerfil) => v.perfil_visitado_id === userId)
+            .sort((a: types.VisitaPerfil, b: types.VisitaPerfil) => new Date(b.data_visita).getTime() - new Date(a.data_visita).getTime());
+        
+        const visitorIds = [...new Set(visits.map((v: types.VisitaPerfil) => v.visitante_id))];
+        const visitors = db.users.filter((u: types.User) => visitorIds.includes(u.id));
+        return visitors;
+    }
+
     if (userLiveStatusMatch && method === 'GET') {
         const userId = parseInt(userLiveStatusMatch[1], 10);
         const isLive = db.lives.some((l: types.LiveStreamRecord) => l.user_id === userId && l.ao_vivo);
         return isLive;
+    }
+
+    if (stopLiveMatch && method === 'POST') {
+        const userId = parseInt(stopLiveMatch[1], 10);
+        const live = db.lives.find((l: types.LiveStreamRecord) => l.user_id === userId && l.ao_vivo);
+        if (live) {
+            live.ao_vivo = false;
+            // Also end any active PK battle this user is in
+            const pkBattle = db.pkBattles.find((b: types.TabelaBatalhaPK) => 
+                b.status === 'ativa' && (b.streamer_A_id === userId || b.streamer_B_id === userId)
+            );
+            if (pkBattle) {
+                pkBattle.status = 'finalizada';
+                // Mark the other streamer's live as no longer in PK
+                const otherStreamerId = pkBattle.streamer_A_id === userId ? pkBattle.streamer_B_id : pkBattle.streamer_A_id;
+                const otherStreamerLive = db.lives.find((l: types.LiveStreamRecord) => l.user_id === otherStreamerId && l.ao_vivo);
+                if (otherStreamerLive) {
+                    otherStreamerLive.em_pk = false;
+                }
+            }
+        }
+        // Always return success even if no live stream was found, to handle cases where stop is called twice.
+        return { success: true };
     }
     
     if (followingLiveStatusMatch && method === 'GET') {

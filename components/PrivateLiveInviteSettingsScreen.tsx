@@ -1,9 +1,9 @@
+
 import React, { useState, useEffect } from 'react';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
 import ToggleSwitch from './ToggleSwitch';
 import type { User, PrivateLiveInviteSettings } from '../types';
 import * as liveStreamService from '../services/liveStreamService';
-import { useApiViewer } from './ApiContext';
 
 interface PrivateLiveInviteSettingsScreenProps {
     user: User;
@@ -29,14 +29,12 @@ const PrivateLiveInviteSettingsScreen: React.FC<PrivateLiveInviteSettingsScreenP
         onlyFriends: false,
     });
     const [isLoading, setIsLoading] = useState(true);
-    const { showApiResponse } = useApiViewer();
 
     useEffect(() => {
         const fetchSettings = async () => {
             setIsLoading(true);
             try {
                 const data = await liveStreamService.getPrivateLiveInviteSettings(user.id);
-                showApiResponse(`GET /api/users/${user.id}/private-live-invite-settings`, data);
                 setSettings({
                     privateInvites: data.privateInvites,
                     onlyFollowing: data.onlyFollowing,
@@ -50,7 +48,7 @@ const PrivateLiveInviteSettingsScreen: React.FC<PrivateLiveInviteSettingsScreenP
             }
         };
         fetchSettings();
-    }, [user.id, showApiResponse]);
+    }, [user.id]);
 
     const handleSettingChange = async (key: keyof typeof settings, value: boolean) => {
         if (!settings) return;
@@ -61,7 +59,6 @@ const PrivateLiveInviteSettingsScreen: React.FC<PrivateLiveInviteSettingsScreenP
 
         try {
             const updatedSettings = await liveStreamService.updatePrivateLiveInviteSettings(user.id, { [key]: value });
-            showApiResponse(`PATCH /api/users/${user.id}/private-live-invite-settings`, updatedSettings);
             setSettings({
                 privateInvites: updatedSettings.privateInvites,
                 onlyFollowing: updatedSettings.onlyFollowing,

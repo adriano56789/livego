@@ -1,15 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import type { ChatMessage } from '../types';
-import { Player } from '@lottiefiles/react-lottie-player';
 import * as authService from '../services/authService';
 import UserPlaceholderIcon from './icons/UserPlaceholderIcon';
 
 interface GiftQueueItem {
-  id: number;
-  animationUrl: string;
+  id: number; // message id
+  giftId: number;
+  imageUrl: string;
   senderName: string;
   senderAvatarUrl: string;
   giftName: string;
+  recipientName: string;
 }
 
 interface GiftDisplayAnimationProps {
@@ -18,26 +19,43 @@ interface GiftDisplayAnimationProps {
 
 const GiftDisplayAnimation: React.FC<GiftDisplayAnimationProps> = ({ triggeredGift }) => {
   const [giftQueue, setGiftQueue] = useState<GiftQueueItem[]>([]);
-  const [currentGift, setCurrentGift] = useState<GiftQueueItem | null>(null);
+  const [currentGift, setCurrentGift] = useState<(GiftQueueItem & { combo: number }) | null>(null);
   const [isVisible, setIsVisible] = useState(false);
+  const comboTimeoutRef = useRef<number | null>(null);
 
   useEffect(() => {
-    if (triggeredGift && triggeredGift.giftAnimationUrl) {
+    if (triggeredGift?.giftImageUrl && triggeredGift.giftId && triggeredGift.recipientName) {
+      // Check for combo
+      if (
+        currentGift &&
+        isVisible && // Only combo if a gift is currently visible
+        currentGift.giftId === triggeredGift.giftId &&
+        currentGift.senderName === triggeredGift.username &&
+        currentGift.recipientName === triggeredGift.recipientName
+      ) {
+        // It's a combo, update the current gift's combo count
+        setCurrentGift(prev => (prev ? { ...prev, id: triggeredGift.id, combo: prev.combo + 1 } : null));
+        return;
+      }
+
+      // Not a combo, so add the new gift to the queue
       const fetchAvatarAndAddToQueue = async () => {
         let avatarUrl = '';
         try {
           const profile = await authService.getUserProfile(triggeredGift.userId);
           avatarUrl = profile.avatar_url || '';
         } catch (e) {
-          console.error("Failed to fetch sender avatar for gift display:", e);
+          console.error("Failed to fetch sender avatar:", e);
         }
         
         const newGift: GiftQueueItem = {
           id: triggeredGift.id,
-          animationUrl: triggeredGift.giftAnimationUrl,
+          giftId: triggeredGift.giftId!,
+          imageUrl: triggeredGift.giftImageUrl!,
           senderName: triggeredGift.username,
           senderAvatarUrl: avatarUrl,
           giftName: triggeredGift.giftName || 'um presente',
+          recipientName: triggeredGift.recipientName!,
         };
 
         setGiftQueue(prev => [...prev, newGift]);
@@ -47,27 +65,34 @@ const GiftDisplayAnimation: React.FC<GiftDisplayAnimationProps> = ({ triggeredGi
   }, [triggeredGift]);
 
   useEffect(() => {
-    if (!currentGift && giftQueue.length > 0) {
-      const nextGift = giftQueue[0];
-      setCurrentGift(nextGift);
-      setGiftQueue(prev => prev.slice(1));
-      setIsVisible(true);
+    // This effect runs when currentGift changes (new gift or combo increment)
+    // It's responsible for managing the display timers.
+    if (currentGift) {
+      if (comboTimeoutRef.current) clearTimeout(comboTimeoutRef.current);
 
-      // Animation duration: 0.5s in, 2s visible, 0.5s out
-      const fadeOutTimer = setTimeout(() => {
-        setIsVisible(false);
+      comboTimeoutRef.current = window.setTimeout(() => {
+        setIsVisible(false); // Start fade-out
       }, 2500);
 
       const cleanupTimer = setTimeout(() => {
-        setCurrentGift(null);
-      }, 3000);
+        setCurrentGift(null); // Clear current gift to allow the next one in queue
+        comboTimeoutRef.current = null;
+      }, 3000); // 2500ms visible + 500ms fade-out animation
 
       return () => {
-        clearTimeout(fadeOutTimer);
         clearTimeout(cleanupTimer);
+        if (comboTimeoutRef.current) clearTimeout(comboTimeoutRef.current);
       };
+
+    } else if (giftQueue.length > 0) {
+      // If no gift is showing, process the next one from the queue
+      const nextGift = giftQueue[0];
+      setCurrentGift({ ...nextGift, combo: 1 });
+      setGiftQueue(prev => prev.slice(1));
+      setIsVisible(true);
     }
   }, [currentGift, giftQueue]);
+
 
   if (!currentGift) {
     return null;
@@ -75,28 +100,29 @@ const GiftDisplayAnimation: React.FC<GiftDisplayAnimationProps> = ({ triggeredGi
 
   return (
     <div
-      className={`fixed top-1/2 left-1/2 z-30 pointer-events-none flex flex-col items-center gap-4 ${isVisible ? 'animate-gift-display-in' : 'animate-gift-display-out'}`}
-      style={{ transform: 'translate(-50%, -50%)' }}
+      key={currentGift.id} // Use gift id to re-trigger animation on new gift
+      className={`pointer-events-auto flex items-center p-1 bg-gradient-to-r from-purple-900/80 via-black/70 to-black/70 backdrop-blur-md rounded-full shadow-lg border border-purple-500/50 transform transition-all duration-500 ${isVisible ? 'animate-gift-banner-in' : 'animate-gift-banner-out'}`}
     >
-      <Player
-        src={currentGift.animationUrl}
-        className="w-48 h-48"
-        autoplay
-        keepLastFrame
-      />
-      <div className="bg-black/60 backdrop-blur-sm p-2 pr-4 rounded-full flex items-center gap-3 shadow-lg -mt-8">
-        <div className="w-10 h-10 rounded-full bg-gray-700 overflow-hidden">
-            {currentGift.senderAvatarUrl ? (
-                <img src={currentGift.senderAvatarUrl} alt={currentGift.senderName} className="w-full h-full object-cover" />
-            ) : (
-                <UserPlaceholderIcon className="w-full h-full text-gray-500 p-1" />
-            )}
-        </div>
-        <div className="text-white text-sm">
-          <p className="font-bold">{currentGift.senderName}</p>
-          <p className="text-xs text-gray-300">enviou {currentGift.giftName}!</p>
-        </div>
+      <div className="w-12 h-12 rounded-full bg-gray-700 overflow-hidden shrink-0 border-2 border-purple-400">
+        {currentGift.senderAvatarUrl ? (
+          <img src={currentGift.senderAvatarUrl} alt={currentGift.senderName} className="w-full h-full object-cover" />
+        ) : (
+          <UserPlaceholderIcon className="w-full h-full text-gray-500 p-1" />
+        )}
       </div>
+
+      <div className="text-white text-sm text-left mx-3 flex-grow">
+        <p className="font-bold">{currentGift.senderName}</p>
+        <p className="text-xs text-gray-300">enviou {currentGift.giftName}!</p>
+      </div>
+      
+      <img src={currentGift.imageUrl} alt={currentGift.giftName} className="w-12 h-12 object-contain" />
+      
+      {currentGift.combo > 1 && (
+        <div className="text-3xl font-black italic text-yellow-300 drop-shadow-lg animate-combo-thump ml-2 pr-4" key={currentGift.combo}>
+          <span className="text-xl font-semibold not-italic">x</span>{currentGift.combo}
+        </div>
+      )}
     </div>
   );
 };

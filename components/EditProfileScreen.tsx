@@ -1,6 +1,7 @@
 
 
 
+
 import React, { useState, useEffect } from 'react';
 import type { User, AppView, PublicProfile, Stream, PkBattle } from '../types';
 import { getGiftsReceived, getGiftsSent, getUserProfile } from '../services/authService';
@@ -35,7 +36,7 @@ interface EditProfileScreenProps {
   isViewingOtherProfile?: boolean;
   viewedUserId?: number;
   onExit?: () => void;
-  onFollowToggle?: (userId: number) => void;
+  onFollowToggle?: (userId: number, optimisticCallback?: (action: 'follow' | 'unfollow') => void) => void;
   onNavigateToChat?: (userId: number) => void;
   onViewStream?: (stream: Stream | PkBattle) => void;
 }
@@ -87,7 +88,7 @@ const ActionMenu: React.FC<{
                 <div className="bg-[#2c2c2e] rounded-xl text-lg text-center">
                     {isFollowing && (
                          <>
-                            <button onClick={onUnfollow} className="w-full p-3.5 text-red-400">Cancelar amizade</button>
+                            <button onClick={onUnfollow} className="w-full p-3.5 text-red-400">Deixar de Seguir</button>
                             <div className="h-px bg-gray-600/50 mx-4"></div>
                          </>
                     )}
@@ -131,7 +132,6 @@ const EditProfileScreen: React.FC<EditProfileScreenProps> = ({
   const [isActionMenuOpen, setIsActionMenuOpen] = useState(false);
   
   const [isFollowing, setIsFollowing] = useState((loggedInUser.following || []).includes(viewedUserId || -1));
-  const [isFollowLoading, setIsFollowLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'obras' | 'curtidas' | 'detalhes'>('obras');
 
   useEffect(() => {
@@ -144,7 +144,7 @@ const EditProfileScreen: React.FC<EditProfileScreenProps> = ({
               setIsLoading(true);
               try {
                   const [userToView, received, sent, isBlockedStatus] = await Promise.all([
-                    liveStreamService.getPublicProfile(viewedUserId),
+                    liveStreamService.getPublicProfile(viewedUserId, loggedInUser.id),
                     getGiftsReceived(viewedUserId),
                     getGiftsSent(viewedUserId),
                     liveStreamService.isUserBlocked(loggedInUser.id, viewedUserId),
@@ -168,11 +168,20 @@ const EditProfileScreen: React.FC<EditProfileScreenProps> = ({
       fetchData();
   }, [isOwnProfile, viewedUserId, user, onExit, loggedInUser.id]);
   
-  const handleFollowClick = async () => {
+  const handleFollowClick = () => {
     if (onFollowToggle && profileData) {
-        setIsFollowLoading(true);
-        await onFollowToggle(profileData.id);
-        setIsFollowLoading(false);
+        const optimisticCallback = (action: 'follow' | 'unfollow') => {
+            if ('followers' in profileData) {
+                setProfileData(prevProfile => {
+                    if (!prevProfile || !('followers' in prevProfile)) return prevProfile;
+                    return {
+                        ...prevProfile,
+                        followers: prevProfile.followers + (action === 'follow' ? 1 : -1)
+                    };
+                });
+            }
+        };
+        onFollowToggle(profileData.id, optimisticCallback);
     }
   };
 
@@ -248,7 +257,7 @@ const EditProfileScreen: React.FC<EditProfileScreenProps> = ({
 
   if (isLoading || !profileData) {
     return (
-        <div className="h-screen w-full bg-black flex items-center justify-center">
+        <div className="h-full w-full bg-black flex items-center justify-center">
             <div className="w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
         </div>
     );
@@ -280,7 +289,7 @@ const EditProfileScreen: React.FC<EditProfileScreenProps> = ({
 
   return (
     <>
-      <div className="h-screen w-full bg-black flex flex-col font-sans">
+      <div className="h-full w-full bg-black flex flex-col font-sans">
         <header className="relative h-48 bg-purple-500 shrink-0">
           <div className="absolute top-6 left-4 right-4 flex justify-between items-center z-20">
             <button onClick={handleBackClick} className="p-2 -m-2 rounded-full hover:bg-black/10 transition-colors"><ArrowLeftIcon className="w-6 h-6 text-white" /></button>
@@ -361,8 +370,7 @@ const EditProfileScreen: React.FC<EditProfileScreenProps> = ({
             </div>
            )}
 
-          <section className="grid grid-cols-4 my-4">
-              <Stat value={formatStat(followersCount)} label="Seguidores" onClick={() => handleStatClick('followers')} />
+          <section className="grid grid-cols-3 my-4">
               <Stat value={formatStat(followersCount)} label="Fãs" onClick={() => handleStatClick('fans')} />
               <Stat value={formatStat(giftsReceived)} label="Recebidos" icon={<CoinIcon className="w-3 h-3 text-yellow-500"/>} />
               <Stat value={formatStat(giftsSent)} label="Enviados" icon={<DiamondIcon className="w-3 h-3"/>} />
@@ -418,23 +426,21 @@ const EditProfileScreen: React.FC<EditProfileScreenProps> = ({
         
         {!isOwnProfile && (
           <footer className="p-4 bg-black border-t border-gray-800/50 shrink-0">
-              <div className="flex items-center justify-center">
-                  {isFollowing ? (
-                      <button
-                          onClick={() => onNavigateToChat?.(profileData.id)}
-                          className="w-full max-w-sm py-3.5 rounded-full font-semibold transition-colors bg-[#2c2c2e] text-gray-300 hover:bg-gray-700"
-                      >
-                          Conversar
-                      </button>
-                  ) : (
-                      <button
-                          onClick={handleFollowClick}
-                          disabled={isFollowLoading}
-                          className="w-full max-w-sm py-3.5 rounded-full font-semibold transition-colors disabled:opacity-50 bg-[#34C759] text-black hover:opacity-90"
-                      >
-                          {isFollowLoading ? 'Seguindo...' : 'Seguir'}
-                      </button>
-                  )}
+              <div className="flex items-center justify-center gap-4">
+                   <button
+                        onClick={() => onNavigateToChat?.(profileData.id)}
+                        className="py-3.5 px-8 rounded-full font-semibold transition-colors bg-[#2c2c2e] text-gray-300 hover:bg-gray-700"
+                    >
+                        Conversar
+                    </button>
+                    <button
+                        onClick={handleFollowClick}
+                        className={`flex-grow py-3.5 rounded-full font-semibold transition-colors ${
+                            isFollowing ? 'bg-[#2c2c2e] text-gray-300 hover:bg-gray-700' : 'bg-[#34C759] text-black hover:opacity-90'
+                        }`}
+                    >
+                        {isFollowing ? 'Seguindo' : 'Seguir'}
+                    </button>
               </div>
           </footer>
         )}

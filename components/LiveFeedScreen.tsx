@@ -213,8 +213,9 @@ export const LiveFeedScreen: React.FC<LiveFeedScreenProps> = ({
                 </div>
                 
                 <div className="flex items-center gap-4 shrink-0">
-                     <button onClick={() => setIsRegionModalOpen(true)} className="flex items-center gap-1.5 p-2 -m-2 rounded-lg hover:bg-white/10 transition-colors">
+                     <button onClick={() => setIsRegionModalOpen(true)} className="flex items-center gap-1.5 p-2 -m-2 rounded-lg hover:bg-white/10 transition-colors text-white">
                         <Flag code={selectedRegion.code} className="w-6 h-auto rounded-sm flex-shrink-0" />
+                        <span className="text-sm font-semibold">{selectedRegion.name}</span>
                         <ChevronUpIcon className="w-4 h-4" />
                     </button>
                      <button onClick={() => onNavigate('search')} className="p-2 -m-2 rounded-lg hover:bg-white/10 transition-colors">

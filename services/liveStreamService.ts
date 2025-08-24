@@ -1,7 +1,7 @@
 
 
 import { apiClient } from './apiClient';
-import type { User, LiveDetails, ChatMessage, Gift, Viewer, RankingContributor, Like, PkBattle, PkBattleState, PublicProfile, PkEventDetails, Conversation, SendGiftResponse, ProtectorDetails, WithdrawalTransaction, WithdrawalMethod, InventoryItem, AppEvent, LiveEndSummary, UserLevelInfo, GeneralRankingStreamer, GeneralRankingUser, WithdrawalBalance, EventStatus, PkRankingData, Stream, Category, StartLiveResponse, ConvitePK, LiveFollowUpdate, PrivateLiveInviteSettings, NotificationSettings, FacingMode, SoundEffectName, UniversalRankingData, UserListRankingPeriod, PkSettings, LiveCategory, StreamUpdateListener, MuteStatusListener, UserKickedListener, SoundEffectListener, MuteStatusUpdate, UserKickedUpdate, SoundEffectUpdate, UserBlockedUpdate, UserUnblockedUpdate, UserBlockedListener, UserUnblockedListener, Region, PrivacySettings, IncomingPrivateLiveInvite } from '../types';
+import type { User, LiveDetails, ChatMessage, Gift, Viewer, RankingContributor, Like, PkBattle, PkBattleState, PublicProfile, PkEventDetails, Conversation, SendGiftResponse, ProtectorDetails, WithdrawalTransaction, WithdrawalMethod, InventoryItem, AppEvent, LiveEndSummary, UserLevelInfo, GeneralRankingStreamer, GeneralRankingUser, WithdrawalBalance, EventStatus, PkRankingData, Stream, Category, StartLiveResponse, ConvitePK, LiveFollowUpdate, PrivateLiveInviteSettings, NotificationSettings, FacingMode, SoundEffectName, UniversalRankingData, UserListRankingPeriod, PkSettings, LiveCategory, StreamUpdateListener, MuteStatusListener, UserKickedListener, SoundEffectListener, MuteStatusUpdate, UserKickedUpdate, SoundEffectUpdate, UserBlockedUpdate, UserUnblockedUpdate, UserBlockedListener, UserUnblockedListener, Region, PrivacySettings, IncomingPrivateLiveInvite, GiftNotificationSettings } from '../types';
 
 // --- Listener Infrastructure ---
 type Listener<T> = (data: T) => void;
@@ -315,6 +315,15 @@ export const updateNotificationSettings = (userId: number, settings: Partial<Omi
         body: JSON.stringify(settings)
     });
 };
+
+export const getGiftNotificationSettings = (userId: number): Promise<GiftNotificationSettings> => apiClient(`/api/users/${userId}/gift-notification-settings`);
+export const updateGiftNotificationSetting = (userId: number, giftId: number, isEnabled: boolean): Promise<GiftNotificationSettings> => {
+    return apiClient(`/api/users/${userId}/gift-notification-settings`, {
+        method: 'PATCH',
+        body: JSON.stringify({ giftId, isEnabled })
+    });
+};
+
 
 export const getPushSettings = (userId: number): Promise<Record<number, boolean>> => apiClient(`/api/users/${userId}/push-settings`);
 export const updatePushSetting = (userId: number, followedUserId: number, enabled: boolean): Promise<{ success: boolean }> => {

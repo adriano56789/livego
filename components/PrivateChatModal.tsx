@@ -165,6 +165,8 @@ const PrivateChatModal: React.FC<PrivateChatModalProps> = ({ user, onClose }) =>
         age: null, gender: null, birthday: null, isLive: false, isFollowing: false, coverPhotoUrl: '',
         stats: { value: 0, icon: 'coin' }, badges: [], protectors: [], achievements: [],
         personalityTags: [], personalSignature: '',
+        followers: 0,
+        followingCount: 0,
     } : null;
 
     const renderConversationList = () => (

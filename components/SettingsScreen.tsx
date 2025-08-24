@@ -1,6 +1,9 @@
 
-import React from 'react';
-import type { User, AppView } from '../types';
+
+import React, { useState, useEffect } from 'react';
+import type { User, AppView, Gift } from '../types';
+import * as liveStreamService from '../services/liveStreamService';
+import DiamondIcon from './icons/DiamondIcon';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
 import CopyrightIcon from './icons/CopyrightIcon';
 import DollarIcon from './icons/DollarIcon';
@@ -12,6 +15,7 @@ import DocumentTextIcon from './icons/DocumentTextIcon';
 import BellIcon from './icons/BellIcon';
 import MailIcon from './icons/MailIcon';
 import LockSolidIcon from './icons/LockSolidIcon';
+import GiftIcon from './icons/GiftIcon';
 
 const SettingsMenuItem: React.FC<{
   icon: React.ReactNode;
@@ -38,9 +42,20 @@ interface SettingsScreenProps {
   onLogout: () => void;
   onNavigate: (view: AppView) => void;
   onDeleteAccount: () => void;
+  onTriggerGiftNotification: (gift: Gift) => void;
 }
 
-const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onExit, onLogout, onNavigate, onDeleteAccount }) => {
+const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onExit, onLogout, onNavigate, onDeleteAccount, onTriggerGiftNotification }) => {
+  const [gifts, setGifts] = useState<Gift[]>([]);
+  const [isGiftSectionLoading, setIsGiftSectionLoading] = useState(true);
+
+  useEffect(() => {
+    liveStreamService.getGiftCatalog()
+        .then(setGifts)
+        .catch(err => console.error("Failed to load gifts for settings screen", err))
+        .finally(() => setIsGiftSectionLoading(false));
+  }, []);
+  
   const handleDeleteClick = () => {
     if (window.confirm('Tem certeza que deseja excluir sua conta? Esta ação é permanente e não pode ser desfeita.')) {
         onDeleteAccount();
@@ -50,6 +65,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onExit, onLogout,
   const menuItems = [
     { icon: <UsersIcon className="w-6 h-6" />, label: "Contas Conectadas", onClick: () => onNavigate('connected-accounts') },
     { icon: <BellIcon className="w-6 h-6" />, label: "Configurações de Notificação", onClick: () => onNavigate('notification-settings') },
+    { icon: <GiftIcon className="w-6 h-6 text-pink-400" />, label: "Notificações de Presente", onClick: () => onNavigate('gift-notification-settings') },
     { icon: <MailIcon className="w-6 h-6" />, label: "Convite privado ao vivo", onClick: () => onNavigate('private-live-invite-settings') },
     { icon: <LockSolidIcon className="w-6 h-6" />, label: "Configurações de Privacidade", onClick: () => onNavigate('privacy-settings') },
     { icon: <DollarIcon className="w-6 h-6" />, label: "Informações de Ganhos", onClick: () => onNavigate('earnings-info') },
@@ -81,6 +97,36 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onExit, onLogout,
               isDestructive={item.isDestructive}
             />
           ))}
+        </div>
+
+        <div className="mt-6">
+            <h2 className="text-sm font-semibold text-gray-500 mb-2 px-4">Simulador de Notificação de Presente</h2>
+            <div className="bg-[#1c1c1c] rounded-xl divide-y divide-gray-700/50">
+                {isGiftSectionLoading ? (
+                    <div className="p-4 text-center text-gray-400">Carregando presentes...</div>
+                ) : (
+                    gifts.map(gift => (
+                        <div key={gift.id} className="p-3 flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <img src={gift.imageUrl} alt={gift.name} className="w-10 h-10 object-contain" />
+                                <div>
+                                    <p className="font-semibold text-white">{gift.name}</p>
+                                    <div className="flex items-center gap-1 text-xs text-yellow-400">
+                                        <DiamondIcon className="w-3 h-3"/>
+                                        <span>{gift.price}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => onTriggerGiftNotification(gift)}
+                                className="bg-green-600 text-white font-semibold text-sm px-4 py-1.5 rounded-full hover:bg-green-500 transition-colors"
+                            >
+                                Testar
+                            </button>
+                        </div>
+                    ))
+                )}
+            </div>
         </div>
       </main>
 

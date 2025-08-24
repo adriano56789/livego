@@ -1,7 +1,7 @@
 
 
 // Basic types
-export type AppView = 'login' | 'upload' | 'edit' | 'feed' | 'profile' | 'go-live-setup' | 'messages' | 'diamond-purchase' | 'video' | 'protectors' | 'blocked-list' | 'withdrawal' | 'withdrawal-method-setup' | 'withdrawal-confirmation' | 'customer-service' | 'backpack' | 'help-article' | 'live-support-chat' | 'report-and-suggestion' | 'event-center' | 'event-detail' | 'settings' | 'copyright' | 'earnings-info' | 'connected-accounts' | 'search' | 'app-version' | 'live-ended' | 'my-level' | 'developer-tools' | 'ranking' | 'documentation' | 'purchase-history' | 'notification-settings' | 'push-settings' | 'private-live-invite-settings' | 'following' | 'visitors' | 'live-stream-viewer' | 'chat' | 'purchase-confirmation' | 'ranking-list' | 'profile-editor' | 'fans' | 'avatar-protection' | 'friend-requests' | 'privacy-settings';
+export type AppView = 'login' | 'upload' | 'edit' | 'feed' | 'profile' | 'go-live-setup' | 'messages' | 'diamond-purchase' | 'video' | 'protectors' | 'blocked-list' | 'withdrawal' | 'withdrawal-method-setup' | 'withdrawal-confirmation' | 'customer-service' | 'backpack' | 'help-article' | 'live-support-chat' | 'report-and-suggestion' | 'event-center' | 'event-detail' | 'settings' | 'copyright' | 'earnings-info' | 'connected-accounts' | 'search' | 'app-version' | 'live-ended' | 'my-level' | 'developer-tools' | 'ranking' | 'documentation' | 'purchase-history' | 'notification-settings' | 'push-settings' | 'private-live-invite-settings' | 'following' | 'visitors' | 'live-stream-viewer' | 'chat' | 'purchase-confirmation' | 'ranking-list' | 'profile-editor' | 'fans' | 'avatar-protection' | 'friend-requests' | 'privacy-settings' | 'component-viewer' | 'gift-notification-settings';
 export type Gender = 'male' | 'female';
 export type Category = 'Popular' | 'Seguindo' | 'Perto' | 'Atualizado' | 'Privada' | 'PK' | 'Novo' | 'Música' | 'Dança';
 export type CameraStatus = 'idle' | 'loading' | 'success' | 'denied' | 'error' | 'not-found' | 'in-use' | 'insecure' | 'timeout';
@@ -99,6 +99,8 @@ export interface PublicProfile {
   birthday: string | null;
   isLive: boolean;
   isFollowing: boolean;
+  followers: number;
+  followingCount: number;
   coverPhotoUrl: string;
   stats: {
     value: number;
@@ -342,6 +344,7 @@ export interface Gift {
   is_ativo: boolean;
   animationUrl: string;
   imageUrl: string;
+  soundUrl?: string;
 }
 
 export interface DiamondPackage {
@@ -613,6 +616,11 @@ export interface NotificationSettings {
     followedPost: boolean;
     order: boolean;
     interactive: boolean;
+}
+
+export interface GiftNotificationSettings {
+  userId: number;
+  enabledGifts: Record<number, boolean>; // giftId -> isEnabled
 }
 
 export interface PkSettings {

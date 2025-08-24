@@ -262,6 +262,7 @@ const initialState = {
         acceptOnlyFriendPkInvites: false,
     }
   ],
+  giftNotificationSettings: [] as types.GiftNotificationSettings[],
   pkMatchmakingQueue: [] as types.FilaPK[],
   reports: [] as types.Denuncia[],
 };
@@ -485,6 +486,8 @@ export const handleApiRequest = async (method: string, path: string, body: any, 
   const userPurchaseHistoryMatch = path.match(/^\/api\/users\/(\d+)\/purchase-history$/);
   const pkOpponentsMatch = path.match(/^\/api\/pk\/opponents\/(\d+)$/);
   const matchmakingStatusMatch = path.match(/^\/api\/pk\/matchmaking\/status\/(\d+)$/);
+  const withdrawalInitiateMatch = path.match(/^\/api\/withdrawals\/initiate$/);
+  const giftNotificationSettingsMatch = path.match(/^\/api\/users\/(\d+)\/gift-notification-settings$/);
 
   // New Matchers for refactoring
   const blocksMatch = path.match(/^\/api\/blocks$/);
@@ -502,6 +505,7 @@ export const handleApiRequest = async (method: string, path: string, body: any, 
   const userCohostFriendsMatch = path.match(/^\/api\/users\/(\d+)\/cohost-friends$/);
   const stopLiveMatch = path.match(/^\/api\/users\/(\d+)\/stop-live$/);
   const userPrivacySettingsMatch = path.match(/^\/api\/users\/(\d+)\/privacy-settings$/);
+  const chatViewedMatch = path.match(/^\/api\/chat\/viewed$/);
 
   // --- NEW HANDLERS ---
     if (method === 'POST' && path === '/api/live/start') {
@@ -582,7 +586,10 @@ export const handleApiRequest = async (method: string, path: string, body: any, 
             (u.following || []).includes(userId) &&
             db.lives.some((l: types.LiveStreamRecord) => l.user_id === u.id && l.ao_vivo)
         );
-        return friends;
+        return friends.map((friend, index) => ({
+            ...friend,
+            coHostHistory: index % 2 === 0 ? 'Co-host com Você' : `Última vez há ${index + 1} dias`
+        }));
     }
 
     if (method === 'POST' && path === '/api/pk/cohost-invite') {
@@ -801,6 +808,75 @@ export const handleApiRequest = async (method: string, path: string, body: any, 
         
         return { invite: fullInvite };
     }
+    
+    if (chatViewedMatch && method === 'POST') {
+        const { conversationId, viewerId } = body;
+        const messagesToUpdate = db.messages.filter((m: types.TabelaMensagem) => m.conversa_id === conversationId && m.remetente_id !== viewerId);
+        messagesToUpdate.forEach((m: types.TabelaMensagem) => {
+            m.status_leitura[viewerId] = true;
+        });
+        return { success: true };
+    }
+  
+    if (withdrawalInitiateMatch && method === 'POST') {
+        const { userId, earningsToWithdraw } = body;
+        const user = db.users.find((u: any) => u.id === userId);
+        if (!user) {
+            throw new Error("Usuário não encontrado.");
+        }
+        if (!user.withdrawal_method) {
+            throw new Error("Nenhum método de saque configurado.");
+        }
+        const pendingWithdrawals = db.withdrawalTransactions
+            .filter((t: any) => t.userId === userId && t.status === 'pending')
+            .reduce((sum: number, t: any) => sum + t.earnings_withdrawn, 0);
+            
+        const availableBalance = (user.wallet_earnings || 0) - pendingWithdrawals;
+
+        if (earningsToWithdraw <= 0 || earningsToWithdraw > availableBalance) {
+            throw new Error("Valor de saque inválido ou insuficiente.");
+        }
+
+        // This is the core logic for updating the wallet
+        const userInDb = db.users.find((u: types.User) => u.id === userId);
+        if(userInDb) {
+            userInDb.wallet_earnings = (userInDb.wallet_earnings || 0) - earningsToWithdraw;
+        }
+
+        const EARNING_TO_BRL_RATE = 0.0115;
+        const WITHDRAWAL_FEE_RATE = 0.20;
+
+        const grossBRL = earningsToWithdraw * EARNING_TO_BRL_RATE;
+        const feeBRL = grossBRL * WITHDRAWAL_FEE_RATE;
+        const netBRL = grossBRL - feeBRL;
+
+        const newTransaction: types.WithdrawalTransaction = {
+            id: `tx_${Date.now()}`,
+            userId: userId,
+            earnings_withdrawn: earningsToWithdraw,
+            amount_brl: grossBRL,
+            fee_brl: feeBRL,
+            net_amount_brl: netBRL,
+            status: 'pending',
+            timestamp: new Date().toISOString(),
+            withdrawal_method: user.withdrawal_method,
+        };
+        db.withdrawalTransactions.push(newTransaction);
+        
+        // Simulate transaction completion after a delay
+        setTimeout(() => {
+            const tx = db.withdrawalTransactions.find((t: any) => t.id === newTransaction.id);
+            if (tx) {
+                tx.status = 'completed';
+                console.log(`[Mock API] Withdrawal transaction ${tx.id} completed.`);
+            }
+        }, 15000); // 15 seconds delay
+
+        return {
+            updatedUser: getDynamicUser(userId),
+            transaction: newTransaction,
+        };
+    }
 
   if (method === 'GET' && path === '/api/gifts') {
       return db.gifts;
@@ -946,6 +1022,38 @@ export const handleApiRequest = async (method: string, path: string, body: any, 
     return userConvos;
   }
 
+    if (privateChatMatch && method === 'GET') {
+        const convoId = privateChatMatch[1];
+        const userId = parseInt(query.get('userId')!, 10);
+        const convoRecord = db.conversations.find((c: types.TabelaConversa) => c.id === convoId);
+        if (!convoRecord) return notFound();
+        return buildConversationViewModel(convoRecord, userId);
+    }
+
+    if (privateChatMatch && method === 'POST') {
+        const convoId = privateChatMatch[1];
+        const { senderId, text, imageUrl } = body;
+        
+        const convoRecord = db.conversations.find((c: types.TabelaConversa) => c.id === convoId);
+        if (!convoRecord) return notFound();
+
+        const newMessage: types.TabelaMensagem = {
+            id: `msg-${convoId}-${Date.now()}`,
+            conversa_id: convoId,
+            remetente_id: senderId,
+            conteudo: imageUrl || text,
+            timestamp: new Date().toISOString(),
+            tipo_conteudo: imageUrl ? 'imagem' : 'texto',
+            status_leitura: { [senderId]: true },
+        };
+        db.messages.push(newMessage);
+
+        convoRecord.ultima_mensagem_texto = imageUrl ? '📷 Imagem' : text;
+        convoRecord.ultima_mensagem_timestamp = newMessage.timestamp;
+
+        return buildConversationViewModel(convoRecord, senderId);
+    }
+  
   if (userCohostFriendsMatch && method === 'GET') {
     const userId = parseInt(userCohostFriendsMatch[1], 10);
     const user = db.users.find((u: types.User) => u.id === userId);
@@ -1753,6 +1861,7 @@ if (liveByIdMatch && method === 'GET') {
       if (!user) return notFound();
       const live = db.lives.find((l: types.LiveStreamRecord) => l.user_id === userId && l.ao_vivo);
       const viewer = db.users.find((u: types.User) => u.id === viewerId);
+      const followersCount = db.users.filter((u: types.User) => (u.following || []).includes(userId)).length;
       
       const publicProfile: types.PublicProfile = {
         id: user.id,
@@ -1764,6 +1873,8 @@ if (liveByIdMatch && method === 'GET') {
         birthday: user.birthday,
         isLive: !!live,
         isFollowing: (viewer?.following || []).includes(userId),
+        followers: followersCount,
+        followingCount: (user.following || []).length,
         coverPhotoUrl: 'https://i.pravatar.cc/800?u=cover' + user.id,
         stats: {
           value: user.wallet_earnings,
@@ -1956,6 +2067,49 @@ if (liveByIdMatch && method === 'GET') {
             db.chatMessages[liveId].push(newMessage);
             return newMessage;
         }
+    }
+
+    if (giftNotificationSettingsMatch) {
+      const userId = parseInt(giftNotificationSettingsMatch[1], 10);
+      let userSettings = db.giftNotificationSettings.find((s: any) => s.userId === userId);
+
+      if (method === 'GET') {
+        if (!userSettings) {
+          // Create default settings if they don't exist. All gifts are enabled by default.
+          const enabledGifts: Record<number, boolean> = {};
+          db.gifts.forEach((g: types.Gift) => {
+              enabledGifts[g.id] = true;
+          });
+          userSettings = {
+              userId,
+              enabledGifts,
+          };
+          db.giftNotificationSettings.push(userSettings);
+        }
+        return userSettings;
+      }
+
+      if (method === 'PATCH') {
+        const { giftId, isEnabled } = body;
+        if (typeof giftId !== 'number' || typeof isEnabled !== 'boolean') {
+          throw new Error("Invalid payload for updating gift notification settings.");
+        }
+        if (!userSettings) {
+          // Create settings if they don't exist.
+          const enabledGifts: Record<number, boolean> = {};
+          db.gifts.forEach((g: types.Gift) => {
+              enabledGifts[g.id] = true; // Default all to true
+          });
+          userSettings = {
+              userId,
+              enabledGifts,
+          };
+          db.giftNotificationSettings.push(userSettings);
+        }
+        
+        userSettings.enabledGifts[giftId] = isEnabled;
+        return userSettings;
+      }
     }
 
 

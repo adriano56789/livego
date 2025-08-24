@@ -1,7 +1,5 @@
 
 
-
-
 import React, { useState, useEffect } from 'react';
 import type { User, AppView, PublicProfile, Stream, PkBattle } from '../types';
 import { getGiftsReceived, getGiftsSent, getUserProfile } from '../services/authService';
@@ -27,6 +25,8 @@ import BlockScreen from './BlockScreen';
 import EmbeddedChatView from './EmbeddedChatView';
 import ShieldCheckIcon from './icons/ShieldCheckIcon';
 import LockSolidIcon from './icons/LockSolidIcon';
+import FollowingScreen from './FollowingScreen';
+import UsersIcon from './icons/UsersIcon';
 
 
 interface EditProfileScreenProps {
@@ -39,6 +39,8 @@ interface EditProfileScreenProps {
   onFollowToggle?: (userId: number, optimisticCallback?: (action: 'follow' | 'unfollow') => void) => void;
   onNavigateToChat?: (userId: number) => void;
   onViewStream?: (stream: Stream | PkBattle) => void;
+  onUpdateUser?: (user: User) => void;
+  onViewProfile?: (userId: number) => void;
 }
 
 
@@ -117,7 +119,9 @@ const EditProfileScreen: React.FC<EditProfileScreenProps> = ({
     onExit,
     onFollowToggle,
     onNavigateToChat,
-    onViewStream
+    onViewStream,
+    onUpdateUser,
+    onViewProfile,
 }) => {
   const isOwnProfile = !isViewingOtherProfile;
   const loggedInUser = user;
@@ -286,6 +290,8 @@ const EditProfileScreen: React.FC<EditProfileScreenProps> = ({
 
   const genderText = profileData.gender === 'male' ? 'Masculino' : profileData.gender === 'female' ? 'Feminino' : 'Não especificado';
   const followersCount = 'followers' in profileData ? profileData.followers : 0;
+  const followingCount = 'followingCount' in profileData ? profileData.followingCount : ('following' in profileData && Array.isArray(profileData.following)) ? profileData.following.length : 0;
+
 
   return (
     <>
@@ -370,8 +376,9 @@ const EditProfileScreen: React.FC<EditProfileScreenProps> = ({
             </div>
            )}
 
-          <section className="grid grid-cols-3 my-4">
+          <section className="grid grid-cols-4 my-4">
               <Stat value={formatStat(followersCount)} label="Fãs" onClick={() => handleStatClick('fans')} />
+              <Stat value={formatStat(followingCount)} label="Seguindo" onClick={() => handleStatClick('following')} />
               <Stat value={formatStat(giftsReceived)} label="Recebidos" icon={<CoinIcon className="w-3 h-3 text-yellow-500"/>} />
               <Stat value={formatStat(giftsSent)} label="Enviados" icon={<DiamondIcon className="w-3 h-3"/>} />
           </section>

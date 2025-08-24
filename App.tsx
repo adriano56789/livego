@@ -1,4 +1,5 @@
 
+
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import LoginScreen from './components/LoginScreen';
 import UploadPhotoScreen from './components/UploadPhotoScreen';
@@ -34,11 +35,13 @@ import UpdateRequiredModal from './components/UpdateRequiredModal';
 import LiveEndedScreen from './components/LiveEndedScreen';
 import MyLevelScreen from './components/MyLevelScreen';
 import DeveloperToolsScreen from './components/DeveloperToolsScreen';
+import ComponentViewerScreen from './components/ComponentViewerScreen';
 import RankingScreen from './components/PkRankingScreen';
 import DocumentationScreen from './components/DocumentationScreen';
 import PurchaseHistoryScreen from './components/PurchaseHistoryScreen';
 import LiveNotificationModal from './components/LiveNotificationModal';
 import NotificationSettingsScreen from './components/NotificationSettingsScreen';
+import GiftNotificationSettingsScreen from './components/GiftNotificationSettingsScreen';
 import PushSettingsScreen from './components/PushSettingsScreen';
 import PrivateLiveInviteSettingsScreen from './components/PrivateLiveInviteSettingsScreen';
 import IncomingPrivateLiveInviteModal from './components/IncomingPrivateLiveInviteModal';
@@ -54,10 +57,10 @@ import { loginWithGoogle, deleteAccount, getUserProfile } from './services/authS
 import * as liveStreamService from './services/liveStreamService';
 import * as versionService from './services/versionService';
 import * as soundService from './services/soundService';
-import type { User, AppView, Category, Stream, PkBattle, Conversation, WithdrawalTransaction, AppEvent, VersionInfo, LiveEndSummary, PurchaseOrder, DiamondPackage, FacingMode, IncomingPrivateLiveInvite } from './types';
-import { ApiViewerProvider, useApiViewer } from './components/ApiContext';
-import ApiViewer from './components/ApiViewer';
+import type { User, AppView, Category, Stream, PkBattle, Conversation, WithdrawalTransaction, AppEvent, VersionInfo, LiveEndSummary, PurchaseOrder, DiamondPackage, FacingMode, IncomingPrivateLiveInvite, Gift, ChatMessage } from './types';
+import { ApiViewerProvider } from './components/ApiContext';
 import ProfileScreen from './components/ProfileScreen';
+import GiftDisplayAnimation from './components/GiftDisplayAnimation';
 
 type LocationPermission = 'prompt' | 'granted' | 'denied';
 
@@ -65,7 +68,6 @@ const AppContent: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { apiResponse, hideApiResponse } = useApiViewer();
   const [currentView, setCurrentView] = useState<AppView>('login');
   const [isUserLive, setIsUserLive] = useState(false);
   const [viewingStream, setViewingStream] = useState<Stream | PkBattle | null>(null);
@@ -88,6 +90,8 @@ const AppContent: React.FC = () => {
   const [viewingOtherProfileId, setViewingOtherProfileId] = useState<number | null>(null);
   const [locationPermission, setLocationPermission] = useState<LocationPermission>('prompt');
   const [walletSuccessMessage, setWalletSuccessMessage] = useState<string | null>(null);
+  const [triggeredGift, setTriggeredGift] = useState<ChatMessage | null>(null);
+  const [giftNotificationSettings, setGiftNotificationSettings] = useState<Record<number, boolean> | null>(null);
 
   useEffect(() => {
     const compareVersions = (v1: string, v2: string): number => {
@@ -118,7 +122,18 @@ const AppContent: React.FC = () => {
   }, []);
   
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+        setGiftNotificationSettings(null);
+        return;
+    }
+
+    liveStreamService.getGiftNotificationSettings(user.id)
+        .then(settings => setGiftNotificationSettings(settings.enabledGifts))
+        .catch(err => {
+            console.error("Failed to fetch gift notification settings", err);
+            setGiftNotificationSettings({}); // Default to empty (all enabled) on error
+        });
+        
     const checkStatus = () => {
         if (document.visibilityState === 'visible') {
             liveStreamService.getUserLiveStatus(user.id).then(setIsUserLive);
@@ -390,6 +405,40 @@ const AppContent: React.FC = () => {
     handleLogout();
   }, [user, handleLogout]);
 
+  const handleTriggerGiftNotification = useCallback((gift: Gift) => {
+    if (!user || (giftNotificationSettings && giftNotificationSettings[gift.id] === false)) {
+        alert(`As notificações para "${gift.name}" estão desativadas. Ative-as na tela de Configurações de Notificação de Presentes para testar.`);
+        return;
+    }
+    soundService.initAudioContext();
+    if (gift.soundUrl) {
+      new Audio(gift.soundUrl).play();
+    } else {
+      soundService.playSound('gift');
+    }
+    const giftMessage: ChatMessage = {
+        id: Date.now(),
+        type: 'gift',
+        userId: user.id,
+        username: user.nickname || user.name,
+        message: `enviou ${gift.name}!`,
+        giftId: gift.id,
+        giftName: gift.name,
+        giftValue: gift.price,
+        giftAnimationUrl: gift.animationUrl,
+        giftImageUrl: gift.imageUrl,
+        recipientName: 'Você', // Test recipient
+        timestamp: new Date().toISOString(),
+        level: user.level,
+        avatarUrl: user.avatar_url,
+    };
+    setTriggeredGift(giftMessage);
+}, [user, giftNotificationSettings]);
+
+  const handleUpdateGiftSettings = (newSettings: Record<number, boolean>) => {
+      setGiftNotificationSettings(newSettings);
+  };
+
   // Main Render Logic
   if (needsUpdate && versionInfo) {
     return <UpdateRequiredModal updateUrl={versionInfo.updateUrl} />;
@@ -425,6 +474,7 @@ const AppContent: React.FC = () => {
           onViewProfile={handleViewProfile}
           onFollowToggle={handleFollowToggle}
           onNavigateFromStream={handleNavigateFromStream}
+          giftNotificationSettings={giftNotificationSettings}
         />
       );
     }
@@ -504,7 +554,7 @@ const AppContent: React.FC = () => {
         }
         break;
       case 'settings':
-        mainContent = <SettingsScreen user={user} onExit={() => setCurrentView('profile')} onLogout={handleLogout} onNavigate={handleNavigate} onDeleteAccount={handleDeleteAccount} />;
+        mainContent = <SettingsScreen user={user} onExit={() => setCurrentView('profile')} onLogout={handleLogout} onNavigate={handleNavigate} onDeleteAccount={handleDeleteAccount} onTriggerGiftNotification={handleTriggerGiftNotification} />;
         break;
       case 'copyright':
         mainContent = <CopyrightScreen onExit={() => setCurrentView('settings')} />;
@@ -529,6 +579,9 @@ const AppContent: React.FC = () => {
       case 'developer-tools':
         mainContent = <DeveloperToolsScreen onExit={() => setCurrentView('settings')} onNavigate={handleNavigate} />;
         break;
+      case 'component-viewer':
+        mainContent = <ComponentViewerScreen onExit={() => setCurrentView('developer-tools')} />;
+        break;
       case 'ranking':
         mainContent = <RankingScreen currentUser={user} onExit={() => setCurrentView('feed')} onViewProfile={handleViewProfile} />;
         break;
@@ -540,6 +593,9 @@ const AppContent: React.FC = () => {
         break;
       case 'notification-settings':
         mainContent = <NotificationSettingsScreen user={user} onExit={() => setCurrentView('settings')} onNavigate={handleNavigate} />;
+        break;
+       case 'gift-notification-settings':
+        mainContent = <GiftNotificationSettingsScreen user={user} onExit={() => setCurrentView('settings')} onUpdateSettings={handleUpdateGiftSettings} />;
         break;
       case 'push-settings':
         mainContent = <PushSettingsScreen user={user} onExit={() => setCurrentView('notification-settings')} />;
@@ -572,7 +628,7 @@ const AppContent: React.FC = () => {
         mainContent = <LiveFeedScreen user={user} onViewStream={handleViewStream} onGoLiveClick={handleGoLiveClick} activeCategory={activeCategory} onSelectCategory={setActiveCategory} onUpdateUser={handleUpdateUser} onNavigateToChat={handleNavigateToChat} onViewProtectors={handleViewProtectors} onNavigate={handleNavigate} locationPermission={locationPermission} setLocationPermission={setLocationPermission} />;
     }
     
-    const showNav = !['go-live-setup', 'chat'].includes(currentView);
+    const showNav = !['go-live-setup', 'chat', 'settings'].includes(currentView);
 
     return (
       <div className="h-full w-full flex flex-col bg-black">
@@ -586,7 +642,7 @@ const AppContent: React.FC = () => {
 
   return (
     <div className="h-screen w-full max-w-md mx-auto flex flex-col bg-black overflow-hidden shadow-2xl">
-      {apiResponse && <ApiViewer title={apiResponse.title} data={apiResponse.data} onClose={hideApiResponse} />}
+      <GiftDisplayAnimation triggeredGift={triggeredGift} />
       {liveNotification && (
         <LiveNotificationModal 
           streamerName={liveNotification.streamerName} 

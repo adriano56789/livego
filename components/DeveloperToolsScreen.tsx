@@ -42,6 +42,7 @@ const DeveloperToolsScreen: React.FC<DeveloperToolsScreenProps> = ({ onExit, onN
 
   const renderTools = () => (
     <div className="space-y-4">
+      <DevToolItem label="Visualizador de Componentes" onClick={() => onNavigate('component-viewer')} />
     </div>
   );
 

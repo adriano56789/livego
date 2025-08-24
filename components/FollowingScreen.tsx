@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect, useCallback } from 'react';
 import type { User } from '../types';
 import * as authService from '../services/authService';
@@ -10,12 +9,13 @@ import UserListRow from './UserListRow';
 interface FollowingScreenProps {
   currentUser: User;
   viewedUserId: number;
-  onExit: () => void;
+  onExit?: () => void;
   onUpdateUser: (user: User) => void;
   onViewProfile: (userId: number) => void;
+  isEmbedded?: boolean;
 }
 
-const FollowingScreen: React.FC<FollowingScreenProps> = ({ currentUser, viewedUserId, onExit, onUpdateUser, onViewProfile }) => {
+const FollowingScreen: React.FC<FollowingScreenProps> = ({ currentUser, viewedUserId, onExit, onUpdateUser, onViewProfile, isEmbedded = false }) => {
     const [users, setUsers] = useState<User[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
@@ -42,15 +42,17 @@ const FollowingScreen: React.FC<FollowingScreenProps> = ({ currentUser, viewedUs
         : await liveStreamService.followUser(currentUser.id, userIdToToggle);
       onUpdateUser(updatedUser);
       // Refetch to update the list, as the user is now unfollowed.
-      fetchData();
+      if (currentUser.id === viewedUserId) {
+        fetchData();
+      }
     };
 
     const renderContent = () => {
         if (isLoading) {
-            return <div className="flex-grow flex items-center justify-center"><div className="w-8 h-8 border-4 border-white border-t-transparent rounded-full animate-spin"></div></div>;
+            return <div className="flex-grow flex items-center justify-center pt-10"><div className="w-8 h-8 border-4 border-white border-t-transparent rounded-full animate-spin"></div></div>;
         }
         if (users.length === 0) {
-            return <div className="flex-grow flex items-center justify-center text-gray-500">Você não está seguindo ninguém.</div>;
+            return <div className="flex-grow flex items-center justify-center text-gray-500 pt-10">Não segue ninguém.</div>;
         }
         return (
             <div className="divide-y divide-gray-800">
@@ -66,6 +68,10 @@ const FollowingScreen: React.FC<FollowingScreenProps> = ({ currentUser, viewedUs
             </div>
         );
     };
+
+    if (isEmbedded) {
+        return <div className="pt-2">{renderContent()}</div>;
+    }
 
     return (
         <div className="h-screen w-full bg-[#1C1F24] text-white flex flex-col font-sans">

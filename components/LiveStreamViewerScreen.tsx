@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import type { User, Stream, PkBattle, ChatMessage, LiveDetails, PkInvitation, SoundEffectName, MuteStatusListener, UserKickedListener, SoundEffectListener, PublicProfile, PkBattleState, ConvitePK, IncomingPrivateLiveInvite, UserBlockedListener, UserUnblockedListener, Viewer, PkBattleStreamer, AppView, FacingMode, CameraStatus } from '../types';
 import * as liveStreamService from '../services/liveStreamService';
@@ -56,6 +57,7 @@ interface LiveStreamViewerScreenProps {
   onViewProfile: (userId: number) => void;
   onNavigateFromStream: (view: AppView, userId: number) => void;
   onFollowToggle: (userId: number, optimisticCallback?: (action: 'follow' | 'unfollow') => void) => void;
+  giftNotificationSettings: Record<number, boolean> | null;
 }
 
 const formatStatNumber = (num: number): string => {
@@ -101,6 +103,7 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
   onViewProfile,
   onNavigateFromStream,
   onFollowToggle,
+  giftNotificationSettings,
 }) => {
     const isPkBattle = 'streamer1' in initialStream;
     const pkBattleId = isPkBattle ? (initialStream as PkBattle).id : null;
@@ -273,18 +276,19 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
                   [battleState.streamer_B.streamId]: viewers2.slice(0, 3),
               });
 
-              const newGift = messages.slice().reverse().find(m => m.type === 'gift');
-              if (newGift && newGift.id !== lastGiftIdRef.current) {
-                  lastGiftIdRef.current = newGift.id;
-                  soundService.playSound('gift');
-                  setTriggeredGiftAnimation(newGift);
-                  setChatUserProfiles(profiles => {
-                      if (!profiles[newGift.userId]) {
-                           authService.getUserProfile(newGift.userId).then(profile => {
-                              setChatUserProfiles(prev => ({ ...prev, [newGift.userId]: { avatarUrl: profile.avatar_url || '' } }));
-                          }).catch(e => console.error("Failed to fetch gift sender profile", e));
+              const lastId = lastGiftIdRef.current;
+              const lastMsgIndex = lastId ? messages.findIndex(m => m.id === lastId) : -1;
+              const newGifts = messages.slice(lastMsgIndex + 1).filter(m => m.type === 'gift');
+
+              if (newGifts.length > 0) {
+                  lastGiftIdRef.current = newGifts[newGifts.length - 1].id;
+                  newGifts.forEach((gift, index) => {
+                       if (gift.giftId && (!giftNotificationSettings || giftNotificationSettings[gift.giftId] !== false)) {
+                          setTimeout(() => {
+                              soundService.playSound('gift');
+                              setTriggeredGiftAnimation(gift);
+                          }, index * 50);
                       }
-                      return profiles;
                   });
               }
               
@@ -314,18 +318,27 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
                   return messages;
               });
 
-              const newGift = messages.slice().reverse().find(m => m.type === 'gift');
-              if (newGift && newGift.id !== lastGiftIdRef.current) {
-                  lastGiftIdRef.current = newGift.id;
-                  setTriggeredGiftAnimation(newGift);
-                  soundService.playSound('gift');
+              const lastId = lastGiftIdRef.current;
+              const lastMsgIndex = lastId ? messages.findIndex(m => m.id === lastId) : -1;
+              const newGifts = messages.slice(lastMsgIndex + 1).filter(m => m.type === 'gift');
+
+              if (newGifts.length > 0) {
+                  lastGiftIdRef.current = newGifts[newGifts.length - 1].id;
+                  newGifts.forEach((gift, index) => {
+                      if (gift.giftId && (!giftNotificationSettings || giftNotificationSettings[gift.giftId] !== false)) {
+                          setTimeout(() => {
+                              soundService.playSound('gift');
+                              setTriggeredGiftAnimation(gift);
+                          }, index * 50);
+                      }
+                  });
               }
           }
       } catch (error) {
           console.error("Stream might have ended:", error);
           onStreamEnded(liveId);
       }
-    }, [initialStream, isPkBattle, onStreamEnded, liveId, isPkViewActive]);
+    }, [initialStream, isPkBattle, onStreamEnded, liveId, isPkViewActive, giftNotificationSettings]);
     
     useEffect(() => {
         const getSimulatedToken = async () => {
@@ -656,10 +669,6 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
 
                     <div className="flex-grow" /> {/* Spacer */}
                     
-                    <div className="absolute left-4 bottom-24 z-20 pointer-events-none">
-                         <GiftDisplayAnimation triggeredGift={triggeredGiftAnimation} />
-                    </div>
-
                     <div className="px-3 pb-2 flex flex-col gap-2 pointer-events-none">
                         <div className="flex justify-between items-center px-2">
                             <div className="flex -space-x-2 pointer-events-auto">
@@ -736,10 +745,6 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
               
               <div className="flex-grow pointer-events-none" />
 
-              <div className="absolute left-4 bottom-24 z-20 pointer-events-none">
-                <GiftDisplayAnimation triggeredGift={triggeredGiftAnimation} />
-              </div>
-
               <footer className="p-3 flex flex-col items-start gap-4">
                   <div className="w-full max-w-md"><ChatArea messages={chatMessages} onUserClick={setViewingProfileId} /></div>
                   <div className="w-full flex items-center gap-2 pointer-events-auto">
@@ -782,6 +787,8 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
     
             {isPkViewActive ? renderPkBattleView() : renderSingleStreamView()}
     
+            <GiftDisplayAnimation triggeredGift={triggeredGiftAnimation} />
+
             {showPkClashAnimation && <PkClashAnimation onAnimationEnd={() => setShowPkClashAnimation(false)} />}
             
             {finalPkBattleState && pkEndAnimationState && <PkResultModal currentUser={user} battleData={finalPkBattleState} onClose={() => setPkEndAnimationState(null)} />}
@@ -805,6 +812,8 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
                                     onNavigateFromStream(view, viewingProfileId);
                                 }
                             }}
+                            onUpdateUser={onUpdateUser}
+                            onViewProfile={onViewProfile}
                         />
                     </div>
                 </div>

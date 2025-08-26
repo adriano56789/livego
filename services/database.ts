@@ -150,7 +150,16 @@ const initialData: any = {
   sentGifts: [],
   pkMatchmakingQueue: [],
   pkInvitations: [],
-  privateLiveInvites: [],
+  privateLiveInvites: [
+    {
+      _id: mongoObjectId(),
+      inviterId: 99887705, // "PK Pro"
+      inviteeId: 10755083, // "Você"
+      streamId: 105, // PK Pro's private stream
+      status: 'pending',
+      timestamp: new Date().toISOString()
+    }
+  ],
   streamUserStats: [],
   helpArticles: [
     {

@@ -118,7 +118,28 @@ const initialData: any = {
     { _id: mongoObjectId(), id: 5, diamonds: 5000, price: 84.99, currency: 'BRL' },
     { _id: mongoObjectId(), id: 6, diamonds: 10000, price: 169.99, currency: 'BRL' },
   ],
-  purchaseOrders: [],
+  purchaseOrders: [
+    {
+      _id: mongoObjectId(),
+      orderId: 'po-1',
+      userId: 10755083,
+      package: { id: 3, diamonds: 1000, price: 16.99, currency: 'BRL' },
+      address: { street: 'Rua Exemplo', number: '123', neighborhood: 'Bairro Teste', city: 'São Paulo', postalCode: '01000-000' },
+      paymentDetails: { method: 'card' },
+      status: 'completed',
+      timestamp: new Date(Date.now() - 86400000 * 2).toISOString(),
+    },
+    {
+      _id: mongoObjectId(),
+      orderId: 'po-2',
+      userId: 10755083,
+      package: { id: 5, diamonds: 5000, price: 84.99, currency: 'BRL' },
+      address: { street: 'Rua Exemplo', number: '123', neighborhood: 'Bairro Teste', city: 'São Paulo', postalCode: '01000-000' },
+      paymentDetails: { method: 'transfer' },
+      status: 'pending',
+      timestamp: new Date().toISOString(),
+    }
+  ],
   withdrawalTransactions: [],
   blockedUsers: [],
   protectedAvatars: [
@@ -164,6 +185,10 @@ const initialData: any = {
     }
   ],
   likes: [],
+  pkSettings: [
+      { _id: mongoObjectId(), userId: 55218901, durationSeconds: 300 },
+      { _id: mongoObjectId(), userId: 66345102, durationSeconds: 300 },
+  ],
 };
 
 
@@ -301,6 +326,7 @@ export const database = {
     sentGifts: createCollection<types.LogPresenteEnviado & { _id: string }>('sentGifts'),
     pkMatchmakingQueue: createCollection<types.FilaPK & { _id: string }>('pkMatchmakingQueue'),
     pkInvitations: createCollection<types.ConvitePK & { _id: string }>('pkInvitations'),
+    pkSettings: createCollection<types.PkSettings & { _id: string }>('pkSettings'),
     privateLiveInvites: createCollection<any & { _id: string }>('privateLiveInvites'),
     streamUserStats: createCollection<types.StreamUserStats & { _id: string }>('streamUserStats'),
     helpArticles: createCollection<types.ArtigoAjuda & { _id: string }>('helpArticles'),

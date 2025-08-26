@@ -283,9 +283,32 @@ const AppContent: React.FC = () => {
     }
   };
   
- const handleGoLiveClick = useCallback(() => {
-    setCurrentView('go-live-setup');
-  }, []);
+ const handleGoLiveClick = useCallback(async () => {
+    if (!user) return;
+    try {
+        const streamToEnter = await liveStreamService.getActiveStreamForUser(user.id);
+        
+        if (streamToEnter) {
+            // User is already live, navigate to their stream.
+            setIsUserLive(true);
+            
+            const pkBattleDb = await liveStreamService.findActivePkBattleForStream(streamToEnter.id);
+            if (pkBattleDb) {
+                const pkBattle = await liveStreamService.getPkBattleDetails(Number(pkBattleDb.id));
+                handleViewStream(pkBattle);
+            } else {
+                handleViewStream(streamToEnter);
+            }
+        } else {
+            // User is not live, navigate to the setup screen.
+            setIsUserLive(false);
+            setCurrentView('go-live-setup');
+        }
+    } catch (error) {
+        console.error("Failed to handle Go Live click:", error);
+        alert("Ocorreu um erro ao tentar entrar na sua transmissão.");
+    }
+}, [user, handleViewStream]);
   
   const handleStartStream = useCallback(async (details: { title: string; meta: string; category: Category, isPrivate: boolean, isPkEnabled: boolean, thumbnailBase64?: string, entryFee?: number, cameraUsed: FacingMode }) => {
     if (!user) return;

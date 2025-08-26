@@ -1,9 +1,7 @@
 
-
 import React, { useState, useEffect, useCallback } from 'react';
 import type { User } from '../types';
 import * as authService from '../services/authService';
-import * as liveStreamService from '../services/liveStreamService';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
 import UserListRow from './UserListRow';
 
@@ -13,9 +11,10 @@ interface FansScreenProps {
   onExit: () => void;
   onUpdateUser: (user: User) => void;
   onViewProfile: (userId: number) => void;
+  onFollowToggle: (userId: number) => void;
 }
 
-const FansScreen: React.FC<FansScreenProps> = ({ currentUser, viewedUserId, onExit, onUpdateUser, onViewProfile }) => {
+const FansScreen: React.FC<FansScreenProps> = ({ currentUser, viewedUserId, onExit, onUpdateUser, onViewProfile, onFollowToggle }) => {
     const [users, setUsers] = useState<User[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
@@ -35,12 +34,8 @@ const FansScreen: React.FC<FansScreenProps> = ({ currentUser, viewedUserId, onEx
         fetchData();
     }, [viewedUserId]);
 
-    const handleFollowToggle = async (userIdToToggle: number) => {
-      const isCurrentlyFollowing = (currentUser.following || []).includes(userIdToToggle);
-      const updatedUser = isCurrentlyFollowing
-        ? await liveStreamService.unfollowUser(currentUser.id, userIdToToggle)
-        : await liveStreamService.followUser(currentUser.id, userIdToToggle);
-      onUpdateUser(updatedUser);
+    const handleFollowToggleWrapper = (userIdToToggle: number) => {
+        onFollowToggle(userIdToToggle);
     };
 
     const renderContent = () => {
@@ -57,7 +52,7 @@ const FansScreen: React.FC<FansScreenProps> = ({ currentUser, viewedUserId, onEx
                         key={user.id} 
                         user={user} 
                         currentUser={currentUser}
-                        onFollowToggle={handleFollowToggle}
+                        onFollowToggle={handleFollowToggleWrapper}
                         onUserClick={onViewProfile}
                     />
                 ))}

@@ -1,9 +1,8 @@
-
-
 // Basic types
 export type AppView = 'login' | 'upload' | 'edit' | 'feed' | 'profile' | 'go-live-setup' | 'messages' | 'diamond-purchase' | 'video' | 'protectors' | 'blocked-list' | 'withdrawal' | 'withdrawal-method-setup' | 'withdrawal-confirmation' | 'customer-service' | 'backpack' | 'help-article' | 'live-support-chat' | 'report-and-suggestion' | 'event-center' | 'event-detail' | 'settings' | 'copyright' | 'earnings-info' | 'connected-accounts' | 'search' | 'app-version' | 'live-ended' | 'my-level' | 'developer-tools' | 'ranking' | 'documentation' | 'purchase-history' | 'notification-settings' | 'push-settings' | 'private-live-invite-settings' | 'following' | 'visitors' | 'live-stream-viewer' | 'chat' | 'purchase-confirmation' | 'ranking-list' | 'profile-editor' | 'fans' | 'avatar-protection' | 'friend-requests' | 'privacy-settings' | 'component-viewer' | 'gift-notification-settings';
 export type Gender = 'male' | 'female';
-export type Category = 'Popular' | 'Seguindo' | 'Perto' | 'Atualizado' | 'Privada' | 'PK' | 'Novo' | 'Música' | 'Dança';
+// FIX: Added 'Festa' to the Category union type to resolve a type error where it was being compared with a value not in the type.
+export type Category = 'Popular' | 'Seguindo' | 'Perto' | 'Atualizado' | 'Privada' | 'PK' | 'Novo' | 'Música' | 'Dança' | 'Festa';
 export type CameraStatus = 'idle' | 'loading' | 'success' | 'denied' | 'error' | 'not-found' | 'in-use' | 'insecure' | 'timeout';
 export type EventStatus = 'ongoing' | 'upcoming' | 'past';
 export type InventoryCategory = 'gift' | 'decoration';
@@ -12,7 +11,7 @@ export type PaymentMethod = 'transfer' | 'card';
 export type FacingMode = 'user' | 'environment';
 export type SoundEffectName = 'riso' | 'aplausos' | 'animar' | 'beijar' | 'estranho' | 'resposta_errada' | 'sorriso' | 'gift';
 export type CardBrand = 'visa' | 'mastercard' | 'amex' | 'elo' | null;
-export type UserListRankingPeriod = 'daily' | 'weekly' | 'total';
+export type UserListRankingPeriod = 'daily' | 'weekly' | 'total' | 'hourly';
 
 export interface SelectableOption {
   id: string;
@@ -53,6 +52,8 @@ export interface User {
   withdrawal_method: WithdrawalMethod | null;
   equipped_entry_effect_id?: string | null;
   level: number;
+  level2?: number;
+  online_status?: boolean;
   xp: number;
   last_camera_used?: FacingMode;
   last_selected_category?: Category;
@@ -70,6 +71,16 @@ export interface User {
   longitude?: number;
   pk_enabled_preference?: boolean;
   last_visit_date?: string;
+  lastLiveTitle?: string;
+  lastLiveMeta?: string;
+  settings?: {
+    notifications: Omit<NotificationSettings, 'userId'>;
+    privacy: Omit<PrivacySettings, 'userId'>;
+    privateLiveInvite: Omit<PrivateLiveInviteSettings, 'userId'>;
+    giftNotifications: Omit<GiftNotificationSettings, 'userId'>;
+  }
+  // This property is added dynamically by the API for friend request lists
+  followTimestamp?: string;
 }
 
 export interface AchievementFrame {
@@ -141,6 +152,8 @@ export interface LiveStreamRecord {
   voice_enabled?: boolean;
   like_count?: number;
   country_code?: string;
+  chatMessages?: ChatMessage[];
+  current_viewers?: number[];
 }
 
 // This is the VIEW MODEL for the frontend, derived from LiveStreamRecord
@@ -269,7 +282,7 @@ export interface LiveEndSummary {
 // Chat & Message types
 export interface TabelaConversa {
   id: string;
-  participantes: number[];
+  participants: number[];
   ultima_mensagem_texto: string;
   ultima_mensagem_timestamp: string;
   titulo_conversa?: string;
@@ -302,10 +315,11 @@ export interface ConversationMessage {
 export interface Conversation {
   id: string; // From TabelaConversa.id
   type?: 'chat' | 'friend_requests_summary';
-  participants: number[]; // From TabelaConversa.participantes
+  participants: number[]; // From TabelaConversa.participants
   otherUserId: number; // Derived
   otherUserName: string; // Derived from Users table
   otherUserAvatarUrl: string; // Derived from Users table
+  isFriend?: boolean; // Derived
   unreadCount: number; // Calculated
   messages: ConversationMessage[]; // Assembled from TabelaMensagem
 }
@@ -313,7 +327,9 @@ export interface Conversation {
 export interface ChatMessage {
   id: number;
   type: 'message' | 'entry' | 'gift' | 'special_entry' | 'levelup' | 'announcement' | 'image';
-  level?: number;
+  globalLevel?: number; // Renamed from level
+  streamLevel?: number; // New level for the current stream
+  statusBadge?: { text: string; icon: string; }; // New badge for stream level
   username: string;
   userId: number;
   message: string;
@@ -327,6 +343,7 @@ export interface ChatMessage {
   giftAnimationUrl?: string;
   giftImageUrl?: string; // Static image for chat
   recipientName?: string; // Who received the gift
+  quantity?: number;
   //
   timestamp: string;
   badgeText?: string;
@@ -406,7 +423,9 @@ export interface LogPresenteEnviado {
     receiverId: number;
     liveId: number;
     giftId: number;
-    giftValue: number;
+    giftValue: number; // earnings points value for receiver
+    diamondCost: number; // diamond cost for sender
+    quantity: number;
     batalha_id?: number;
     timestamp: string;
 }
@@ -582,7 +601,7 @@ export interface GeneralRankingStreamer {
     username: string;
     avatarUrl: string;
     level: number;
-    followers: number;
+    score: number;
 }
 
 export interface GeneralRankingUser {
@@ -591,7 +610,7 @@ export interface GeneralRankingUser {
     username: string;
     avatarUrl: string;
     level: number;
-    xp: number;
+    score: number;
 }
 
 export interface LiveFollowUpdate {
@@ -759,4 +778,17 @@ export interface PrivacySettings {
   showActiveStatus: boolean;
   showInNearby: boolean;
   protectionEnabled: boolean;
+}
+
+export interface StreamUserStats {
+  userId: number;
+  liveId: number;
+  xp: number;
+}
+
+export interface FollowLog {
+    _id: string;
+    followerId: number;
+    followingId: number;
+    timestamp: string;
 }

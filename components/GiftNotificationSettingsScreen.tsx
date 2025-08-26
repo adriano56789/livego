@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import type { User, Gift, GiftNotificationSettings as Settings } from '../types';
 import * as liveStreamService from '../services/liveStreamService';

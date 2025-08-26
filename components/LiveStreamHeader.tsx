@@ -1,6 +1,7 @@
 
 
-import React from 'react';
+
+import React, { useState } from 'react';
 import AudioVisualizer from './AudioVisualizer';
 import ViewersIcon from './icons/ViewersIcon';
 import CrossIcon from './icons/CrossIcon';
@@ -65,13 +66,34 @@ const LiveStreamHeader: React.FC<LiveStreamHeaderProps> = ({
   const isPkRight = variant === 'pk-right';
   const alignment = isPkRight ? 'items-end' : 'items-start';
 
-  const FollowButton: React.FC = () => (
-      !isCurrentUserHost ? (
-        <button onClick={onFollowToggle} className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 transition-colors ${isFollowing ? 'bg-gray-500/80' : 'bg-pink-500/80'}`}>
-            {isFollowing ? <CheckIcon className="w-5 h-5 text-white" /> : <PlusIcon className="w-5 h-5 text-white" />}
+  const FollowButton: React.FC = () => {
+    const [isFollowLoading, setIsFollowLoading] = useState(false);
+
+    const handleToggle = () => {
+        if (isFollowLoading) return;
+        setIsFollowLoading(true);
+        // The parent's optimistic update will cause a re-render, resetting the loading state.
+        // This is primarily to prevent rapid double-clicks.
+        onFollowToggle();
+    };
+    
+    if (isCurrentUserHost) return null;
+
+    return (
+        <button 
+            onClick={handleToggle}
+            disabled={isFollowLoading}
+            className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 transition-colors ${isFollowing ? 'bg-gray-500/80' : 'bg-pink-500/80'} disabled:opacity-70`}
+        >
+            {isFollowLoading ? (
+                 <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+            ) : isFollowing ? <CheckIcon className="w-5 h-5 text-white" /> : <PlusIcon className="w-5 h-5 text-white" />}
         </button>
-      ) : null
-  );
+      )
+  };
 
   if (isSingle) {
     return (

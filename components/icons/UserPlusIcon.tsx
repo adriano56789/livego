@@ -1,4 +1,3 @@
-
 import React from 'react';
 
 const UserPlusIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (

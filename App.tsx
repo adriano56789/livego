@@ -257,7 +257,7 @@ const AppContent: React.FC = () => {
     const optimisticallyUpdatedUser = {
         ...user,
         following: isCurrentlyFollowing
-            ? user.following.filter(id => id !== userIdToToggle)
+            ? (user.following || []).filter(id => id !== userIdToToggle)
             : [...(user.following || []), userIdToToggle],
     };
     setUser(optimisticallyUpdatedUser);
@@ -283,16 +283,9 @@ const AppContent: React.FC = () => {
     }
   };
   
-  const handleGoLiveClick = useCallback(async () => {
-    if (!user) return;
-    if (isUserLive) {
-        await liveStreamService.stopLiveStream(user.id);
-        setIsUserLive(false);
-        setViewingStream(null);
-    } else {
-        setCurrentView('go-live-setup');
-    }
-  }, [isUserLive, user]);
+ const handleGoLiveClick = useCallback(() => {
+    setCurrentView('go-live-setup');
+  }, []);
   
   const handleStartStream = useCallback(async (details: { title: string; meta: string; category: Category, isPrivate: boolean, isPkEnabled: boolean, thumbnailBase64?: string, entryFee?: number, cameraUsed: FacingMode }) => {
     if (!user) return;
@@ -429,7 +422,7 @@ const AppContent: React.FC = () => {
         giftImageUrl: gift.imageUrl,
         recipientName: 'Você', // Test recipient
         timestamp: new Date().toISOString(),
-        level: user.level,
+        globalLevel: user.level,
         avatarUrl: user.avatar_url,
     };
     setTriggeredGift(giftMessage);
@@ -475,6 +468,7 @@ const AppContent: React.FC = () => {
           onFollowToggle={handleFollowToggle}
           onNavigateFromStream={handleNavigateFromStream}
           giftNotificationSettings={giftNotificationSettings}
+          onTriggerGiftAnimation={setTriggeredGift}
         />
       );
     }
@@ -607,13 +601,13 @@ const AppContent: React.FC = () => {
         mainContent = <PrivacySettingsScreen user={user} onExit={() => setCurrentView('settings')} />;
         break;
       case 'following':
-        mainContent = <FollowingScreen currentUser={user} viewedUserId={viewingOtherProfileId || user.id} onExit={() => setCurrentView('profile')} onUpdateUser={handleUpdateUser} onViewProfile={handleViewProfile} />;
+        mainContent = <FollowingScreen currentUser={user} viewedUserId={viewingOtherProfileId || user.id} onExit={() => setCurrentView('profile')} onUpdateUser={handleUpdateUser} onViewProfile={handleViewProfile} onFollowToggle={handleFollowToggle} />;
         break;
       case 'visitors':
-        mainContent = <VisitorsScreen currentUser={user} viewedUserId={viewingOtherProfileId || user.id} onExit={() => setCurrentView('profile')} onUpdateUser={handleUpdateUser} onViewProfile={handleViewProfile} />;
+        mainContent = <VisitorsScreen currentUser={user} viewedUserId={viewingOtherProfileId || user.id} onExit={() => setCurrentView('profile')} onUpdateUser={handleUpdateUser} onViewProfile={handleViewProfile} onFollowToggle={handleFollowToggle} />;
         break;
       case 'fans':
-        mainContent = <FansScreen currentUser={user} viewedUserId={viewingOtherProfileId || user.id} onExit={() => setCurrentView('profile')} onUpdateUser={handleUpdateUser} onViewProfile={handleViewProfile} />;
+        mainContent = <FansScreen currentUser={user} viewedUserId={viewingOtherProfileId || user.id} onExit={() => setCurrentView('profile')} onUpdateUser={handleUpdateUser} onViewProfile={handleViewProfile} onFollowToggle={handleFollowToggle} />;
         break;
       case 'profile-editor':
         mainContent = <ProfileEditorScreen user={user} onExit={() => setCurrentView('profile')} onSave={(u) => { setUser(u); setCurrentView('profile'); }} />;
@@ -628,7 +622,7 @@ const AppContent: React.FC = () => {
         mainContent = <LiveFeedScreen user={user} onViewStream={handleViewStream} onGoLiveClick={handleGoLiveClick} activeCategory={activeCategory} onSelectCategory={setActiveCategory} onUpdateUser={handleUpdateUser} onNavigateToChat={handleNavigateToChat} onViewProtectors={handleViewProtectors} onNavigate={handleNavigate} locationPermission={locationPermission} setLocationPermission={setLocationPermission} />;
     }
     
-    const showNav = !['go-live-setup', 'chat', 'settings'].includes(currentView);
+    const showNav = !viewingOtherProfileId && !['go-live-setup', 'chat', 'settings', 'following', 'fans', 'visitors', 'report-and-suggestion', 'customer-service', 'diamond-purchase', 'avatar-protection', 'profile-editor', 'help-article', 'live-support-chat'].includes(currentView);
 
     return (
       <div className="h-full w-full flex flex-col bg-black">

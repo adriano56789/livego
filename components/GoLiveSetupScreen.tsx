@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import type { User, Category, CameraStatus, FacingMode, LiveCategory } from '../types';
 import * as liveStreamService from '../services/liveStreamService';
+import * as authService from '../services/authService';
 import CrossIcon from './icons/CrossIcon';
 import PlusIcon from './icons/PlusIcon';
 import CameraFlipIcon from './icons/CameraFlipIcon';
@@ -81,6 +82,8 @@ const GoLiveSetupScreen: React.FC<GoLiveSetupScreenProps> = ({ user, onStartStre
   const [isSettingsLoading, setIsSettingsLoading] = useState(true);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [categories, setCategories] = useState<LiveCategory[]>([]);
+  const [isSavingDetails, setIsSavingDetails] = useState(false);
+  const [saveDetailsSuccess, setSaveDetailsSuccess] = useState(false);
 
   const handleFlipCamera = useCallback(() => {
     setFacingMode(prev => (prev === 'user' ? 'environment' : 'user'));
@@ -188,6 +191,8 @@ const GoLiveSetupScreen: React.FC<GoLiveSetupScreenProps> = ({ user, onStartStre
             setIsPkEnabled(preferences.isPkEnabled);
             setFacingMode(preferences.lastCameraUsed || 'user');
             setCategory(preferences.lastSelectedCategory || 'Popular');
+            setTitle(preferences.lastLiveTitle || '');
+            setMeta(preferences.lastLiveMeta || '');
             
             setCategories(fetchedCategories);
 
@@ -226,6 +231,23 @@ const GoLiveSetupScreen: React.FC<GoLiveSetupScreenProps> = ({ user, onStartStre
       }
   };
 
+  const handleSaveDetails = async () => {
+    if (isSavingDetails) return;
+    setIsSavingDetails(true);
+    try {
+        await authService.updateUserProfile(user.id, {
+            lastLiveTitle: title,
+            lastLiveMeta: meta,
+        });
+        setSaveDetailsSuccess(true);
+        setTimeout(() => setSaveDetailsSuccess(false), 2000);
+    } catch (err) {
+        alert("Falha ao salvar os detalhes.");
+    } finally {
+        setIsSavingDetails(false);
+    }
+  };
+
   const handleStartClick = useCallback(async () => {
     const parsedFee = parseInt(entryFee, 10);
     const feeToSend = !isNaN(parsedFee) && parsedFee > 0 ? parsedFee : undefined;
@@ -235,6 +257,16 @@ const GoLiveSetupScreen: React.FC<GoLiveSetupScreenProps> = ({ user, onStartStre
         return;
     }
     setIsStarting(true);
+     // Silently save preferences on start
+    try {
+        await authService.updateUserProfile(user.id, {
+            lastLiveTitle: title,
+            lastLiveMeta: meta,
+        });
+    } catch (e) {
+        console.warn("Could not save title/meta preference on stream start", e);
+    }
+
     onStartStream({ 
         title,
         meta,
@@ -245,7 +277,7 @@ const GoLiveSetupScreen: React.FC<GoLiveSetupScreenProps> = ({ user, onStartStre
         isPkEnabled: isPkEnabled,
         cameraUsed: facingMode,
     });
-  }, [title, meta, category, isLiveStreamPrivate, thumbnailBase64, entryFee, isPkEnabled, onStartStream, facingMode]);
+  }, [title, meta, category, isLiveStreamPrivate, thumbnailBase64, entryFee, isPkEnabled, onStartStream, facingMode, user.id]);
 
   const renderFeeInput = () => (
     <div className="flex items-center gap-3 mt-4 bg-gray-800/80 backdrop-blur-sm p-3 rounded-lg">
@@ -339,14 +371,23 @@ const GoLiveSetupScreen: React.FC<GoLiveSetupScreenProps> = ({ user, onStartStre
                         placeholder="Dê um título para sua transmi..."
                         className="w-full bg-transparent text-xl font-semibold text-white placeholder-gray-400 focus:outline-none border-b border-gray-600 focus:border-green-500 pb-2 transition-colors"
                     />
-                     <textarea
-                        value={meta}
-                        onChange={(e) => setMeta(e.target.value)}
-                        placeholder="Descrição (opcional)..."
-                        rows={1}
-                        maxLength={100}
-                        className="w-full bg-transparent text-sm text-gray-300 placeholder-gray-500 focus:outline-none mt-2 resize-none"
-                    />
+                     <div className="flex items-center gap-2 mt-2">
+                        <input
+                            type="text"
+                            value={meta}
+                            onChange={(e) => setMeta(e.target.value)}
+                            placeholder="Descrição (opcional)..."
+                            maxLength={100}
+                            className="flex-grow bg-transparent text-sm text-gray-300 placeholder-gray-500 focus:outline-none"
+                        />
+                        <button
+                            onClick={handleSaveDetails}
+                            disabled={isSavingDetails || saveDetailsSuccess}
+                            className="shrink-0 bg-gray-700 text-white font-semibold px-3 py-1.5 rounded-full text-xs transition-colors hover:bg-gray-600 disabled:opacity-50"
+                        >
+                            {isSavingDetails ? '...' : saveDetailsSuccess ? 'Salvo!' : 'Salvar'}
+                        </button>
+                    </div>
                 </div>
             </div>
 

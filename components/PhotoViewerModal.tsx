@@ -1,3 +1,4 @@
+
 import React from 'react';
 import CrossIcon from './icons/CrossIcon';
 import TrashIcon from './icons/TrashIcon';

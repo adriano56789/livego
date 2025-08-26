@@ -27,7 +27,7 @@ export const getFriends = (userId: number): Promise<User[]> => {
 };
 
 export const getFans = (userId: number): Promise<User[]> => {
-    // In this mock, fans are the same as followers.
+    // In this mock, fans are unilateral followers.
     return apiClient(`/api/users/${userId}/fans`);
 };
 
@@ -69,7 +69,7 @@ export const generateNickname = (): Promise<{ newNickname: string }> => {
     return apiClient('/api/users/generate-nickname', { method: 'POST' });
 };
 
-export const updateUserProfile = (userId: number, profileData: Partial<Pick<User, 'nickname' | 'gender' | 'birthday' | 'invite_code' | 'personalSignature' | 'country' | 'personalityTags' | 'profession' | 'languages' | 'height' | 'weight' | 'emotionalState'>>): Promise<User> => {
+export const updateUserProfile = (userId: number, profileData: Partial<Pick<User, 'nickname' | 'gender' | 'birthday' | 'invite_code' | 'personalSignature' | 'country' | 'personalityTags' | 'profession' | 'languages' | 'height' | 'weight' | 'emotionalState' | 'lastLiveTitle' | 'lastLiveMeta'>>): Promise<User> => {
     return apiClient(`/api/users/${userId}`, {
         method: 'PUT',
         body: JSON.stringify(profileData),

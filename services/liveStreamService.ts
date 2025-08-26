@@ -1,5 +1,3 @@
-
-
 import { apiClient } from './apiClient';
 import type { User, LiveDetails, ChatMessage, Gift, Viewer, RankingContributor, Like, PkBattle, PkBattleState, PublicProfile, PkEventDetails, Conversation, SendGiftResponse, ProtectorDetails, WithdrawalTransaction, WithdrawalMethod, InventoryItem, AppEvent, LiveEndSummary, UserLevelInfo, GeneralRankingStreamer, GeneralRankingUser, WithdrawalBalance, EventStatus, PkRankingData, Stream, Category, StartLiveResponse, ConvitePK, LiveFollowUpdate, PrivateLiveInviteSettings, NotificationSettings, FacingMode, SoundEffectName, UniversalRankingData, UserListRankingPeriod, PkSettings, LiveCategory, StreamUpdateListener, MuteStatusListener, UserKickedListener, SoundEffectListener, MuteStatusUpdate, UserKickedUpdate, SoundEffectUpdate, UserBlockedUpdate, UserUnblockedUpdate, UserBlockedListener, UserUnblockedListener, Region, PrivacySettings, IncomingPrivateLiveInvite, GiftNotificationSettings } from '../types';
 
@@ -136,10 +134,10 @@ export const sendChatMessage = async (liveId: number, userId: number, message: s
 };
 
 export const getGiftCatalog = (): Promise<Gift[]> => apiClient('/api/gifts');
-export const sendGift = (liveId: number, senderId: number, giftId: number, receiverId?: number): Promise<SendGiftResponse> => {
+export const sendGift = (liveId: number, senderId: number, giftId: number, quantity: number, receiverId?: number): Promise<SendGiftResponse> => {
     return apiClient<SendGiftResponse>(`/api/lives/${liveId}/gift`, {
         method: 'POST',
-        body: JSON.stringify({ senderId, giftId, receiverId })
+        body: JSON.stringify({ senderId, giftId, quantity, receiverId })
     }).then(response => {
         if (response.success) {
             liveUpdateManager.dispatch(liveId);
@@ -224,6 +222,13 @@ export const getFriendRequests = (userId: number): Promise<User[]> => {
     return apiClient(`/api/users/${userId}/friend-requests`);
 };
 
+export const declineFriendRequest = (currentUserId: number, userIdToDecline: number): Promise<{ success: boolean }> => {
+    return apiClient('/api/friend-requests/decline', {
+        method: 'POST',
+        body: JSON.stringify({ currentUserId, userIdToDecline })
+    });
+};
+
 export const saveWithdrawalMethod = (userId: number, method: 'pix' | 'mercado_pago', account: string): Promise<User> => {
     return apiClient(`/api/users/${userId}/withdrawal-method`, { method: 'PUT', body: JSON.stringify({ method, account }) });
 };
@@ -263,8 +268,8 @@ export const submitSuggestion = (suggestionData: { suggesterId: number; suggesti
 export const getEventsByStatus = (status: EventStatus): Promise<AppEvent[]> => apiClient(`/api/events?status=${status}`);
 export const getEventById = (eventId: string): Promise<AppEvent> => apiClient(`/api/events/${eventId}`);
 export const getUserLevelInfo = (userId: number): Promise<UserLevelInfo> => apiClient(`/api/users/${userId}/level`);
-export const getStreamerRanking = (): Promise<GeneralRankingStreamer[]> => apiClient('/api/ranking/streamers');
-export const getUserRanking = (): Promise<GeneralRankingUser[]> => apiClient('/api/ranking/users');
+export const getStreamerRanking = (period: UserListRankingPeriod): Promise<GeneralRankingStreamer[]> => apiClient(`/api/ranking/streamers?period=${period}`);
+export const getUserRanking = (period: UserListRankingPeriod): Promise<GeneralRankingUser[]> => apiClient(`/api/ranking/users?period=${period}`);
 
 export const joinLiveStream = (userId: number, liveId: number): Promise<{ success: boolean }> => apiClient<{ success: boolean }>(`/api/lives/${liveId}/join`, { method: 'POST', body: JSON.stringify({ userId }) }).then(response => {
     if (response.success) liveUpdateManager.dispatch(liveId);
@@ -363,7 +368,7 @@ export const updatePkSettings = (userId: number, durationSeconds: number): Promi
     });
 };
 
-export const getUserLivePreferences = (userId: number): Promise<{isPkEnabled: boolean, lastCameraUsed: FacingMode, lastSelectedCategory: Category}> => {
+export const getUserLivePreferences = (userId: number): Promise<{isPkEnabled: boolean, lastCameraUsed: FacingMode, lastSelectedCategory: Category, lastLiveTitle?: string, lastLiveMeta?: string}> => {
     return apiClient(`/api/users/${userId}/live-preferences`);
 };
 export const updateUserPkPreference = (userId: number, isPkEnabled: boolean): Promise<{success: boolean}> => {
@@ -441,4 +446,11 @@ export const reportUser = (reporterId: number, reportedId: number): Promise<{ su
 
 export const flipCamera = (liveId: number): Promise<{ success: boolean, newFacingMode: FacingMode }> => {
     return apiClient(`/api/lives/${liveId}/flip-camera`, { method: 'POST' });
+};
+
+export const toggleMicrophone = (liveId: number, enabled: boolean): Promise<{ success: boolean }> => {
+    return apiClient(`/api/lives/${liveId}/mic-toggle`, {
+        method: 'POST',
+        body: JSON.stringify({ enabled }),
+    });
 };

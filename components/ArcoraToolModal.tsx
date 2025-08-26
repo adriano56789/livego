@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect } from 'react';
 import CrossIcon from './icons/CrossIcon';
 
@@ -11,6 +10,7 @@ import MailIcon from './icons/MailIcon';
 import BoxingGlovesIcon from './icons/BoxingGlovesIcon';
 import GroupWhiteIcon from './icons/GroupWhiteIcon';
 import LinkedCirclesIcon from './icons/LinkedCirclesIcon';
+import MicOffIcon from './icons/MicOffIcon';
 
 
 // Basic Tool Icons
@@ -114,7 +114,7 @@ const ArcoraToolModal: React.FC<ArcoraToolModalProps> = ({
     const anchorTools = [
         { icon: <BeautifyStarIcon className={iconClass} />, label: 'Embelezar', notImplemented: true },
         { icon: <SoundEffectIcon className={iconClass} />, label: 'Efeito sonoro', onClick: onOpenSoundEffectModal },
-        { icon: <VoiceIcon className={iconClass} />, label: 'Âncora de Voz', onClick: onToggleVoice, isActive: isVoiceEnabled },
+        { icon: isVoiceEnabled ? <VoiceIcon className={iconClass} /> : <MicOffIcon className={iconClass} />, label: 'Microfone', onClick: onToggleVoice, isActive: isVoiceEnabled },
         { icon: <ClarityIcon className={iconClass} />, label: 'Clareza', notImplemented: true },
     ];
     

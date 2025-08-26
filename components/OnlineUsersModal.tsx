@@ -11,10 +11,7 @@ interface OnlineUsersModalProps {
 }
 
 const formatContribution = (num: number): string => {
-    if (num >= 1000) {
-        return (num / 1000).toFixed(2).replace(/\.00$/, '') + 'K';
-    }
-    return num.toString();
+    return String(num || 0);
 };
 
 const UserListItem: React.FC<{ user: Viewer, onUserClick: (userId: number) => void }> = ({ user, onUserClick }) => (

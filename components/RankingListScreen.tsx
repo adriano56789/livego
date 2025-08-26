@@ -73,7 +73,7 @@ const UserRow: React.FC<{ user: UniversalRankingUser; isCurrentUser?: boolean; o
             </div>
             <div className="flex items-center gap-1.5 text-yellow-400 font-semibold text-sm shrink-0">
                 <CoinIcon className="w-4 h-4" />
-                <span>{user.score.toLocaleString('pt-BR')}</span>
+                <span>{user.score}</span>
             </div>
         </button>
     );

@@ -27,6 +27,7 @@ import ShieldCheckIcon from './icons/ShieldCheckIcon';
 import LockSolidIcon from './icons/LockSolidIcon';
 import FollowingScreen from './FollowingScreen';
 import UsersIcon from './icons/UsersIcon';
+import LiveBadge from './LiveBadge';
 
 
 interface EditProfileScreenProps {
@@ -36,7 +37,7 @@ interface EditProfileScreenProps {
   isViewingOtherProfile?: boolean;
   viewedUserId?: number;
   onExit?: () => void;
-  onFollowToggle?: (userId: number, optimisticCallback?: (action: 'follow' | 'unfollow') => void) => void;
+  onFollowToggle?: (userId: number, optimisticCallback?: (action: 'follow' | 'unfollow') => void) => Promise<void>;
   onNavigateToChat?: (userId: number) => void;
   onViewStream?: (stream: Stream | PkBattle) => void;
   onUpdateUser?: (user: User) => void;
@@ -129,6 +130,7 @@ const EditProfileScreen: React.FC<EditProfileScreenProps> = ({
   const [profileData, setProfileData] = useState<User | PublicProfile | null>(isOwnProfile ? user : null);
   const [isLoading, setIsLoading] = useState(!isOwnProfile);
   const [isBlocked, setIsBlocked] = useState(false);
+  const [isFollowLoading, setIsFollowLoading] = useState(false);
 
   const [idCopied, setIdCopied] = useState(false);
   const [giftsReceived, setGiftsReceived] = useState(0);
@@ -171,9 +173,39 @@ const EditProfileScreen: React.FC<EditProfileScreenProps> = ({
       };
       fetchData();
   }, [isOwnProfile, viewedUserId, user, onExit, loggedInUser.id]);
+
+  useEffect(() => {
+    if (!isViewingOtherProfile || !viewedUserId) return;
+
+    const pollLiveStatus = async () => {
+        // Don't poll if tab is not active or a modal is open
+        if (document.visibilityState !== 'visible' || isActionMenuOpen || isBlocked) return; 
+        try {
+            const isCurrentlyLive = await liveStreamService.getUserLiveStatus(viewedUserId);
+            
+            setProfileData(prev => {
+                if (!prev || !('isLive' in prev) || prev.isLive === isCurrentlyLive) {
+                    return prev; // No change needed
+                }
+                return { ...prev, isLive: isCurrentlyLive };
+            });
+            
+        } catch (error) {
+            console.warn("Failed to poll live status, stopping poll.", error);
+            clearInterval(intervalId); // Stop polling on error
+        }
+    };
+
+    const intervalId = setInterval(pollLiveStatus, 30000); // Poll every 30 seconds
+
+    return () => clearInterval(intervalId);
+  }, [isViewingOtherProfile, viewedUserId, isActionMenuOpen, isBlocked]);
   
-  const handleFollowClick = () => {
-    if (onFollowToggle && profileData) {
+  const handleFollowClick = async () => {
+    if (isFollowLoading || !onFollowToggle || !profileData) return;
+    
+    setIsFollowLoading(true);
+    try {
         const optimisticCallback = (action: 'follow' | 'unfollow') => {
             if ('followers' in profileData) {
                 setProfileData(prevProfile => {
@@ -185,7 +217,11 @@ const EditProfileScreen: React.FC<EditProfileScreenProps> = ({
                 });
             }
         };
-        onFollowToggle(profileData.id, optimisticCallback);
+        await onFollowToggle(profileData.id, optimisticCallback);
+    } catch (error) {
+        console.error("Follow/unfollow failed", error);
+    } finally {
+        setIsFollowLoading(false);
     }
   };
 
@@ -222,21 +258,30 @@ const EditProfileScreen: React.FC<EditProfileScreenProps> = ({
   };
     
   const handleEnterLive = async () => {
-    if (!profileData || !('isLive' in profileData && profileData.isLive) || !onViewStream) return;
+    if (!profileData || !onViewStream) return;
 
     try {
-        const activeStream = await liveStreamService.getActiveStreamForUser(profileData.id);
-        if (activeStream) {
-            const pkBattleDb = await liveStreamService.findActivePkBattleForStream(activeStream.id);
+        // Use the correct service function that only finds active streams.
+        const streamToEnter = await liveStreamService.getActiveStreamForUser(profileData.id);
+        
+        if (streamToEnter) {
+            // Check if it's part of a PK battle
+            const pkBattleDb = await liveStreamService.findActivePkBattleForStream(streamToEnter.id);
             if (pkBattleDb) {
                 const pkBattle = await liveStreamService.getPkBattleDetails(Number(pkBattleDb.id));
                 onViewStream(pkBattle);
             } else {
-                onViewStream(activeStream);
+                onViewStream(streamToEnter);
             }
-            onExit?.();
         } else {
-            alert("Não foi possível encontrar a live ativa para este usuário.");
+            // If no active stream is found, inform the user and update the UI state.
+            alert("O streamer não está ao vivo no momento.");
+            if ('isLive' in profileData) {
+                setProfileData(prev => {
+                    if (!prev || !('isLive' in prev)) return prev;
+                    return { ...prev, isLive: false };
+                });
+            }
         }
     } catch (error) {
         console.error("Failed to enter live stream from profile:", error);
@@ -279,10 +324,11 @@ const EditProfileScreen: React.FC<EditProfileScreenProps> = ({
   }
 
   // Type-safe accessors for properties that differ or might not exist
-  const avatarUrl = 'avatarUrl' in profileData ? profileData.avatarUrl : profileData.avatar_url;
+  const avatarUrl = 'avatarUrl' in profileData ? profileData.avatarUrl : user.avatar_url;
+  const coverPhotoUrl = 'coverPhotoUrl' in profileData ? profileData.coverPhotoUrl : 'https://picsum.photos/seed/default-cover/800/400';
   const isAvatarProtected = 'is_avatar_protected' in profileData && !!profileData.is_avatar_protected;
   const isProfileProtected = 'privacy' in profileData && !!profileData.privacy?.protectionEnabled;
-  const level = 'level' in profileData ? profileData.level : parseInt(profileData.badges.find(b => b.type === 'level')?.text || '1', 10);
+  const level = 'level' in profileData ? profileData.level : parseInt(profileData.badges?.find(b => b.type === 'level')?.text || '1', 10);
   
   const formattedBirthday = profileData.birthday 
     ? new Date(profileData.birthday + 'T00:00:00').toLocaleDateString('pt-BR')
@@ -296,22 +342,29 @@ const EditProfileScreen: React.FC<EditProfileScreenProps> = ({
   return (
     <>
       <div className="h-full w-full bg-black flex flex-col font-sans">
-        <header className="relative h-48 bg-purple-500 shrink-0">
+        <header className="relative h-48 bg-gray-800 shrink-0">
+          {'coverPhotoUrl' in profileData && profileData.coverPhotoUrl ? (
+            <img src={coverPhotoUrl} alt="Cover" className="absolute inset-0 w-full h-full object-cover" />
+          ) : (
+            <div className="absolute inset-0 bg-purple-500"></div> // Fallback
+          )}
+          <div className="absolute inset-0 bg-black/30"></div>
+          
           <div className="absolute top-6 left-4 right-4 flex justify-between items-center z-20">
-            <button onClick={handleBackClick} className="p-2 -m-2 rounded-full hover:bg-black/10 transition-colors"><ArrowLeftIcon className="w-6 h-6 text-white" /></button>
+            <button onClick={handleBackClick} className="p-2 -m-2 rounded-full bg-black/30 hover:bg-black/50 transition-colors"><ArrowLeftIcon className="w-6 h-6 text-white" /></button>
             <div className="flex items-center gap-3">
                 {isOwnProfile && (
                     <>
-                        <button onClick={() => onNavigate?.('avatar-protection')} className="p-2 -m-2 rounded-full hover:bg-black/10 transition-colors" title="Proteção de Avatar">
+                        <button onClick={() => onNavigate?.('avatar-protection')} className="p-2 -m-2 rounded-full bg-black/30 hover:bg-black/50 transition-colors" title="Proteção de Avatar">
                             <ShieldCheckIcon className="w-6 h-6 text-white" />
                         </button>
-                        <button onClick={() => onNavigate?.('profile-editor')} className="p-2 -m-2 rounded-full hover:bg-black/10 transition-colors" title="Editar Perfil">
+                        <button onClick={() => onNavigate?.('profile-editor')} className="p-2 -m-2 rounded-full bg-black/30 hover:bg-black/50 transition-colors" title="Editar Perfil">
                             <PencilIcon className="w-6 h-6 text-white" />
                         </button>
                     </>
                 )}
                 {!isOwnProfile && (
-                     <button onClick={() => setIsActionMenuOpen(true)} className="p-2 -m-2 rounded-full hover:bg-black/10 transition-colors">
+                     <button onClick={() => setIsActionMenuOpen(true)} className="p-2 -m-2 rounded-full bg-black/30 hover:bg-black/50 transition-colors">
                         <EllipsisIcon className="w-6 h-6 text-white" />
                      </button>
                 )}
@@ -339,9 +392,14 @@ const EditProfileScreen: React.FC<EditProfileScreenProps> = ({
           </div>
         </header>
 
-        <main className="flex-grow pt-16 px-4 pb-4 overflow-y-auto scrollbar-hide">
+        <main className="relative flex-grow pt-16 px-4 pb-4 overflow-y-auto scrollbar-hide">
           <section className="text-center">
-            <h1 className="text-2xl font-bold text-white">{profileData.nickname || profileData.name}</h1>
+            <div className="flex justify-center items-center gap-3">
+              <h1 className="text-2xl font-bold text-white">{profileData.nickname || profileData.name}</h1>
+              {'isLive' in profileData && profileData.isLive && (
+                <LiveBadge onClick={handleEnterLive} />
+              )}
+            </div>
             <div className="flex justify-center items-center gap-2 mt-2">
                 {isProfileProtected && (
                   <div className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-bold bg-blue-500 text-white`}>
@@ -367,14 +425,6 @@ const EditProfileScreen: React.FC<EditProfileScreenProps> = ({
                 <span>BR</span>
             </div>
           </section>
-
-          {'isLive' in profileData && profileData.isLive && (
-            <div className="mt-4">
-                <button onClick={handleEnterLive} className="w-full bg-gradient-to-r from-red-500 to-orange-500 text-white font-bold py-3.5 rounded-full text-lg shadow-lg animate-pulse-glow" style={{'--glow-color': 'rgba(239, 68, 68, 0.6)'} as React.CSSProperties}>
-                    Entrar na Live
-                </button>
-            </div>
-           )}
 
           <section className="grid grid-cols-4 my-4">
               <Stat value={formatStat(followersCount)} label="Fãs" onClick={() => handleStatClick('fans')} />
@@ -434,20 +484,23 @@ const EditProfileScreen: React.FC<EditProfileScreenProps> = ({
         {!isOwnProfile && (
           <footer className="p-4 bg-black border-t border-gray-800/50 shrink-0">
               <div className="flex items-center justify-center gap-4">
-                   <button
-                        onClick={() => onNavigateToChat?.(profileData.id)}
-                        className="py-3.5 px-8 rounded-full font-semibold transition-colors bg-[#2c2c2e] text-gray-300 hover:bg-gray-700"
-                    >
-                        Conversar
-                    </button>
-                    <button
-                        onClick={handleFollowClick}
-                        className={`flex-grow py-3.5 rounded-full font-semibold transition-colors ${
-                            isFollowing ? 'bg-[#2c2c2e] text-gray-300 hover:bg-gray-700' : 'bg-[#34C759] text-black hover:opacity-90'
-                        }`}
-                    >
-                        {isFollowing ? 'Seguindo' : 'Seguir'}
-                    </button>
+                  <button
+                      onClick={() => onNavigateToChat?.(profileData.id)}
+                      className="py-3.5 px-8 rounded-full font-semibold transition-colors bg-[#2c2c2e] text-gray-300 hover:bg-gray-700"
+                  >
+                      Conversar
+                  </button>
+                  <button
+                      onClick={handleFollowClick}
+                      disabled={isFollowLoading}
+                      className={`flex-grow py-3.5 rounded-full font-semibold transition-colors text-white disabled:opacity-70 ${
+                        isFollowing
+                          ? 'bg-blue-600 hover:bg-blue-500'
+                          : 'bg-purple-600 hover:bg-purple-500'
+                      }`}
+                  >
+                      {isFollowLoading ? 'Aguarde...' : (isFollowing ? 'Seguindo' : 'Seguir')}
+                  </button>
               </div>
           </footer>
         )}

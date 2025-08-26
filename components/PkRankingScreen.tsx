@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
-import type { User, GeneralRankingStreamer, GeneralRankingUser } from '../types';
+import type { User, GeneralRankingStreamer, GeneralRankingUser, UserListRankingPeriod } from '../types';
 import * as liveStreamService from '../services/liveStreamService';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
 import PodiumCrownIcon from './icons/PodiumCrownIcon';
@@ -11,16 +10,16 @@ interface RankingScreenProps {
   onViewProfile: (userId: number) => void;
 }
 
-const formatScore = (num: number) => (num || 0).toLocaleString('pt-BR');
+type Tab = 'streamers' | 'users';
 
-const PodiumItem: React.FC<{ user: GeneralRankingStreamer | GeneralRankingUser; position: 1 | 2 | 3; onUserClick: (userId: number) => void; type: 'streamers' | 'users' }> = ({ user, position, onUserClick, type }) => {
+const PodiumItem: React.FC<{ user: GeneralRankingStreamer | GeneralRankingUser; position: 1 | 2 | 3; onUserClick: (userId: number) => void; type: Tab }> = ({ user, position, onUserClick, type }) => {
     const isFirst = position === 1;
     const size = isFirst ? 'w-24 h-24' : 'w-20 h-20';
     const border = isFirst ? 'border-4 border-yellow-400' : 'border-2 border-gray-400';
     const nameColor = isFirst ? 'text-yellow-300' : 'text-gray-200';
     const order = isFirst ? 'order-2' : position === 2 ? 'order-1' : 'order-3';
-    const value = type === 'streamers' ? formatScore((user as GeneralRankingStreamer).followers) : formatScore((user as GeneralRankingUser).xp);
-    const label = type === 'streamers' ? 'Seguidores' : 'XP';
+    const value = user.score;
+    const label = type === 'streamers' ? 'Recebidos' : 'Enviados';
 
     return (
         <button onClick={() => onUserClick(user.userId)} className={`flex flex-col items-center text-center ${order} ${isFirst ? 'self-end' : 'self-end mb-2'}`}>
@@ -29,13 +28,13 @@ const PodiumItem: React.FC<{ user: GeneralRankingStreamer | GeneralRankingUser; 
                 <img src={user.avatarUrl} alt={user.username} className={`${size} rounded-full object-cover ${border}`} />
             </div>
             <p className={`font-bold mt-2 truncate max-w-full ${nameColor}`}>{user.username}</p>
-            <p className="text-sm text-white font-semibold">{value} <span className="text-xs text-gray-400">{label}</span></p>
+            <p className="text-sm text-white font-semibold">{value.toLocaleString('pt-BR')} <span className="text-xs text-gray-400">{label}</span></p>
         </button>
     );
 };
 
-const UserRow: React.FC<{ user: GeneralRankingStreamer | GeneralRankingUser; onUserClick: (userId: number) => void; type: 'streamers' | 'users' }> = ({ user, onUserClick, type }) => {
-    const value = type === 'streamers' ? formatScore((user as GeneralRankingStreamer).followers) : formatScore((user as GeneralRankingUser).xp);
+const UserRow: React.FC<{ user: GeneralRankingStreamer | GeneralRankingUser; onUserClick: (userId: number) => void; type: Tab }> = ({ user, onUserClick, type }) => {
+    const value = user.score;
     return (
         <button onClick={() => onUserClick(user.userId)} className="flex items-center w-full px-2 py-2 hover:bg-white/10 rounded-lg transition-colors">
             <div className="w-10 text-center text-gray-300 font-bold">{user.rank}</div>
@@ -44,40 +43,47 @@ const UserRow: React.FC<{ user: GeneralRankingStreamer | GeneralRankingUser; onU
                 <p className="font-semibold text-white">{user.username}</p>
                 <p className="text-xs text-gray-400">Nível {user.level}</p>
             </div>
-            <p className="font-bold text-white">{value}</p>
+            <p className="font-bold text-white">{value.toLocaleString('pt-BR')}</p>
         </button>
     );
 };
 
 
 const RankingScreen: React.FC<RankingScreenProps> = ({ currentUser, onExit, onViewProfile }) => {
-    const [activeTab, setActiveTab] = useState<'streamers' | 'users'>('streamers');
-    const [streamerRanking, setStreamerRanking] = useState<GeneralRankingStreamer[]>([]);
-    const [userRanking, setUserRanking] = useState<GeneralRankingUser[]>([]);
+    const [activeTab, setActiveTab] = useState<Tab>('streamers');
+    const [activePeriod, setActivePeriod] = useState<UserListRankingPeriod>('daily');
+    const [rankingData, setRankingData] = useState<(GeneralRankingStreamer | GeneralRankingUser)[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    
+    const periodTabs: { key: UserListRankingPeriod, label: string }[] = [
+        { key: 'hourly', label: 'Horário' },
+        { key: 'daily', label: 'Diário' },
+        { key: 'weekly', label: 'Semanal' },
+        { key: 'total', label: 'Total' },
+    ];
 
     useEffect(() => {
         const fetchRanking = async () => {
             setIsLoading(true);
             try {
+                let data;
                 if (activeTab === 'streamers') {
-                    const data = await liveStreamService.getStreamerRanking();
-                    setStreamerRanking(data);
+                    data = await liveStreamService.getStreamerRanking(activePeriod);
                 } else {
-                    const data = await liveStreamService.getUserRanking();
-                    setUserRanking(data);
+                    data = await liveStreamService.getUserRanking(activePeriod);
                 }
+                setRankingData(data);
             } catch (error) {
-                console.error(`Failed to fetch ${activeTab} ranking`, error);
+                console.error(`Failed to fetch ${activeTab} ranking for ${activePeriod}`, error);
             } finally {
                 setIsLoading(false);
             }
         };
         fetchRanking();
-    }, [activeTab]);
+    }, [activeTab, activePeriod]);
 
     const renderList = () => {
-        const list = activeTab === 'streamers' ? streamerRanking : userRanking;
+        const list = rankingData;
         if (list.length === 0) return <div className="flex-grow flex items-center justify-center text-gray-400">Nenhum ranking disponível.</div>;
         
         const top3 = list.filter(u => u.rank <= 3).sort((a,b) => a.rank - b.rank);
@@ -117,11 +123,23 @@ const RankingScreen: React.FC<RankingScreenProps> = ({ currentUser, onExit, onVi
                         Ranking de Usuários
                     </button>
                 </div>
+                
+                <div className="shrink-0 flex items-center justify-center gap-2 p-1 bg-black/20 rounded-full my-2">
+                   {periodTabs.map(tab => (
+                       <button 
+                         key={tab.key}
+                         onClick={() => setActivePeriod(tab.key)}
+                         className={`flex-1 py-1.5 rounded-full text-xs font-bold transition-colors ${activePeriod === tab.key ? 'bg-white/90 text-black' : 'text-gray-300'}`}
+                       >
+                           {tab.label}
+                       </button>
+                   ))}
+                </div>
 
                 <div className="flex items-center text-sm text-gray-300 font-semibold py-2 px-2 mt-4">
                     <p className="w-10 text-center">Posição</p>
                     <p className="flex-1 ml-5">{activeTab === 'streamers' ? 'Streamer' : 'Usuário'}</p>
-                    <p>{activeTab === 'streamers' ? 'Seguidores' : 'XP'}</p>
+                    <p>{activeTab === 'streamers' ? 'Moedas Recebidas' : 'Moedas Enviadas'}</p>
                 </div>
 
                 {isLoading ? (

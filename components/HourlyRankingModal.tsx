@@ -101,7 +101,7 @@ const PodiumItem: React.FC<{ user: UniversalRankingUser; position: 1 | 2 | 3; ty
                 </div>
                 <div className="flex items-center gap-1 text-yellow-400 font-semibold text-sm mt-1">
                     <PresentIcon className="w-4 h-4" />
-                    <span>{(user.score || 0).toLocaleString()}</span>
+                    <span>{user.score || 0}</span>
                 </div>
             </div>
 
@@ -146,7 +146,7 @@ const RankingListItem: React.FC<{ user: UniversalRankingUser; onUserClick: (user
                     <div className="flex items-center gap-2 text-xs text-gray-300 mt-1">
                         Receber:
                         <PresentIcon className="w-4 h-4 text-yellow-400" />
-                        <span className="font-semibold">{(user.score || 0).toLocaleString()}</span>
+                        <span className="font-semibold">{user.score || 0}</span>
                     </div>
                 </div>
             </div>

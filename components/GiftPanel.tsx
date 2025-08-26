@@ -8,8 +8,9 @@ interface GiftPanelProps {
   user: User;
   liveId: number;
   streamerId: number;
+  isHost: boolean;
   onClose: () => void;
-  onSendGift: (giftId: number, receiverId?: number) => void;
+  onSendGift: (giftId: number, quantity: number, receiverId?: number) => void;
   onRechargeClick: () => void;
   pkBattleStreamers?: {
     streamer1: PkBattleStreamer;
@@ -17,9 +18,10 @@ interface GiftPanelProps {
   };
 }
 
-const GiftPanel: React.FC<GiftPanelProps> = ({ user, liveId, streamerId, onClose, onSendGift, onRechargeClick, pkBattleStreamers }) => {
+const GiftPanel: React.FC<GiftPanelProps> = ({ user, liveId, streamerId, isHost, onClose, onSendGift, onRechargeClick, pkBattleStreamers }) => {
   const [gifts, setGifts] = useState<Gift[]>([]);
   const [selectedGiftId, setSelectedGiftId] = useState<number | null>(null);
+  const [quantity, setQuantity] = useState(1);
   const [selectedReceiverId, setSelectedReceiverId] = useState<number | null>(pkBattleStreamers ? null : streamerId);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -42,9 +44,11 @@ const GiftPanel: React.FC<GiftPanelProps> = ({ user, liveId, streamerId, onClose
 
   const handleSend = () => {
     if (selectedGift) {
-      onSendGift(selectedGift.id, selectedReceiverId ?? undefined);
+      onSendGift(selectedGift.id, quantity, selectedReceiverId ?? undefined);
     }
   };
+  
+  const quantityOptions = [1, 10, 30, 66, 99];
 
   const renderPkReceiverSelection = () => {
     if (!pkBattleStreamers) return null;
@@ -72,6 +76,11 @@ const GiftPanel: React.FC<GiftPanelProps> = ({ user, liveId, streamerId, onClose
     );
   };
 
+  const isSendDisabled = !selectedGift || 
+    (!!pkBattleStreamers && !selectedReceiverId) || // Must select a receiver in PK
+    (!pkBattleStreamers && isHost) || // Cannot send to self in solo stream
+    (!!pkBattleStreamers && isHost && selectedReceiverId === user.id); // Cannot send to self in PK
+
   return (
     <div 
       className="fixed inset-0 bg-transparent z-50 flex items-end"
@@ -82,7 +91,7 @@ const GiftPanel: React.FC<GiftPanelProps> = ({ user, liveId, streamerId, onClose
         onClick={e => e.stopPropagation()}
       >
         {pkBattleStreamers && renderPkReceiverSelection()}
-        <div className="p-4 grid grid-cols-4 gap-4 overflow-y-auto max-h-[40vh] min-h-[20vh] border-t border-b border-white/10">
+        <div className="p-4 grid grid-cols-4 gap-4 overflow-y-auto max-h-[40vh] min-h-[20vh] border-t border-white/10">
             {isLoading ? (
                  <div className="col-span-4 text-center py-8 text-gray-400">Carregando presentes...</div>
             ) : gifts.length > 0 ? (
@@ -112,6 +121,25 @@ const GiftPanel: React.FC<GiftPanelProps> = ({ user, liveId, streamerId, onClose
                 </div>
             )}
         </div>
+        
+        <div className="border-t border-b border-white/10 px-4 py-2">
+            <div className="flex justify-between items-center">
+                <span className="text-sm font-semibold text-gray-300">Quantidade</span>
+                <div className="flex items-center gap-2">
+                    {quantityOptions.map(q => (
+                        <button
+                            key={q}
+                            onClick={() => setQuantity(q)}
+                            className={`px-3 py-1 text-sm font-semibold rounded-full transition-colors ${
+                                quantity === q ? 'bg-purple-500 text-white' : 'bg-gray-700 text-gray-300'
+                            }`}
+                        >
+                            {q}
+                        </button>
+                    ))}
+                </div>
+            </div>
+        </div>
 
         <footer className="p-3 flex items-center justify-between">
             <button onClick={onRechargeClick} className="flex items-center gap-2">
@@ -121,7 +149,7 @@ const GiftPanel: React.FC<GiftPanelProps> = ({ user, liveId, streamerId, onClose
             </button>
             <button 
                 onClick={handleSend}
-                disabled={!selectedGift || (!!pkBattleStreamers && !selectedReceiverId)}
+                disabled={isSendDisabled}
                 className="bg-green-500 text-black font-bold px-8 py-2.5 rounded-full disabled:bg-gray-600 disabled:text-gray-400 transition-colors"
             >
                 Enviar

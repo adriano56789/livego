@@ -13,8 +13,6 @@ interface ContributionRankingModalProps {
 
 type Tab = 'streamers' | 'users';
 
-const formatScore = (num: number): string => num.toLocaleString('pt-BR');
-
 const PodiumItem: React.FC<{ user: GeneralRankingStreamer | GeneralRankingUser; position: 1 | 2 | 3; onUserClick: (userId: number) => void; type: Tab }> = ({ user, position, onUserClick, type }) => {
     const isFirst = position === 1;
     const isSecond = position === 2;
@@ -23,8 +21,8 @@ const PodiumItem: React.FC<{ user: GeneralRankingStreamer | GeneralRankingUser; 
     const avatarSize = isFirst ? 'w-24 h-24' : 'w-20 h-20';
     const borderSize = isFirst ? 'border-4' : 'border-2';
     const borderColor = isFirst ? 'border-yellow-400' : isSecond ? 'border-slate-300' : 'border-amber-500';
-    const value = type === 'streamers' ? formatScore((user as GeneralRankingStreamer).followers) : formatScore((user as GeneralRankingUser).xp);
-    const label = type === 'streamers' ? 'Seguidores' : 'XP';
+    const value = user.score;
+    const label = type === 'streamers' ? 'Recebidos' : 'Enviados';
 
     return (
         <button onClick={() => onUserClick(user.userId)} className={containerClasses}>
@@ -38,13 +36,13 @@ const PodiumItem: React.FC<{ user: GeneralRankingStreamer | GeneralRankingUser; 
             </div>
             <p className="font-bold text-white text-base mt-2 truncate max-w-full">{user.username}</p>
             <p className="text-sm text-gray-300">Nível {user.level}</p>
-            <p className="text-yellow-400 font-semibold mt-1">{value} {label}</p>
+            <p className="text-yellow-400 font-semibold mt-1">{value || 0} {label}</p>
         </button>
     );
 };
 
 const UserRankItem: React.FC<{ user: GeneralRankingStreamer | GeneralRankingUser; onUserClick: (userId: number) => void; type: Tab }> = ({ user, onUserClick, type }) => {
-    const value = type === 'streamers' ? formatScore((user as GeneralRankingStreamer).followers) : formatScore((user as GeneralRankingUser).xp);
+    const value = user.score;
 
     return (
         <button onClick={() => onUserClick(user.userId)} className="flex items-center gap-4 p-2 rounded-lg w-full hover:bg-white/5">
@@ -54,7 +52,7 @@ const UserRankItem: React.FC<{ user: GeneralRankingStreamer | GeneralRankingUser
                 <p className="font-semibold text-white truncate">{user.username}</p>
                 <p className="text-xs text-gray-400">Nível {user.level}</p>
             </div>
-            <p className="font-bold text-yellow-400">{value}</p>
+            <p className="font-bold text-yellow-400">{value || 0}</p>
         </button>
     );
 };
@@ -69,10 +67,10 @@ const ContributionRankingModal: React.FC<ContributionRankingModalProps> = ({ str
         setIsLoading(true);
         try {
             if (tab === 'streamers') {
-                const data = await liveStreamService.getStreamerRanking();
+                const data = await liveStreamService.getStreamerRanking('daily');
                 setStreamerRanking(data);
             } else {
-                const data = await liveStreamService.getUserRanking();
+                const data = await liveStreamService.getUserRanking('daily');
                 setUserRanking(data);
             }
         } catch (error) {

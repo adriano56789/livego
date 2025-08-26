@@ -2,7 +2,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import type { User } from '../types';
 import * as authService from '../services/authService';
-import * as liveStreamService from '../services/liveStreamService';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
 import UserListRow from './UserListRow';
 
@@ -12,10 +11,11 @@ interface FollowingScreenProps {
   onExit?: () => void;
   onUpdateUser: (user: User) => void;
   onViewProfile: (userId: number) => void;
+  onFollowToggle: (userId: number) => void;
   isEmbedded?: boolean;
 }
 
-const FollowingScreen: React.FC<FollowingScreenProps> = ({ currentUser, viewedUserId, onExit, onUpdateUser, onViewProfile, isEmbedded = false }) => {
+const FollowingScreen: React.FC<FollowingScreenProps> = ({ currentUser, viewedUserId, onExit, onUpdateUser, onViewProfile, onFollowToggle, isEmbedded = false }) => {
     const [users, setUsers] = useState<User[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
@@ -35,17 +35,20 @@ const FollowingScreen: React.FC<FollowingScreenProps> = ({ currentUser, viewedUs
         fetchData();
     }, [fetchData]);
 
-    const handleFollowToggle = async (userIdToToggle: number) => {
+    const handleFollowToggleWrapper = (userIdToToggle: number) => {
+      // We need to know if we are following *before* the optimistic update happens in the parent.
       const isCurrentlyFollowing = (currentUser.following || []).includes(userIdToToggle);
-      const updatedUser = isCurrentlyFollowing
-        ? await liveStreamService.unfollowUser(currentUser.id, userIdToToggle)
-        : await liveStreamService.followUser(currentUser.id, userIdToToggle);
-      onUpdateUser(updatedUser);
-      // Refetch to update the list, as the user is now unfollowed.
-      if (currentUser.id === viewedUserId) {
-        fetchData();
+
+      // Call the main handler from App.tsx which handles API and global state
+      onFollowToggle(userIdToToggle);
+
+      // If this is the current user's own "following" list, and the action was an unfollow,
+      // remove the user from the local state to update the list instantly without a refetch.
+      if (currentUser.id === viewedUserId && isCurrentlyFollowing) {
+          setUsers(prevUsers => prevUsers.filter(u => u.id !== userIdToToggle));
       }
     };
+
 
     const renderContent = () => {
         if (isLoading) {
@@ -61,7 +64,7 @@ const FollowingScreen: React.FC<FollowingScreenProps> = ({ currentUser, viewedUs
                         key={user.id} 
                         user={user} 
                         currentUser={currentUser}
-                        onFollowToggle={handleFollowToggle}
+                        onFollowToggle={handleFollowToggleWrapper}
                         onUserClick={onViewProfile}
                     />
                 ))}

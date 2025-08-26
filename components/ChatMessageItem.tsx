@@ -1,7 +1,7 @@
 
-
 import React from 'react';
 import type { ChatMessage } from '../types';
+import { Player } from '@lottiefiles/react-lottie-player';
 import FancyChatBubble from './FancyChatBubble';
 import ProfileBadge from './ProfileBadge';
 import UserPlaceholderIcon from './icons/UserPlaceholderIcon';
@@ -23,7 +23,7 @@ const ChatMessageItem: React.FC<ChatMessageItemProps> = ({ message, onUserClick 
                     {message.avatarUrl ? <img src={message.avatarUrl} alt={message.username} className="w-full h-full object-cover" /> : <UserPlaceholderIcon className="w-full h-full p-1 text-gray-500"/>}
                 </div>
                 <span className="font-semibold text-sm text-white truncate max-w-[120px]">{message.username}</span>
-                {message.level && <ProfileBadge badge={{ text: String(message.level), type: 'level' }} />}
+                {message.globalLevel && <ProfileBadge badge={{ text: String(message.globalLevel), type: 'level' }} />}
                 {message.age && message.gender && <ProfileBadge badge={{ text: String(message.age), type: 'gender_age', icon: message.gender }} />}
                 <span className="text-sm text-gray-300 ml-1">entrou</span>
             </button>
@@ -47,12 +47,29 @@ const ChatMessageItem: React.FC<ChatMessageItemProps> = ({ message, onUserClick 
 
   if (message.type === 'gift') {
     return (
-      <div className="text-sm flex items-center gap-2 self-start animate-slide-in-bottom">
-        <button onClick={() => onUserClick(message.userId)} className="font-semibold text-cyan-300">{message.username}</button>
-        <span className="text-gray-300">{message.message}</span>
-        {message.giftImageUrl && (
-             <img src={message.giftImageUrl} alt={message.giftName} className="w-8 h-8" />
-        )}
+      <div className="p-1.5 self-start animate-slide-in-bottom max-w-[85%] sm:max-w-[70%] flex items-start gap-2">
+        <button onClick={() => onUserClick(message.userId)} className="w-10 h-10 rounded-full bg-gray-700 overflow-hidden shrink-0">
+            {message.avatarUrl ? <img src={message.avatarUrl} alt={message.username} className="w-full h-full object-cover" /> : <UserPlaceholderIcon className="w-full h-full p-1 text-gray-500"/>}
+        </button>
+        <div className="bg-gradient-to-r from-purple-600/70 to-pink-600/70 backdrop-blur-sm rounded-xl p-2 flex-grow flex items-center justify-between">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+                <button onClick={() => onUserClick(message.userId)} className="font-semibold text-sm text-gray-200 truncate">{message.username}</button>
+                {message.globalLevel && <ProfileBadge badge={{ text: String(message.globalLevel), type: 'level' }} />}
+            </div>
+            <div className="flex items-center gap-2">
+              <p className="text-white text-base break-words">{message.message}</p>
+              {message.giftImageUrl && (
+                  <img src={message.giftImageUrl} alt={message.giftName || ''} className="w-8 h-8 object-contain" />
+              )}
+            </div>
+          </div>
+          {message.quantity && message.quantity > 1 && (
+            <div className="text-3xl font-black italic text-yellow-300 drop-shadow-lg animate-combo-thump ml-2 pr-2 shrink-0">
+              <span className="text-xl font-semibold not-italic">x</span>{message.quantity}
+            </div>
+          )}
+        </div>
       </div>
     );
   }
@@ -66,7 +83,7 @@ const ChatMessageItem: React.FC<ChatMessageItemProps> = ({ message, onUserClick 
         <div className="bg-black/40 backdrop-blur-sm rounded-xl p-2 flex-grow">
             <div className="flex items-center gap-2 mb-1">
                 <button onClick={() => onUserClick(message.userId)} className="font-semibold text-sm text-gray-300 truncate">{message.username}</button>
-                {message.level && <ProfileBadge badge={{ text: String(message.level), type: 'level' }} />}
+                {message.globalLevel && <ProfileBadge badge={{ text: String(message.globalLevel), type: 'level' }} />}
                 {message.age && message.gender && <ProfileBadge badge={{ text: String(message.age), type: 'gender_age', icon: message.gender }} />}
             </div>
             <a href={message.imageUrl} target="_blank" rel="noopener noreferrer">
@@ -88,7 +105,7 @@ const ChatMessageItem: React.FC<ChatMessageItemProps> = ({ message, onUserClick 
   if (message.type === 'levelup') {
       return (
           <div className="text-sm text-center text-green-300 bg-green-900/40 py-1 px-3 rounded-full self-center my-1 animate-fade-in-fast">
-              🎉 <button onClick={() => onUserClick(message.userId)} className="font-semibold">{message.username}</button> alcançou o nível {message.level}!
+              🎉 <button onClick={() => onUserClick(message.userId)} className="font-semibold">{message.username}</button> alcançou o nível {message.globalLevel}!
           </div>
       );
   }
@@ -102,7 +119,7 @@ const ChatMessageItem: React.FC<ChatMessageItemProps> = ({ message, onUserClick 
       <div className="bg-black/40 backdrop-blur-sm rounded-xl p-2 flex-grow">
           <div className="flex items-center gap-2 mb-1">
               <button onClick={() => onUserClick(message.userId)} className="font-semibold text-sm text-gray-300 truncate">{message.username}</button>
-              {message.level && <ProfileBadge badge={{ text: String(message.level), type: 'level' }} />}
+              {message.globalLevel && <ProfileBadge badge={{ text: String(message.globalLevel), type: 'level' }} />}
               {message.age && message.gender && <ProfileBadge badge={{ text: String(message.age), type: 'gender_age', icon: message.gender }} />}
           </div>
           <p className="text-white text-base break-words">{message.message}</p>

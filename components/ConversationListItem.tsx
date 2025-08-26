@@ -2,6 +2,7 @@
 
 import React from 'react';
 import type { Conversation } from '../types';
+import UsersIcon from './icons/UsersIcon';
 
 interface ConversationListItemProps {
   conversation: Conversation;
@@ -38,7 +39,10 @@ const ConversationListItem: React.FC<ConversationListItemProps> = ({ conversatio
       </div>
       <div className="flex-grow overflow-hidden">
         <div className="flex justify-between items-baseline">
-            <h2 className="font-semibold text-white truncate">{conversation.otherUserName}</h2>
+            <div className="flex items-center gap-2">
+              <h2 className="font-semibold text-white truncate">{conversation.otherUserName}</h2>
+              {conversation.isFriend && <UsersIcon className="w-4 h-4 text-yellow-400 shrink-0" />}
+            </div>
             <span className="text-xs text-gray-500 shrink-0 ml-2">{lastMessage ? formatTimestamp(lastMessage.timestamp) : ''}</span>
         </div>
         <p className={`truncate text-sm ${conversation.unreadCount > 0 ? 'text-gray-300' : 'text-gray-500'}`}>

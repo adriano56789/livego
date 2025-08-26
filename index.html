@@ -143,12 +143,13 @@
 
       /* Gift Combo Animation */
       @keyframes combo-thump {
-        0% { transform: scale(1); }
-        50% { transform: scale(1.5); }
-        100% { transform: scale(1); }
+        0% { transform: scale(1) rotate(0deg); }
+        50% { transform: scale(2.2) rotate(-10deg); }
+        100% { transform: scale(1) rotate(0deg); }
       }
       .animate-combo-thump {
-        animation: combo-thump 0.3s ease-out;
+        animation: combo-thump 0.25s ease-out;
+        transform-origin: center;
       }
       
       /* Keyframes for slide-up-fast animation */
@@ -160,20 +161,62 @@
         animation: slide-up-fast 0.25s ease-out forwards;
       }
 
-      /* Gift Display Animation */
-      @keyframes gift-display-in {
-        from { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
-        to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+      /* Gift Display Animation Keyframes */
+      @keyframes gift-banner-in {
+        from { transform: translateX(-100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
       }
-      @keyframes gift-display-out {
-        from { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-        to { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+      @keyframes gift-banner-out {
+        from { transform: translateY(0) scale(1); opacity: 1; }
+        to { transform: translateY(-100%) scale(0.8); opacity: 0; }
       }
-      .animate-gift-display-in {
-        animation: gift-display-in 0.5s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+      .animate-gift-banner-in {
+        animation: gift-banner-in 0.5s cubic-bezier(0.25, 1, 0.5, 1) forwards;
       }
-      .animate-gift-display-out {
-        animation: gift-display-out 0.5s ease-out forwards;
+      .animate-gift-banner-out {
+        animation: gift-banner-out 0.5s ease-out forwards;
+      }
+      
+      /* Keyframes for Live Info Modal */
+      @keyframes fade-in-out-short {
+        0% { opacity: 0; transform: translateY(-20px); }
+        10% { opacity: 1; transform: translateY(0); }
+        90% { opacity: 1; transform: translateY(0); }
+        100% { opacity: 0; transform: translateY(-20px); }
+      }
+      .animate-fade-in-out-short { animation: fade-in-out-short 5s ease-in-out forwards; }
+      
+      /* New Chat Bubble Style */
+      .chat-bubble-new {
+          background: linear-gradient(135deg, #a855f7, #6d28d9);
+          border-radius: 16px;
+          position: relative;
+          padding: 8px 12px;
+          color: white;
+      }
+      .chat-bubble-new .swoosh {
+          position: absolute;
+          width: 12px;
+          height: 12px;
+          border-style: solid;
+          border-color: rgba(233, 213, 255, 0.6); /* purple-200 with opacity */
+          border-width: 2px;
+      }
+      .chat-bubble-new .swoosh-tl {
+          top: -4px;
+          left: 15px;
+          border-right-color: transparent;
+          border-bottom-color: transparent;
+          border-radius: 100% 0 0 0;
+          transform: rotate(-35deg);
+      }
+      .chat-bubble-new .swoosh-tr {
+          top: -4px;
+          right: 15px;
+          border-left-color: transparent;
+          border-bottom-color: transparent;
+          border-radius: 0 100% 0 0;
+          transform: rotate(35deg);
       }
     </style>
   <script type="importmap">

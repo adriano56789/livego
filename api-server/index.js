@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const { AccessToken } = require('livekit-server-sdk');
 const { handleApiRequest } = require('../services/api');
+const config = require('./config');
 
 const app = express();
 app.use(cors());
@@ -10,10 +11,9 @@ app.use(express.json({ limit: '10mb' })); // Aumentar o limite para upload de im
 const PORT = process.env.PORT || 3001;
 
 // --- LiveKit Configuration ---
-// Em um ambiente de produção real, estas variáveis viriam de um arquivo .env
-// e seriam carregadas com uma biblioteca como 'dotenv'.
-const LIVEKIT_API_KEY = process.env.LIVEKIT_API_KEY || 'devkey';
-const LIVEKIT_API_SECRET = process.env.LIVEKIT_API_SECRET || 'secret';
+// These are now loaded from the config file to simulate environment variables.
+const LIVEKIT_API_KEY = config.LIVEKIT_API_KEY;
+const LIVEKIT_API_SECRET = config.LIVEKIT_API_SECRET;
 // ---
 
 // Endpoint para gerar tokens do LiveKit
@@ -79,4 +79,5 @@ app.listen(PORT, () => {
     console.log(`[API Server] Servidor Express real (com dados simulados) rodando na porta ${PORT}`);
     console.log(`[API Server] Frontend deve fazer requisições para http://localhost:${PORT}`);
     console.log(`[API Server] Chave LiveKit usada: ${LIVEKIT_API_KEY}`);
+    console.log(`[API Server] Conexão com MongoDB simulada em: ${config.MONGO_URI}`);
 });

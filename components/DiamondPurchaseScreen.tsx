@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import type { User, DiamondPackage, AppView, PurchaseOrder, WithdrawalTransaction, WithdrawalBalance } from '../types';
 import { getDiamondPackages } from '../services/authService';
@@ -253,7 +252,7 @@ const DiamondPurchaseScreen: React.FC<DiamondPurchaseScreenProps> = ({
   
   const content = (
     <div 
-        className={`${isOverlay ? 'bg-[#121212] h-[75vh] max-h-[600px] w-full max-w-lg rounded-t-2xl' : 'bg-[#121212] h-full w-full'} text-white flex flex-col font-sans`}
+        className={`${isOverlay ? 'bg-[#121212] h-auto max-h-[60vh] w-full max-w-lg rounded-t-2xl animate-slide-up-fast' : 'bg-[#121212] h-full w-full'} text-white flex flex-col font-sans`}
         onClick={e => e.stopPropagation()}
     >
       <header className="px-4 pt-4 pb-2 flex flex-col items-center shrink-0">
@@ -368,7 +367,7 @@ const DiamondPurchaseScreen: React.FC<DiamondPurchaseScreenProps> = ({
   if (isOverlay) {
     return (
         <div 
-            className="fixed inset-0 bg-black/70 z-50 flex items-end justify-center"
+            className="fixed inset-0 bg-transparent z-50 flex items-end justify-center"
             onClick={onExit}
         >
             {content}

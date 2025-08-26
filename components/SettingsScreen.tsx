@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect } from 'react';
 import type { User, AppView, Gift } from '../types';
 import * as liveStreamService from '../services/liveStreamService';

@@ -437,6 +437,7 @@ export const handleApiRequest = async (method: string, path: string, body: any, 
   const userStopLiveMatch = path.match(/^\/api\/users\/(\d+)\/stop-live$/);
   const userFollowingLiveStatusMatch = path.match(/^\/api\/users\/(\d+)\/following-live-status$/);
   const userGiftNotificationSettingsMatch = path.match(/^\/api\/users\/(\d+)\/gift-notification-settings$/);
+  const userNotificationSettingsMatch = path.match(/^\/api\/users\/(\d+)\/notification-settings$/);
   const userPendingInvitesMatch = path.match(/^\/api\/users\/(\d+)\/pending-invites$/);
   const pkBattleDetailsMatch = path.match(/^\/api\/pk-battles\/(\d+)$/);
   const pkActiveBattleMatch = path.match(/^\/api\/batalhas-pk\/(\d+)$/);
@@ -516,6 +517,42 @@ export const handleApiRequest = async (method: string, path: string, body: any, 
         return {
             userId,
             enabledGifts: updatedUser?.settings?.giftNotifications?.enabledGifts || {}
+        };
+    }
+  }
+
+  if (userNotificationSettingsMatch) {
+    const userId = parseInt(userNotificationSettingsMatch[1], 10);
+    const user = await database.users.findOne({ id: userId });
+    if (!user) throw new Error("User not found");
+
+    if (method === 'GET') {
+        const settings = user.settings?.notifications || {
+            newMessages: true,
+            streamerLive: true,
+            followedPost: true,
+            order: true,
+            interactive: true,
+        };
+        return {
+            userId,
+            ...settings
+        };
+    }
+
+    if (method === 'PATCH') {
+        const updates = body as Partial<Omit<types.NotificationSettings, 'userId'>>;
+        for (const key in updates) {
+            const updatePath = `settings.notifications.${key}`;
+            // @ts-ignore
+            await database.users.updateOne({ id: userId }, { $set: { [updatePath]: updates[key] } });
+        }
+        
+        const updatedUser = await database.users.findOne({ id: userId });
+        const newSettings = updatedUser?.settings?.notifications || {};
+        return {
+            userId,
+            ...newSettings
         };
     }
   }

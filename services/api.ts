@@ -225,9 +225,12 @@ export const handleApiRequest = async (method: string, path: string, body: any, 
   }
 
   if (method === 'POST' && path === '/api/auth/google') {
-    const user = await getDynamicUser(10755083); // The main mock user
+    const accountId = body?.accountId;
+    // If no ID is passed (e.g., from an old call), default to the main user.
+    const userToLoginId = accountId !== undefined ? accountId : 10755083;
+    const user = await getDynamicUser(userToLoginId); 
     if (!user) {
-      throw new Error('Usuário principal não encontrado na base de dados simulada.');
+      throw new Error(`Usuário com ID ${userToLoginId} não encontrado.`);
     }
     return user;
   }

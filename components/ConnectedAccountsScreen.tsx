@@ -11,14 +11,14 @@ interface ConnectedAccountsScreenProps {
 
 const ConnectedAccountsScreen: React.FC<ConnectedAccountsScreenProps> = ({ user, onExit, onLogout }) => {
   return (
-    <div className="h-screen w-full bg-black text-white flex flex-col font-sans">
+    <div className="h-full w-full bg-black text-white flex flex-col font-sans">
       <header className="p-4 flex items-center shrink-0 border-b border-gray-800 relative">
         <button onClick={onExit} className="p-2 -m-2 z-10"><ArrowLeftIcon className="w-6 h-6" /></button>
         <h1 className="font-bold text-lg absolute left-1/2 -translate-x-1/2">Contas Conectadas</h1>
         <div className="w-6 h-6"></div>
       </header>
 
-      <main className="flex-grow p-6">
+      <main className="flex-grow p-6 flex flex-col">
         <p className="text-sm text-gray-400 mb-4">Esta é a conta do Google que você usou para entrar no LiveGo. Você pode desconectar para entrar com outra conta.</p>
 
         <div className="bg-[#1c1c1e] p-4 rounded-lg">
@@ -30,16 +30,16 @@ const ConnectedAccountsScreen: React.FC<ConnectedAccountsScreenProps> = ({ user,
             </div>
           </div>
         </div>
-      </main>
-
-      <footer className="p-4 shrink-0 mt-auto">
+        
+        <div className="mt-auto pt-6">
          <button 
             onClick={onLogout}
-            className="w-full bg-[#2c2c2e] text-white font-bold py-3.5 rounded-xl text-lg transition-colors hover:bg-gray-700"
+            className="w-full bg-red-900/50 text-red-400 font-bold py-3.5 rounded-xl text-lg transition-colors hover:bg-red-800/50"
         >
           Desconectar
         </button>
-      </footer>
+        </div>
+      </main>
     </div>
   );
 };

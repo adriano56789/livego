@@ -3,6 +3,34 @@ import type * as types from '../types';
 import * as levelService from './levelService';
 
 // --- INITIAL MOCK DATA (STRUCTURED LIKE MONGODB COLLECTIONS) ---
+const newUserTemplate = {
+  has_uploaded_real_photo: true,
+  has_completed_profile: true,
+  invite_code: null,
+  following: [],
+  wallet_diamonds: 100,
+  wallet_earnings: 0,
+  withdrawal_method: null,
+  xp: 100,
+  last_camera_used: 'user' as types.FacingMode,
+  country: 'BR',
+  personalSignature: "",
+  personalityTags: [],
+  emotionalState: null,
+  profession: null,
+  languages: null,
+  height: null,
+  weight: null,
+  pk_enabled_preference: true,
+  declined_requests: [],
+  settings: {
+    notifications: { newMessages: true, streamerLive: true, followedPost: true, order: true, interactive: true },
+    privacy: { showLocation: true, showActiveStatus: true, showInNearby: true, protectionEnabled: false },
+    privateLiveInvite: { privateInvites: true, onlyFollowing: true, onlyFans: false, onlyFriends: false, acceptOnlyFriendPkInvites: false },
+    giftNotifications: { enabledGifts: {} }
+  }
+};
+
 const userDefinitions = [
     {
       _id: mongoObjectId(),
@@ -38,6 +66,39 @@ const userDefinitions = [
         privateLiveInvite: { privateInvites: true, onlyFollowing: true, onlyFans: false, onlyFriends: false, acceptOnlyFriendPkInvites: false },
         giftNotifications: { enabledGifts: {} }
       }
+    },
+    {
+      _id: mongoObjectId(),
+      id: 1,
+      name: 'Maria Silva',
+      email: 'maria.silva@example.com',
+      avatar_url: 'https://i.pravatar.cc/400?u=1',
+      nickname: 'Maria Silva',
+      gender: 'female',
+      birthday: '1998-03-20',
+      ...newUserTemplate,
+    },
+    {
+      _id: mongoObjectId(),
+      id: 2,
+      name: 'João Souza',
+      email: 'joao.souza@example.com',
+      avatar_url: 'https://i.pravatar.cc/400?u=2',
+      nickname: 'João Souza',
+      gender: 'male',
+      birthday: '1996-11-10',
+      ...newUserTemplate,
+    },
+    {
+      _id: mongoObjectId(),
+      id: 3,
+      name: 'Nova Conta',
+      email: 'nova.conta@example.com',
+      avatar_url: 'https://i.pravatar.cc/400?u=3',
+      nickname: 'Nova Conta',
+      gender: null,
+      birthday: null,
+      ...newUserTemplate,
     },
     { _id: mongoObjectId(), id: 55218901, name: 'Streamer 1', nickname: 'Lest Go 500 K...', avatar_url: 'https://i.pravatar.cc/400?u=55218901', following: [], xp: 0, country: 'BR', gender: 'male', birthday: '1990-01-01', settings: {}, is_avatar_protected: true, declined_requests: [] },
     { _id: mongoObjectId(), id: 66345102, name: 'Streamer 2', nickname: 'PK Queen', avatar_url: 'https://i.pravatar.cc/400?u=66345102', following: [], xp: 0, country: 'US', gender: 'female', birthday: '1998-10-20', settings: {}, declined_requests: [] },

@@ -1,8 +1,8 @@
 import { apiClient } from './apiClient';
 import type { User, Conversation, DiamondPackage, Address, CardDetails, PaymentMethod, PurchaseOrder, CardBrand } from '../types';
 
-export const loginWithGoogle = (): Promise<User> => {
-    return apiClient('/api/auth/google', { method: 'POST' });
+export const loginWithGoogle = (accountId?: number): Promise<User> => {
+    return apiClient('/api/auth/google', { method: 'POST', body: JSON.stringify({ accountId }) });
 };
 
 export const loginWithFacebook = (): Promise<void> => {

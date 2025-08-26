@@ -199,11 +199,11 @@ const AppContent: React.FC = () => {
   }, [user, incomingPrivateLiveInvite]);
 
 
-  const handleLogin = useCallback(async () => {
+  const handleLogin = useCallback(async (accountId?: number) => {
     setIsLoading(true);
     setError(null);
     try {
-        const loggedInUser = await loginWithGoogle();
+        const loggedInUser = await loginWithGoogle(accountId);
         setUser(loggedInUser);
     } catch (err) {
         const errorMessage = err instanceof Error ? err.message : "Ocorreu um erro desconhecido";

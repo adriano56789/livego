@@ -1,6 +1,4 @@
 
-
-
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import type { User, Conversation, ConversationMessage, PublicProfile } from '../types';
 import * as liveStreamService from '../services/liveStreamService';
@@ -162,9 +160,22 @@ const PrivateChatModal: React.FC<PrivateChatModalProps> = ({ user, onClose }) =>
         name: activeConversation.otherUserName,
         nickname: activeConversation.otherUserName,
         avatarUrl: activeConversation.otherUserAvatarUrl,
-        age: null, gender: null, birthday: null, isLive: false, isFollowing: false, coverPhotoUrl: '',
-        stats: { value: 0, icon: 'coin' }, badges: [], protectors: [], achievements: [],
-        personalityTags: [], personalSignature: '',
+        age: null,
+        gender: null,
+        birthday: null,
+        isLive: false,
+        isFollowing: false,
+        isFriend: !!activeConversation.isFriend,
+        // FIX: Add missing 'recebidos' and 'enviados' properties to PublicProfile object.
+        recebidos: 0,
+        enviados: 0,
+        coverPhotoUrl: '',
+        stats: { value: 0, icon: 'coin' },
+        badges: [],
+        protectors: [],
+        achievements: [],
+        personalityTags: [],
+        personalSignature: '',
         followers: 0,
         followingCount: 0,
     } : null;
@@ -228,7 +239,7 @@ const PrivateChatModal: React.FC<PrivateChatModalProps> = ({ user, onClose }) =>
         <>
             <div className="fixed inset-0 z-50 bg-transparent flex items-end justify-center" onClick={onClose}>
                 <div 
-                    className="bg-[#212124] w-full max-w-lg h-[85vh] rounded-t-2xl flex flex-col text-white shadow-2xl animate-slide-up-fast"
+                    className="bg-[#212124] w-full max-w-lg h-[75vh] max-h-[600px] rounded-t-2xl flex flex-col text-white shadow-2xl animate-slide-up-fast"
                     onClick={e => e.stopPropagation()}
                 >
                     {activeConversation ? renderChatView() : renderConversationList()}

@@ -1,3 +1,4 @@
+
 import { mongoObjectId } from './mongoObjectId';
 import type * as types from '../types';
 import * as levelService from './levelService';
@@ -44,7 +45,7 @@ const userDefinitions = [
       has_uploaded_real_photo: true,
       has_completed_profile: true,
       invite_code: 'A1B2C3D4',
-      following: [],
+      following: [1, 2],
       wallet_diamonds: 50000,
       wallet_earnings: 0,
       withdrawal_method: null,
@@ -77,6 +78,7 @@ const userDefinitions = [
       gender: 'female',
       birthday: '1998-03-20',
       ...newUserTemplate,
+      following: [10755083, 2],
     },
     {
       _id: mongoObjectId(),
@@ -99,8 +101,9 @@ const userDefinitions = [
       gender: null,
       birthday: null,
       ...newUserTemplate,
+      following: [10755083],
     },
-    { _id: mongoObjectId(), id: 55218901, name: 'Streamer 1', nickname: 'Lest Go 500 K...', avatar_url: 'https://i.pravatar.cc/400?u=55218901', following: [], xp: 0, country: 'BR', gender: 'male', birthday: '1990-01-01', settings: {}, is_avatar_protected: true, declined_requests: [] },
+    { _id: mongoObjectId(), id: 55218901, name: 'Streamer 1', nickname: 'Lest Go 500 K...', avatar_url: 'https://i.pravatar.cc/400?u=55218901', following: [10755083], xp: 0, country: 'BR', gender: 'male', birthday: '1990-01-01', settings: {}, is_avatar_protected: true, declined_requests: [] },
     { _id: mongoObjectId(), id: 66345102, name: 'Streamer 2', nickname: 'PK Queen', avatar_url: 'https://i.pravatar.cc/400?u=66345102', following: [], xp: 0, country: 'US', gender: 'female', birthday: '1998-10-20', settings: {}, declined_requests: [] },
     { _id: mongoObjectId(), id: 77123403, name: 'Streamer 3', nickname: 'Dancer Live', avatar_url: 'https://i.pravatar.cc/400?u=77123403', following: [], xp: 0, country: 'ES', gender: 'female', birthday: '2000-03-10', settings: {}, declined_requests: [] },
     { _id: mongoObjectId(), id: 88567804, name: 'Streamer 4', nickname: 'Music Lover', avatar_url: 'https://i.pravatar.cc/400?u=88567804', following: [], xp: 0, country: 'BR', gender: 'male', birthday: '1992-12-01', settings: {}, declined_requests: [] },

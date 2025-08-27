@@ -1,5 +1,5 @@
 // Basic types
-export type AppView = 'login' | 'upload' | 'edit' | 'feed' | 'profile' | 'go-live-setup' | 'messages' | 'diamond-purchase' | 'video' | 'protectors' | 'blocked-list' | 'withdrawal' | 'withdrawal-method-setup' | 'withdrawal-confirmation' | 'customer-service' | 'backpack' | 'help-article' | 'live-support-chat' | 'report-and-suggestion' | 'event-center' | 'event-detail' | 'settings' | 'copyright' | 'earnings-info' | 'connected-accounts' | 'search' | 'app-version' | 'live-ended' | 'my-level' | 'developer-tools' | 'ranking' | 'documentation' | 'purchase-history' | 'notification-settings' | 'push-settings' | 'private-live-invite-settings' | 'following' | 'visitors' | 'live-stream-viewer' | 'chat' | 'purchase-confirmation' | 'ranking-list' | 'profile-editor' | 'fans' | 'avatar-protection' | 'friend-requests' | 'privacy-settings' | 'component-viewer' | 'gift-notification-settings';
+export type AppView = 'login' | 'account-selection' | 'upload' | 'edit' | 'feed' | 'profile' | 'go-live-setup' | 'messages' | 'diamond-purchase' | 'video' | 'protectors' | 'blocked-list' | 'withdrawal' | 'withdrawal-method-setup' | 'withdrawal-confirmation' | 'customer-service' | 'backpack' | 'help-article' | 'live-support-chat' | 'report-and-suggestion' | 'event-center' | 'event-detail' | 'settings' | 'copyright' | 'earnings-info' | 'connected-accounts' | 'search' | 'app-version' | 'live-ended' | 'my-level' | 'developer-tools' | 'ranking' | 'documentation' | 'purchase-history' | 'notification-settings' | 'push-settings' | 'private-live-invite-settings' | 'following' | 'visitors' | 'live-stream-viewer' | 'chat' | 'purchase-confirmation' | 'ranking-list' | 'profile-editor' | 'fans' | 'avatar-protection' | 'friend-requests' | 'privacy-settings' | 'component-viewer' | 'gift-notification-settings' | 'view-self-profile';
 export type Gender = 'male' | 'female';
 // FIX: Added 'Festa' to the Category union type to resolve a type error where it was being compared with a value not in the type.
 export type Category = 'Popular' | 'Seguindo' | 'Perto' | 'Atualizado' | 'Privada' | 'PK' | 'Novo' | 'Música' | 'Dança' | 'Festa';
@@ -110,8 +110,11 @@ export interface PublicProfile {
   birthday: string | null;
   isLive: boolean;
   isFollowing: boolean;
+  isFriend: boolean;
   followers: number;
   followingCount: number;
+  recebidos: number;
+  enviados: number;
   coverPhotoUrl: string;
   stats: {
     value: number;
@@ -637,158 +640,89 @@ export interface NotificationSettings {
     interactive: boolean;
 }
 
-export interface GiftNotificationSettings {
-  userId: number;
-  enabledGifts: Record<number, boolean>; // giftId -> isEnabled
-}
-
-export interface PkSettings {
-  userId: number;
-  durationSeconds: number;
-}
-
-export interface SoundEffectLogEntry {
-    id: number;
-    liveId: number;
-    effectName: SoundEffectName;
-    triggeredBy: number;
-    timestamp: string;
-}
-
-export interface TabelaUsuario {
-  id: number;
-  nome_completo: string;
-  email: string;
-  senha_hash: string;
-  avatar_url?: string;
-  provedor_login: 'google' | 'facebook' | 'email';
-  id_provedor?: string | null;
-  data_criacao: string;
-  ultimo_login: string;
-  is_streamer: boolean;
-}
-
-export interface LiveCategory {
-  id: string;
-  name: Category;
-  slug: string;
+export interface PrivacySettings {
+    userId: number;
+    showLocation: boolean;
+    showActiveStatus: boolean;
+    showInNearby: boolean;
+    protectionEnabled: boolean;
 }
 
 export interface TabelaBatalhaPK {
-  id: string | number;
-  streamer_A_id: number;
-  streamer_B_id: number;
-  pontuacao_A: number;
-  pontuacao_B: number;
-  multiplicador_A?: number;
-  multiplicador_B?: number;
-  status: 'ativa' | 'finalizada' | 'cancelada';
-  resultado?: 'vitoria_A' | 'vitoria_B' | 'empate' | null;
-  data_inicio: string;
-  data_fim: string;
-  duracao_segundos: number;
-  liga?: string;
-  tipo_batalha?: 'convite_direto' | 'matchmaking';
-  data_comemoracao_fim?: string | null; // Custom field for frontend logic
-  vencedor_id?: number | null; // Custom field for frontend logic
-  round_number?: number;
-  next_battle_id?: number | string;
+    id: number | string;
+    streamer_A_id: number;
+    streamer_B_id: number;
+    pontuacao_A: number;
+    pontuacao_B: number;
+    status: 'ativa' | 'finalizada' | 'cancelada';
+    data_inicio: string;
+    data_fim: string;
+    duracao_segundos: number;
+}
+
+export interface PkBattleState {
+    id: number;
+    streamer_A: User;
+    streamer_B: User;
+    streamer_A_id: number;
+    streamer_B_id: number;
+    // FIX: Add optional streamId properties to hold stream IDs for streamers in a PK battle.
+    streamer_A_streamId?: number;
+    streamer_B_streamId?: number;
+    pontuacao_A: number;
+    pontuacao_B: number;
+    status: 'ativa' | 'finalizada' | 'cancelada';
+    data_inicio: string;
+    data_fim: string;
+    duracao_segundos: number;
+    top_supporters_A: TabelaRankingApoiadores[];
+    top_supporters_B: TabelaRankingApoiadores[];
 }
 
 export interface TabelaRankingApoiadores {
-  id: number;
-  batalha_id: string | number;
-  streamer_id: number;
-  apoiador_id: number;
-  total_pontos_enviados: number;
-  posicao_ranking: number;
-  avatar_url?: string;
+    batalha_id: number;
+    apoiador_id: number;
+    streamer_apoiado_id: number;
+    total_pontos_enviados: number;
+    avatar_url?: string;
 }
 
-export interface PkBattleState extends TabelaBatalhaPK {
-  streamer_A: User & { streamId: number; winMultiplier?: number; status?: 'win' | 'lose'; };
-  streamer_B: User & { streamId: number; winMultiplier?: number; status?: 'win' | 'lose'; };
-  top_supporters_A: TabelaRankingApoiadores[];
-  top_supporters_B: TabelaRankingApoiadores[];
-}
-
-
-export interface Denuncia {
-  id: string;
-  usuario_denunciante_id: number;
-  usuario_denunciado_id: string;
-  motivo_denuncia: string;
-  comentarios: string;
-  contexto_id?: string | null;
-  status_revisao: 'Pendente' | 'Analisando' | 'Resolvida';
-  data_denuncia: string;
-  acao_tomada?: string | null;
-}
-
-export interface Sugestao {
-  id: string;
-  usuario_id: number;
-  texto_sugestao: string;
-  status_revisao: 'Recebida' | 'Em análise' | 'Implementada';
-  data_sugestao: string;
-}
-
-export interface ConfiguracaoNivel {
-  nivel: number;
-  xp_necessario_total: number;
-  recompensa_id: string;
-  recompensa_descricao: string;
-  icone_url: string;
-}
-
-export interface SeguidorRelacionamento {
-  seguidor_id: number;
-  streamer_id: number;
-  data_seguindo: string;
-}
-
-export interface VisitaPerfil {
-  id: string;
-  visitante_id: number;
-  perfil_visitado_id: number;
-  data_visita: string;
+export interface PkSettings {
+    userId: number;
+    durationSeconds: number;
 }
 
 export interface FilaPK {
-  streamer_id: number;
-  data_entrada: string;
-  status: 'aguardando' | 'em_pareamento';
+    userId: number;
+    timestamp_entrada: string;
+}
+
+export interface LiveCategory {
+    id: string;
+    name: Category;
+    slug: string;
 }
 
 export interface UserBlockedUpdate {
     blockerId: number;
     targetId: number;
 }
-export type UserBlockedListener = (data: UserBlockedUpdate) => void;
 
 export interface UserUnblockedUpdate {
     unblockerId: number;
     targetId: number;
 }
-export type UserUnblockedListener = (data: UserUnblockedUpdate) => void;
 
-export interface PrivacySettings {
-  userId: number;
-  showLocation: boolean;
-  showActiveStatus: boolean;
-  showInNearby: boolean;
-  protectionEnabled: boolean;
+export type UserBlockedListener = (update: UserBlockedUpdate) => void;
+export type UserUnblockedListener = (update: UserUnblockedUpdate) => void;
+
+export interface GiftNotificationSettings {
+    userId: number;
+    enabledGifts: Record<number, boolean>;
 }
 
 export interface StreamUserStats {
-  userId: number;
-  liveId: number;
-  xp: number;
-}
-
-export interface FollowLog {
-    _id: string;
-    followerId: number;
-    followingId: number;
-    timestamp: string;
+    userId: number;
+    liveId: number;
+    xp: number;
 }

@@ -3,7 +3,7 @@
 
 import type * as types from '../types';
 import * as levelService from './levelService';
-import { database } from './database';
+import { database, getRawDb } from './database';
 import { mongoObjectId } from './mongoObjectId';
 
 // --- SIMULATED ENVIRONMENT VARIABLES ---
@@ -209,6 +209,102 @@ const createPkBattle = async (inviterId: number, inviteeId: number): Promise<typ
     return battleViewModel;
 }
 
+// Helper function to build a PublicProfile view model
+const buildPublicProfileViewModel = async (userToView: types.User, viewerId?: number): Promise<types.PublicProfile> => {
+    // Get all users to calculate following/followers
+    const allUsers = await database.users.find();
+    
+    // Is the viewer following the user they are looking at?
+    let isFollowing = false;
+    if (viewerId) {
+        const viewer = allUsers.find(u => u.id === viewerId);
+        isFollowing = (viewer?.following || []).includes(userToView.id);
+    }
+    
+    const isFriend = isFollowing && (userToView.following || []).includes(viewerId!);
+    
+    // Check live status
+    const liveStream = await database.liveStreams.findOne({ user_id: userToView.id, ao_vivo: true });
+    
+    // Get protectors
+    const gifts = await database.sentGifts.find({ receiverId: userToView.id });
+    const supporterMap = new Map<number, number>();
+    gifts.forEach(g => {
+        supporterMap.set(g.senderId, (supporterMap.get(g.senderId) || 0) + g.giftValue);
+    });
+    const sortedSupporters = Array.from(supporterMap.entries()).sort((a, b) => b[1] - a[1]).slice(0, 3);
+    const protectorDetails: types.ProtectorDetails[] = await Promise.all(
+        sortedSupporters.map(async ([userId, value], index) => {
+            const protectorUser = allUsers.find(u => u.id === userId)!;
+            return {
+                rank: index + 1,
+                userId: userId,
+                name: protectorUser.nickname || protectorUser.name,
+                avatarUrl: protectorUser.avatar_url || '',
+                protectionValue: value,
+            };
+        })
+    );
+    
+    const achievements: types.Achievement[] = [
+        { id: '1', name: 'Superstar', imageUrl: `https://i.pravatar.cc/150?u=ach1-${userToView.id}`, frameType: 'golden-winged' },
+        { id: '2', name: 'Generoso', imageUrl: `https://i.pravatar.cc/150?u=ach2-${userToView.id}`, frameType: 'silver-winged' },
+    ];
+    
+    const followersCount = allUsers.filter(u => (u.following || []).includes(userToView.id)).length;
+    const age = calculateAge(userToView.birthday);
+    
+    const badges: types.ProfileBadgeType[] = [];
+    if (userToView.gender && age) {
+        badges.push({ text: String(age), type: 'gender_age', icon: userToView.gender });
+    }
+    badges.push({ text: String(userToView.level), type: 'level' });
+
+    // Calculate received and sent gifts
+    const giftsReceived = await database.sentGifts.find({ receiverId: userToView.id });
+    const recebidos = giftsReceived.reduce((sum, gift) => sum + gift.giftValue * gift.quantity, 0);
+
+    const giftsSent = await database.sentGifts.find({ senderId: userToView.id });
+    const enviados = giftsSent.reduce((sum, gift) => sum + gift.diamondCost * gift.quantity, 0);
+
+    // Get visitor count (use the logic from getDynamicUser)
+    const profileVisits = await database.profileVisits.find({ visitedId: userToView.id });
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    // @ts-ignore
+    const recentVisits = profileVisits.filter((v: any) => new Date(v.date) > sevenDaysAgo);
+    // @ts-ignore
+    const uniqueVisitorIds = new Set(recentVisits.map((v: any) => v.visitorId));
+    
+    return {
+        id: userToView.id,
+        name: userToView.name,
+        nickname: userToView.nickname || userToView.name,
+        avatarUrl: userToView.avatar_url || '',
+        age: age,
+        gender: userToView.gender,
+        birthday: userToView.birthday,
+        isLive: !!liveStream,
+        isFollowing: isFollowing,
+        isFriend: isFriend,
+        followers: followersCount,
+        followingCount: (userToView.following || []).length,
+        recebidos,
+        enviados,
+        coverPhotoUrl: 'https://picsum.photos/seed/' + userToView.id + '/800/400',
+        stats: {
+            value: uniqueVisitorIds.size,
+            icon: 'moon',
+        },
+        badges: badges,
+        protectors: protectorDetails,
+        achievements: achievements,
+        personalityTags: userToView.personalityTags || [],
+        personalSignature: userToView.personalSignature || 'Este usuário é muito preguiçoso para deixar uma assinatura.',
+        is_avatar_protected: userToView.is_avatar_protected,
+        privacy: userToView.settings?.privacy,
+    };
+};
+
 // Router function that simulates a backend API
 export const handleApiRequest = async (method: string, path: string, body: any, query: URLSearchParams): Promise<any> => {
   console.log(`[Mock API] Handling: ${method} ${path}`);
@@ -222,6 +318,11 @@ export const handleApiRequest = async (method: string, path: string, body: any, 
       latestVersion: '1.0.0',
       updateUrl: 'https://example.com/update-app',
     };
+  }
+
+  if (method === 'GET' && path === '/api/diamonds/packages') {
+    const packages = await database.diamondPackages.find();
+    return packages;
   }
 
   if (method === 'POST' && path === '/api/auth/google') {
@@ -312,9 +413,8 @@ export const handleApiRequest = async (method: string, path: string, body: any, 
   }
 
   const filterByRegion = (lives: any[], regionCode?: string | null): any[] => {
-    const region = regionCode || query.get('region');
-    if (region && region.toLowerCase() !== 'global') {
-        return lives.filter(l => (l as types.LiveStreamRecord).country_code === region);
+    if (regionCode && regionCode.toLowerCase() !== 'global') {
+        return lives.filter(l => (l as types.LiveStreamRecord).country_code === regionCode);
     }
     return lives;
   };
@@ -410,6 +510,7 @@ export const handleApiRequest = async (method: string, path: string, body: any, 
   // Use regex for paths with params
   const liveListMatch = path.match(/^\/api\/lives$/);
   const liveDetailsMatch = path.match(/^\/api\/lives\/(\d+)$/);
+  const liveSummaryMatch = path.match(/^\/api\/lives\/(\d+)\/summary$/);
   const liveGiftMatch = path.match(/^\/api\/lives\/(\d+)\/gift$/);
   const liveLikeMatch = path.match(/^\/api\/lives\/(\d+)\/like$/);
   const liveJoinMatch = path.match(/^\/api\/lives\/(\d+)\/join$/);
@@ -417,6 +518,7 @@ export const handleApiRequest = async (method: string, path: string, body: any, 
   const liveMicToggleMatch = path.match(/^\/api\/lives\/(\d+)\/mic-toggle$/);
   const liveViewersMatch = path.match(/^\/api\/lives\/(\d+)\/viewers$/);
   const liveChatMatch = path.match(/^\/api\/chat\/live\/(\d+)$/);
+  const privateChatMatch = path.match(/^\/api\/chat\/private\/(.+)$/);
   const livePkMatch = path.match(/^\/api\/lives\/pk$/);
   const liveStartMatch = path.match(/^\/api\/live\/start$/);
   const hourlyRankingMatch = path.match(/^\/api\/ranking\/hourly$/);
@@ -424,6 +526,7 @@ export const handleApiRequest = async (method: string, path: string, body: any, 
   const userLiveStatusMatch = path.match(/^\/api\/users\/(\d+)\/live-status$/);
   const userLevelMatch = path.match(/^\/api\/users\/(\d+)\/level$/);
   const userLivePreferencesMatch = path.match(/^\/api\/users\/(\d+)\/live-preferences$/);
+  const userWithdrawalBalanceMatch = path.match(/^\/api\/users\/(\d+)\/withdrawal-balance$/);
   const userDetailsMatch = path.match(/^\/api\/users\/(\d+)$/);
   const userProfileMatch = path.match(/^\/api\/users\/(\d+)\/profile$/);
   const userFollowersMatch = path.match(/^\/api\/users\/(\d+)\/followers$/);
@@ -439,6 +542,7 @@ export const handleApiRequest = async (method: string, path: string, body: any, 
   const userGiftsSentMatch = path.match(/^\/api\/users\/(\d+)\/gifts\/sent$/);
   const userStopLiveMatch = path.match(/^\/api\/users\/(\d+)\/stop-live$/);
   const userFollowingLiveStatusMatch = path.match(/^\/api\/users\/(\d+)\/following-live-status$/);
+  const userPrivateLiveInviteSettingsMatch = path.match(/^\/api\/users\/(\d+)\/private-live-invite-settings$/);
   const userGiftNotificationSettingsMatch = path.match(/^\/api\/users\/(\d+)\/gift-notification-settings$/);
   const userNotificationSettingsMatch = path.match(/^\/api\/users\/(\d+)\/notification-settings$/);
   const userPendingInvitesMatch = path.match(/^\/api\/users\/(\d+)\/pending-invites$/);
@@ -446,8 +550,7 @@ export const handleApiRequest = async (method: string, path: string, body: any, 
   const pkActiveBattleMatch = path.match(/^\/api\/batalhas-pk\/(\d+)$/);
   const streamPkBattleMatch = path.match(/^\/api\/streams\/(\d+)\/batalha-pk$/);
   const blocksMatch = path.match(/^\/api\/blocks$/);
-  const unblockMatch = path.match(/^\/api\/blocks\/(\d+)\/(\d+)$/);
-  const blockStatusMatch = path.match(/^\/api\/blocks\/(\d+)\/(\d+)$/);
+  const blockStatusOrUnblockMatch = path.match(/^\/api\/blocks\/(\d+)\/(\d+)$/);
   const pkPendingInviteMatch = path.match(/^\/api\/pk\/invites\/pending\/(\d+)$/);
   const pkInviteStatusMatch = path.match(/^\/api\/pk\/invites\/status\/(.+)$/);
   const pkAcceptInviteMatch = path.match(/^\/api\/pk\/invites\/(.+)\/accept$/);
@@ -456,6 +559,8 @@ export const handleApiRequest = async (method: string, path: string, body: any, 
   const pkCohostInviteMatch = path.match(/^\/api\/pk\/cohost-invite$/);
   const followsMatch = path.match(/^\/api\/follows$/);
   const unfollowMatch = path.match(/^\/api\/follows\/(\d+)\/(\d+)$/);
+  const streamerRankingMatch = path.match(/^\/api\/ranking\/streamers$/);
+  const userRankingMatch = path.match(/^\/api\/ranking\/users$/);
 
 
   // --- ROUTE HANDLERS ---
@@ -524,6 +629,78 @@ export const handleApiRequest = async (method: string, path: string, body: any, 
     }
   }
 
+  if (method === 'GET' && userWithdrawalBalanceMatch) {
+    const userId = parseInt(userWithdrawalBalanceMatch[1], 10);
+    const user = await database.users.findOne({ id: userId });
+    if (!user) {
+        throw new Error('User not found');
+    }
+
+    const transactions = await database.withdrawalTransactions.find({ userId });
+    const pendingWithdrawals = transactions
+        .filter(tx => tx.status === 'pending')
+        .reduce((sum, tx) => sum + tx.earnings_withdrawn, 0);
+
+    const totalEarnings = user.wallet_earnings;
+    const availableBalance = totalEarnings - pendingWithdrawals;
+
+    const balance: types.WithdrawalBalance = {
+        totalEarnings,
+        pendingWithdrawals,
+        availableBalance,
+    };
+    return balance;
+  }
+  
+  if (userPrivateLiveInviteSettingsMatch) {
+    const userId = parseInt(userPrivateLiveInviteSettingsMatch[1], 10);
+    const user = await database.users.findOne({ id: userId });
+    if (!user) throw new Error("User not found");
+
+    if (method === 'GET') {
+        const settings = user.settings?.privateLiveInvite || {
+            privateInvites: true,
+            onlyFollowing: true,
+            onlyFans: false,
+            onlyFriends: false,
+            acceptOnlyFriendPkInvites: false,
+        };
+        return {
+            userId,
+            ...settings
+        };
+    }
+
+    if (method === 'PATCH') {
+        const updates = body as Partial<Omit<types.PrivateLiveInviteSettings, 'userId'>>;
+        for (const key in updates) {
+            const updatePath = `settings.privateLiveInvite.${key}`;
+            // @ts-ignore
+            await database.users.updateOne({ id: userId }, { $set: { [updatePath]: updates[key] } });
+        }
+        
+        const updatedUser = await database.users.findOne({ id: userId });
+        const newSettings = updatedUser?.settings?.privateLiveInvite || {};
+        return {
+            userId,
+            ...newSettings
+        };
+    }
+  }
+  
+  if (method === 'POST' && liveMicToggleMatch) {
+    const liveId = parseInt(liveMicToggleMatch[1], 10);
+    const { enabled } = body;
+    
+    const live = await database.liveStreams.findOne({ id: liveId });
+    if (!live || !live.ao_vivo) {
+        throw new Error("Live stream not found or has ended.");
+    }
+    
+    await database.liveStreams.updateOne({ id: liveId }, { $set: { voice_enabled: enabled } });
+    return { success: true };
+  }
+  
   if (userNotificationSettingsMatch) {
     const userId = parseInt(userNotificationSettingsMatch[1], 10);
     const user = await database.users.findOne({ id: userId });
@@ -677,6 +854,95 @@ export const handleApiRequest = async (method: string, path: string, body: any, 
     throw new Error('User not found');
   }
 
+  if (method === 'GET' && userProfileMatch) {
+    const userId = parseInt(userProfileMatch[1], 10);
+    const viewerId = query.get('viewerId') ? parseInt(query.get('viewerId')!, 10) : undefined;
+    const user = await database.users.findOne({ id: userId });
+    if (!user) {
+        throw new Error('User not found');
+    }
+    return buildPublicProfileViewModel(user as unknown as types.User, viewerId);
+  }
+
+  if (method === 'GET' && userFollowersMatch) {
+    const userId = parseInt(userFollowersMatch[1], 10);
+    const allUsers = await database.users.find();
+    const followers = allUsers.filter((u: any) => (u.following || []).includes(userId));
+    return followers.map(u => ({...u, level: levelService.calculateLevelFromXp(u.xp)}));
+  }
+
+  if (method === 'GET' && userFollowingMatch) {
+    const userId = parseInt(userFollowingMatch[1], 10);
+    const user = await database.users.findOne({ id: userId });
+    if (!user) throw new Error(`User with ID ${userId} not found`);
+    const followingIds = user.following || [];
+    if (followingIds.length === 0) return [];
+    
+    const allUsers = await database.users.find();
+    const followingUsers = allUsers.filter(u => followingIds.includes(u.id));
+    return followingUsers.map(u => ({...u, level: levelService.calculateLevelFromXp(u.xp)}));
+  }
+
+  if (method === 'GET' && userFansMatch) {
+    const userId = parseInt(userFansMatch[1], 10);
+    const allUsers = await database.users.find();
+    const fans = allUsers.filter((u: any) => (u.following || []).includes(userId));
+    return fans.map(u => ({...u, level: levelService.calculateLevelFromXp(u.xp)}));
+  }
+
+  if (method === 'GET' && userFriendsMatch) {
+    const userId = parseInt(userFriendsMatch[1], 10);
+    const user = await database.users.findOne({ id: userId });
+    if (!user) throw new Error(`User with ID ${userId} not found`);
+    
+    const followingIds = user.following || [];
+    const allUsers = await database.users.find();
+    
+    const friends = allUsers.filter(otherUser => 
+        followingIds.includes(otherUser.id) &&
+        (otherUser.following || []).includes(userId)
+    );
+    
+    return friends.map(u => ({...u, level: levelService.calculateLevelFromXp(u.xp)}));
+  }
+
+  if (method === 'GET' && userVisitorsMatch) {
+    const userId = parseInt(userVisitorsMatch[1], 10);
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const recentVisits = await database.profileVisits.find({ visitedId: userId });
+
+    const recentUniqueVisits = recentVisits
+        // @ts-ignore
+        .filter((v: any) => new Date(v.date) > sevenDaysAgo)
+        .reduce((acc: Record<number, any>, visit) => {
+            if (!acc[visit.visitorId] || new Date(acc[visit.visitorId].date) < new Date(visit.date)) {
+                acc[visit.visitorId] = visit;
+            }
+            return acc;
+        }, {});
+    
+    const sortedVisits = Object.values(recentUniqueVisits).sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    
+    const visitorIds = sortedVisits.map((v: any) => v.visitorId);
+
+    if (visitorIds.length === 0) return [];
+    
+    const allUsers = await database.users.find();
+    const visitors = allUsers
+        .filter(u => visitorIds.includes(u.id))
+        .map(u => {
+            const visit = sortedVisits.find((v: any) => v.visitorId === u.id);
+            return {
+                ...u,
+                last_visit_date: visit?.date.toISOString(),
+                level: levelService.calculateLevelFromXp(u.xp)
+            };
+        })
+        .sort((a, b) => new Date(b.last_visit_date!).getTime() - new Date(a.last_visit_date!).getTime());
+
+    return visitors;
+  }
+  
   if (method === 'GET' && userPendingInvitesMatch) {
     const userId = parseInt(userPendingInvitesMatch[1], 10);
     
@@ -708,154 +974,459 @@ export const handleApiRequest = async (method: string, path: string, body: any, 
     
     return { invite };
   }
+  
+  if (method === 'GET' && liveSummaryMatch) {
+    const liveId = parseInt(liveSummaryMatch[1], 10);
+    const live = await database.liveStreams.findOne({ id: liveId });
+
+    if (!live) {
+        throw new Error(`Live stream with ID ${liveId} not found for summary`);
+    }
+
+    const streamer = await database.users.findOne({ id: live.user_id });
+    if (!streamer) {
+        throw new Error(`Streamer with ID ${live.user_id} not found`);
+    }
+    
+    const durationSeconds = (new Date().getTime() - new Date(live.inicio).getTime()) / 1000;
+
+    const summary: types.LiveEndSummary = {
+        streamerId: streamer.id,
+        streamerName: streamer.nickname || streamer.name,
+        streamerAvatarUrl: streamer.avatar_url || '',
+        durationSeconds: Math.round(durationSeconds),
+        peakViewers: live.espectadores || 0,
+        totalEarnings: live.received_gifts_value || 0,
+        newFollowers: Math.floor(Math.random() * (live.espectadores / 10 + 1)),
+        newMembers: Math.floor(Math.random() * (live.espectadores / 50 + 1)),
+        newFans: Math.floor(Math.random() * (live.espectadores / 20 + 1)),
+    };
+
+    return summary;
+  }
+
+  if (method === 'GET' && userConversationsMatch) {
+    const userId = parseInt(userConversationsMatch[1], 10);
+    const currentUser = await database.users.findOne({ id: userId });
+    if (!currentUser) throw new Error("User not found");
+
+    const allUsers = await database.users.find();
+    const allConvos = await database.conversations.find();
+    
+    const userConvosRecords = allConvos.filter(c => c.participants.includes(userId));
+    const conversationViewModels = userConvosRecords.map(c => buildConversationViewModel(c, userId, allUsers));
+
+    // Friend requests: users who follow the current user, but the current user does not follow back.
+    const friendRequests = allUsers.filter(u => 
+        (u.following || []).includes(userId) && 
+        !(currentUser.following || []).includes(u.id)
+    );
+
+    if (friendRequests.length > 0) {
+        const friendRequestSummary: types.Conversation = {
+            id: 'friend-requests-summary',
+            type: 'friend_requests_summary',
+            participants: [userId],
+            otherUserId: -1,
+            otherUserName: "Pedidos de amizade",
+            otherUserAvatarUrl: '', // Will be handled by UI
+            unreadCount: friendRequests.length,
+            messages: [{
+                id: 'fr-msg',
+                senderId: -1,
+                type: 'system',
+                text: `${friendRequests.length} novos pedidos de amizade`,
+                imageUrl: null,
+                timestamp: new Date().toISOString(),
+                status: 'sent',
+                seenBy: []
+            }]
+        };
+        return [friendRequestSummary, ...conversationViewModels];
+    }
+    
+    return conversationViewModels;
+  }
+  
+  if (blockStatusOrUnblockMatch) {
+    const loggedUserId = parseInt(blockStatusOrUnblockMatch[1], 10);
+    const targetUserId = parseInt(blockStatusOrUnblockMatch[2], 10);
+    
+    if (method === 'GET') {
+      const blockRecord = await database.blockedUsers.findOne({ blockerId: loggedUserId, blockedId: targetUserId });
+      return { isBlocked: !!blockRecord };
+    }
+    
+    if (method === 'DELETE') {
+      const { deletedCount } = await database.blockedUsers.deleteOne({ blockerId: loggedUserId, blockedId: targetUserId });
+      // In a real app, you might dispatch an event here for real-time updates
+      return { success: deletedCount > 0 };
+    }
+  }
 
   if (method === 'GET' && liveListMatch) {
-    const category = query.get('category') as types.Category;
+    const category = query.get('category')?.toLowerCase();
     const userId = query.get('userId') ? parseInt(query.get('userId')!, 10) : null;
-    const allLive = await database.liveStreams.find({ ao_vivo: true });
+    let allLive = await database.liveStreams.find({ ao_vivo: true });
+    let results: types.LiveStreamRecord[] = [];
 
-    let streams;
     switch (category) {
-        case 'Seguindo':
+        case 'seguindo':
             if (!userId) throw new Error("userId is required for 'seguindo' category");
             const user = await database.users.findOne({ id: userId });
             const followingIds = user?.following || [];
-            streams = allLive.filter((l: any) => followingIds.includes(l.user_id));
+            results = allLive.filter((l: any) => followingIds.includes(l.user_id));
             break;
-        case 'Privada':
+        case 'novo':
+        case 'atualizado': // Treat 'Atualizado' as 'Novo'
+            results = allLive.sort((a: any, b: any) => new Date(b.inicio).getTime() - new Date(a.inicio).getTime());
+            break;
+        case 'privada':
              if (!userId) throw new Error("userId is required for 'privada' category");
-             streams = allLive.filter((l: any) => l.is_private && (l.invited_users || []).includes(userId));
+             results = allLive.filter((l: any) => l.is_private && (l.invited_users?.includes(userId) || l.user_id === userId));
              break;
-        case 'PK':
-            streams = allLive.filter((l: any) => l.em_pk);
+        case 'música':
+             results = allLive.filter((l: any) => l.categoria === 'Música');
+             break;
+        case 'dança':
+             results = allLive.filter((l: any) => l.categoria === 'Dança');
+             break;
+        case 'pk':
+            // This is handled by /api/lives/pk, but as a fallback filter here
+            results = allLive.filter((l: any) => l.em_pk);
             break;
-        case 'Novo':
-             streams = allLive.sort((a: any, b: any) => new Date(b.inicio).getTime() - new Date(a.inicio).getTime()).slice(0, 10);
-            break;
-        case 'Música':
-        case 'Dança':
-            streams = allLive.filter((l: any) => l.categoria === category);
-            break;
-        case 'Popular':
+        case 'perto':
+            // 'Perto' is handled by a separate endpoint, but as a fallback, return popular
+        case 'popular':
         default:
-             streams = allLive.sort((a: any, b: any) => (b.espectadores || 0) - (a.espectadores || 0));
+            results = allLive.sort((a: any, b: any) => (b.current_viewers?.length || 0) - (a.current_viewers?.length || 0));
             break;
     }
     
-    const regionFilteredStreams = filterByRegion(streams);
-    return regionFilteredStreams.map(mapLiveRecordToStream);
+    const filteredByRegion = filterByRegion(results, query.get('region'));
+    return filteredByRegion.map(mapLiveRecordToStream);
   }
 
-  // --- PK BATTLES ---
-  if (method === 'GET' && livePkMatch) {
-    const allBattles = await database.pkBattles.find({ status: 'ativa' });
-    const battleDetails = await Promise.all(allBattles.map(async (battle) => {
-        const [streamerA, streamerB, streamA, streamB] = await Promise.all([
-            getDynamicUser(battle.streamer_A_id),
-            getDynamicUser(battle.streamer_B_id),
-            database.liveStreams.findOne({ user_id: battle.streamer_A_id, ao_vivo: true }),
-            database.liveStreams.findOne({ user_id: battle.streamer_B_id, ao_vivo: true }),
-        ]);
+  if (method === 'GET' && userLiveStatusMatch) {
+      const userId = parseInt(userLiveStatusMatch[1], 10);
+      const liveStream = await database.liveStreams.findOne({ user_id: userId, ao_vivo: true });
+      return !!liveStream;
+  }
 
-        if (!streamerA || !streamerB || !streamA || !streamB) return null;
-        
+  if (method === 'GET' && userFollowingLiveStatusMatch) {
+    const userId = parseInt(userFollowingLiveStatusMatch[1], 10);
+    const user = await database.users.findOne({ id: userId });
+    const followingIds = user?.following || [];
+    if (followingIds.length === 0) return [];
+    
+    const liveStreams = await database.liveStreams.find({ ao_vivo: true });
+    const liveStreamerIds = new Set(liveStreams.map((s: any) => s.user_id));
+
+    return followingIds.map(id => {
+        const isLive = liveStreamerIds.has(id);
+        const streamRecord = isLive ? liveStreams.find((s: any) => s.user_id === id) : null;
         return {
-            id: battle.id,
-            title: `${streamerA.nickname} VS ${streamerB.nickname}`,
-            streamer1: { userId: streamerA.id, streamId: streamA.id, name: streamerA.nickname || streamerA.name, score: battle.pontuacao_A, avatarUrl: streamerA.avatar_url || '', isVerified: true, countryCode: streamerA.country },
-            streamer2: { userId: streamerB.id, streamId: streamB.id, name: streamerB.nickname || streamerB.name, score: battle.pontuacao_B, avatarUrl: streamerB.avatar_url || '', isVerified: false, countryCode: streamerB.country },
+            userId: id,
+            isLive: isLive,
+            stream: streamRecord ? mapLiveRecordToStream(streamRecord) : null
         };
-    }));
-
-    return filterByRegion(battleDetails.filter(Boolean) as types.PkBattle[]);
+    });
   }
 
-  // ... (rest of the file remains the same)
+  if (method === 'GET' && streamerRankingMatch) {
+    const allUsers = await database.users.find();
+    const allGifts = await database.sentGifts.find();
+    
+    const streamerScores: Record<number, number> = {};
+    allGifts.forEach(gift => {
+        streamerScores[gift.receiverId] = (streamerScores[gift.receiverId] || 0) + gift.giftValue * gift.quantity;
+    });
 
+    const rankedStreamers = allUsers
+        .map(user => ({
+            userId: user.id,
+            username: user.nickname || user.name,
+            avatarUrl: user.avatar_url || '',
+            level: user.level,
+            score: streamerScores[user.id] || 0,
+        }))
+        .filter(s => s.score > 0)
+        .sort((a, b) => b.score - a.score)
+        .map((s, index) => ({ ...s, rank: index + 1 }));
+
+    return rankedStreamers;
+  }
+
+  if (method === 'GET' && userRankingMatch) {
+    const allUsers = await database.users.find();
+    const allGifts = await database.sentGifts.find();
+    
+    const userScores: Record<number, number> = {};
+    allGifts.forEach(gift => {
+        userScores[gift.senderId] = (userScores[gift.senderId] || 0) + gift.diamondCost * gift.quantity;
+    });
+
+    const rankedUsers = allUsers
+        .map(user => ({
+            userId: user.id,
+            username: user.nickname || user.name,
+            avatarUrl: user.avatar_url || '',
+            level: user.level,
+            score: userScores[user.id] || 0,
+        }))
+        .filter(u => u.score > 0)
+        .sort((a, b) => b.score - a.score)
+        .map((u, index) => ({ ...u, rank: index + 1 }));
+
+    return rankedUsers;
+  }
+  
+  if (privateChatMatch) {
+    const conversationId = privateChatMatch[1];
+    if (method === 'GET') {
+      const currentUserId = parseInt(query.get('userId')!, 10);
+      const convoRecord = await database.conversations.findOne({ id: conversationId });
+      if (!convoRecord) throw new Error("Conversa não encontrada");
+      const allUsers = await database.users.find();
+      return buildConversationViewModel(convoRecord, currentUserId, allUsers);
+    }
+    if (method === 'POST') {
+      const { senderId, text, imageUrl } = body;
+      const convo = await database.conversations.findOne({ id: conversationId });
+      if (!convo) throw new Error("Conversa não encontrada");
+      const newMessage = {
+        id: mongoObjectId(),
+        senderId,
+        text,
+        imageUrl,
+        timestamp: new Date().toISOString(),
+        status: 'sent',
+        seenBy: [senderId],
+      };
+      if (!convo.messages) convo.messages = [];
+      convo.messages.push(newMessage as any);
+      // FIX: The property name was 'last_message_text', but the type 'TabelaConversa' expects 'ultima_mensagem_texto'.
+      (convo as any).ultima_mensagem_texto = text || 'Imagem';
+      // FIX: The property name was 'last_message_timestamp', but the type 'TabelaConversa' expects 'ultima_mensagem_timestamp'.
+      (convo as any).ultima_mensagem_timestamp = newMessage.timestamp;
+      await database.conversations.updateOne({ id: conversationId }, { $set: convo });
+      const allUsers = await database.users.find();
+      return buildConversationViewModel(convo, senderId, allUsers);
+    }
+  }
+
+  if (method === 'GET' && userLevelMatch) {
+    const userId = parseInt(userLevelMatch[1], 10);
+    const user = await database.users.findOne({ id: userId });
+    if (!user) {
+      throw new Error(`User with ID ${userId} not found`);
+    }
+    const currentLevel = levelService.calculateLevelFromXp(user.xp);
+    const xpForNextLevel = levelService.getXpForLevel(currentLevel + 1);
+    return {
+      currentLevel,
+      currentXp: user.xp,
+      xpForNextLevel,
+    };
+  }
+  
   if (method === 'GET' && liveDetailsMatch) {
     const liveId = parseInt(liveDetailsMatch[1], 10);
     const live = await database.liveStreams.findOne({ id: liveId });
     if (!live || !live.ao_vivo) {
-      throw new Error('Live stream not found or has ended');
+      throw new Error(`Live stream with ID ${liveId} not found or has ended`);
     }
     const streamer = await getDynamicUser(live.user_id);
     if (!streamer) {
-      throw new Error('Streamer not found');
+      throw new Error(`Streamer with ID ${live.user_id} not found`);
     }
-    
-    // Simulate ranking
-    const allStreams = await database.liveStreams.find({ ao_vivo: true });
-    allStreams.sort((a: any, b: any) => (b.received_gifts_value || 0) - (a.received_gifts_value || 0));
-    const rank = allStreams.findIndex((s: any) => s.id === liveId) + 1;
-
-    return {
+    const details: types.LiveDetails = {
       streamerName: streamer.nickname || streamer.name,
       streamerAvatarUrl: streamer.avatar_url || '',
-      streamerFollowers: streamer.followers,
+      streamerFollowers: streamer.followers || 0,
       viewerCount: live.current_viewers?.length || 0,
-      totalVisitors: live.espectadores,
+      totalVisitors: (live.espectadores || 0) + (live.current_viewers?.length || 0),
       receivedGiftsValue: live.received_gifts_value || 0,
-      rankingPosition: `${rank}`,
+      rankingPosition: 'Top 5',
       status: 'ao vivo',
       likeCount: live.like_count || 0,
+      streamerIsAvatarProtected: streamer.is_avatar_protected,
       title: live.titulo,
       meta: live.meta,
-      streamerIsAvatarProtected: streamer.is_avatar_protected,
     };
+    return details;
   }
   
-  if (method === 'GET' && userLiveStatusMatch) {
-    const userId = parseInt(userLiveStatusMatch[1], 10);
-    const liveStream = await database.liveStreams.findOne({ user_id: userId, ao_vivo: true });
-    return !!liveStream;
+  if (method === 'POST' && liveJoinMatch) {
+    const liveId = parseInt(liveJoinMatch[1], 10);
+    const { userId } = body;
+    const live = await database.liveStreams.findOne({ id: liveId });
+    if (live && live.ao_vivo) {
+      if (!live.current_viewers) {
+        live.current_viewers = [];
+      }
+      if (!live.current_viewers.includes(userId)) {
+        live.current_viewers.push(userId);
+        await database.liveStreams.updateOne({ id: liveId }, { $set: { current_viewers: live.current_viewers } });
+      }
+      return { success: true };
+    }
+    throw new Error('Live stream not found or has ended.');
+  }
+
+  if (method === 'POST' && liveLeaveMatch) {
+    const liveId = parseInt(liveLeaveMatch[1], 10);
+    const { userId } = body;
+    const live = await database.liveStreams.findOne({ id: liveId });
+    if (live) {
+      if (live.current_viewers) {
+        const index = live.current_viewers.indexOf(userId);
+        if (index > -1) {
+          live.current_viewers.splice(index, 1);
+          await database.liveStreams.updateOne({ id: liveId }, { $set: { current_viewers: live.current_viewers } });
+        }
+      }
+      return { success: true };
+    }
+    return { success: false };
+  }
+
+  if (method === 'GET' && liveViewersMatch) {
+    const liveId = parseInt(liveViewersMatch[1], 10);
+    const live = await database.liveStreams.findOne({ id: liveId });
+
+    if (!live || !live.ao_vivo) {
+      throw new Error(`Live stream with ID ${liveId} not found or has ended`);
+    }
+
+    const viewerIds = live.current_viewers || [];
+    if (viewerIds.length === 0) {
+      return [];
+    }
+
+    const allUsers = await database.users.find();
+    const giftsInLive = await database.sentGifts.find({ liveId });
+
+    const contributions: Record<number, number> = {};
+    giftsInLive.forEach(gift => {
+      contributions[gift.senderId] = (contributions[gift.senderId] || 0) + (gift.diamondCost * gift.quantity);
+    });
+
+    const viewers: types.Viewer[] = viewerIds.map(userId => {
+      const user = allUsers.find(u => u.id === userId);
+      if (!user) return null;
+
+      return {
+        id: user.id,
+        name: user.nickname || user.name,
+        avatarUrl: user.avatar_url || '',
+        entryTime: new Date().toISOString(),
+        contribution: contributions[user.id] || 0,
+        level: user.level,
+        level2: user.level2 || 1,
+      };
+    }).filter((v): v is types.Viewer => v !== null)
+      .sort((a, b) => b.contribution - a.contribution);
+    
+    const streamer = allUsers.find(u => u.id === live.user_id);
+    if (streamer) {
+        viewers.unshift({
+            id: streamer.id,
+            name: streamer.nickname || streamer.name,
+            avatarUrl: streamer.avatar_url || '',
+            entryTime: live.inicio,
+            contribution: 999999, // High number to keep at top
+            level: streamer.level,
+            level2: streamer.level2 || 1,
+        });
+    }
+
+    return viewers;
+  }
+  
+  if (liveChatMatch) {
+    const liveId = parseInt(liveChatMatch[1], 10);
+    if (method === 'GET') {
+        const live = await database.liveStreams.findOne({ id: liveId });
+        if (live && live.ao_vivo) {
+            if (!live.chatMessages) {
+                // Initialize chat if it doesn't exist
+                await initializeChatForLive(liveId, await database.users.find(), await database.liveStreams.find());
+                const updatedLive = await database.liveStreams.findOne({ id: liveId });
+                return updatedLive?.chatMessages || [];
+            }
+            return live.chatMessages;
+        }
+        // Throw an error if the stream is not found, which will be caught by the component
+        throw new Error(`Live stream com ID ${liveId} não encontrada ou encerrada.`);
+    }
+
+    if (method === 'POST') {
+        const { userId, message, imageUrl } = body;
+        const user = await database.users.findOne({ id: userId });
+        if (!user) throw new Error("User not found");
+        const live = await database.liveStreams.findOne({ id: liveId });
+        if (!live || !live.ao_vivo) throw new Error("Live stream not found");
+
+        const age = calculateAge(user.birthday);
+
+        const newMsg: types.ChatMessage = {
+            id: Date.now(),
+            type: imageUrl ? 'image' : 'message',
+            userId: userId,
+            username: user.nickname || user.name,
+            message: message,
+            imageUrl: imageUrl,
+            timestamp: new Date().toISOString(),
+            globalLevel: user.level,
+            avatarUrl: user.avatar_url,
+            age: age,
+            gender: user.gender,
+        };
+
+        await database.liveStreams.updateOne({ id: liveId }, { $push: { chatMessages: newMsg } });
+        return newMsg;
+    }
   }
 
   if (method === 'GET' && userActiveStreamMatch) {
     const userId = parseInt(userActiveStreamMatch[1], 10);
-    const liveStream = await database.liveStreams.findOne({ user_id: userId, ao_vivo: true });
-    if(liveStream) {
-        return mapLiveRecordToStream(liveStream);
+    const liveRecord = await database.liveStreams.findOne({ user_id: userId, ao_vivo: true });
+    if (liveRecord) {
+      return mapLiveRecordToStream(liveRecord);
     }
     return null;
   }
   
-  if (method === 'GET' && userFollowingLiveStatusMatch) {
-      const userId = parseInt(userFollowingLiveStatusMatch[1], 10);
+  if (method === 'GET' && userLivePreferencesMatch) {
+      const userId = parseInt(userLivePreferencesMatch[1], 10);
       const user = await database.users.findOne({ id: userId });
-      if (!user) return [];
-      const followingIds = user.following || [];
-      
-      const liveStreams = await database.liveStreams.find({ ao_vivo: true });
-      const liveFollowedIds = new Set(liveStreams.filter(s => followingIds.includes(s.user_id)).map(s => s.user_id));
-
-      return followingIds.map(id => {
-          const isLive = liveFollowedIds.has(id);
-          const streamRecord = isLive ? liveStreams.find(s => s.user_id === id) : null;
-          return {
-              userId: id,
-              isLive,
-              stream: streamRecord ? mapLiveRecordToStream(streamRecord) : null
-          };
-      });
+      if (!user) throw new Error("User not found");
+      return {
+          isPkEnabled: user.pk_enabled_preference ?? true,
+          lastCameraUsed: user.last_camera_used || 'user',
+          lastSelectedCategory: user.last_selected_category || 'Popular',
+          lastLiveTitle: user.lastLiveTitle || '',
+          lastLiveMeta: user.lastLiveMeta || '',
+      };
   }
-
-  // ... (rest of the file)
+  
   if (method === 'POST' && liveStartMatch) {
     const { userId, title, meta, category, isPrivate, isPkEnabled, thumbnailUrl, entryFee, cameraUsed } = body;
+    const user = await database.users.findOne({ id: userId });
+    if (!user) throw new Error("User not found");
+
+    const existingLive = await database.liveStreams.findOne({ user_id: userId, ao_vivo: true });
+    if (existingLive) {
+        throw new Error("User is already live.");
+    }
     
-    // Stop any existing live stream for this user first
-    await database.liveStreams.updateOne({ user_id: userId, ao_vivo: true }, { $set: { ao_vivo: false } });
-
-    const streamer = await database.users.findOne({ id: userId });
-    if (!streamer) throw new Error("Streamer not found");
-
-    // FIX: Remove the `_id` property from the object literal to match the `LiveStreamRecord` type.
-    // The `insertOne` function in `database.ts` will add the `_id` automatically.
-    const newStream: types.LiveStreamRecord = {
-        id: Math.floor(Math.random() * 100000),
+    // FIX: Removed the `_id` property from this object literal, as it is not defined in the `LiveStreamRecord` type and is handled by the mock DB's `insertOne` method.
+    const newLiveStream: types.LiveStreamRecord = {
+        id: Math.floor(Math.random() * 900000) + 100000,
         user_id: userId,
         titulo: title,
-        nome_streamer: streamer.nickname || streamer.name,
+        nome_streamer: user.nickname || user.name,
         thumbnail_url: thumbnailUrl,
         espectadores: 0,
         categoria: category,
@@ -863,48 +1434,34 @@ export const handleApiRequest = async (method: string, path: string, body: any, 
         em_pk: false,
         is_private: isPrivate,
         entry_fee: entryFee || null,
-        meta: meta || null,
+        meta: meta,
         inicio: new Date().toISOString(),
         permite_pk: isPkEnabled,
-        like_count: 0,
-        country_code: streamer.country,
         camera_facing_mode: cameraUsed,
-        chatMessages: [],
-        current_viewers: []
+        voice_enabled: true,
+        like_count: 0,
+        country_code: user.country,
+        current_viewers: [userId],
     };
     
-    await database.liveStreams.insertOne(newStream as any);
+    await database.liveStreams.insertOne(newLiveStream);
+    
+    await database.users.updateOne({ id: userId }, { $set: { last_selected_category: category }});
+    
+    const streamViewModel = mapLiveRecordToStream(newLiveStream);
+    const streamKey = `sk_${userId}_${newLiveStream.id}`;
 
     return {
-      live: mapLiveRecordToStream(newStream),
-      urls: {
-        rtmp: `${SRS_URL_PUBLISH}/${newStream.id}`,
-        hls: `${SRS_URL_PLAY_HLS}/${newStream.id}.m3u8`,
-        webrtc: `${SRS_URL_PLAY_WEBRTC}/${newStream.id}`,
-        streamKey: `sk_${userId}_${newStream.id}`,
-      },
+        live: streamViewModel,
+        urls: {
+            rtmp: `${SRS_URL_PUBLISH}/${streamKey}`,
+            hls: `${SRS_URL_PLAY_HLS}/${streamKey}.m3u8`,
+            webrtc: `${SRS_URL_PLAY_WEBRTC}/${streamKey}`,
+            streamKey: streamKey,
+        },
     };
   }
-  
-  if (method === 'POST' && userStopLiveMatch) {
-    const userId = parseInt(userStopLiveMatch[1], 10);
-    const result = await database.liveStreams.updateOne({ user_id: userId, ao_vivo: true }, { $set: { ao_vivo: false }});
-    if (result.modifiedCount === 0) {
-        // Might be a PK battle, check that table too
-        const activeBattle = await database.pkBattles.findOne({ status: 'ativa' });
-        if (activeBattle && (activeBattle.streamer_A_id === userId || activeBattle.streamer_B_id === userId)) {
-             await database.pkBattles.updateOne({ id: activeBattle.id }, { $set: { status: 'finalizada' }});
-             // Also end the associated streams
-             const streamA = await database.liveStreams.findOne({ user_id: activeBattle.streamer_A_id, ao_vivo: true });
-             const streamB = await database.liveStreams.findOne({ user_id: activeBattle.streamer_B_id, ao_vivo: true });
-             if(streamA) await database.liveStreams.updateOne({ id: streamA.id }, { $set: { ao_vivo: false, em_pk: false }});
-             if(streamB) await database.liveStreams.updateOne({ id: streamB.id }, { $set: { ao_vivo: false, em_pk: false }});
-             return { success: true };
-        }
-    }
-    return { success: result.modifiedCount > 0 };
-  }
 
-  // Catch-all for any unhandled routes
+  // --- Fallback ---
   notFound();
 };

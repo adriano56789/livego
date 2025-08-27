@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import type { User, Stream, PkBattle, ChatMessage, LiveDetails, PkInvitation, SoundEffectName, MuteStatusListener, UserKickedListener, SoundEffectListener, PublicProfile, PkBattleState, ConvitePK, IncomingPrivateLiveInvite, UserBlockedListener, UserUnblockedListener, Viewer, PkBattleStreamer, AppView, FacingMode, CameraStatus } from '../types';
 import * as liveStreamService from '../services/liveStreamService';
@@ -38,6 +39,7 @@ import HeartSolidIcon from './icons/HeartSolidIcon';
 import GiftBoxIcon from './icons/GiftBoxIcon';
 import MoreToolsIcon from './icons/MoreToolsIcon';
 import UserPlusIcon from './icons/UserPlusIcon';
+import CameraOffIcon from './icons/CameraOffIcon';
 
 
 interface LiveStreamViewerScreenProps {
@@ -89,6 +91,30 @@ const LiveInfoModal: React.FC<{ title: string; meta: string; }> = ({ title, meta
         <div className="absolute top-1/4 left-4 right-4 z-20 bg-black/70 backdrop-blur-md p-4 rounded-xl border border-white/20 animate-fade-in-out-short pointer-events-none">
             <h3 className="text-lg font-bold text-white truncate">{title}</h3>
             {meta && <p className="text-sm text-gray-300 mt-1 max-h-20 overflow-y-auto scrollbar-hide">{meta}</p>}
+        </div>
+    );
+};
+
+// FIX: Create a component to display camera status to the host.
+const CameraStatusOverlay: React.FC<{ status: CameraStatus }> = ({ status }) => {
+    if (status === 'success' || status === 'idle') return null;
+
+    let message = '';
+    switch (status) {
+        case 'loading': message = 'Iniciando câmera...'; break;
+        case 'denied': message = 'Acesso à câmera negado. Verifique as permissões do navegador.'; break;
+        case 'timeout': message = 'A câmera demorou para responder. Tente novamente.'; break;
+        case 'in-use': message = 'Sua câmera está em uso por outro aplicativo.'; break;
+        case 'not-found': message = 'Nenhuma câmera foi encontrada.'; break;
+        case 'error': message = 'Ocorreu um erro inesperado com a câmera.'; break;
+        case 'insecure': message = 'O acesso à câmera requer uma conexão segura (HTTPS).'; break;
+    }
+    
+    return (
+        <div className="absolute inset-0 z-10 bg-black/70 flex flex-col items-center justify-center p-4 text-center">
+            {status !== 'loading' && <CameraOffIcon className="w-16 h-16 mb-4 text-red-500" />}
+            {status === 'loading' && <div className="w-12 h-12 border-4 border-gray-600 border-t-transparent rounded-full animate-spin mb-4"></div>}
+            <p className="text-white font-semibold">{message}</p>
         </div>
     );
 };
@@ -162,13 +188,13 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
     
     const liveId = isPkBattle ? (initialStream as PkBattle).streamer1.streamId : (initialStream as Stream).id;
     const streamerId = isPkBattle ? (initialStream as PkBattle).streamer1.userId : (initialStream as Stream).userId;
-    const isHost = user.id === streamerId;
+    const isHost = user.id === streamerId || (isPkBattle && user.id === (initialStream as PkBattle).streamer2.userId);
     const isPrivateStream = !isPkBattle && (initialStream as Stream).isPrivate;
 
     // Host Camera State
     const videoRef = useRef<HTMLVideoElement>(null);
     const [mediaStream, setMediaStream] = useState<MediaStream | null>(null);
-    const [cameraStatus, setCameraStatus] = useState<CameraStatus>('idle');
+    const [cameraStatus, setCameraStatus] = useState<CameraStatus>(isHost ? 'loading' : 'idle');
     const [isMicEnabled, setIsMicEnabled] = useState(true);
     const getInitialCameraMode = useCallback(() => {
         if ('cameraFacingMode' in initialStream && initialStream.cameraFacingMode) {
@@ -208,7 +234,7 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
             });
     }, [isMicEnabled, liveId]);
     
-    // Effect for acquiring and cleaning up the camera stream for the host
+    // FIX: Add detailed error handling for camera access and a user-facing status.
     useEffect(() => {
         if (!isHost) {
             setCameraStatus('idle');
@@ -227,7 +253,7 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
           setCameraStatus('loading');
           try {
             const constraints = {
-                audio: true, // Audio might be needed for the stream
+                audio: true,
                 video: { facingMode: cameraFacingMode, width: { ideal: 1280 }, height: { ideal: 720 } }
             };
             stream = await navigator.mediaDevices.getUserMedia(constraints);
@@ -238,8 +264,32 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
               stream.getTracks().forEach(track => track.stop());
             }
           } catch (err) {
-            if (isMounted) setCameraStatus('error');
-            console.error("Camera access error:", err);
+            if (isMounted) {
+                console.error("Camera access error:", err);
+                if (err instanceof DOMException) {
+                    switch (err.name) {
+                    case 'NotAllowedError':
+                    case 'PermissionDeniedError':
+                        setCameraStatus('denied');
+                        break;
+                    case 'NotReadableError':
+                    case 'OverconstrainedError':
+                        setCameraStatus('in-use');
+                        break;
+                    case 'NotFoundError':
+                    case 'DevicesNotFoundError':
+                        setCameraStatus('not-found');
+                        break;
+                    case 'TimeoutError':
+                        setCameraStatus('timeout');
+                        break;
+                    default:
+                        setCameraStatus('error');
+                    }
+                } else {
+                    setCameraStatus('error');
+                }
+            }
           }
         };
 
@@ -289,14 +339,29 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
           if (isPkBattle && isPkViewActive) {
               const pkId = (initialStream as PkBattle).id;
               const battleState = await liveStreamService.getActivePkBattle(pkId);
+              
+              const pkInitial = initialStream as PkBattle;
+              (battleState as PkBattleState).streamer_A_streamId = pkInitial.streamer1.userId === battleState.streamer_A_id 
+                  ? pkInitial.streamer1.streamId 
+                  : pkInitial.streamer2.streamId;
+              (battleState as PkBattleState).streamer_B_streamId = pkInitial.streamer1.userId === battleState.streamer_B_id
+                  ? pkInitial.streamer1.streamId
+                  : pkInitial.streamer2.streamId;
+
               setActivePkBattle(battleState);
 
+              if (!battleState.streamer_A_streamId || !battleState.streamer_B_streamId) {
+                console.error("Could not map stream IDs in PK battle");
+                onStreamEnded(liveId);
+                return;
+              }
+
               const [details1, details2, messages, viewers1, viewers2] = await Promise.all([
-                  liveStreamService.getLiveStreamDetails(battleState.streamer_A.streamId),
-                  liveStreamService.getLiveStreamDetails(battleState.streamer_B.streamId),
-                  liveStreamService.getChatMessages(battleState.streamer_A.streamId),
-                  liveStreamService.getViewers(battleState.streamer_A.streamId),
-                  liveStreamService.getViewers(battleState.streamer_B.streamId),
+                  liveStreamService.getLiveStreamDetails(battleState.streamer_A_streamId),
+                  liveStreamService.getLiveStreamDetails(battleState.streamer_B_streamId),
+                  liveStreamService.getChatMessages(battleState.streamer_A_streamId),
+                  liveStreamService.getViewers(battleState.streamer_A_streamId),
+                  liveStreamService.getViewers(battleState.streamer_B_streamId),
               ]);
               setLiveDetails(details1);
               setLiveDetails2(details2);
@@ -307,8 +372,8 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
                   return messages;
               });
               setHeaderViewers({
-                  [battleState.streamer_A.streamId]: viewers1.slice(0, 3),
-                  [battleState.streamer_B.streamId]: viewers2.slice(0, 3),
+                  [battleState.streamer_A_streamId]: viewers1.slice(0, 3),
+                  [battleState.streamer_B_streamId]: viewers2.slice(0, 3),
               });
 
               const lastId = lastGiftIdRef.current;
@@ -458,7 +523,7 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
 
     const handleSendMessage = useCallback(async (message: string) => {
         try {
-            const currentLiveId = isPkViewActive && activePkBattle ? activePkBattle.streamer_A.streamId : liveId;
+            const currentLiveId = isPkViewActive && activePkBattle ? activePkBattle.streamer_A_streamId! : liveId;
             await liveStreamService.sendChatMessage(currentLiveId, user.id, message);
             fetchLiveDetails();
         } catch (error) {
@@ -478,7 +543,7 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
 
                     const { url } = await liveStreamService.uploadChatImage(imageDataUrl);
 
-                    const currentLiveId = isPkViewActive && activePkBattle ? activePkBattle.streamer_A.streamId : liveId;
+                    const currentLiveId = isPkViewActive && activePkBattle ? activePkBattle.streamer_A_streamId! : liveId;
                     await liveStreamService.sendChatMessage(currentLiveId, user.id, '', url);
                     fetchLiveDetails();
                 } catch (err) {
@@ -499,7 +564,7 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
 
     const handleSendGift = async (giftId: number, quantity: number, receiverId?: number) => {
         try {
-            const currentLiveId = isPkViewActive && activePkBattle ? activePkBattle.streamer_A.streamId : liveId;
+            const currentLiveId = isPkViewActive && activePkBattle ? activePkBattle.streamer_A_streamId! : liveId;
             const response = await liveStreamService.sendGift(currentLiveId, user.id, giftId, quantity, receiverId);
             if (response.success && response.updatedUser) {
                 onUpdateUser(response.updatedUser);
@@ -521,15 +586,13 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
     };
 
     const handleSendCoHostInvite = async (opponent: User) => {
-        // Close the invite modal immediately in all cases
         setIsPkInviteModalOpen(false);
         setIsPkStartDisputeModalOpen(false);
     
         console.log(`Simulating PK invite from opponent ${opponent.nickname} to self for testing.`);
         
-        // Create a mock invitation object for the current user to see, as if the opponent invited them.
         const mockInvite: PkInvitation = {
-            id: `mock-invite-${opponent.id}`, // Use opponent ID to make it unique and identifiable
+            id: `mock-invite-${opponent.id}`,
             remetente_id: opponent.id,
             destinatario_id: user.id,
             status: 'pendente',
@@ -540,7 +603,6 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
             inviterAvatarUrl: opponent.avatar_url || '',
         };
         
-        // This will trigger the PkCompetitionInviteModal for the current user.
         setIncomingCompetitionInvite(mockInvite);
     };
     
@@ -550,33 +612,30 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
             const inviteId = incomingCompetitionInvite.id;
             let battle: PkBattle;
     
-            // Handle simulated invites for testing
             if (inviteId.startsWith('mock-invite-') || inviteId.startsWith('self-invite-')) {
                 const inviterId = incomingCompetitionInvite.remetente_id;
                 const inviteeId = incomingCompetitionInvite.destinatario_id;
                 console.log(`Accepting simulated invite. Creating PK battle between ${inviterId} and ${inviteeId}.`);
                 battle = await liveStreamService.inviteToCoHostPk(inviterId, inviteeId);
             } else {
-                // Regular acceptance flow for real invites
                 const response = await liveStreamService.acceptPkInvitation(inviteId);
                 if (!response.battle) throw new Error("A batalha não pôde ser criada a partir do convite.");
                 battle = response.battle;
             }
             
             if (battle) {
-                // THIS IS THE KEY CHANGE: Update state locally instead of calling onViewStream
-                setShowPkClashAnimation(true); // Trigger the cool clash animation
+                setShowPkClashAnimation(true);
                 
                 const battleState = await liveStreamService.getActivePkBattle(battle.id);
                 setActivePkBattle(battleState);
                 setIsPkViewActive(true);
-                setIncomingCompetitionInvite(null); // Close the invite modal
+                setIncomingCompetitionInvite(null);
             } else {
                 throw new Error("Não foi possível iniciar a batalha.");
             }
         } catch (error) {
             alert(error instanceof Error ? error.message : "Erro ao aceitar convite.");
-            setIncomingCompetitionInvite(null); // Ensure modal closes on error
+            setIncomingCompetitionInvite(null);
         }
     };
 
@@ -584,7 +643,6 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
         if (!incomingCompetitionInvite) return;
         try {
             const inviteId = incomingCompetitionInvite.id;
-             // For simulated invites, we just close the modal. For real invites, we call the API.
             if (inviteId.startsWith('self-invite-') || inviteId.startsWith('mock-invite-')) {
                 console.log(`Declining simulated invite: ${inviteId}`);
             } else {
@@ -611,7 +669,7 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
                 }
                 setIsPkInviteModalOpen(false);
             } else {
-                alert("Não foi possível encontrar a live ativa para este usuário.");
+                alert("Não foi possível encontrar la live ativa para este usuário.");
             }
         } catch (error) {
             console.error("Failed to enter friend's live stream:", error);
@@ -622,7 +680,7 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
     const pkBattleStreamersProp = isPkBattle && activePkBattle ? {
         streamer1: {
             userId: activePkBattle.streamer_A.id,
-            streamId: activePkBattle.streamer_A.streamId,
+            streamId: activePkBattle.streamer_A_streamId!,
             name: activePkBattle.streamer_A.nickname || activePkBattle.streamer_A.name,
             score: activePkBattle.pontuacao_A,
             avatarUrl: activePkBattle.streamer_A.avatar_url || '',
@@ -630,7 +688,7 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
         } as PkBattleStreamer,
         streamer2: {
             userId: activePkBattle.streamer_B.id,
-            streamId: activePkBattle.streamer_B.streamId,
+            streamId: activePkBattle.streamer_B_streamId!,
             name: activePkBattle.streamer_B.nickname || activePkBattle.streamer_B.name,
             score: activePkBattle.pontuacao_B,
             avatarUrl: activePkBattle.streamer_B.avatar_url || '',
@@ -651,8 +709,38 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
         return (
             <>
                 <div className="absolute inset-0 z-0 flex">
-                    <div className="w-1/2 h-full bg-cover bg-center" style={{ backgroundImage: `url(${streamer1.avatar_url})` }} />
-                    <div className="w-1/2 h-full bg-cover bg-center" style={{ backgroundImage: `url(${streamer2.avatar_url})` }} />
+                    <div className="w-1/2 h-full relative">
+                        {user.id === streamer1.id ? (
+                            <>
+                                <video
+                                    ref={videoRef}
+                                    autoPlay
+                                    playsInline
+                                    muted
+                                    className={`w-full h-full object-cover ${cameraFacingMode === 'user' ? 'transform scale-x-[-1]' : ''}`}
+                                />
+                                <CameraStatusOverlay status={cameraStatus} />
+                            </>
+                        ) : (
+                            <div className="w-full h-full bg-cover bg-center" style={{ backgroundImage: `url(${streamer1.avatar_url})` }} />
+                        )}
+                    </div>
+                    <div className="w-1/2 h-full relative">
+                         {user.id === streamer2.id ? (
+                            <>
+                                <video
+                                    ref={videoRef}
+                                    autoPlay
+                                    playsInline
+                                    muted
+                                    className={`w-full h-full object-cover ${cameraFacingMode === 'user' ? 'transform scale-x-[-1]' : ''}`}
+                                />
+                                 <CameraStatusOverlay status={cameraStatus} />
+                            </>
+                        ) : (
+                            <div className="w-full h-full bg-cover bg-center" style={{ backgroundImage: `url(${streamer2.avatar_url})` }} />
+                        )}
+                    </div>
                 </div>
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
     
@@ -667,8 +755,8 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
                             coins={formatStatNumber(liveDetails?.receivedGiftsValue || 0)} 
                             likes={formatStatNumber(liveDetails?.likeCount || 0)} 
                             onUserClick={() => setViewingProfileId(streamer1.id)}
-                            onViewersClick={() => setOnlineUsersModalLiveId(activePkBattle.streamer_A.streamId)}
-                            onCoinsClick={() => setHourlyRankingModalInfo({ liveId: activePkBattle.streamer_A.streamId, streamer: { id: streamer1.id, name: streamer1.nickname || streamer1.name, avatarUrl: streamer1.avatar_url || '' } })}
+                            onViewersClick={() => setOnlineUsersModalLiveId(activePkBattle.streamer_A_streamId!)}
+                            onCoinsClick={() => setHourlyRankingModalInfo({ liveId: activePkBattle.streamer_A_streamId!, streamer: { id: streamer1.id, name: streamer1.nickname || streamer1.name, avatarUrl: streamer1.avatar_url || '' } })}
                             isCurrentUserHost={user.id === streamer1.id}
                             isFollowing={(user.following || []).includes(streamer1.id)}
                             onFollowToggle={() => onFollowToggle(streamer1.id)}
@@ -684,8 +772,8 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
                             likes={formatStatNumber(liveDetails2?.likeCount || 0)} 
                             onUserClick={() => setViewingProfileId(streamer2.id)} 
                             onExitClick={handleExitClick}
-                            onViewersClick={() => setOnlineUsersModalLiveId(activePkBattle.streamer_B.streamId)}
-                            onCoinsClick={() => setHourlyRankingModalInfo({ liveId: activePkBattle.streamer_B.streamId, streamer: { id: streamer2.id, name: streamer2.nickname || streamer2.name, avatarUrl: streamer2.avatar_url || '' } })}
+                            onViewersClick={() => setOnlineUsersModalLiveId(activePkBattle.streamer_B_streamId!)}
+                            onCoinsClick={() => setHourlyRankingModalInfo({ liveId: activePkBattle.streamer_B_streamId!, streamer: { id: streamer2.id, name: streamer2.nickname || streamer2.name, avatarUrl: streamer2.avatar_url || '' } })}
                             isCurrentUserHost={user.id === streamer2.id}
                             isFollowing={(user.following || []).includes(streamer2.id)}
                             onFollowToggle={() => onFollowToggle(streamer2.id)}
@@ -759,11 +847,24 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
     const renderSingleStreamView = () => (
       <>
           <div className="absolute inset-0 z-0">
-              <img
-                  src="https://images.pexels.com/photos/1763075/pexels-photo-1763075.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2"
-                  alt="Stream background"
-                  className="w-full h-full object-cover"
-              />
+              {isHost ? (
+                  <>
+                    <video
+                        ref={videoRef}
+                        autoPlay
+                        playsInline
+                        muted
+                        className={`w-full h-full object-cover ${cameraFacingMode === 'user' ? 'transform scale-x-[-1]' : ''}`}
+                    />
+                    <CameraStatusOverlay status={cameraStatus} />
+                  </>
+              ) : (
+                  <img
+                      src="https://images.pexels.com/photos/1763075/pexels-photo-1763075.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2"
+                      alt="Stream background"
+                      className="w-full h-full object-cover"
+                  />
+              )}
               <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
           </div>
 
@@ -922,7 +1023,6 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
                     isPkBattleActive={isPkViewActive}
                     onOpenPkInviteModal={() => { setIsArcoraToolModalOpen(false); setIsPkInviteModalOpen(true); }}
                     cameraFacingMode={cameraFacingMode}
-                    mediaStream={mediaStream}
                 />
             )}
 

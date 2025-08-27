@@ -1,5 +1,4 @@
 
-
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import LoginScreen from './components/LoginScreen';
 import UploadPhotoScreen from './components/UploadPhotoScreen';
@@ -61,14 +60,16 @@ import type { User, AppView, Category, Stream, PkBattle, Conversation, Withdrawa
 import { ApiViewerProvider } from './components/ApiContext';
 import ProfileScreen from './components/ProfileScreen';
 import GiftDisplayAnimation from './components/GiftDisplayAnimation';
+import GoogleIcon from './components/icons/GoogleIcon';
 
 type LocationPermission = 'prompt' | 'granted' | 'denied';
+
 
 const AppContent: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [currentView, setCurrentView] = useState<AppView>('login');
+  const [currentView, setCurrentView] = useState<AppView>('feed');
   const [isUserLive, setIsUserLive] = useState(false);
   const [viewingStream, setViewingStream] = useState<Stream | PkBattle | null>(null);
   const [viewingConversationId, setViewingConversationId] = useState<string | null>(null);
@@ -412,7 +413,9 @@ const AppContent: React.FC = () => {
 
   const handleLogout = useCallback(() => {
     setUser(null);
-    setCurrentView('login');
+    setViewingStream(null);
+    setViewingOtherProfileId(null);
+    setCurrentView('feed');
   }, []);
   
   const handleDeleteAccount = useCallback(async () => {
@@ -464,14 +467,6 @@ const AppContent: React.FC = () => {
     return <LoginScreen onGoogleLogin={handleLogin} isLoading={isLoading} error={error} />;
   }
   
-  if (!user.has_uploaded_real_photo) {
-    return <UploadPhotoScreen user={user} onPhotoUploaded={handlePhotoUploaded} />;
-  }
-  
-  if (!user.has_completed_profile) {
-    return <ProfileEditorScreen user={user} onExit={() => setUser({ ...user, has_completed_profile: true })} onSave={handleProfileComplete} />;
-  }
-
   const renderMainView = () => {
     if (viewingStream) {
       return (
@@ -511,6 +506,9 @@ const AppContent: React.FC = () => {
         break;
       case 'profile':
         mainContent = <ProfileScreen user={user} onNavigate={handleNavigate} onGoLiveClick={handleGoLiveClick} />;
+        break;
+      case 'view-self-profile':
+        mainContent = <EditProfileScreen user={user} isViewingOtherProfile={false} viewedUserId={user.id} onExit={() => handleNavigate('profile')} onNavigate={handleNavigate} onFollowToggle={handleFollowToggle} onNavigateToChat={handleNavigateToChat} onViewStream={handleViewStream} />;
         break;
       case 'video':
         mainContent = <VideoScreen />;
@@ -645,7 +643,7 @@ const AppContent: React.FC = () => {
         mainContent = <LiveFeedScreen user={user} onViewStream={handleViewStream} onGoLiveClick={handleGoLiveClick} activeCategory={activeCategory} onSelectCategory={setActiveCategory} onUpdateUser={handleUpdateUser} onNavigateToChat={handleNavigateToChat} onViewProtectors={handleViewProtectors} onNavigate={handleNavigate} locationPermission={locationPermission} setLocationPermission={setLocationPermission} />;
     }
     
-    const showNav = !viewingOtherProfileId && !['go-live-setup', 'chat', 'settings', 'following', 'fans', 'visitors', 'report-and-suggestion', 'customer-service', 'diamond-purchase', 'avatar-protection', 'profile-editor', 'help-article', 'live-support-chat', 'connected-accounts'].includes(currentView);
+    const showNav = !viewingOtherProfileId && !['go-live-setup', 'chat', 'settings', 'following', 'fans', 'visitors', 'report-and-suggestion', 'customer-service', 'diamond-purchase', 'avatar-protection', 'profile-editor', 'help-article', 'live-support-chat', 'connected-accounts', 'view-self-profile'].includes(currentView);
 
     return (
       <div className="h-full w-full flex flex-col bg-black">

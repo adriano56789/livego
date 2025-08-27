@@ -1,6 +1,7 @@
 
 import React from 'react';
 import GoogleIcon from './icons/GoogleIcon';
+import FacebookIcon from './icons/FacebookIcon';
 
 interface LoginScreenProps {
   onGoogleLogin: (accountId: number) => void;
@@ -8,73 +9,59 @@ interface LoginScreenProps {
   error: string | null;
 }
 
-const mockAccounts = [
-  { id: 10755083, name: 'Seu Perfil', email: 'livego@example.com', avatar: 'https://i.pravatar.cc/150?u=10755083' },
-  { id: 1, name: 'Maria Silva', email: 'maria.silva@example.com', avatar: 'https://i.pravatar.cc/150?u=1' },
-  { id: 2, name: 'João Souza', email: 'joao.souza@example.com', avatar: 'https://i.pravatar.cc/150?u=2' },
-];
+const LoginScreen: React.FC<LoginScreenProps> = ({ onGoogleLogin, isLoading, error }) => (
+    <div 
+        className="h-full w-full bg-black text-white p-8 flex flex-col justify-between items-center font-sans"
+        style={{
+            backgroundImage: 'linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(20,20,20,1) 60%, rgba(45,45,45,1) 100%)',
+        }}
+    >
+        <div className="flex-grow flex flex-col justify-center items-center text-center -mt-16">
+            <h1 className="text-7xl font-extrabold tracking-tighter" style={{ fontFamily: "'Helvetica Neue', sans-serif" }}>
+                LiveGo
+            </h1>
+            <p className="text-gray-300 mt-2 text-lg">Top Streamers, Boas Vibrações!</p>
+        </div>
 
-const LoginScreen: React.FC<LoginScreenProps> = ({ onGoogleLogin, isLoading, error }) => {
-    
-  return (
-    <>
-      <style>{`
-        @keyframes fade-in-up {
-          from { opacity: 0; transform: translateY(15px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        .animate-fade-in-up { 
-          animation: fade-in-up 0.5s ease-out forwards;
-          opacity: 0;
-        }
-      `}</style>
-      <div className="h-full w-full bg-black text-white p-6 flex flex-col justify-between font-sans">
-          <header className="flex-shrink-0 py-4 animate-fade-in-up" style={{ animationDelay: '100ms' }}>
-              <h1 className="text-3xl font-bold text-center">Escolha uma conta</h1>
-              <p className="text-gray-400 text-center mt-2">para continuar no LiveGo</p>
-          </header>
+        <div className="w-full max-w-sm flex flex-col items-center flex-shrink-0">
+            {error && <p className="text-red-400 text-center text-sm mb-4">{error}</p>}
+            <button
+                onClick={() => onGoogleLogin(10755083)}
+                disabled={isLoading}
+                className="w-full flex items-center justify-center gap-3 p-3.5 rounded-full bg-white text-black font-semibold text-base hover:bg-gray-200 transition-colors disabled:opacity-50"
+            >
+                {isLoading ? (
+                    <svg className="animate-spin h-6 w-6 text-black" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                ) : (
+                    <>
+                        <GoogleIcon className="w-6 h-6" />
+                        <span>Entrar com o Google</span>
+                    </>
+                )}
+            </button>
+            
+            <div className="flex items-center w-full my-6">
+                <div className="flex-grow border-t border-gray-600"></div>
+                <span className="flex-shrink mx-4 text-gray-400 text-sm">Mais opções de login</span>
+                <div className="flex-grow border-t border-gray-600"></div>
+            </div>
+            
+            <button 
+                onClick={() => alert('Login com Facebook não implementado.')}
+                className="w-12 h-12 rounded-full bg-gray-800 flex items-center justify-center hover:bg-gray-700 transition-colors"
+                aria-label="Entrar com o Facebook"
+            >
+                <FacebookIcon className="w-6 h-6 text-white"/>
+            </button>
 
-          <main className="flex-shrink-0 flex flex-col gap-4">
-              {mockAccounts.map((account, index) => (
-                  <button
-                      key={account.id}
-                      onClick={() => onGoogleLogin(account.id)}
-                      disabled={isLoading}
-                      className="flex items-center w-full p-3 rounded-lg bg-[#1c1c1e] hover:bg-[#2c2c2e] transition-colors disabled:opacity-50 animate-fade-in-up"
-                      style={{ animationDelay: `${200 + index * 100}ms` }}
-                  >
-                      <img src={account.avatar} alt={account.name} className="w-10 h-10 rounded-full mr-4"/>
-                      <div className="text-left">
-                          <p className="font-semibold">{account.name}</p>
-                          <p className="text-sm text-gray-400">{account.email}</p>
-                      </div>
-                  </button>
-              ))}
-              <button
-                  onClick={() => onGoogleLogin(3)}
-                  disabled={isLoading}
-                  className="flex items-center w-full p-3 rounded-lg hover:bg-[#2c2c2e] transition-colors disabled:opacity-50 animate-fade-in-up"
-                  style={{ animationDelay: `${200 + mockAccounts.length * 100}ms` }}
-              >
-                  <div className="w-10 h-10 rounded-full mr-4 bg-gray-700 flex items-center justify-center">
-                      <GoogleIcon className="w-6 h-6"/>
-                  </div>
-                  <p className="font-semibold">Usar outra conta</p>
-              </button>
-          </main>
-          
-          <footer 
-            className="flex-shrink-0 animate-fade-in-up" 
-            style={{ animationDelay: `${300 + mockAccounts.length * 100}ms` }}
-          >
-              {error && <p className="text-red-400 text-center text-sm mb-4">{error}</p>}
-              <p className="text-xs text-gray-500 text-center py-4">
-                Para continuar, o Google compartilhará seu nome, endereço de e-mail e foto do perfil com o LiveGo. Consulte a <a href="#" className="text-blue-400">Política de Privacidade</a> e os <a href="#" className="text-blue-400">Termos de Serviço</a> do LiveGo.
-              </p>
-          </footer>
-      </div>
-    </>
-  );
-};
+            <p className="text-xs text-gray-500 text-center mt-12">
+                Login/registro significa que você leu e fornece o <a href="#" className="underline">Contrato do Usuário</a> e a <a href="#" className="underline">Política de Privacidade</a>.
+            </p>
+        </div>
+    </div>
+);
 
 export default LoginScreen;

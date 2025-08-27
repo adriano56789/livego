@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import type { User, PrivateLiveInviteSettings } from '../types';
 import * as liveStreamService from '../services/liveStreamService';
@@ -108,7 +109,7 @@ const PkInviteModal: React.FC<PkInviteModalProps> = ({ user, onClose, onEnterFri
   return (
     <div className="fixed inset-0 z-50 bg-transparent flex items-end" onClick={onClose}>
       <div
-        className="bg-[#1C1F24] w-full h-[85vh] max-h-[700px] rounded-t-2xl flex flex-col text-white animate-slide-up-fast"
+        className="bg-[#1C1F24] w-full h-[75vh] max-h-[600px] rounded-t-2xl flex flex-col text-white animate-slide-up-fast"
         onClick={e => e.stopPropagation()}
       >
         <header className="p-4 flex items-center justify-between shrink-0 border-b border-gray-700/50">

@@ -1,4 +1,5 @@
-import React, { useRef, useEffect } from 'react';
+
+import React from 'react';
 import CrossIcon from './icons/CrossIcon';
 
 // Anchor Tool Icons
@@ -37,7 +38,6 @@ interface ArcoraToolModalProps {
   onOpenPkStartModal: () => void;
   isPkBattleActive: boolean;
   onOpenPkInviteModal: () => void;
-  mediaStream: MediaStream | null;
 }
 
 const ToolButton: React.FC<{ icon: React.ReactNode; label: string; subLabel?: string; isNew?: boolean; notImplemented?: boolean; onClick?: () => void; isActive?: boolean; }> = ({ icon, label, subLabel, isNew, notImplemented, onClick, isActive }) => (
@@ -88,27 +88,7 @@ const ArcoraToolModal: React.FC<ArcoraToolModalProps> = ({
     onOpenPkStartModal,
     isPkBattleActive,
     onOpenPkInviteModal,
-    mediaStream,
 }) => {
-    const videoRef = useRef<HTMLVideoElement>(null);
-
-    useEffect(() => {
-        const videoElement = videoRef.current;
-        if (videoElement && mediaStream) {
-            if (videoElement.srcObject !== mediaStream) {
-                videoElement.srcObject = mediaStream;
-            }
-            const playPromise = videoElement.play();
-            if (playPromise !== undefined) {
-                playPromise.catch(error => {
-                    if (error.name !== 'AbortError') {
-                        console.error("Modal video play failed", error);
-                    }
-                });
-            }
-        }
-    }, [mediaStream]);
-
     const iconClass = "w-7 h-7 text-gray-200";
 
     const anchorTools = [
@@ -132,7 +112,6 @@ const ArcoraToolModal: React.FC<ArcoraToolModalProps> = ({
         { icon: <CameraFlipIcon className={iconClass} />, label: 'Giro', onClick: onSwitchCamera, subLabel: cameraFacingMode === 'user' ? 'Frontal' : 'Traseira' },
         { icon: <MuteIcon className={iconClass} />, label: 'Silenciamento', onClick: onOpenMuteModal },
         { icon: <MessageIcon className={iconClass} />, label: 'Bate-papo', onClick: onOpenPrivateChat },
-        { icon: <MirrorImageIcon className={iconClass} />, label: 'Imagem espelhada', notImplemented: true },
         { icon: <RotateIcon className={iconClass} />, label: 'Girar', notImplemented: true },
     ];
 
@@ -146,7 +125,7 @@ const ArcoraToolModal: React.FC<ArcoraToolModalProps> = ({
       onClick={onClose}
     >
       <div 
-        className="bg-[#212124]/95 backdrop-blur-md w-full rounded-t-2xl flex flex-col text-white animate-slide-up-fast max-h-[80vh]"
+        className="bg-[#212124]/95 backdrop-blur-md w-full rounded-t-2xl flex flex-col text-white animate-slide-up-fast max-h-[60vh]"
         onClick={e => e.stopPropagation()}
       >
         <header className="p-4 border-b border-white/10 flex items-center justify-center relative shrink-0">
@@ -156,14 +135,6 @@ const ArcoraToolModal: React.FC<ArcoraToolModalProps> = ({
             </button>
         </header>
         <div className="p-6 overflow-y-auto scrollbar-hide">
-             <div className="bg-black rounded-lg aspect-video mb-6 overflow-hidden flex items-center justify-center">
-                {mediaStream ? (
-                    <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
-                ) : (
-                    <div className="text-gray-500 text-sm">Câmera indisponível</div>
-                )}
-            </div>
-
              <Section title="Ferramentas de Co-host e PK">
                 {pkTools.map(tool => <ToolButton key={tool.label} {...tool} />)}
             </Section>

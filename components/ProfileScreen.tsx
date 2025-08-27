@@ -1,6 +1,8 @@
 
 
 
+
+
 import React, { useMemo } from 'react';
 import type { User, AppView } from '../types';
 import CopyIcon from './icons/CopyIcon';
@@ -46,8 +48,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onNavigate, onGoLiv
         if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
             age--;
         }
-        // Let's assume the screenshot was taken in a year where the user was 30
-        return 30;
+        return age;
     }, [user.birthday]);
 
     const menuItems = [
@@ -69,7 +70,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onNavigate, onGoLiv
                 {/* Header */}
                 <header className="flex flex-col items-center gap-3 mb-6">
                     <div className="relative">
-                        <div className="w-28 h-28 rounded-full overflow-hidden shrink-0 bg-gray-700 p-1.5 bg-gradient-to-tr from-purple-600 to-fuchsia-400">
+                        <button onClick={() => onNavigate('view-self-profile')} className="w-28 h-28 rounded-full overflow-hidden shrink-0 bg-gray-700 p-1.5 bg-gradient-to-tr from-purple-600 to-fuchsia-400">
                            <div className="w-full h-full rounded-full bg-black overflow-hidden flex items-center justify-center">
                              {user.avatar_url ? (
                                 <img src={user.avatar_url} alt={user.name} className="w-full h-full object-cover" />
@@ -77,9 +78,6 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onNavigate, onGoLiv
                                 <UserPlaceholderIcon className="w-full h-full text-gray-500 p-1" />
                             )}
                            </div>
-                        </div>
-                        <button onClick={() => onNavigate('profile-editor')} className="absolute -top-1 right-2 w-7 h-7 bg-gray-600 rounded-full flex items-center justify-center border-2 border-gray-800">
-                            <PencilIcon className="w-4 h-4 text-white"/>
                         </button>
                     </div>
                     <div className="text-center">
@@ -92,7 +90,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onNavigate, onGoLiv
                                </div>
                            )}
                            <ProfileBadge badge={{ text: String(user.level), type: 'level' }} />
-                            {userAge && user.gender && (
+                            {userAge && (
                                <div className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-bold ${user.gender === 'female' ? 'bg-[#ff2d55]' : 'bg-[#007aff]'} text-white`}>
                                    {user.gender === 'female' ? <FemaleIcon className="w-3 h-3" /> : <MaleIcon className="w-3 h-3" />}
                                    <span>{userAge}</span>

@@ -1,4 +1,5 @@
 
+
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import LoginScreen from './components/LoginScreen';
 import UploadPhotoScreen from './components/UploadPhotoScreen';
@@ -328,7 +329,6 @@ const AppContent: React.FC = () => {
         setIsUserLive(true);
         setActiveCategory(details.category); // Set the category of the new stream
         handleViewStream(response.live);
-        setCurrentView('feed');
     } catch (error) {
         console.error("Failed to start stream:", error);
         setError(error instanceof Error ? error.message : "Could not start stream");
@@ -365,7 +365,14 @@ const AppContent: React.FC = () => {
     if (currentView === 'diamond-purchase' && view !== 'diamond-purchase') {
       setWalletSuccessMessage(null);
     }
-    setViewingOtherProfileId(null); // Reset profile view on main navigation
+    
+    // Preserve the viewed user's ID when navigating to a related list screen.
+    // Otherwise, it's main navigation, so reset the ID.
+    const isProfileSubView = ['following', 'fans', 'visitors'].includes(view);
+    if (!isProfileSubView) {
+        setViewingOtherProfileId(null);
+    }
+
     setCurrentView(view);
   }, [currentView]);
   

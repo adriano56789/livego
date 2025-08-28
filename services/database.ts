@@ -1,4 +1,3 @@
-
 import { mongoObjectId } from './mongoObjectId';
 import type * as types from '../types';
 import * as levelService from './levelService';
@@ -45,7 +44,7 @@ const userDefinitions = [
       has_uploaded_real_photo: true,
       has_completed_profile: true,
       invite_code: 'A1B2C3D4',
-      following: [1, 2],
+      following: [55218901], // Following "Lest Go 500 K..."
       wallet_diamonds: 50000,
       wallet_earnings: 0,
       withdrawal_method: null,
@@ -68,48 +67,41 @@ const userDefinitions = [
         giftNotifications: { enabledGifts: {} }
       }
     },
-    {
-      _id: mongoObjectId(),
-      id: 1,
-      name: 'Maria Silva',
-      email: 'maria.silva@example.com',
-      avatar_url: 'https://i.pravatar.cc/400?u=1',
-      nickname: 'Maria Silva',
-      gender: 'female',
-      birthday: '1998-03-20',
-      ...newUserTemplate,
-      following: [10755083, 2],
-    },
-    {
-      _id: mongoObjectId(),
-      id: 2,
-      name: 'João Souza',
-      email: 'joao.souza@example.com',
-      avatar_url: 'https://i.pravatar.cc/400?u=2',
-      nickname: 'João Souza',
+    { 
+      _id: mongoObjectId(), 
+      id: 55218901, 
+      name: 'Streamer 1', 
+      nickname: 'Lest Go 500 K...', 
+      avatar_url: 'https://i.pravatar.cc/400?u=55218901', 
       gender: 'male',
-      birthday: '1996-11-10',
+      birthday: '1990-01-01',
       ...newUserTemplate,
+      following: [10755083], 
+      is_avatar_protected: true,
     },
-    {
-      _id: mongoObjectId(),
-      id: 3,
-      name: 'Nova Conta',
-      email: 'nova.conta@example.com',
-      avatar_url: 'https://i.pravatar.cc/400?u=3',
-      nickname: 'Nova Conta',
+    { 
+      _id: mongoObjectId(), 
+      id: 66345102, 
+      name: 'Streamer 2', 
+      nickname: 'PK Queen', 
+      avatar_url: 'https://i.pravatar.cc/400?u=66345102', 
+      gender: 'female',
+      birthday: '1998-10-20',
+      ...newUserTemplate,
+      country: 'US',
+    },
+    { 
+      _id: mongoObjectId(), 
+      id: 999, 
+      name: 'Atendimento ao Cliente', 
+      nickname: 'Suporte LiveGo', 
+      avatar_url: 'https://storage.googleapis.com/genai-assets/LiveGoSupportAgent.png', 
+      email: 'support@livego.com',
       gender: null,
       birthday: null,
       ...newUserTemplate,
-      following: [10755083],
-    },
-    { _id: mongoObjectId(), id: 55218901, name: 'Streamer 1', nickname: 'Lest Go 500 K...', avatar_url: 'https://i.pravatar.cc/400?u=55218901', following: [10755083], xp: 0, country: 'BR', gender: 'male', birthday: '1990-01-01', settings: {}, is_avatar_protected: true, declined_requests: [] },
-    { _id: mongoObjectId(), id: 66345102, name: 'Streamer 2', nickname: 'PK Queen', avatar_url: 'https://i.pravatar.cc/400?u=66345102', following: [], xp: 0, country: 'US', gender: 'female', birthday: '1998-10-20', settings: {}, declined_requests: [] },
-    { _id: mongoObjectId(), id: 77123403, name: 'Streamer 3', nickname: 'Dancer Live', avatar_url: 'https://i.pravatar.cc/400?u=77123403', following: [], xp: 0, country: 'ES', gender: 'female', birthday: '2000-03-10', settings: {}, declined_requests: [] },
-    { _id: mongoObjectId(), id: 88567804, name: 'Streamer 4', nickname: 'Music Lover', avatar_url: 'https://i.pravatar.cc/400?u=88567804', following: [], xp: 0, country: 'BR', gender: 'male', birthday: '1992-12-01', settings: {}, declined_requests: [] },
-    { _id: mongoObjectId(), id: 99887705, name: 'PK Pro', nickname: 'PK Pro ⚡', avatar_url: 'https://i.pravatar.cc/400?u=99887705', following: [], xp: 0, country: 'US', coHostHistory: 'Co-host com Você', gender: 'male', birthday: '1994-08-25', settings: {}, declined_requests: [] },
-    { _id: mongoObjectId(), id: 11223306, name: 'New Challenger', nickname: 'New Challenger', avatar_url: 'https://i.pravatar.cc/400?u=11223306', following: [], xp: 0, country: 'BR', coHostHistory: 'Última vez há 2 dias', gender: 'male', birthday: '2002-06-30', settings: {}, declined_requests: [] },
-    { _id: mongoObjectId(), id: 999, name: 'Atendimento ao Cliente', nickname: 'Suporte LiveGo', avatar_url: 'https://storage.googleapis.com/genai-assets/LiveGoSupportAgent.png', following: [], xp: 999999, email: 'support@livego.com', gender: null, birthday: null, country: 'BR', settings: {}, declined_requests: [] }
+      xp: 999999,
+    }
 ];
 
 const initialData: any = {
@@ -122,10 +114,6 @@ const initialData: any = {
   liveStreams: [
     { _id: mongoObjectId(), id: 101, user_id: 55218901, titulo: "PK Challenge", nome_streamer: "Lest Go 500 K...", thumbnail_url: 'https://i.pravatar.cc/400?u=55218901', espectadores: 0, categoria: 'PK', ao_vivo: true, em_pk: true, is_private: false, entry_fee: null, meta: 'Evento de PK', inicio: new Date(), permite_pk: true, received_gifts_value: 0, like_count: 0, country_code: 'BR', camera_facing_mode: 'user', current_viewers: [] },
     { _id: mongoObjectId(), id: 102, user_id: 66345102, titulo: "Dance Party!", nome_streamer: "PK Queen", thumbnail_url: 'https://i.pravatar.cc/400?u=66345102', espectadores: 0, categoria: 'Dança', ao_vivo: true, em_pk: true, is_private: false, entry_fee: null, meta: 'Vem dançar!', inicio: new Date(), permite_pk: true, received_gifts_value: 0, like_count: 0, country_code: 'US', camera_facing_mode: 'user', current_viewers: [] },
-    { _id: mongoObjectId(), id: 103, user_id: 77123403, titulo: "Música ao vivo", nome_streamer: "Dancer Live", thumbnail_url: 'https://i.pravatar.cc/400?u=77123403', espectadores: 0, categoria: 'Música', ao_vivo: true, em_pk: false, is_private: false, entry_fee: null, meta: 'Cantando sucessos', inicio: new Date(), permite_pk: true, received_gifts_value: 0, like_count: 0, country_code: 'ES', camera_facing_mode: 'user', current_viewers: [] },
-    { _id: mongoObjectId(), id: 104, user_id: 88567804, titulo: "Just Chatting", nome_streamer: "Music Lover", thumbnail_url: 'https://i.pravatar.cc/400?u=88567804', espectadores: 0, categoria: 'Popular', ao_vivo: true, em_pk: false, is_private: false, entry_fee: null, meta: '', inicio: new Date(), permite_pk: true, received_gifts_value: 0, like_count: 0, country_code: 'BR', camera_facing_mode: 'user', current_viewers: [] },
-    { _id: mongoObjectId(), id: 105, user_id: 99887705, titulo: "Sessão Privada", nome_streamer: "PK Pro ⚡", thumbnail_url: 'https://i.pravatar.cc/400?u=99887705', espectadores: 0, categoria: 'Privada', ao_vivo: true, em_pk: false, is_private: true, entry_fee: null, meta: 'Apenas para convidados', inicio: new Date(), permite_pk: false, received_gifts_value: 0, invited_users: [10755083], like_count: 0, country_code: 'US', camera_facing_mode: 'user', current_viewers: [] },
-    { _id: mongoObjectId(), id: 106, user_id: 11223306, titulo: "Training for PK", nome_streamer: "New Challenger", thumbnail_url: 'https://i.pravatar.cc/400?u=11223306', espectadores: 0, categoria: 'Popular', ao_vivo: true, em_pk: false, is_private: false, entry_fee: null, meta: 'Let\'s go!', inicio: new Date(), permite_pk: true, received_gifts_value: 0, like_count: 0, country_code: 'BR', camera_facing_mode: 'user', current_viewers: [] },
   ],
   conversations: [
     {

@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import type { User, Category, CameraStatus, FacingMode, LiveCategory } from '../types';
 import * as liveStreamService from '../services/liveStreamService';
@@ -13,7 +14,6 @@ import LockOpenIcon from './icons/LockOpenIcon';
 import DiamondIcon from './icons/DiamondIcon';
 import PkIcon from './icons/PkIcon';
 import ToggleSwitch from './ToggleSwitch';
-import StarIcon from './icons/StarIcon';
 import CameraOffIcon from './icons/CameraOffIcon';
 
 interface GoLiveSetupScreenProps {
@@ -45,22 +45,23 @@ const CategorySelectionModal: React.FC<{
 
 
 const ToolItem: React.FC<{ icon: React.ReactNode; label: string; onClick?: () => void; children?: React.ReactNode }> = ({ icon, label, onClick, children }) => {
-  const handleClick = onClick || (() => alert(`Funcionalidade "${label}" não implementada.`));
-  
+  const Component = onClick && !children ? 'button' : 'div';
+  const actionProps = Component === 'button' ? { onClick: onClick || (() => alert(`Funcionalidade "${label}" não implementada.`)) } : {};
+
   return (
-    <button 
-        onClick={handleClick}
-        className="w-full flex items-center justify-between py-3 text-left transition-colors hover:bg-white/5"
+    <Component 
+      {...actionProps}
+      className={`w-full flex items-center justify-between py-3 text-left ${Component === 'button' ? 'transition-colors hover:bg-white/5' : ''}`}
     >
-        <div className="flex items-center gap-4">
-            {icon}
-            <span className="font-semibold text-gray-200">{label}</span>
-        </div>
-        <div className="flex items-center gap-2" onClick={e => children && e.stopPropagation()}>
-            {children}
-            <span className="text-gray-500 text-lg font-bold">&gt;</span>
-        </div>
-    </button>
+      <div className="flex items-center gap-4">
+          {icon}
+          <span className="font-semibold text-gray-200">{label}</span>
+      </div>
+      <div className="flex items-center gap-2">
+          {children}
+          {Component === 'button' && <span className="text-gray-500 text-lg font-bold">&gt;</span>}
+      </div>
+    </Component>
   );
 };
 
@@ -84,6 +85,7 @@ const GoLiveSetupScreen: React.FC<GoLiveSetupScreenProps> = ({ user, onStartStre
   const [categories, setCategories] = useState<LiveCategory[]>([]);
   const [isSavingDetails, setIsSavingDetails] = useState(false);
   const [saveDetailsSuccess, setSaveDetailsSuccess] = useState(false);
+  const [isBeautyOn, setIsBeautyOn] = useState(false);
 
   const handleFlipCamera = useCallback(() => {
     setFacingMode(prev => (prev === 'user' ? 'environment' : 'user'));
@@ -415,7 +417,9 @@ const GoLiveSetupScreen: React.FC<GoLiveSetupScreenProps> = ({ user, onStartStre
 
             <div className="bg-black/40 backdrop-blur-sm rounded-xl divide-y divide-white/10 mt-4 px-4">
                 <ToolItem icon={<BookOpenIcon className="w-6 h-6 text-gray-300" />} label="Manual de Transmissão ao Vivo" />
-                <ToolItem icon={<StarIcon className="w-6 h-6 text-gray-300" />} label="Configurações de Beleza" />
+                <ToolItem icon={<BeautyIcon className="w-6 h-6 text-gray-300" />} label="Efeitos de Beleza">
+                    <ToggleSwitch enabled={isBeautyOn} onChange={setIsBeautyOn} />
+                </ToolItem>
                 <ToolItem icon={<PkIcon className="w-7 h-7" />} label="Batalha PK">
                     <ToggleSwitch enabled={isPkEnabled} onChange={handlePkToggleChange} />
                 </ToolItem>

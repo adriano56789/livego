@@ -60,7 +60,6 @@ const PkInviteModal: React.FC<PkInviteModalProps> = ({ user, onClose, onEnterFri
     const [friends, setFriends] = useState<User[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [settings, setSettings] = useState<PrivateLiveInviteSettings | null>(null);
-    const [query, setQuery] = useState('');
     const { showApiResponse } = useApiViewer();
     
     useEffect(() => {
@@ -96,15 +95,6 @@ const PkInviteModal: React.FC<PkInviteModalProps> = ({ user, onClose, onEnterFri
             setSettings(oldSettings);
         }
     };
-    
-    const filteredFriends = useMemo(() => {
-        if (!query.trim()) return friends;
-        const lowerQuery = query.toLowerCase();
-        return friends.filter(f => 
-            f.nickname?.toLowerCase().includes(lowerQuery) || 
-            f.name.toLowerCase().includes(lowerQuery)
-        );
-    }, [friends, query]);
 
   return (
     <div className="fixed inset-0 z-50 bg-transparent flex items-end" onClick={onClose}>
@@ -112,10 +102,10 @@ const PkInviteModal: React.FC<PkInviteModalProps> = ({ user, onClose, onEnterFri
         className="bg-[#1C1F24] w-full h-[75vh] max-h-[600px] rounded-t-2xl flex flex-col text-white animate-slide-up-fast"
         onClick={e => e.stopPropagation()}
       >
-        <header className="p-4 flex items-center justify-between shrink-0 border-b border-gray-700/50">
-          <button onClick={onClose}><CrossIcon className="w-6 h-6 text-gray-400" /></button>
-          <h2 className="font-bold text-lg">Co-host com criadores</h2>
-          <div className="flex items-center gap-4">
+        <header className="p-4 flex items-center justify-between shrink-0 border-b border-gray-700/50 relative">
+          <button onClick={onClose} className="z-10"><CrossIcon className="w-6 h-6 text-gray-400" /></button>
+          <h2 className="font-bold text-lg absolute left-1/2 -translate-x-1/2">Co-host com criadores</h2>
+          <div className="flex items-center gap-4 z-10">
               <SearchIcon className="w-6 h-6 text-gray-400"/>
               <ClockIcon className="w-6 h-6 text-gray-400"/>
               <SettingsIcon className="w-6 h-6 text-gray-400"/>
@@ -151,9 +141,9 @@ const PkInviteModal: React.FC<PkInviteModalProps> = ({ user, onClose, onEnterFri
 
             {isLoading ? (
                 <div className="text-center text-gray-500 py-10">Carregando...</div>
-            ) : filteredFriends.length > 0 ? (
+            ) : friends.length > 0 ? (
                 <div className="divide-y divide-gray-700/50">
-                    {filteredFriends.map(friend => (
+                    {friends.map(friend => (
                         <FriendRow 
                             key={friend.id} 
                             friend={friend} 

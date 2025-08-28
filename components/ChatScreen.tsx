@@ -1,15 +1,14 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import type { Conversation, ConversationMessage, PublicProfile, Stream, PkBattle, User } from '../types';
 import * as liveStreamService from '../services/liveStreamService';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
 import EllipsisIcon from './icons/EllipsisIcon';
-import ActionsModal from './ActionsModal';
 import UserProfileModal from './UserProfileModal';
 import BlockScreen from './BlockScreen';
 import ChatInput from './ChatInput';
 import DoubleCheckIcon from './icons/DoubleCheckIcon';
 import CheckIcon from './icons/CheckIcon';
+import ChatActionsModal from './ChatActionsModal';
 
 interface ChatScreenProps {
   conversationId: string;
@@ -64,7 +63,7 @@ const ChatBubble: React.FC<{ message: ConversationMessage; isSender: boolean }> 
 const ChatScreen: React.FC<ChatScreenProps> = ({ conversationId, currentUserId, user, onUpdateUser, onExit, onViewProtectors, onViewStream }) => {
   const [conversation, setConversation] = useState<Conversation | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isActionsModalOpen, setIsActionsModalOpen] = useState(false);
+  const [isChatActionsModalOpen, setIsChatActionsModalOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isBlocked, setIsBlocked] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -140,24 +139,16 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ conversationId, currentUserId, 
     } catch (error) {
         console.error("Failed to prepare image", error);
         alert("Erro ao preparar a imagem.");
-        setIsUploading(false);
     }
   };
 
   const handleBlock = () => {
     if (!conversation) return;
     liveStreamService.blockUser(currentUserId, conversation.otherUserId);
-    setIsActionsModalOpen(false);
+    setIsChatActionsModalOpen(false);
     setIsBlocked(true);
   };
     
-  const handleReport = () => {
-    if (!conversation) return;
-    liveStreamService.reportUser(currentUserId, conversation.otherUserId);
-    alert(`Denúncia sobre ${conversation.otherUserName} enviada.`);
-    setIsActionsModalOpen(false);
-  };
-
   const handleUnblock = async () => {
     if (!conversation) return;
     try {
@@ -168,37 +159,24 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ conversationId, currentUserId, 
         alert("Não foi possível desbloquear o usuário. Tente novamente.");
     }
   };
-
-  const handleViewProfile = () => {
-    setIsActionsModalOpen(false);
-    setIsProfileModalOpen(true);
-  };
-    
-  const otherUserProfileForModal: PublicProfile | null = conversation ? {
-      id: conversation.otherUserId,
-      name: conversation.otherUserName,
-      nickname: conversation.otherUserName,
-      avatarUrl: conversation.otherUserAvatarUrl,
-      age: null,
-      gender: null,
-      birthday: null,
-      isLive: false,
-      isFollowing: false,
-      isFriend: !!conversation.isFriend,
-      followers: 0,
-      followingCount: 0,
-      // FIX: Add missing 'recebidos' and 'enviados' properties to PublicProfile object.
-      recebidos: 0,
-      enviados: 0,
-      coverPhotoUrl: '',
-      stats: { value: 0, icon: 'moon' },
-      badges: [],
-      protectors: [],
-      achievements: [],
-      personalityTags: [],
-      personalSignature: '',
-  } : null;
   
+  const handleUnfriend = async () => {
+    if (!conversation) return;
+    
+    if (window.confirm(`Tem certeza que deseja cancelar a amizade com ${conversation.otherUserName}? Isso fará com que você deixe de segui-lo(a).`)) {
+        try {
+            const updatedUser = await liveStreamService.unfollowUser(currentUserId, conversation.otherUserId);
+            onUpdateUser(updatedUser);
+            // Optimistically update conversation state
+            setConversation(prev => prev ? { ...prev, isFriend: false } : null);
+            setIsChatActionsModalOpen(false); // Close modal
+        } catch (error) {
+            console.error("Failed to unfriend user:", error);
+            alert("Não foi possível cancelar a amizade.");
+        }
+    }
+  };
+
   if (isLoading || !conversation) {
     return (
       <div className="h-screen w-full bg-[#121212] flex items-center justify-center">
@@ -218,6 +196,8 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ conversationId, currentUserId, 
     );
   }
 
+  const isFollowing = (user.following || []).includes(conversation.otherUserId);
+
   return (
     <div className="h-screen w-full bg-[#121212] flex flex-col text-white font-sans">
       <header className="p-4 flex items-center justify-between bg-[#1c1c1c] border-b border-gray-800 shrink-0">
@@ -226,7 +206,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ conversationId, currentUserId, 
             <h1 className="font-semibold">{conversation.otherUserName}</h1>
             <span className="text-xs text-gray-400">Online</span>
         </button>
-        <button onClick={() => setIsActionsModalOpen(true)}><EllipsisIcon className="w-6 h-6" /></button>
+        <button onClick={() => setIsChatActionsModalOpen(true)}><EllipsisIcon className="w-6 h-6" /></button>
       </header>
 
       <main className="flex-grow p-4 overflow-y-auto flex flex-col gap-3 scrollbar-hide">
@@ -240,16 +220,14 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ conversationId, currentUserId, 
         <ChatInput onSendMessage={handleSendMessage} onImageSelected={handleImageSelected} isUploading={isUploading} />
       </footer>
 
-      {otherUserProfileForModal && (
-          <ActionsModal 
-              isOpen={isActionsModalOpen}
-              onClose={() => setIsActionsModalOpen(false)}
-              user={otherUserProfileForModal}
-              onBlock={handleBlock}
-              onReport={handleReport}
-              onViewProfile={handleViewProfile}
-          />
-      )}
+      <ChatActionsModal
+        isOpen={isChatActionsModalOpen}
+        onClose={() => setIsChatActionsModalOpen(false)}
+        onBlock={handleBlock}
+        onUnfriend={handleUnfriend}
+        isFollowing={isFollowing}
+      />
+      
       {isProfileModalOpen && conversation && (
         <UserProfileModal
             userId={conversation.otherUserId}
@@ -257,8 +235,6 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ conversationId, currentUserId, 
             onUpdateUser={onUpdateUser}
             onClose={() => setIsProfileModalOpen(false)}
             onNavigateToChat={(userId) => {
-                // If trying to chat with the same user, just close the modal.
-                // Otherwise, could navigate to a new chat, but for now we just close.
                 setIsProfileModalOpen(false);
             }}
             onViewProtectors={onViewProtectors}

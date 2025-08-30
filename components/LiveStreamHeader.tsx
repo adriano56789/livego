@@ -1,6 +1,3 @@
-
-
-
 import React, { useState } from 'react';
 import AudioVisualizer from './AudioVisualizer';
 import ViewersIcon from './icons/ViewersIcon';
@@ -62,9 +59,6 @@ const LiveStreamHeader: React.FC<LiveStreamHeaderProps> = ({
   streamerIsAvatarProtected,
 }) => {
   const isSingle = variant === 'single';
-  const isPkLeft = variant === 'pk-left';
-  const isPkRight = variant === 'pk-right';
-  const alignment = isPkRight ? 'items-end' : 'items-start';
 
   const FollowButton: React.FC = () => {
     const [isFollowLoading, setIsFollowLoading] = useState(false);
@@ -112,7 +106,7 @@ const LiveStreamHeader: React.FC<LiveStreamHeaderProps> = ({
                             </div>
                         )}
                     </div>
-                    <p className="text-xs text-gray-300">{followers} seguidores</p>
+                    <p className="text-xs text-gray-300">{followers} {Number(followers) === 1 ? 'seguidor' : 'seguidores'}</p>
                     </div>
                     <AudioVisualizer />
                 </button>
@@ -151,59 +145,21 @@ const LiveStreamHeader: React.FC<LiveStreamHeaderProps> = ({
     );
   }
 
-  // PK Battle Variant
+  // PK Battle Variants
+  const mainContainerClasses = `flex items-center gap-2 pointer-events-auto ${variant === 'pk-right' ? 'flex-row-reverse' : 'flex-row'}`;
+  
   return (
-    <div className={`w-full flex flex-col ${alignment} gap-1.5`}>
-      <div className={`flex items-start gap-2 ${isPkRight ? 'flex-row-reverse' : ''}`}>
-        <div className={`flex items-center gap-2 pointer-events-auto ${isPkRight ? 'flex-row-reverse' : ''}`}>
-            <button onClick={onUserClick} className={`flex items-center gap-2 bg-black/40 backdrop-blur-sm p-1 rounded-full ${isPkRight ? 'flex-row-reverse pl-3' : 'pr-3'}`}>
-                <Avatar src={avatarUrl} alt={name} className="w-8 h-8" />
-                <div className={`${isPkRight ? 'text-right' : 'text-left'}`}>
-                    <div className={`font-semibold text-sm text-white truncate max-w-[100px] flex items-center gap-1.5 ${isPkRight ? 'flex-row-reverse' : ''}`}>
-                        <span>{name}</span>
-                        {streamerIsAvatarProtected && (
-                           <div className="p-0.5 bg-sky-500/80 rounded-full animate-protection-glow" title="Avatar Protegido">
-                                <ShieldCheckIcon className="w-2.5 h-2.5 text-white"/>
-                            </div>
-                        )}
-                    </div>
-                    <p className="text-xs text-gray-300">{followers} seguidores</p>
-                </div>
-                <AudioVisualizer />
-            </button>
-            <FollowButton />
-        </div>
-        {isPkRight && onExitClick && (
-            <button onClick={onExitClick} className="w-9 h-9 flex-shrink-0 items-center justify-center bg-black/40 backdrop-blur-sm rounded-full pointer-events-auto">
+    <div className={mainContainerClasses}>
+        <button onClick={onUserClick} className="flex items-center gap-2 bg-black/40 backdrop-blur-sm p-1 pr-3 rounded-full">
+            <Avatar src={avatarUrl} alt={name} className="w-9 h-9" />
+            <p className="font-semibold text-sm text-white truncate max-w-[100px]">{name}</p>
+        </button>
+        <FollowButton />
+        {variant === 'pk-right' && onExitClick && (
+            <button onClick={onExitClick} className="w-9 h-9 flex-shrink-0 items-center justify-center bg-black/40 backdrop-blur-sm rounded-full">
                 <CrossIcon className="w-5 h-5" />
             </button>
         )}
-      </div>
-
-      <div className={`flex items-center gap-2 ${isPkRight ? 'flex-row-reverse' : ''}`}>
-          {headerViewers && headerViewers.length > 0 && (
-              <div className={`flex items-center ${isPkRight ? '-space-x-2 flex-row-reverse' : '-space-x-2'}`}>
-                  {headerViewers.map(v => (
-                      <Avatar key={v.id} src={v.avatarUrl} alt={v.name} className="w-7 h-7 border-2 border-black/50" />
-                  ))}
-              </div>
-          )}
-          <button onClick={onViewersClick} className="flex items-center gap-1 bg-black/40 backdrop-blur-sm px-2.5 py-1 rounded-full text-sm font-semibold pointer-events-auto">
-              <ViewersIcon className="w-4 h-4" />
-              {viewerCount}
-          </button>
-      </div>
-      
-      <div className={`flex items-center gap-2 ${isPkRight ? 'flex-row-reverse' : ''}`}>
-          <button onClick={onCoinsClick} className="flex items-center gap-1.5 bg-black/40 backdrop-blur-sm px-2.5 py-1 rounded-full pointer-events-auto">
-              <CoinBIcon className="w-5 h-5" />
-              <span className="text-sm font-semibold text-white">{coins}</span>
-          </button>
-          <button className="flex items-center gap-1.5 bg-black/40 backdrop-blur-sm px-2.5 py-1 rounded-full pointer-events-auto">
-              <PinkHeartIcon className="w-5 h-5" />
-              <span className="text-sm font-semibold text-white">{likes}</span>
-          </button>
-      </div>
     </div>
   );
 };

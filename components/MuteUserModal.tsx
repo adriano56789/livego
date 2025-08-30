@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import CrossIcon from './icons/CrossIcon';
 import EmptyBoxIcon from './icons/EmptyBoxIcon';
@@ -64,7 +63,6 @@ const MuteUserModal: React.FC<MuteUserModalProps> = ({ liveId, mutedUsers, onMut
     );
   };
 
-    // FIX: Added return statement with JSX to complete the component and fix rendering errors.
     return (
         <div className="fixed inset-0 z-50 bg-black/60 flex items-end" onClick={onClose}>
             <div 
@@ -110,5 +108,4 @@ const MuteUserModal: React.FC<MuteUserModalProps> = ({ liveId, mutedUsers, onMut
     );
 };
 
-// FIX: Added default export to resolve module import error.
 export default MuteUserModal;

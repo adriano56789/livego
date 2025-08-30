@@ -1,4 +1,3 @@
-
 import React from 'react';
 import type { WithdrawalTransaction } from '../types';
 import SuccessIcon from './icons/SuccessIcon';
@@ -48,7 +47,7 @@ const WithdrawalConfirmationScreen: React.FC<WithdrawalConfirmationScreenProps> 
                 />
                 <InfoRow 
                     label="Ganhos Sacados" 
-                    value={transaction.earnings_withdrawn.toLocaleString('pt-BR')} 
+                    value={(transaction.earnings_withdrawn || 0).toLocaleString('pt-BR')} 
                 />
                 <InfoRow 
                     label="Taxa da Plataforma" 

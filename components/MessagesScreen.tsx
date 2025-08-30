@@ -9,6 +9,7 @@ import ConversationListItem from './ConversationListItem';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
 import UserPlusIcon from './icons/UserPlusIcon';
 import UserListRow from './UserListRow';
+import MessageIcon from './icons/MessageIcon';
 
 interface MessagesScreenProps {
   user: User;
@@ -92,7 +93,13 @@ const MessagesScreen: React.FC<MessagesScreenProps> = ({ user, onNavigate, onNav
       return <div className="text-center text-red-400 pt-10">{error}</div>;
     }
     if (conversations.length === 0) {
-      return <div className="text-center text-gray-500 pt-10">Nenhuma mensagem encontrada.</div>;
+      return (
+        <div className="flex-grow flex flex-col items-center justify-center text-center text-gray-500 px-4 h-full">
+            <MessageIcon className="w-20 h-20 mb-4 opacity-30" />
+            <h2 className="text-xl font-bold text-gray-300">Nenhuma mensagem</h2>
+            <p className="mt-2">Suas conversas com outros usuários aparecerão aqui.</p>
+        </div>
+      );
     }
     return (
         <div className="divide-y divide-gray-800">

@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import type { User, Conversation, ConversationMessage, PublicProfile } from '../types';
 import * as liveStreamService from '../services/liveStreamService';
@@ -166,7 +167,6 @@ const PrivateChatModal: React.FC<PrivateChatModalProps> = ({ user, onClose }) =>
         isLive: false,
         isFollowing: false,
         isFriend: !!activeConversation.isFriend,
-        // FIX: Add missing 'recebidos' and 'enviados' properties to PublicProfile object.
         recebidos: 0,
         enviados: 0,
         coverPhotoUrl: '',

@@ -1,17 +1,20 @@
 
+
 import React, { useState, useEffect } from 'react';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
 import HeadsetIcon from './icons/HeadsetIcon';
 import EnvelopeIcon from './icons/EnvelopeIcon';
 import WhatsAppIcon from './icons/WhatsAppIcon';
 import HelpIcon from './icons/HelpIcon';
-import type { ArtigoAjuda, CanalContato } from '../types';
+import type { ArtigoAjuda, CanalContato, AppView } from '../types';
 import * as helpService from '../services/helpService';
 
 interface CustomerServiceScreenProps {
   onExit: () => void;
   onViewArticle: (articleId: string) => void;
-  onViewSupportChat: () => void;
+  onViewSupportChat?: () => void;
+  onNavigate?: (view: AppView) => void;
+  mode?: 'full' | 'help_only' | 'articles_only';
 }
 
 const ServiceButton: React.FC<{ icon: React.ReactNode; label: string; onClick: () => void; }> = ({ icon, label, onClick }) => (
@@ -30,7 +33,7 @@ const ArticleItem: React.FC<{ label: string; onClick: () => void; }> = ({ label,
   </button>
 );
 
-const CustomerServiceScreen: React.FC<CustomerServiceScreenProps> = ({ onExit, onViewArticle, onViewSupportChat }) => {
+const CustomerServiceScreen: React.FC<CustomerServiceScreenProps> = ({ onExit, onViewArticle, onViewSupportChat, onNavigate, mode = 'full' }) => {
   const [contactChannels, setContactChannels] = useState<CanalContato[]>([]);
   const [usefulArticles, setUsefulArticles] = useState<ArtigoAjuda[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -39,12 +42,23 @@ const CustomerServiceScreen: React.FC<CustomerServiceScreenProps> = ({ onExit, o
     const fetchData = async () => {
       setIsLoading(true);
       try {
-        const [channels, articles] = await Promise.all([
-          helpService.getContactChannels(),
-          helpService.getHelpArticles('Artigos Úteis')
-        ]);
-        setContactChannels(channels);
-        setUsefulArticles(articles);
+        const promises: Promise<any>[] = [];
+        if (mode === 'full') {
+            promises.push(helpService.getContactChannels());
+        }
+        if (mode === 'articles_only' || mode === 'full' || mode === 'help_only') {
+            promises.push(helpService.getHelpArticles('Artigos Úteis'));
+        }
+        
+        const results = await Promise.all(promises);
+        let resultIndex = 0;
+
+        if (mode === 'full') {
+            setContactChannels(results[resultIndex++]);
+        }
+        if (mode === 'articles_only' || mode === 'full' || mode === 'help_only') {
+            setUsefulArticles(results[resultIndex++]);
+        }
       } catch (error) {
         console.error("Failed to load customer service data:", error);
       } finally {
@@ -52,7 +66,7 @@ const CustomerServiceScreen: React.FC<CustomerServiceScreenProps> = ({ onExit, o
       }
     };
     fetchData();
-  }, []);
+  }, [mode]);
 
   const getIconForChannel = (iconName: CanalContato['icone']) => {
     switch (iconName) {
@@ -66,7 +80,7 @@ const CustomerServiceScreen: React.FC<CustomerServiceScreenProps> = ({ onExit, o
   const handleChannelClick = (channel: CanalContato) => {
     switch (channel.tipo) {
       case 'chat_interno':
-        onViewSupportChat();
+        onViewSupportChat?.();
         break;
       case 'email':
         window.open(channel.destino);
@@ -77,59 +91,78 @@ const CustomerServiceScreen: React.FC<CustomerServiceScreenProps> = ({ onExit, o
     }
   };
 
+  const getTitle = () => {
+      switch(mode) {
+          case 'articles_only': return 'Artigos Úteis';
+          case 'help_only': return 'Central de Ajuda';
+          default: return 'Atendimento ao Cliente';
+      }
+  };
+
   return (
     <div className="h-screen w-full bg-black text-white flex flex-col font-sans">
       <header className="p-4 flex items-center justify-between shrink-0 border-b border-gray-800">
         <button onClick={onExit}><ArrowLeftIcon className="w-6 h-6" /></button>
-        <h1 className="font-bold text-lg">Atendimento ao Cliente</h1>
+        <h1 className="font-bold text-lg">{getTitle()}</h1>
         <div className="w-6 h-6"></div>
       </header>
       <main className="flex-grow p-4 overflow-y-auto scrollbar-hide">
-        <section className="text-center mb-8">
-          <h2 className="text-xl font-semibold">Como podemos ajudar?</h2>
-          <p className="text-gray-400 mt-2">Nossa equipe de suporte está pronta para te atender.</p>
-        </section>
+        {mode === 'full' && (
+          <>
+            <section className="text-center mb-8">
+              <h2 className="text-xl font-semibold">Como podemos ajudar?</h2>
+              <p className="text-gray-400 mt-2">Nossa equipe de suporte está pronta para te atender.</p>
+            </section>
 
-        <section className="mb-8">
-          <h3 className="font-semibold text-gray-300 mb-3">Contato Direto</h3>
-          {isLoading ? (
-            <div className="text-center text-gray-500">Carregando...</div>
-          ) : (
-            <div className="grid grid-cols-3 gap-4">
-              {contactChannels.map(channel => (
-                <ServiceButton 
-                  key={channel.id}
-                  icon={getIconForChannel(channel.icone)} 
-                  label={channel.nome} 
-                  onClick={() => handleChannelClick(channel)} 
-                />
-              ))}
-            </div>
-          )}
-        </section>
+            <section className="mb-8">
+              <h3 className="font-semibold text-gray-300 mb-3">Contato Direto</h3>
+              {isLoading ? (
+                <div className="text-center text-gray-500">Carregando...</div>
+              ) : (
+                <div className="grid grid-cols-3 gap-4">
+                  {contactChannels.map(channel => (
+                    <ServiceButton 
+                      key={channel.id}
+                      icon={getIconForChannel(channel.icone)} 
+                      label={channel.nome} 
+                      onClick={() => handleChannelClick(channel)} 
+                    />
+                  ))}
+                </div>
+              )}
+            </section>
+          </>
+        )}
         
-        <section className="mb-8">
-          <button onClick={() => onViewArticle('faq')} className="w-full flex justify-between items-center p-4 bg-green-800/50 rounded-lg hover:bg-green-700/50 transition-colors">
-            <div className="flex items-center gap-3">
-              <HelpIcon className="w-6 h-6 text-green-300"/>
-              <span className="font-bold text-lg text-green-200">Perguntas Frequentes (FAQ)</span>
-            </div>
-            <span className="text-green-300 font-bold text-xl">&gt;</span>
-          </button>
-        </section>
+        {mode !== 'articles_only' && (
+            <section className="mb-8">
+                <button onClick={() => onViewArticle('faq')} className="w-full flex justify-between items-center p-4 bg-green-800/50 rounded-lg hover:bg-green-700/50 transition-colors">
+                    <div className="flex items-center gap-3">
+                    <HelpIcon className="w-6 h-6 text-green-300"/>
+                    <span className="font-bold text-lg text-green-200">Perguntas Frequentes (FAQ)</span>
+                    </div>
+                    <span className="text-green-300 font-bold text-xl">&gt;</span>
+                </button>
+            </section>
+        )}
 
-        <section>
-          <h3 className="font-semibold text-gray-300 mb-3">Artigos Úteis</h3>
-           {isLoading ? (
-            <div className="text-center text-gray-500">Carregando...</div>
-          ) : (
-            <div className="space-y-3">
-              {usefulArticles.map(article => (
-                <ArticleItem key={article.id} label={article.titulo} onClick={() => onViewArticle(article.id)} />
-              ))}
-            </div>
-          )}
-        </section>
+        {mode === 'articles_only' ? (
+             <section>
+                {isLoading ? (
+                    <div className="text-center text-gray-500">Carregando...</div>
+                ) : (
+                    <div className="space-y-3">
+                    {usefulArticles.map(article => (
+                        <ArticleItem key={article.id} label={article.titulo} onClick={() => onViewArticle(article.id)} />
+                    ))}
+                    </div>
+                )}
+            </section>
+        ) : (
+            <section>
+                <ArticleItem label="Artigos Úteis" onClick={() => onNavigate?.('useful-articles-list')} />
+            </section>
+        )}
       </main>
     </div>
   );

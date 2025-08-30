@@ -28,7 +28,7 @@ const PodiumItem: React.FC<{ user: GeneralRankingStreamer | GeneralRankingUser; 
                 <img src={user.avatarUrl} alt={user.username} className={`${size} rounded-full object-cover ${border}`} />
             </div>
             <p className={`font-bold mt-2 truncate max-w-full ${nameColor}`}>{user.username}</p>
-            <p className="text-sm text-white font-semibold">{value.toLocaleString('pt-BR')} <span className="text-xs text-gray-400">{label}</span></p>
+            <p className="text-sm text-white font-semibold">{(value || 0).toLocaleString('pt-BR')} <span className="text-xs text-gray-400">{label}</span></p>
         </button>
     );
 };
@@ -43,7 +43,7 @@ const UserRow: React.FC<{ user: GeneralRankingStreamer | GeneralRankingUser; onU
                 <p className="font-semibold text-white">{user.username}</p>
                 <p className="text-xs text-gray-400">Nível {user.level}</p>
             </div>
-            <p className="font-bold text-white">{value.toLocaleString('pt-BR')}</p>
+            <p className="font-bold text-white">{(user.score || 0).toLocaleString('pt-BR')}</p>
         </button>
     );
 };

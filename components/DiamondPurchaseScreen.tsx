@@ -347,7 +347,7 @@ const DiamondPurchaseScreen: React.FC<DiamondPurchaseScreenProps> = ({
                             >
                                 <div className="flex items-center gap-2 mb-2">
                                     <DiamondIcon className="w-5 h-5"/>
-                                    <span className="text-lg font-bold text-white">{pkg.diamonds.toLocaleString()}</span>
+                                    <span className="text-lg font-bold text-white">{(pkg.diamonds || 0).toLocaleString()}</span>
                                 </div>
                                 <span className="text-sm text-gray-400 bg-gray-800/60 px-3 py-1 rounded-full">
                                     {pkg.currency} {pkg.price.toFixed(2).replace('.', ',')}

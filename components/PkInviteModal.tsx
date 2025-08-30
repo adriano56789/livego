@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import type { User, PrivateLiveInviteSettings } from '../types';
+import type { User, PrivateLiveInviteSettings, PkBattle } from '../types';
 import * as liveStreamService from '../services/liveStreamService';
 import SearchIcon from './icons/SearchIcon';
 import ClockIcon from './icons/ClockIcon';
@@ -11,6 +11,8 @@ import ToggleSwitch from './ToggleSwitch';
 import { useApiViewer } from './ApiContext';
 import ViewersIcon from './icons/ViewersIcon';
 import UserPlaceholderIcon from './icons/UserPlaceholderIcon';
+import PkSettingsModal from './PkSettingsModal';
+import PkRandomMatchModal from './PkRandomMatchModal';
 
 interface PkInviteModalProps {
   user: User;
@@ -24,18 +26,19 @@ const FriendRow: React.FC<{
     onEnter: () => void; 
     onInvite: () => void; 
 }> = ({ friend, onEnter, onInvite }) => {
-  const showEnterButton = friend.coHostHistory === 'Co-host com Você';
+  const showEnterButton = friend.online_status;
 
   return (
     <div className="flex items-center gap-4 py-2">
-        <div className="w-14 h-14 rounded-full overflow-hidden shrink-0">
+        <div className="relative w-14 h-14 rounded-full overflow-hidden shrink-0">
           {friend.avatar_url ? <img src={friend.avatar_url} alt={friend.nickname || ''} className="w-full h-full object-cover" /> : <UserPlaceholderIcon className="w-full h-full p-1 text-gray-500 bg-gray-700"/> }
+          {friend.online_status && <div className="absolute bottom-0 right-0 w-4 h-4 bg-green-500 rounded-full border-2 border-[#1C1F24]" />}
         </div>
         <div className="flex-grow overflow-hidden">
             <p className="font-semibold text-white truncate">{friend.nickname}</p>
             <div className="flex items-center gap-2 text-xs text-gray-400 mt-1">
                 <ViewersIcon className="w-3 h-3"/>
-                <span>{friend.followers.toLocaleString('pt-BR')}</span>
+                <span>{(friend.followers || 0).toLocaleString('pt-BR')}</span>
                 <p className="truncate">{friend.coHostHistory}</p>
             </div>
         </div>
@@ -61,6 +64,9 @@ const PkInviteModal: React.FC<PkInviteModalProps> = ({ user, onClose, onEnterFri
     const [isLoading, setIsLoading] = useState(true);
     const [settings, setSettings] = useState<PrivateLiveInviteSettings | null>(null);
     const { showApiResponse } = useApiViewer();
+    const [query, setQuery] = useState('');
+    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+    const [isMatching, setIsMatching] = useState(false);
     
     useEffect(() => {
         const fetchData = async () => {
@@ -81,6 +87,15 @@ const PkInviteModal: React.FC<PkInviteModalProps> = ({ user, onClose, onEnterFri
         fetchData();
     }, [user.id]);
 
+    const filteredFriends = useMemo(() => {
+        if (!query.trim()) return friends;
+        const lowerQuery = query.toLowerCase();
+        return friends.filter(f => 
+            (f.nickname || '').toLowerCase().includes(lowerQuery) || 
+            String(f.id).includes(lowerQuery)
+        );
+    }, [query, friends]);
+
     const handleSettingChange = async (key: keyof Omit<PrivateLiveInviteSettings, 'userId'>, value: boolean) => {
         if (!settings) return;
         const oldSettings = { ...settings };
@@ -95,69 +110,93 @@ const PkInviteModal: React.FC<PkInviteModalProps> = ({ user, onClose, onEnterFri
             setSettings(oldSettings);
         }
     };
+    
+    const handleMatchFound = (battle: PkBattle) => {
+        setIsMatching(false);
+        // This would typically navigate to the battle, but for now, we just close and maybe alert.
+        // FIX: Cannot find name 'currentUser'. Changed to 'user' which is available in props.
+        alert(`Partida encontrada! ${user.nickname} vs ${battle.streamer2.name}`);
+        onClose();
+    };
 
   return (
-    <div className="fixed inset-0 z-50 bg-transparent flex items-end" onClick={onClose}>
-      <div
-        className="bg-[#1C1F24] w-full h-[75vh] max-h-[600px] rounded-t-2xl flex flex-col text-white animate-slide-up-fast"
-        onClick={e => e.stopPropagation()}
-      >
-        <header className="p-4 flex items-center justify-between shrink-0 border-b border-gray-700/50 relative">
-          <button onClick={onClose} className="z-10"><CrossIcon className="w-6 h-6 text-gray-400" /></button>
-          <h2 className="font-bold text-lg absolute left-1/2 -translate-x-1/2">Co-host com criadores</h2>
-          <div className="flex items-center gap-4 z-10">
-              <SearchIcon className="w-6 h-6 text-gray-400"/>
-              <ClockIcon className="w-6 h-6 text-gray-400"/>
-              <SettingsIcon className="w-6 h-6 text-gray-400"/>
-          </div>
-        </header>
-
-        <main className="flex-grow p-4 overflow-y-auto scrollbar-hide">
-            <div className="flex items-center gap-3 p-2 bg-gray-800/50 rounded-lg">
-                <div className="w-6 h-6 rounded-full flex items-center justify-center bg-gray-600">
-                    <BellSnoozeIcon className="w-4 h-4 text-gray-300"/>
-                </div>
-                <span className="flex-grow text-sm text-gray-300">Aceitar apenas convites de amigos.</span>
-                <ToggleSwitch 
-                    enabled={settings?.acceptOnlyFriendPkInvites ?? false}
-                    onChange={(val) => handleSettingChange('acceptOnlyFriendPkInvites', val)}
-                />
+    <>
+        <div className="fixed inset-0 z-50 bg-transparent flex items-end" onClick={onClose}>
+        <div
+            className="bg-[#1C1F24] w-full h-[75vh] max-h-[600px] rounded-t-2xl flex flex-col text-white animate-slide-up-fast"
+            onClick={e => e.stopPropagation()}
+        >
+            <header className="p-4 flex items-center justify-between shrink-0 border-b border-gray-700/50 relative">
+            <button onClick={onClose} className="z-10"><CrossIcon className="w-6 h-6 text-gray-400" /></button>
+            <h2 className="font-bold text-lg absolute left-1/2 -translate-x-1/2">Co-host com criadores</h2>
+            <div className="flex items-center gap-4 z-10">
+                <button onClick={() => alert("Histórico não implementado")}><ClockIcon className="w-6 h-6 text-gray-400"/></button>
+                <button onClick={() => setIsSettingsOpen(true)}><SettingsIcon className="w-6 h-6 text-gray-400"/></button>
             </div>
+            </header>
 
-            <div className="my-4 p-3 flex items-center justify-between bg-gray-800/50 rounded-lg">
-                <div className="flex items-center gap-3">
-                    <div className="relative w-10 h-10">
-                        <img src="https://i.pravatar.cc/150?u=suggestion" alt="convites rápidos" className="w-full h-full rounded-full object-cover"/>
-                        <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold text-sm border-2 border-[#1C1F24]">?</div>
+            <main className="flex-grow p-4 overflow-y-auto scrollbar-hide">
+                <div className="relative mb-4">
+                    <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 pointer-events-none" />
+                    <input
+                        type="text"
+                        value={query}
+                        onChange={(e) => setQuery(e.target.value)}
+                        placeholder="Pesquisar por nome ou ID"
+                        className="w-full bg-[#2c2c2e] h-11 rounded-full pl-11 pr-4 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                    />
+                </div>
+
+                <div className="flex items-center gap-3 p-2 bg-gray-800/50 rounded-lg">
+                    <div className="w-6 h-6 rounded-full flex items-center justify-center bg-gray-600">
+                        <BellSnoozeIcon className="w-4 h-4 text-gray-300"/>
                     </div>
-                    <p className="font-semibold text-sm">Faça novos amigos com<br/>convites rápidos</p>
+                    <span className="flex-grow text-sm text-gray-300">Aceitar apenas convites de amigos.</span>
+                    <ToggleSwitch 
+                        enabled={settings?.acceptOnlyFriendPkInvites ?? false}
+                        onChange={(val) => handleSettingChange('acceptOnlyFriendPkInvites', val)}
+                    />
                 </div>
-                <button className="bg-pink-600 text-white font-semibold text-sm px-5 py-2 rounded-full hover:bg-pink-700">
-                    Enviar
-                </button>
-            </div>
 
-            <h3 className="font-semibold text-gray-400 my-4">Amigos ({friends.length})</h3>
-
-            {isLoading ? (
-                <div className="text-center text-gray-500 py-10">Carregando...</div>
-            ) : friends.length > 0 ? (
-                <div className="divide-y divide-gray-700/50">
-                    {friends.map(friend => (
-                        <FriendRow 
-                            key={friend.id} 
-                            friend={friend} 
-                            onEnter={() => onEnterFriendLive(friend)} 
-                            onInvite={() => onSendInvite(friend)}
-                        />
-                    ))}
+                <div className="my-4 p-3 flex items-center justify-between bg-gray-800/50 rounded-lg">
+                    <div className="flex items-center gap-3">
+                        <div className="relative w-10 h-10">
+                            <img src="https://i.pravatar.cc/150?u=suggestion" alt="convites rápidos" className="w-full h-full rounded-full object-cover"/>
+                            <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold text-sm border-2 border-[#1C1F24]">?</div>
+                        </div>
+                        <p className="font-semibold text-sm">Faça novos amigos com<br/>convites rápidos</p>
+                    </div>
+                    <button onClick={() => setIsMatching(true)} className="bg-pink-600 text-white font-semibold text-sm px-5 py-2 rounded-full hover:bg-pink-700">
+                        Enviar
+                    </button>
                 </div>
-            ) : (
-                <div className="text-center text-gray-500 py-10">Nenhum amigo online encontrado.</div>
-            )}
-        </main>
-      </div>
-    </div>
+
+                <h3 className="font-semibold text-gray-400 my-4">Amigos ({friends.length})</h3>
+
+                {isLoading ? (
+                    <div className="text-center text-gray-500 py-10">Carregando...</div>
+                ) : filteredFriends.length > 0 ? (
+                    <div className="divide-y divide-gray-700/50">
+                        {filteredFriends.map(friend => (
+                            <FriendRow 
+                                key={friend.id} 
+                                friend={friend} 
+                                onEnter={() => onEnterFriendLive(friend)} 
+                                onInvite={() => onSendInvite(friend)}
+                            />
+                        ))}
+                    </div>
+                ) : (
+                    <div className="text-center text-gray-500 py-10">Nenhum amigo encontrado.</div>
+                )}
+            </main>
+        </div>
+        </div>
+
+        {isSettingsOpen && <PkSettingsModal userId={user.id} onClose={() => setIsSettingsOpen(false)} />}
+        {/* FIX: Cannot find name 'onMatchFound'. Passed the 'handleMatchFound' handler. */}
+        {isMatching && <PkRandomMatchModal currentUser={user} onClose={() => setIsMatching(false)} onMatchFound={handleMatchFound} />}
+    </>
   );
 };
 

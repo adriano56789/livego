@@ -152,8 +152,9 @@ const AppContent: React.FC = () => {
     const checkFollowedStatus = async () => {
       if (document.visibilityState !== 'visible') return;
       try {
-        const settings = await liveStreamService.getNotificationSettings(user.id);
-        if (!settings.streamerLive) return;
+        // This call was removed as per user request to reduce noise
+        // const settings = await liveStreamService.getNotificationSettings(user.id);
+        // if (!settings.streamerLive) return;
 
         const statuses = await liveStreamService.getFollowingLiveStatus(user.id);
         const currentlyLive = new Set(statuses.filter(s => s.isLive).map(s => s.userId));
@@ -181,6 +182,9 @@ const AppContent: React.FC = () => {
     return () => clearInterval(intervalId);
   }, [user, liveNotification]);
 
+  /*
+  // FIX: This polling was causing the private invite notification to reappear constantly.
+  // The user requested this simulation be disabled for now.
   useEffect(() => {
     if (!user) return;
 
@@ -199,6 +203,7 @@ const AppContent: React.FC = () => {
     const intervalId = setInterval(pollPrivateInvites, 6000); // Poll every 6 seconds
     return () => clearInterval(intervalId);
   }, [user, incomingPrivateLiveInvite]);
+  */
 
 
   const handleLogin = useCallback(async (accountId?: number) => {
@@ -236,7 +241,8 @@ const AppContent: React.FC = () => {
   
   const handleViewProfile = useCallback((userId: number) => {
     if (user && userId === user.id) {
-      setCurrentView('profile');
+      setViewingStream(null); // Sair da visualização da transmissão
+      setCurrentView('view-self-profile'); // Navegar para a visualização detalhada do próprio perfil
       return;
     }
     setViewingStream(null);
@@ -409,13 +415,13 @@ const AppContent: React.FC = () => {
   const handlePurchaseComplete = useCallback((updatedUser: User, order: PurchaseOrder) => {
       setUser(updatedUser);
       setPurchaseOverlay(null);
-      setWalletSuccessMessage(`+${order.package.diamonds.toLocaleString()} diamantes adicionados à sua carteira!`);
+      setWalletSuccessMessage(`+${(order.package?.diamonds || 0).toLocaleString()} diamantes adicionados à sua carteira!`);
   }, []);
   
   const handleWithdrawalComplete = useCallback((transaction: WithdrawalTransaction) => {
     setLastWithdrawal(transaction);
     setCurrentView('withdrawal-confirmation');
-    setWalletSuccessMessage(`Saque de ${transaction.earnings_withdrawn.toLocaleString()} ganhos solicitado com sucesso.`);
+    setWalletSuccessMessage(`Saque de ${(transaction.earnings_withdrawn || 0).toLocaleString()} ganhos solicitado com sucesso.`);
   }, []);
 
   const handleLogout = useCallback(() => {
@@ -518,7 +524,15 @@ const AppContent: React.FC = () => {
         mainContent = <EditProfileScreen user={user} isViewingOtherProfile={false} viewedUserId={user.id} onExit={() => handleNavigate('profile')} onNavigate={handleNavigate} onFollowToggle={handleFollowToggle} onNavigateToChat={handleNavigateToChat} onViewStream={handleViewStream} />;
         break;
       case 'video':
-        mainContent = <VideoScreen />;
+        mainContent = (
+          <VideoScreen 
+            currentUser={user}
+            onUpdateUser={handleUpdateUser}
+            onViewProfile={handleViewProfile}
+            onFollowToggle={handleFollowToggle}
+            onNavigateToChat={handleNavigateToChat}
+          />
+        );
         break;
       case 'messages':
         mainContent = <MessagesScreen user={user} onNavigate={handleNavigate} onNavigateToChat={handleNavigateToChat} onViewProfile={handleViewProfile} onUpdateUser={handleUpdateUser} />;
@@ -554,7 +568,13 @@ const AppContent: React.FC = () => {
         mainContent = <WithdrawalConfirmationScreen transaction={lastWithdrawal} onExit={() => { setLastWithdrawal(null); setCurrentView('diamond-purchase'); }} />;
         break;
       case 'customer-service':
-        mainContent = <CustomerServiceScreen onExit={() => setCurrentView('profile')} onViewArticle={(id) => { setViewingHelpArticleId(id); setCurrentView('help-article'); }} onViewSupportChat={() => setCurrentView('live-support-chat')} />;
+        mainContent = <CustomerServiceScreen mode="full" onExit={() => setCurrentView('profile')} onViewArticle={(id) => { setViewingHelpArticleId(id); setCurrentView('help-article'); }} onViewSupportChat={() => setCurrentView('live-support-chat')} onNavigate={handleNavigate} />;
+        break;
+      case 'help-center':
+        mainContent = <CustomerServiceScreen mode="help_only" onExit={() => setCurrentView('profile')} onViewArticle={(id) => { setViewingHelpArticleId(id); setCurrentView('help-article'); }} onViewSupportChat={() => setCurrentView('live-support-chat')} onNavigate={handleNavigate} />;
+        break;
+      case 'useful-articles-list':
+        mainContent = <CustomerServiceScreen mode="articles_only" onExit={() => setCurrentView('profile')} onViewArticle={(id) => { setViewingHelpArticleId(id); setCurrentView('help-article'); }} />;
         break;
       case 'help-article':
         if (viewingHelpArticleId) {
@@ -650,7 +670,7 @@ const AppContent: React.FC = () => {
         mainContent = <LiveFeedScreen user={user} onViewStream={handleViewStream} onGoLiveClick={handleGoLiveClick} activeCategory={activeCategory} onSelectCategory={setActiveCategory} onUpdateUser={handleUpdateUser} onNavigateToChat={handleNavigateToChat} onViewProtectors={handleViewProtectors} onNavigate={handleNavigate} locationPermission={locationPermission} setLocationPermission={setLocationPermission} />;
     }
     
-    const showNav = !viewingOtherProfileId && !['go-live-setup', 'chat', 'settings', 'following', 'fans', 'visitors', 'report-and-suggestion', 'customer-service', 'diamond-purchase', 'avatar-protection', 'profile-editor', 'help-article', 'live-support-chat', 'connected-accounts', 'view-self-profile'].includes(currentView);
+    const showNav = !viewingOtherProfileId && !['go-live-setup', 'chat', 'settings', 'following', 'fans', 'visitors', 'report-and-suggestion', 'customer-service', 'diamond-purchase', 'avatar-protection', 'profile-editor', 'help-article', 'live-support-chat', 'connected-accounts', 'view-self-profile', 'help-center', 'useful-articles-list'].includes(currentView);
 
     return (
       <div className="h-full w-full flex flex-col bg-black">

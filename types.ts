@@ -1,7 +1,6 @@
 // Basic types
-export type AppView = 'login' | 'account-selection' | 'upload' | 'edit' | 'feed' | 'profile' | 'go-live-setup' | 'messages' | 'diamond-purchase' | 'video' | 'protectors' | 'blocked-list' | 'withdrawal' | 'withdrawal-method-setup' | 'withdrawal-confirmation' | 'customer-service' | 'backpack' | 'help-article' | 'live-support-chat' | 'report-and-suggestion' | 'event-center' | 'event-detail' | 'settings' | 'copyright' | 'earnings-info' | 'connected-accounts' | 'search' | 'app-version' | 'live-ended' | 'my-level' | 'developer-tools' | 'ranking' | 'documentation' | 'purchase-history' | 'notification-settings' | 'push-settings' | 'private-live-invite-settings' | 'following' | 'visitors' | 'live-stream-viewer' | 'chat' | 'purchase-confirmation' | 'ranking-list' | 'profile-editor' | 'fans' | 'avatar-protection' | 'friend-requests' | 'privacy-settings' | 'component-viewer' | 'gift-notification-settings' | 'view-self-profile';
+export type AppView = 'login' | 'account-selection' | 'upload' | 'edit' | 'feed' | 'profile' | 'go-live-setup' | 'messages' | 'diamond-purchase' | 'video' | 'protectors' | 'blocked-list' | 'withdrawal' | 'withdrawal-method-setup' | 'withdrawal-confirmation' | 'customer-service' | 'backpack' | 'help-article' | 'live-support-chat' | 'report-and-suggestion' | 'event-center' | 'event-detail' | 'settings' | 'copyright' | 'earnings-info' | 'connected-accounts' | 'search' | 'app-version' | 'live-ended' | 'my-level' | 'developer-tools' | 'ranking' | 'documentation' | 'purchase-history' | 'notification-settings' | 'push-settings' | 'private-live-invite-settings' | 'following' | 'visitors' | 'live-stream-viewer' | 'chat' | 'purchase-confirmation' | 'ranking-list' | 'profile-editor' | 'fans' | 'avatar-protection' | 'friend-requests' | 'privacy-settings' | 'component-viewer' | 'gift-notification-settings' | 'view-self-profile' | 'help-center' | 'useful-articles-list';
 export type Gender = 'male' | 'female';
-// FIX: Added 'Festa' to the Category union type to resolve a type error where it was being compared with a value not in the type.
 export type Category = 'Popular' | 'Seguindo' | 'Perto' | 'Atualizado' | 'Privada' | 'PK' | 'Novo' | 'Música' | 'Dança' | 'Festa';
 export type CameraStatus = 'idle' | 'loading' | 'success' | 'denied' | 'error' | 'not-found' | 'in-use' | 'insecure' | 'timeout';
 export type EventStatus = 'ongoing' | 'upcoming' | 'past';
@@ -222,6 +221,7 @@ export interface PkBattle {
   title: string;
   streamer1: PkBattleStreamer;
   streamer2: PkBattleStreamer;
+  isCoHost?: boolean;
 }
 
 export interface ConvitePK {
@@ -232,6 +232,7 @@ export interface ConvitePK {
   data_envio: string;
   data_expiracao: string;
   batalha_id?: number;
+  is_co_host?: boolean;
 }
 
 export interface PkInvitation extends ConvitePK {
@@ -365,6 +366,7 @@ export interface Gift {
   animationUrl: string;
   imageUrl: string;
   soundUrl?: string;
+  iconComponent?: string;
 }
 
 export interface DiamondPackage {
@@ -658,6 +660,7 @@ export interface TabelaBatalhaPK {
     data_inicio: string;
     data_fim: string;
     duracao_segundos: number;
+    is_co_host?: boolean;
 }
 
 export interface PkBattleState {
@@ -666,7 +669,6 @@ export interface PkBattleState {
     streamer_B: User;
     streamer_A_id: number;
     streamer_B_id: number;
-    // FIX: Add optional streamId properties to hold stream IDs for streamers in a PK battle.
     streamer_A_streamId?: number;
     streamer_B_streamId?: number;
     pontuacao_A: number;
@@ -677,6 +679,7 @@ export interface PkBattleState {
     duracao_segundos: number;
     top_supporters_A: TabelaRankingApoiadores[];
     top_supporters_B: TabelaRankingApoiadores[];
+    is_co_host?: boolean;
 }
 
 export interface TabelaRankingApoiadores {
@@ -725,4 +728,55 @@ export interface StreamUserStats {
     userId: number;
     liveId: number;
     xp: number;
+}
+
+export interface BlockedUser {
+    blockerId: number;
+    blockedId: number;
+    timestamp: string;
+}
+
+export interface ProtectedAvatar {
+    userId: number;
+    avatarImage: string; // base64
+    protectionId: string;
+    timestamp: string;
+}
+
+export interface Report {
+    reportId: string;
+    reporterId: number;
+    reportedId: number | string;
+    reason: string;
+    details?: string;
+    timestamp: string;
+}
+
+export interface ProfileVisit {
+    visitorId: number;
+    visitedId: number;
+    timestamp: string;
+}
+
+export interface PrivateLiveInvite {
+    inviterId: number;
+    inviteeId: number;
+    streamId: number;
+    status: 'pending' | 'accepted' | 'declined';
+    timestamp: string;
+}
+
+export interface SecurityLogEntry {
+    id?: string;
+    timestamp: string;
+    endpoint: string;
+    method: string;
+    criticalMessage: string;
+}
+
+export interface HealthCheckResult {
+    endpoint: string;
+    method: string;
+    status: 'OK' | 'NOT_FOUND' | 'ERROR';
+    details: string;
 }

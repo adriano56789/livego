@@ -63,9 +63,9 @@ const PkResultModal: React.FC<PkResultModalProps> = ({ currentUser, battleData, 
                 </p>
 
                 <div className="flex items-center justify-center gap-4 mt-2 text-xl font-bold">
-                    <span className="text-pink-400">{streamer1Score.toLocaleString()}</span>
+                    <span className="text-pink-400">{(streamer1Score || 0).toLocaleString()}</span>
                     <span className="text-gray-500">VS</span>
-                    <span className="text-blue-400">{streamer2Score.toLocaleString()}</span>
+                    <span className="text-blue-400">{(streamer2Score || 0).toLocaleString()}</span>
                 </div>
             </div>
 

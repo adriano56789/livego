@@ -1,7 +1,7 @@
 // A simple non-linear progression.
 // The amount of XP needed for the next level increases.
 
-const LEVEL_MILESTONES: { level: number; xp: number }[] = [
+const LEVEL_MILESTONES = [
   { level: 1, xp: 0 },
   { level: 2, xp: 100 },
   { level: 3, xp: 400 },
@@ -31,8 +31,8 @@ const LEVEL_MILESTONES: { level: number; xp: number }[] = [
 
 /**
  * Calculates a user's level based on their total XP using linear interpolation between milestones.
- * @param xp The total experience points of the user.
- * @returns The calculated level.
+ * @param {number} xp The total experience points of the user.
+ * @returns {number} The calculated level.
  */
 export const calculateLevelFromXp = (xp: number): number => {
   if (xp <= LEVEL_MILESTONES[0].xp) return 1;
@@ -63,8 +63,8 @@ export const calculateLevelFromXp = (xp: number): number => {
 
 /**
  * Gets the total XP required to reach the beginning of a specific level.
- * @param level The target level.
- * @returns The total XP needed to start that level.
+ * @param {number} level The target level.
+ * @returns {number} The total XP needed to start that level.
  */
 export const getXpForLevel = (level: number): number => {
   if (level <= 1) return 0;

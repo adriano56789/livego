@@ -2,6 +2,6 @@
 // to inspect the state of the mock database.
 import { getRawDb } from './database';
 
-export const getDatabaseState = (): Record<string, any> => {
+export const getDatabaseState = (): Record<string, any[]> => {
   return getRawDb();
 };

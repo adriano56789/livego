@@ -3,6 +3,32 @@ import type { User, Gift, PkBattleStreamer } from '../types';
 import * as liveStreamService from '../services/liveStreamService';
 import DiamondIcon from './icons/DiamondIcon';
 import GiftIcon from './icons/GiftIcon';
+import LollipopIcon from './icons/LollipopIcon';
+import DonutIcon from './icons/DonutIcon';
+import RubberDuckIcon from './icons/RubberDuckIcon';
+import MicrophoneIcon from './icons/MicrophoneIcon';
+import GameControllerIcon from './icons/GameControllerIcon';
+import TreasureChestIcon from './icons/TreasureChestIcon';
+import DiamondHeartIcon from './icons/DiamondHeartIcon';
+import CrownV2Icon from './icons/CrownV2Icon';
+import SportsCarIcon from './icons/SportsCarIcon';
+import PrivateJetIcon from './icons/PrivateJetIcon';
+import HeartGiftIcon from './icons/HeartGiftIcon';
+import RoseGiftIcon from './icons/RoseGiftIcon';
+import IceCreamGiftIcon from './icons/IceCreamGiftIcon';
+import RocketGiftIcon from './icons/RocketGiftIcon';
+import CastleGiftIcon from './icons/CastleGiftIcon';
+import RingGiftIcon from './icons/RingGiftIcon';
+import CutePandaIcon from './icons/CutePandaIcon';
+import FunnyBombIcon from './icons/FunnyBombIcon';
+import LovePotionIcon from './icons/LovePotionIcon';
+import RockGuitarIcon from './icons/RockGuitarIcon';
+import JackInTheBoxIcon from './icons/JackInTheBoxIcon';
+import MagicUnicornIcon from './icons/MagicUnicornIcon';
+import MoneyRainIcon from './icons/MoneyRainIcon';
+import SpaceshipIcon from './icons/SpaceshipIcon';
+import LionKingIcon from './icons/LionKingIcon';
+import LegendaryDragonIcon from './icons/LegendaryDragonIcon';
 
 interface GiftPanelProps {
   user: User;
@@ -17,6 +43,35 @@ interface GiftPanelProps {
     streamer2: PkBattleStreamer;
   };
 }
+
+const iconMap: Record<string, React.FC<any>> = {
+  HeartGift: HeartGiftIcon,
+  RoseGift: RoseGiftIcon,
+  IceCreamGift: IceCreamGiftIcon,
+  RocketGift: RocketGiftIcon,
+  CastleGift: CastleGiftIcon,
+  RingGift: RingGiftIcon,
+  Lollipop: LollipopIcon,
+  Donut: DonutIcon,
+  RubberDuck: RubberDuckIcon,
+  Microphone: MicrophoneIcon,
+  GameController: GameControllerIcon,
+  TreasureChest: TreasureChestIcon,
+  DiamondHeart: DiamondHeartIcon,
+  CrownV2: CrownV2Icon,
+  SportsCar: SportsCarIcon,
+  PrivateJet: PrivateJetIcon,
+  CutePanda: CutePandaIcon,
+  FunnyBomb: FunnyBombIcon,
+  LovePotion: LovePotionIcon,
+  RockGuitar: RockGuitarIcon,
+  JackInTheBox: JackInTheBoxIcon,
+  MagicUnicorn: MagicUnicornIcon,
+  MoneyRain: MoneyRainIcon,
+  Spaceship: SpaceshipIcon,
+  LionKing: LionKingIcon,
+  LegendaryDragon: LegendaryDragonIcon,
+};
 
 const GiftPanel: React.FC<GiftPanelProps> = ({ user, liveId, streamerId, isHost, onClose, onSendGift, onRechargeClick, pkBattleStreamers }) => {
   const [gifts, setGifts] = useState<Gift[]>([]);
@@ -95,24 +150,33 @@ const GiftPanel: React.FC<GiftPanelProps> = ({ user, liveId, streamerId, isHost,
             {isLoading ? (
                  <div className="col-span-4 text-center py-8 text-gray-400">Carregando presentes...</div>
             ) : gifts.length > 0 ? (
-                gifts.map(gift => (
-                    <button 
-                        key={gift.id} 
-                        onClick={() => setSelectedGiftId(gift.id)}
-                        className={`flex flex-col items-center gap-2 p-2 rounded-lg transition-all ${selectedGiftId === gift.id ? 'bg-white/20 scale-105' : 'bg-black/20'}`}
-                    >
-                        <img
-                            src={gift.imageUrl}
-                            alt={gift.name}
-                            className="w-12 h-12 object-contain"
-                        />
-                        <span className="text-xs">{gift.name}</span>
-                        <div className="flex items-center gap-1 text-xs text-yellow-400">
-                            <DiamondIcon className="w-3 h-3"/>
-                            <span>{gift.price}</span>
-                        </div>
-                    </button>
-                ))
+                gifts.map(gift => {
+                    const IconComponent = gift.iconComponent ? iconMap[gift.iconComponent] : null;
+                    return (
+                        <button 
+                            key={gift.id} 
+                            onClick={() => setSelectedGiftId(gift.id)}
+                            className={`flex flex-col items-center gap-2 p-2 rounded-lg transition-all ${selectedGiftId === gift.id ? 'bg-white/20 scale-105' : 'bg-black/20'}`}
+                        >
+                            <div className="w-12 h-12 flex items-center justify-center">
+                                {IconComponent ? (
+                                    <IconComponent className="w-full h-full object-contain" />
+                                ) : (
+                                    <img
+                                        src={gift.imageUrl}
+                                        alt={gift.name}
+                                        className="w-12 h-12 object-contain"
+                                    />
+                                )}
+                            </div>
+                            <span className="text-xs">{gift.name}</span>
+                            <div className="flex items-center gap-1 text-xs text-yellow-400">
+                                <DiamondIcon className="w-3 h-3"/>
+                                <span>{gift.price}</span>
+                            </div>
+                        </button>
+                    )
+                })
             ) : (
                 <div className="col-span-4 flex flex-col items-center justify-center text-center py-8 text-gray-400">
                     <GiftIcon className="w-16 h-16 mb-4 opacity-30" />

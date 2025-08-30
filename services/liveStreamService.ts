@@ -391,11 +391,18 @@ export const getInvitableOpponents = (userId: number): Promise<User[]> => {
     return apiClient(`/api/pk/opponents/${userId}`);
 };
 
-export const inviteToCoHostPk = (inviterId: number, inviteeId: number): Promise<PkBattle> => {
-    return apiClient('/api/pk/cohost-invite', {
+export const createPkInvitation = (inviterId: number, inviteeId: number, isCoHost: boolean): Promise<ConvitePK> => {
+    return apiClient('/api/pk/invites', {
         method: 'POST',
-        body: JSON.stringify({ inviterId, inviteeId })
+        body: JSON.stringify({ inviterId, inviteeId, isCoHost })
     });
+};
+
+//FIX: This function's name is confusing. It is used to *create* an invitation, but it returns a battle.
+// The new `createPkInvitation` should be used instead. This one is kept for potential legacy reasons but now just returns a mock error.
+export const inviteToCoHostPk = (inviterId: number, inviteeId: number): Promise<any> => {
+    console.warn("`inviteToCoHostPk` is deprecated. Use `createPkInvitation` instead.");
+    return Promise.reject(new Error("Função obsoleta."));
 };
 
 export const getPendingPkInvitation = (userId: number): Promise<ConvitePK | null> => {

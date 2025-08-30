@@ -3,6 +3,7 @@
 
 
 
+
 import React, { useMemo } from 'react';
 import type { User, AppView } from '../types';
 import CopyIcon from './icons/CopyIcon';
@@ -58,7 +59,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onNavigate, onGoLiv
         { icon: <PlayOutlineIcon className="w-6 h-6 text-red-400" />, label: "Aplicativo ao Vivo", onClick: onGoLiveClick },
         { icon: <HeadsetIcon className="w-6 h-6 text-blue-400" />, label: "Atendimento ao Cliente", onClick: () => onNavigate('customer-service') },
         { icon: <WarningIcon className="w-6 h-6 text-yellow-500" />, label: "Denúncias & Sugestões", onClick: () => onNavigate('report-and-suggestion') },
-        { icon: <HelpIcon className="w-6 h-6 text-gray-400" />, label: "Central de Ajuda", onClick: () => onNavigate('customer-service') },
+        { icon: <HelpIcon className="w-6 h-6 text-gray-400" />, label: "Central de Ajuda", onClick: () => onNavigate('help-center') },
         { icon: <BlockedIcon className="w-6 h-6 text-gray-400" />, label: "Lista de Bloqueio", onClick: () => onNavigate('blocked-list') },
         { icon: <SettingsIcon className="w-6 h-6 text-gray-400" />, label: "Configurações", onClick: () => onNavigate('settings') },
     ];

@@ -1,4 +1,6 @@
-import React, { useState, useEffect } from 'react';
+
+
+import React, { useState, useEffect, useCallback } from 'react';
 import type { User, AppView, PublicProfile, Stream, PkBattle } from '../types';
 import * as liveStreamService from '../services/liveStreamService';
 
@@ -17,6 +19,7 @@ import DiamondSentIcon from './icons/DiamondSentIcon';
 import PlayOutlineIcon from './icons/PlayOutlineIcon';
 import ClockIcon from './icons/ClockIcon';
 import MenuIcon from './icons/MenuIcon';
+import PencilIcon from './icons/PencilIcon';
 
 
 // Action sheet that slides from the bottom
@@ -112,6 +115,7 @@ const EditProfileScreen: React.FC<EditProfileScreenProps> = ({
   onFollowToggle,
   onNavigateToChat,
   onNavigate,
+  onViewStream,
 }) => {
     const [profile, setProfile] = useState<PublicProfile | null>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -119,10 +123,17 @@ const EditProfileScreen: React.FC<EditProfileScreenProps> = ({
     const [isBlocked, setIsBlocked] = useState(false);
     const [idCopied, setIdCopied] = useState(false);
     const [isFollowing, setIsFollowing] = useState(false);
+    const [isFollowLoading, setIsFollowLoading] = useState(false);
     const [activeTab, setActiveTab] = useState<Tab>('obras');
 
+    const isOwnProfile = user.id === viewedUserId;
 
     useEffect(() => {
+        if (!viewedUserId) {
+            setIsLoading(false);
+            console.error("EditProfileScreen was rendered without a viewedUserId.");
+            return;
+        }
         const fetchProfile = async () => {
             setIsLoading(true);
             try {
@@ -139,18 +150,42 @@ const EditProfileScreen: React.FC<EditProfileScreenProps> = ({
                 setIsFollowing(data.isFollowing);
             } catch (error) {
                 console.error(`Failed to fetch profile for user ${viewedUserId}:`, error);
-                // Don't alert here as it might be an expected "not found"
+                setProfile(null);
             } finally {
                 setIsLoading(false);
             }
         };
 
         fetchProfile();
-    }, [viewedUserId, user.id, onExit]);
+    }, [viewedUserId, user.id]);
     
+    const handleEnterLive = useCallback(async () => {
+        if (!profile || !profile.isLive || !onViewStream) return;
+        try {
+            const streamToEnter = await liveStreamService.getActiveStreamForUser(profile.id);
+            if (streamToEnter) {
+                const pkBattleDb = await liveStreamService.findActivePkBattleForStream(streamToEnter.id);
+                if (pkBattleDb) {
+                    const pkBattle = await liveStreamService.getPkBattleDetails(Number(pkBattleDb.id));
+                    onViewStream(pkBattle);
+                } else {
+                    onViewStream(streamToEnter);
+                }
+            } else {
+                alert("Não foi possível encontrar a transmissão ao vivo do usuário.");
+            }
+        } catch (error) {
+            console.error("Failed to enter live stream:", error);
+            alert("Ocorreu um erro ao tentar entrar na transmissão.");
+        }
+    }, [profile, onViewStream]);
+
     const handleFollowToggleWrapper = async () => {
-        if (!profile) return;
+        if (!profile) {
+            return;
+        }
         
+        setIsFollowLoading(true);
         const originalFollowingState = isFollowing;
         setIsFollowing(!originalFollowingState);
 
@@ -160,6 +195,8 @@ const EditProfileScreen: React.FC<EditProfileScreenProps> = ({
              });
         } catch(e) {
             setIsFollowing(originalFollowingState);
+        } finally {
+            setIsFollowLoading(false);
         }
     };
     
@@ -194,6 +231,12 @@ const EditProfileScreen: React.FC<EditProfileScreenProps> = ({
         setIdCopied(true);
         setTimeout(() => setIdCopied(false), 2000);
     };
+    
+    const handleNavigateToChatWrapper = () => {
+        if (profile) {
+            onNavigateToChat(profile.id);
+        }
+    };
 
     const formatStatNumber = (num: number) => {
         if (num > 999) {
@@ -203,130 +246,145 @@ const EditProfileScreen: React.FC<EditProfileScreenProps> = ({
     };
     
     const formatRecebidos = (num: number) => {
-         if (num > 999) {
+         if (num > 999999) { // Milhões
+            return (num / 1000000).toFixed(2).replace('.', ',') + ' mi';
+         }
+         if (num > 999) { // Mil
             return (num / 1000).toFixed(2).replace('.', ',') + ' mil';
         }
         return String(num);
     }
 
-    if (isLoading || !profile) {
+    if (isLoading) {
         return (
-            <div className="h-full w-full bg-[#1C1F24] flex items-center justify-center">
+            <div className="h-full w-full bg-black flex items-center justify-center">
                 <div className="w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+            </div>
+        );
+    }
+
+    if (!profile) {
+        return (
+             <div className="h-full w-full bg-black flex flex-col font-sans">
+                 <header className="relative h-48">
+                    <img src="https://images.pexels.com/photos/1763075/pexels-photo-1763075.jpeg" alt="Cover" className="w-full h-full object-cover opacity-30 blur-sm"/>
+                    <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent"></div>
+                    <div className="absolute top-4 left-4 right-4 flex justify-between items-center z-10">
+                        <button onClick={onExit} className="p-2 bg-black/40 rounded-full backdrop-blur-sm"><ArrowLeftIcon className="w-6 h-6 text-white"/></button>
+                    </div>
+                </header>
+                <main className="px-4 pb-4 text-center flex-grow flex flex-col items-center justify-center -mt-16">
+                     <h1 className="text-2xl font-bold text-red-400">Erro ao carregar perfil</h1>
+                     <p className="text-gray-400 mt-2">Não foi possível encontrar o usuário. Por favor, volte e tente novamente.</p>
+                </main>
             </div>
         );
     }
     
     if (isBlocked) {
-        return <BlockScreen userName={profile.nickname} onUnblock={handleUnblock} onExit={onExit} bgColor="bg-[#1C1F24]"/>;
+        return <BlockScreen userName={profile.nickname} onUnblock={handleUnblock} onExit={onExit} bgColor="bg-black" />;
     }
 
     return (
+      <>
         <div className="h-full w-full bg-black flex flex-col font-sans">
-            <header className="absolute top-0 left-0 right-0 z-20 px-4 pt-8 pb-4 flex items-center justify-between">
-                <button onClick={onExit} className="p-2 bg-black/30 rounded-full backdrop-blur-sm text-white">
-                    <ArrowLeftIcon className="w-6 h-6" />
-                </button>
-                <button onClick={() => setIsOptionsMenuOpen(true)} className="p-2 bg-black/30 rounded-full backdrop-blur-sm text-white">
-                    <EllipsisIcon className="w-6 h-6" />
-                </button>
-            </header>
-            
-            <ActionSheetMenu
-                isOpen={isOptionsMenuOpen}
-                onClose={() => setIsOptionsMenuOpen(false)}
-                onUnfriend={handleUnfriend}
-                onBlock={handleBlockUser}
-                onReport={handleReportUser}
-                isFollowing={isFollowing}
-            />
+            <div className="flex-grow overflow-y-auto scrollbar-hide">
+                <header className="relative h-48">
+                    <img src={profile.coverPhotoUrl} alt="Cover" className="w-full h-full object-cover"/>
+                    <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent"></div>
+                    <div className="absolute top-4 left-4 right-4 flex justify-between items-center z-10">
+                        <button onClick={onExit} className="p-2 bg-black/40 rounded-full backdrop-blur-sm"><ArrowLeftIcon className="w-6 h-6 text-white"/></button>
+                        <div className="flex items-center gap-2">
+                           {isOwnProfile && (
+                                <button onClick={() => onNavigate?.('profile-editor')} className="p-2 bg-black/40 rounded-full backdrop-blur-sm" aria-label="Editar perfil">
+                                    <PencilIcon className="w-6 h-6 text-white"/>
+                                </button>
+                            )}
+                           <button onClick={() => setIsOptionsMenuOpen(true)} className="p-2 bg-black/40 rounded-full backdrop-blur-sm"><EllipsisIcon className="w-6 h-6 text-white"/></button>
+                        </div>
+                    </div>
 
-            <main className="flex-grow overflow-y-auto scrollbar-hide">
-                 <div className="relative h-40 bg-gray-800">
-                    <img src={profile.coverPhotoUrl} alt="Cover" className="w-full h-full object-cover" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent"></div>
-                </div>
-
-                <div className="relative px-4 -mt-14">
-                     <div className="flex items-end justify-between">
-                         <div className="relative w-28 h-28 shrink-0">
-                            <img src={profile.avatarUrl} alt={profile.nickname} className="w-full h-full rounded-full border-4 border-black object-cover" />
-                         </div>
-                         <button className="flex items-center gap-2 bg-gradient-to-r from-pink-500 to-purple-600 text-white font-bold px-3 py-1.5 rounded-full text-sm shadow-lg">
+                    <div className="absolute -bottom-10 left-4">
+                        <div className="w-24 h-24 rounded-full border-4 border-black bg-gray-800 overflow-hidden">
+                            <img src={profile.avatarUrl} alt={profile.nickname} className="w-full h-full object-cover" />
+                        </div>
+                    </div>
+                     {profile.isLive && (
+                         <button 
+                            onClick={handleEnterLive} 
+                            className="absolute bottom-4 right-4 z-10 flex items-center gap-2 bg-pink-500/80 backdrop-blur-sm text-white font-bold px-3 py-1.5 rounded-full text-sm hover:bg-pink-600/80 transition-colors">
                             <LiveIndicatorIcon />
                             <span>LIVE</span>
-                        </button>
+                         </button>
+                     )}
+                </header>
+
+                <main className="px-4 pb-4">
+                    <div className="mt-12">
+                        <h1 className="text-2xl font-bold text-white">{profile.nickname}</h1>
+                        <div className="flex items-center gap-2 text-sm text-gray-400 mt-1">
+                            <span>ID: {profile.id}</span>
+                            <button onClick={handleCopyId} title="Copiar ID">
+                                {idCopied ? <span className="text-xs text-lime-400">Copiado</span> : <CopyIcon className="w-4 h-4 text-gray-500 hover:text-white" />}
+                            </button>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2 mt-2">
+                            {profile.badges?.map((badge, index) => (
+                                <ProfileBadge key={index} badge={badge} />
+                            ))}
+                        </div>
                     </div>
                     
-                    <h1 className="text-3xl font-bold text-white mt-3">{profile.nickname}</h1>
-                    <div className="flex items-center gap-2 text-sm text-gray-400 mt-1">
-                        <span>ID: {profile.id}</span>
-                        <button onClick={handleCopyId} title="Copiar ID">
-                            {idCopied ? <span className="text-xs text-purple-400">Copiado</span> : <CopyIcon className="w-4 h-4 text-gray-400 hover:text-white" />}
-                        </button>
-                    </div>
-                    
-                    <div className="flex flex-wrap items-center gap-2 my-3">
-                        {profile.badges.map((badge, index) => {
-                            if(badge.type === 'gender_age' && profile.gender && profile.age) {
-                                return (
-                                    <div key={index} className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-bold ${profile.gender === 'female' ? 'bg-[#ff2d55]' : 'bg-[#007aff]'} text-white`}>
-                                        {profile.gender === 'female' ? <FemaleIcon className="w-3 h-3" /> : <MaleIcon className="w-3 h-3" />}
-                                        <span>{profile.age}</span>
-                                    </div>
-                                );
-                            }
-                            return <ProfileBadge key={index} badge={badge} />;
-                        })}
-                    </div>
-
-
-                    <div className="grid grid-cols-4 gap-2 my-4">
+                    <div className="grid grid-cols-4 gap-2 my-6 text-center">
                         <StatButton value={formatStatNumber(profile.followers)} label="Fãs" onClick={() => onNavigate?.('fans')} />
-                        <StatButton value={profile.followingCount.toLocaleString()} label="Seguindo" onClick={() => onNavigate?.('following')} />
-                        <Stat value={formatRecebidos(profile.recebidos)} label="Recebidos" icon={<CoinReceivedIcon className="w-3 h-3"/>} />
-                        <Stat value={String(profile.enviados)} label="Enviados" icon={<DiamondSentIcon className="w-3 h-3"/>} />
+                        <StatButton value={formatStatNumber(profile.followingCount)} label="Seguindo" onClick={() => onNavigate?.('following')} />
+                         <Stat value={formatRecebidos(profile.recebidos)} label="Recebidos" icon={<CoinReceivedIcon />} />
+                        <Stat value={formatStatNumber(profile.enviados)} label="Enviados" icon={<DiamondSentIcon />} />
                     </div>
 
-                    <div className="flex items-center justify-around mt-4 border-t border-gray-800 pt-3">
-                        <TabButton label="Obras" icon={<PlayOutlineIcon className="w-6 h-6" />} isActive={activeTab === 'obras'} onClick={() => setActiveTab('obras')} />
-                        <TabButton label="Curtidas" icon={<ClockIcon className="w-6 h-6" />} isActive={activeTab === 'curtidas'} onClick={() => setActiveTab('curtidas')} />
-                        <TabButton label="Detalhes" icon={<MenuIcon className="w-6 h-6" />} isActive={activeTab === 'detalhes'} onClick={() => setActiveTab('detalhes')} />
+                    <div className="w-full h-px bg-gray-800 my-4"></div>
+
+                     <div className="flex justify-around items-center">
+                        <TabButton label="Obras" icon={<PlayOutlineIcon />} isActive={activeTab === 'obras'} onClick={() => setActiveTab('obras')} />
+                        <TabButton label="Curtidas" icon={<ClockIcon />} isActive={activeTab === 'curtidas'} onClick={() => setActiveTab('curtidas')} />
+                        <TabButton label="Detalhes" icon={<MenuIcon />} isActive={activeTab === 'detalhes'} onClick={() => setActiveTab('detalhes')} />
                     </div>
-                    
-                    <div className="text-center py-12">
-                        {activeTab === 'obras' && <p className="text-gray-500">Nenhuma obra publicada.</p>}
-                        {activeTab === 'curtidas' && <p className="text-gray-500">Nenhum conteúdo curtido.</p>}
-                        {activeTab === 'detalhes' && <p className="text-gray-500">Detalhes do perfil não disponíveis.</p>}
-                    </div>
+                </main>
+                <div className="text-center text-gray-600 py-10">
+                    <p>Nenhuma obra publicada.</p>
                 </div>
-            </main>
-             <footer className="p-4 bg-black border-t border-gray-800/50 shrink-0">
-                <div className="flex items-center gap-4">
-                    {isFollowing ? (
-                        <button onClick={() => onNavigateToChat(profile.id)} className="flex-grow py-3 rounded-full font-semibold text-lg text-white transition-colors bg-gradient-to-r from-purple-500 to-indigo-600 hover:opacity-90 flex items-center justify-center gap-2">
-                            <MessageIcon className="w-6 h-6"/>
-                            Conversa
-                        </button>
-                    ) : (
-                        <button onClick={handleFollowToggleWrapper} className="flex-grow py-3 rounded-full font-semibold text-lg transition-colors bg-gradient-to-r from-purple-500 to-indigo-600 text-white hover:opacity-90">
-                            Seguir
-                        </button>
-                    )}
-                </div>
+            </div>
+            
+            <footer className="p-4 bg-black border-t border-gray-800/50 shrink-0">
+                {isFollowing ? (
+                    <button
+                        onClick={handleNavigateToChatWrapper}
+                        className="w-full py-3.5 rounded-full font-semibold transition-colors bg-gradient-to-r from-purple-600 to-fuchsia-500 text-white"
+                    >
+                        Conversar
+                    </button>
+                ) : (
+                    <button
+                        onClick={handleFollowToggleWrapper}
+                        disabled={isFollowLoading}
+                        className="w-full py-3.5 rounded-full font-semibold transition-colors bg-gradient-to-r from-purple-600 to-fuchsia-500 text-white disabled:opacity-50"
+                    >
+                        {isFollowLoading ? '...' : 'Seguir'}
+                    </button>
+                )}
             </footer>
-             <style>{`
-                .scrollbar-hide::-webkit-scrollbar {
-                    display: none;
-                }
-                .scrollbar-hide {
-                    -ms-overflow-style: none;
-                    scrollbar-width: none;
-                }
-                 @keyframes slide-up-fast { from { transform: translateY(100%); } to { transform: translateY(0); } }
-                .animate-slide-up-fast { animation: slide-up-fast 0.25s ease-out forwards; }
-            `}</style>
         </div>
+
+        <ActionSheetMenu 
+            isOpen={isOptionsMenuOpen}
+            onClose={() => setIsOptionsMenuOpen(false)}
+            isFollowing={isFollowing}
+            onUnfriend={handleUnfriend}
+            onBlock={handleBlockUser}
+            onReport={handleReportUser}
+        />
+      </>
     );
 };
+
 export default EditProfileScreen;

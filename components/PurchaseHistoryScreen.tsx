@@ -74,14 +74,14 @@ const PurchaseHistoryScreen: React.FC<PurchaseHistoryScreenProps> = ({ user, onE
               <div>
                 <p className="font-semibold text-white flex items-center gap-2">
                   <DiamondIcon className="w-5 h-5"/>
-                  {order.package.diamonds.toLocaleString()} Diamantes
+                  {(order.package?.diamonds || 0).toLocaleString()} Diamantes
                 </p>
                 <p className="text-xs text-gray-500 mt-1">
                   {new Date(order.timestamp).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}
                 </p>
               </div>
               <div className="text-right">
-                <p className="font-bold text-white">{order.package.currency} {order.package.price.toFixed(2).replace('.', ',')}</p>
+                <p className="font-bold text-white">{order.package?.currency} {(order.package?.price || 0).toFixed(2).replace('.', ',')}</p>
                 <span className={`text-xs font-semibold px-2 py-0.5 rounded-full mt-1 inline-block ${statusStyles[order.status]}`}>
                   {order.status === 'pending' ? 'Pendente' : order.status === 'completed' ? 'Concluído' : 'Falhou'}
                 </span>

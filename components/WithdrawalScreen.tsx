@@ -111,7 +111,7 @@ const WithdrawalScreen: React.FC<WithdrawalScreenProps> = ({ user, onUpdateUser,
           <p className="text-sm text-gray-400">Seu saldo de Ganhos</p>
           <div className="flex items-center gap-3 mt-2">
             <GoldCoinIcon className="w-10 h-10" />
-            <p className="text-4xl font-bold">{balance.availableBalance.toLocaleString('pt-BR')}</p>
+            <p className="text-4xl font-bold">{(balance.availableBalance || 0).toLocaleString('pt-BR')}</p>
           </div>
         </div>
 
@@ -133,7 +133,7 @@ const WithdrawalScreen: React.FC<WithdrawalScreenProps> = ({ user, onUpdateUser,
                 </button>
             </div>
              <p className="text-xs text-gray-500 mb-4">
-                Disponível para saque: {balance.availableBalance.toLocaleString('pt-BR')} Ganhos
+                Disponível para saque: {(balance.availableBalance || 0).toLocaleString('pt-BR')} Ganhos
             </p>
             
             <div className="space-y-2 text-sm pt-4 mt-4 border-t border-gray-800">
@@ -182,7 +182,7 @@ const WithdrawalScreen: React.FC<WithdrawalScreenProps> = ({ user, onUpdateUser,
                     {history.map(tx => (
                         <div key={tx.id} className="py-3 border-b border-gray-800 last:border-b-0 text-sm">
                             <div className="flex justify-between">
-                                <span className="font-semibold text-white">Saque de {tx.earnings_withdrawn.toLocaleString('pt-BR')} Ganhos</span>
+                                <span className="font-semibold text-white">Saque de {(tx.earnings_withdrawn || 0).toLocaleString('pt-BR')} Ganhos</span>
                                 <span className="font-bold text-green-400">{formatCurrency(tx.net_amount_brl)}</span>
                             </div>
                             <div className="flex justify-between text-gray-400 mt-1">

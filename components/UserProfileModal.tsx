@@ -1,6 +1,3 @@
-
-
-
 import React, { useState, useEffect } from 'react';
 import type { PublicProfile, Stream, PkBattle, User } from '../types';
 import * as liveStreamService from '../services/liveStreamService';
@@ -70,6 +67,11 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ userId, currentUser
     const isOwnProfile = currentUser.id === userId;
 
     useEffect(() => {
+        if (!userId) {
+            console.error("UserProfileModal rendered without a userId.");
+            onClose();
+            return;
+        }
         const fetchProfile = async () => {
             setIsLoading(true);
             try {
@@ -256,7 +258,7 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ userId, currentUser
                       
                       <div className="flex items-center gap-1.5 mt-2">
                           {renderStatIcon(profile.stats.icon)}
-                          <span className="font-bold text-base text-white">{profile.stats.value.toLocaleString('pt-BR')}</span>
+                          <span className="font-bold text-base text-white">{(profile.stats?.value || 0).toLocaleString('pt-BR')}</span>
                           <QuestionMarkIcon className="w-4 h-4 text-gray-500 ml-1" />
                       </div>
                       

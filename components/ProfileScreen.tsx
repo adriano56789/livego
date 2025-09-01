@@ -24,6 +24,7 @@ import MaleIcon from './icons/MaleIcon';
 import FemaleIcon from './icons/FemaleIcon';
 import UserPlaceholderIcon from './icons/UserPlaceholderIcon';
 import ShieldCheckIcon from './icons/ShieldCheckIcon';
+import TrophySolidIcon from './icons/TrophySolidIcon';
 
 interface ProfileScreenProps {
   user: User;
@@ -55,6 +56,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onNavigate, onGoLiv
     const menuItems = [
         { icon: <ShopIcon className="w-6 h-6 text-blue-400" />, label: "Loja", onClick: () => onNavigate('diamond-purchase') },
         { icon: <StarIcon className="w-6 h-6 text-yellow-400" />, label: "Meu Nível", onClick: () => onNavigate('my-level') },
+        { icon: <TrophySolidIcon className="w-6 h-6 text-yellow-400" />, label: "Top Fãs", onClick: () => onNavigate('top-fans') },
         { icon: <ShieldCheckIcon className="w-6 h-6 text-sky-400" />, label: "Proteção de Avatar", onClick: () => onNavigate('avatar-protection') },
         { icon: <PlayOutlineIcon className="w-6 h-6 text-red-400" />, label: "Aplicativo ao Vivo", onClick: onGoLiveClick },
         { icon: <HeadsetIcon className="w-6 h-6 text-blue-400" />, label: "Atendimento ao Cliente", onClick: () => onNavigate('customer-service') },

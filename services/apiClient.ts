@@ -22,14 +22,14 @@ export const apiClient = async <T>(path: string, options?: RequestInit): Promise
         // Direct call to the in-memory API handler
         const responseData = await handleApiRequest(method, cleanPath, body, query);
 
-        apiLogger.log(requestTitle, {
+        apiLogger.log(requestTitle, cleanPath, {
             request: { method, path: cleanPath, body },
             response: responseData,
         });
         
         return responseData;
     } catch (error) {
-        apiLogger.log(requestTitle, {
+        apiLogger.log(requestTitle, cleanPath, {
             request: { method, path: cleanPath, body },
             error: error instanceof Error ? error.message : String(error),
         });

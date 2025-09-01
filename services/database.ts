@@ -1,7 +1,9 @@
+
+
 import { mongoObjectId } from './mongoObjectId';
 import * as levelService from './levelService';
 // FIX: Added missing type imports.
-import type { User, LiveStreamRecord, Stream, PkBattle, PkBattleState, PurchaseOrder, ConvitePK, LiveCategory, Category, StartLiveResponse, FacingMode, LiveDetails, ChatMessage, Viewer, PublicProfile, AppEvent, ArtigoAjuda, CanalContato, HealthCheckResult, PrivateLiveInviteSettings, NotificationSettings, GiftNotificationSettings, PrivacySettings, LiveFollowUpdate, WithdrawalBalance, UserLevelInfo, InventoryItem, WithdrawalTransaction, RankingContributor, Conversation, ConversationMessage, Gift, DiamondPackage, PkSettings, SelectableOption, SecurityLogEntry } from '../types';
+import type { User, LiveStreamRecord, Stream, PkBattle, PkBattleState, PurchaseOrder, ConvitePK, LiveCategory, Category, StartLiveResponse, FacingMode, LiveDetails, ChatMessage, Viewer, PublicProfile, AppEvent, ArtigoAjuda, CanalContato, HealthCheckResult, PrivateLiveInviteSettings, NotificationSettings, GiftNotificationSettings, PrivacySettings, LiveFollowUpdate, WithdrawalBalance, UserLevelInfo, InventoryItem, WithdrawalTransaction, RankingContributor, Conversation, ConversationMessage, Gift, DiamondPackage, PkSettings, SelectableOption, SecurityLogEntry, UniversalRankingUser, LiveEndSummary } from '../types';
 
 // --- INITIAL MOCK DATA (STRUCTURED LIKE MONGODB COLLECTIONS) ---
 const newUserTemplate = {
@@ -147,7 +149,7 @@ const initialData = {
   conversations: [
     {
       _id: mongoObjectId(),
-      id: 'convo_1_2',
+      id: 'convo_10755083_55218901',
       participants: [10755083, 55218901],
       messages: [
         {
@@ -208,7 +210,18 @@ const initialData = {
   protectedAvatars: [],
   reports: [],
   profileVisits: [],
-  sentGifts: [],
+  sentGifts: [
+    // Gifts for streamer 55218901
+    { _id: mongoObjectId(), id: 1, senderId: 10755083, receiverId: 55218901, liveId: 101, giftId: 1, giftValue: 1, diamondCost: 1, quantity: 1, timestamp: new Date().toISOString() },
+    { _id: mongoObjectId(), id: 2, senderId: 66345102, receiverId: 55218901, liveId: 101, giftId: 2, giftValue: 10, diamondCost: 10, quantity: 1, timestamp: new Date().toISOString() },
+    { _id: mongoObjectId(), id: 3, senderId: 10755083, receiverId: 55218901, liveId: 101, giftId: 3, giftValue: 50, diamondCost: 50, quantity: 1, timestamp: new Date().toISOString() },
+    { _id: mongoObjectId(), id: 4, senderId: 99887705, receiverId: 55218901, liveId: 101, giftId: 4, giftValue: 1000, diamondCost: 1000, quantity: 1, timestamp: new Date().toISOString() },
+
+    // Gifts for main user 10755083
+    { _id: mongoObjectId(), id: 5, senderId: 55218901, receiverId: 10755083, liveId: 105, giftId: 5, giftValue: 5000, diamondCost: 5000, quantity: 1, timestamp: new Date().toISOString() },
+    { _id: mongoObjectId(), id: 6, senderId: 66345102, receiverId: 10755083, liveId: 105, giftId: 6, giftValue: 20000, diamondCost: 20000, quantity: 1, timestamp: new Date().toISOString() },
+    { _id: mongoObjectId(), id: 7, senderId: 55218901, receiverId: 10755083, liveId: 105, giftId: 1, giftValue: 1, diamondCost: 1, quantity: 1, timestamp: new Date().toISOString() },
+  ],
   pkMatchmakingQueue: [],
   pkInvitations: [],
   privateLiveInvites: [],
@@ -383,11 +396,25 @@ const createCollection = <T extends { _id: string }>(collectionName: keyof typeo
         await delay(30);
         const collection = db[collectionName] as T[];
         return collection.find(doc => {
-            return Object.entries(query).every(([key, value]) => {
-                if (Array.isArray(value) && Array.isArray((doc as any)[key])) {
-                    return value.every(v => (doc as any)[key].includes(v)) && value.length === (doc as any)[key].length;
+            return Object.entries(query).every(([key, queryValue]: [string, any]) => {
+                const docValue = (doc as any)[key];
+
+                if (typeof queryValue === 'object' && queryValue !== null && '$all' in queryValue && '$size' in queryValue) {
+                    if (!Array.isArray(docValue)) return false;
+                    const queryArray = queryValue['$all'];
+                    if (!Array.isArray(queryArray)) return false;
+
+                    const docSet = new Set(docValue);
+                    const allMatch = queryArray.every(item => docSet.has(item));
+                    const sizeMatch = docValue.length === queryValue['$size'];
+                    
+                    return allMatch && sizeMatch;
                 }
-                return (doc as any)[key] === value;
+
+                if (Array.isArray(queryValue) && Array.isArray(docValue)) {
+                    return queryValue.every(v => docValue.includes(v)) && queryValue.length === docValue.length;
+                }
+                return docValue === queryValue;
             });
         }) || null;
     },

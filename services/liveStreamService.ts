@@ -1,5 +1,6 @@
+
 import { apiClient } from './apiClient';
-import type { User, LiveDetails, ChatMessage, Gift, Viewer, RankingContributor, Like, PkBattle, PkBattleState, PublicProfile, PkEventDetails, Conversation, SendGiftResponse, ProtectorDetails, WithdrawalTransaction, WithdrawalMethod, InventoryItem, AppEvent, LiveEndSummary, UserLevelInfo, GeneralRankingStreamer, GeneralRankingUser, WithdrawalBalance, EventStatus, PkRankingData, Stream, Category, StartLiveResponse, ConvitePK, LiveFollowUpdate, PrivateLiveInviteSettings, NotificationSettings, FacingMode, SoundEffectName, UniversalRankingData, UserListRankingPeriod, PkSettings, LiveCategory, StreamUpdateListener, MuteStatusListener, UserKickedListener, SoundEffectListener, MuteStatusUpdate, UserKickedUpdate, SoundEffectUpdate, UserBlockedUpdate, UserUnblockedUpdate, UserBlockedListener, UserUnblockedListener, Region, PrivacySettings, IncomingPrivateLiveInvite, GiftNotificationSettings } from '../types';
+import type { User, LiveDetails, ChatMessage, Gift, Viewer, RankingContributor, Like, PkBattle, PkBattleState, PublicProfile, PkEventDetails, Conversation, SendGiftResponse, ProtectorDetails, WithdrawalTransaction, WithdrawalMethod, InventoryItem, AppEvent, LiveEndSummary, UserLevelInfo, GeneralRankingStreamer, GeneralRankingUser, WithdrawalBalance, EventStatus, PkRankingData, Stream, Category, StartLiveResponse, ConvitePK, LiveFollowUpdate, PrivateLiveInviteSettings, NotificationSettings, FacingMode, SoundEffectName, UniversalRankingData, UserListRankingPeriod, PkSettings, LiveCategory, StreamUpdateListener, MuteStatusListener, UserKickedListener, SoundEffectListener, MuteStatusUpdate, UserKickedUpdate, SoundEffectUpdate, UserBlockedUpdate, UserUnblockedUpdate, UserBlockedListener, UserUnblockedListener, Region, PrivacySettings, IncomingPrivateLiveInvite, GiftNotificationSettings, TopFanDetails } from '../types';
 
 // --- Listener Infrastructure ---
 type Listener<T> = (data: T) => void;
@@ -209,6 +210,7 @@ export const uploadChatImage = (imageDataUrl: string): Promise<{ url: string }> 
 };
 
 export const getProtectorsList = (streamerId: number): Promise<ProtectorDetails[]> => apiClient(`/api/users/${streamerId}/protectors`);
+export const getTopFans = (userId: number): Promise<TopFanDetails[]> => apiClient(`/api/users/${userId}/top-fans`);
 
 export const followUser = (followerId: number, followingId: number): Promise<User> => {
     return apiClient('/api/follows', { method: 'POST', body: JSON.stringify({ followerId, followingId }) });
@@ -378,13 +380,6 @@ export const updateUserPkPreference = (userId: number, isPkEnabled: boolean): Pr
     });
 };
 
-export const helpHostRankUp = (senderId: number, hostId: number, giftValue: number): Promise<{success: boolean, message: string, updatedUser: User | null}> => {
-    return apiClient(`/api/ranking/help-host`, {
-        method: 'POST',
-        body: JSON.stringify({ senderId, hostId, giftValue })
-    });
-}
-
 // --- NEWLY ADDED FUNCTIONS TO FIX ERRORS ---
 
 export const getInvitableOpponents = (userId: number): Promise<User[]> => {
@@ -459,5 +454,12 @@ export const toggleMicrophone = (liveId: number, enabled: boolean): Promise<{ su
     return apiClient(`/api/lives/${liveId}/mic-toggle`, {
         method: 'POST',
         body: JSON.stringify({ enabled }),
+    });
+};
+// FIX: Added missing 'helpHostRankUp' function.
+export const helpHostRankUp = (senderId: number, hostId: number, giftValue: number): Promise<{ updatedUser: User | null; success: boolean; message: string; }> => {
+    return apiClient('/api/ranking/help-host', {
+        method: 'POST',
+        body: JSON.stringify({ senderId, hostId, giftValue })
     });
 };

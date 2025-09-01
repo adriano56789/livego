@@ -1,5 +1,6 @@
 
 
+
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import LoginScreen from './components/LoginScreen';
 import UploadPhotoScreen from './components/UploadPhotoScreen';
@@ -53,15 +54,17 @@ import ProfileEditorScreen from './components/ProfileEditorScreen';
 import AvatarProtectionScreen from './components/AvatarProtectionScreen';
 import FriendRequestScreen from './components/FriendRequestScreen';
 import PrivacySettingsScreen from './components/PrivacySettingsScreen';
+import TopFansScreen from './components/TopFansScreen';
 import { loginWithGoogle, deleteAccount, getUserProfile } from './services/authService';
 import * as liveStreamService from './services/liveStreamService';
 import * as versionService from './services/versionService';
 import * as soundService from './services/soundService';
 import type { User, AppView, Category, Stream, PkBattle, Conversation, WithdrawalTransaction, AppEvent, VersionInfo, LiveEndSummary, PurchaseOrder, DiamondPackage, FacingMode, IncomingPrivateLiveInvite, Gift, ChatMessage } from './types';
-import { ApiViewerProvider } from './components/ApiContext';
+import { ApiViewerProvider, useApiViewer } from './components/ApiContext';
 import ProfileScreen from './components/ProfileScreen';
 import GiftDisplayAnimation from './components/GiftDisplayAnimation';
 import GoogleIcon from './components/icons/GoogleIcon';
+import ApiViewer from './components/ApiViewer';
 
 type LocationPermission = 'prompt' | 'granted' | 'denied';
 
@@ -90,10 +93,12 @@ const AppContent: React.FC = () => {
   const previouslyLiveFollowed = useRef<Set<number>>(new Set());
   const [incomingPrivateLiveInvite, setIncomingPrivateLiveInvite] = useState<IncomingPrivateLiveInvite | null>(null);
   const [viewingOtherProfileId, setViewingOtherProfileId] = useState<number | null>(null);
+  const [viewingTopFansFor, setViewingTopFansFor] = useState<number | null>(null);
   const [locationPermission, setLocationPermission] = useState<LocationPermission>('prompt');
   const [walletSuccessMessage, setWalletSuccessMessage] = useState<string | null>(null);
   const [triggeredGift, setTriggeredGift] = useState<ChatMessage | null>(null);
   const [giftNotificationSettings, setGiftNotificationSettings] = useState<Record<number, boolean> | null>(null);
+  const { apiResponse, hideApiResponse } = useApiViewer();
 
   useEffect(() => {
     const compareVersions = (v1: string, v2: string): number => {
@@ -152,10 +157,6 @@ const AppContent: React.FC = () => {
     const checkFollowedStatus = async () => {
       if (document.visibilityState !== 'visible') return;
       try {
-        // This call was removed as per user request to reduce noise
-        // const settings = await liveStreamService.getNotificationSettings(user.id);
-        // if (!settings.streamerLive) return;
-
         const statuses = await liveStreamService.getFollowingLiveStatus(user.id);
         const currentlyLive = new Set(statuses.filter(s => s.isLive).map(s => s.userId));
         const justWentLive = statuses.find(s => s.isLive && !previouslyLiveFollowed.current.has(s.userId));
@@ -181,30 +182,6 @@ const AppContent: React.FC = () => {
     const intervalId = setInterval(checkFollowedStatus, 8000);
     return () => clearInterval(intervalId);
   }, [user, liveNotification]);
-
-  /*
-  // FIX: This polling was causing the private invite notification to reappear constantly.
-  // The user requested this simulation be disabled for now.
-  useEffect(() => {
-    if (!user) return;
-
-    const pollPrivateInvites = async () => {
-      if (document.visibilityState !== 'visible' || incomingPrivateLiveInvite) return;
-      try {
-        const { invite } = await liveStreamService.getPendingPrivateLiveInvites(user.id);
-        if (invite) {
-          setIncomingPrivateLiveInvite(invite);
-        }
-      } catch (e) {
-        console.error("Failed to poll for private live invites:", e);
-      }
-    };
-    
-    const intervalId = setInterval(pollPrivateInvites, 6000); // Poll every 6 seconds
-    return () => clearInterval(intervalId);
-  }, [user, incomingPrivateLiveInvite]);
-  */
-
 
   const handleLogin = useCallback(async (accountId?: number) => {
     setIsLoading(true);
@@ -241,502 +218,230 @@ const AppContent: React.FC = () => {
   
   const handleViewProfile = useCallback((userId: number) => {
     if (user && userId === user.id) {
-      setViewingStream(null); // Sair da visualização da transmissão
-      setCurrentView('view-self-profile'); // Navegar para a visualização detalhada do próprio perfil
-      return;
-    }
-    setViewingStream(null);
-    setViewingOtherProfileId(userId);
-  }, [user]);
-
-  const handleExitProfileView = useCallback(() => {
-    setViewingOtherProfileId(null);
-    setCurrentView('feed');
-  }, []);
-
-  const handleFollowToggle = async (userIdToToggle: number, optimisticCallback?: (action: 'follow' | 'unfollow') => void) => {
-    if (!user) return;
-
-    const originalUser = { ...user, following: [...(user.following || [])] };
-    const isCurrentlyFollowing = originalUser.following.includes(userIdToToggle);
-    const action = isCurrentlyFollowing ? 'unfollow' : 'follow';
-
-    // 1. Optimistic UI update for the current user's following list
-    const optimisticallyUpdatedUser = {
-        ...user,
-        following: isCurrentlyFollowing
-            ? (user.following || []).filter(id => id !== userIdToToggle)
-            : [...(user.following || []), userIdToToggle],
-    };
-    setUser(optimisticallyUpdatedUser);
-    
-    // 2. Trigger optimistic callback for other components (e.g., EditProfileScreen's follower count)
-    optimisticCallback?.(action);
-
-    try {
-        // 3. Make the API call
-        const updatedUserFromServer = isCurrentlyFollowing
-          ? await liveStreamService.unfollowUser(user.id, userIdToToggle)
-          : await liveStreamService.followUser(user.id, userIdToToggle);
-        
-        // 4. Final state sync with the server's response
-        setUser(updatedUserFromServer);
-    } catch (error) {
-        console.error("Failed to toggle follow state", error);
-        alert(`Ocorreu um erro: ${error instanceof Error ? error.message : 'Tente novamente.'}`);
-        
-        // 5. Revert UI on error
-        setUser(originalUser);
-        optimisticCallback?.(isCurrentlyFollowing ? 'follow' : 'unfollow'); // Revert the callback action
-    }
-  };
-  
- const handleGoLiveClick = useCallback(async () => {
-    if (!user) return;
-    try {
-        const streamToEnter = await liveStreamService.getActiveStreamForUser(user.id);
-        
-        if (streamToEnter) {
-            // User is already live, navigate to their stream.
-            setIsUserLive(true);
-            
-            const pkBattleDb = await liveStreamService.findActivePkBattleForStream(streamToEnter.id);
-            if (pkBattleDb) {
-                const pkBattle = await liveStreamService.getPkBattleDetails(Number(pkBattleDb.id));
-                handleViewStream(pkBattle);
-            } else {
-                handleViewStream(streamToEnter);
-            }
-        } else {
-            // User is not live, navigate to the setup screen.
-            setIsUserLive(false);
-            setCurrentView('go-live-setup');
-        }
-    } catch (error) {
-        console.error("Failed to handle Go Live click:", error);
-        alert("Ocorreu um erro ao tentar entrar na sua transmissão.");
-    }
-}, [user, handleViewStream]);
-  
-  const handleStartStream = useCallback(async (details: { title: string; meta: string; category: Category, isPrivate: boolean, isPkEnabled: boolean, thumbnailBase64?: string, entryFee?: number, cameraUsed: FacingMode }) => {
-    if (!user) return;
-    try {
-        let thumbnailUrl: string | undefined = undefined;
-        if (details.thumbnailBase64) {
-            const response = await liveStreamService.uploadLiveThumbnail(details.thumbnailBase64);
-            thumbnailUrl = response.thumbnailUrl;
-        }
-        
-        const streamDetails = { ...details, thumbnailUrl };
-        delete (streamDetails as any).thumbnailBase64;
-
-        const response = await liveStreamService.startLiveStream(user, streamDetails);
-        
-        setIsUserLive(true);
-        setActiveCategory(details.category); // Set the category of the new stream
-        handleViewStream(response.live);
-    } catch (error) {
-        console.error("Failed to start stream:", error);
-        setError(error instanceof Error ? error.message : "Could not start stream");
-    }
-  }, [user, handleViewStream]);
-
-  const handleStopStream = useCallback(async (streamerId: number, streamId: number) => {
-    try {
-        const summary = await liveStreamService.getLiveEndSummary(streamId);
-        await liveStreamService.stopLiveStream(streamerId);
-        setIsUserLive(false);
-        setViewingStream(null);
-        setViewingEndedStreamSummary(summary);
-    } catch (error) {
-        console.error("Failed to stop stream:", error);
-        setIsUserLive(false);
-        setViewingStream(null);
-        setCurrentView('feed');
-    }
-  }, []);
-
-  const handleStreamEnded = useCallback((streamId: number) => {
-    if (viewingStream && viewingStream.id === streamId) {
-        setViewingStream(null);
-        alert("A transmissão que você estava assistindo terminou.");
-    }
-  }, [viewingStream]);
-
-  const handleUpdateUser = useCallback((updatedUser: User) => {
-    setUser(updatedUser);
-  }, []);
-
-  const handleNavigate = useCallback((view: AppView) => {
-    if (currentView === 'diamond-purchase' && view !== 'diamond-purchase') {
-      setWalletSuccessMessage(null);
-    }
-    
-    // Preserve the viewed user's ID when navigating to a related list screen.
-    // Otherwise, it's main navigation, so reset the ID.
-    const isProfileSubView = ['following', 'fans', 'visitors'].includes(view);
-    if (!isProfileSubView) {
+        setCurrentView('profile');
         setViewingOtherProfileId(null);
+        return;
     }
-
-    setCurrentView(view);
-  }, [currentView]);
-  
-  const handleNavigateFromStream = useCallback((view: AppView, userId: number) => {
-    setViewingStream(null);
-    setViewingOtherProfileId(null);
-    if (['following', 'fans', 'visitors'].includes(view)) {
-        setViewingOtherProfileId(userId); // Keep this to pass to the list screens
-    }
-    setCurrentView(view);
-  }, []);
-  
-  const handleNavigateToChat = useCallback((userId: number) => {
-    if (!user) return;
-    setViewingStream(null);
-    setViewingOtherProfileId(null);
-    const findConvo = async () => {
-        const { id } = await liveStreamService.getOrCreateConversationWithUser(user.id, userId);
-        setViewingConversationId(id);
-        setCurrentView('chat');
-    };
-    findConvo();
+    setViewingOtherProfileId(userId);
+    setCurrentView('edit');
   }, [user]);
 
-  const handleViewProtectors = useCallback((userId: number) => {
-    setViewingProtectorsFor(userId);
-    setCurrentView('protectors');
+  const handleGoLive = useCallback(() => {
+      setCurrentView('go-live-setup');
+  }, []);
+
+  const handleStartStream = useCallback((details: any) => {
+    if (!user) return;
+    liveStreamService.startLiveStream(user, details)
+        .then(response => {
+            setIsUserLive(true);
+            setCurrentView('feed');
+            alert("Stream started! In a real app, you'd be taken to a streamer dashboard.");
+        })
+        .catch(err => {
+            console.error("Failed to start stream", err);
+            setError("Failed to start stream");
+            setCurrentView('feed');
+        });
+  }, [user]);
+  
+  const handleStopStream = useCallback((streamerId: number, streamId: number) => {
+      liveStreamService.stopLiveStream(streamerId).then(async () => {
+          setIsUserLive(false);
+          setViewingStream(null);
+          const summary = await liveStreamService.getLiveEndSummary(streamId);
+          setViewingEndedStreamSummary(summary);
+      });
   }, []);
   
+  const handleFollowToggle = useCallback(async (userIdToToggle: number, optimisticCallback?: (action: 'follow' | 'unfollow') => void) => {
+    if (!user) return;
+    const isCurrentlyFollowing = user.following.includes(userIdToToggle);
+    if(optimisticCallback) optimisticCallback(isCurrentlyFollowing ? 'unfollow' : 'follow');
+    const updatedUser = isCurrentlyFollowing
+        ? await liveStreamService.unfollowUser(user.id, userIdToToggle)
+        : await liveStreamService.followUser(user.id, userIdToToggle);
+    setUser(updatedUser);
+  }, [user]);
+
+  const handleTriggerGiftAnimation = useCallback((gift: ChatMessage) => {
+    setTriggeredGift(null);
+    setTimeout(() => setTriggeredGift(gift), 50);
+  }, []);
+
+  const handleNavigate = useCallback((view: AppView, meta?: any) => {
+    if (meta?.userId) setViewingOtherProfileId(meta.userId);
+    if (meta?.conversationId) setViewingConversationId(meta.conversationId);
+    setCurrentView(view);
+  }, []);
+
+  // For settings
+  const handleLogout = useCallback(() => {
+    setUser(null);
+  }, []);
+
+  const handleDeleteAccount = useCallback(async () => {
+    if (!user) return;
+    if (window.confirm('Tem certeza de que deseja excluir permanentemente sua conta? Esta ação não pode ser desfeita.')) {
+        try {
+            await deleteAccount(user.id);
+            alert('Conta excluída com sucesso.');
+            handleLogout();
+        } catch (err) {
+            alert('Falha ao excluir a conta. Por favor, tente novamente.');
+            console.error(err);
+        }
+    }
+  }, [user, handleLogout]);
+
+  // For diamond purchase flow
+  const handlePurchase = useCallback((updatedUser: User, order: PurchaseOrder) => {
+    setUser(updatedUser);
+    setWalletSuccessMessage(`+${order.package.diamonds.toLocaleString()} diamantes adicionados à sua carteira!`);
+  }, []);
+
   const handleConfirmPurchase = useCallback((pkg: DiamondPackage) => {
     setPurchaseOverlay({ step: 'confirm', pkg });
   }, []);
-  
-  const handlePurchaseComplete = useCallback((updatedUser: User, order: PurchaseOrder) => {
+
+  // For withdrawal flow
+  const handleWithdrawalSetupComplete = useCallback((updatedUser: User) => {
       setUser(updatedUser);
-      setPurchaseOverlay(null);
-      setWalletSuccessMessage(`+${(order.package?.diamonds || 0).toLocaleString()} diamantes adicionados à sua carteira!`);
+      setCurrentView('withdrawal');
   }, []);
   
   const handleWithdrawalComplete = useCallback((transaction: WithdrawalTransaction) => {
-    setLastWithdrawal(transaction);
-    setCurrentView('withdrawal-confirmation');
-    setWalletSuccessMessage(`Saque de ${(transaction.earnings_withdrawn || 0).toLocaleString()} ganhos solicitado com sucesso.`);
+      setLastWithdrawal(transaction);
+      setCurrentView('withdrawal-confirmation');
   }, []);
 
-  const handleLogout = useCallback(() => {
-    setUser(null);
-    setViewingStream(null);
-    setViewingOtherProfileId(null);
-    setCurrentView('feed');
+  // For help/events flow
+  const handleViewArticle = useCallback((articleId: string) => {
+      setViewingHelpArticleId(articleId);
+      setCurrentView('help-article');
+  }, []);
+
+  const handleViewEvent = useCallback((eventId: string) => {
+      setViewingEventId(eventId);
+      setCurrentView('event-detail');
   }, []);
   
-  const handleDeleteAccount = useCallback(async () => {
-    if (!user) return;
-    await deleteAccount(user.id);
-    handleLogout();
-  }, [user, handleLogout]);
+  const handleUpdateGiftNotificationSettings = useCallback((newSettings: Record<number, boolean>) => {
+    setGiftNotificationSettings(newSettings);
+  }, []);
 
-  const handleTriggerGiftNotification = useCallback((gift: Gift) => {
-    if (!user || (giftNotificationSettings && giftNotificationSettings[gift.id] === false)) {
-        alert(`As notificações para "${gift.name}" estão desativadas. Ative-as na tela de Configurações de Notificação de Presentes para testar.`);
-        return;
-    }
-    soundService.initAudioContext();
-    if (gift.soundUrl) {
-      new Audio(gift.soundUrl).play();
-    } else {
-      soundService.playSound('gift');
-    }
-    const giftMessage: ChatMessage = {
-        id: Date.now(),
-        type: 'gift',
-        userId: user.id,
-        username: user.nickname || user.name,
-        message: `enviou ${gift.name}!`,
-        giftId: gift.id,
-        giftName: gift.name,
-        giftValue: gift.price,
-        giftAnimationUrl: gift.animationUrl,
-        giftImageUrl: gift.imageUrl,
-        recipientName: 'Você', // Test recipient
-        timestamp: new Date().toISOString(),
-        globalLevel: user.level,
-        avatarUrl: user.avatar_url,
-    };
-    setTriggeredGift(giftMessage);
-}, [user, giftNotificationSettings]);
-
-  const handleUpdateGiftSettings = (newSettings: Record<number, boolean>) => {
-      setGiftNotificationSettings(newSettings);
-  };
-
-  // Main Render Logic
+  // Login/Onboarding Flow
   if (needsUpdate && versionInfo) {
     return <UpdateRequiredModal updateUrl={versionInfo.updateUrl} />;
   }
-  
   if (!user) {
     return <LoginScreen onGoogleLogin={handleLogin} isLoading={isLoading} error={error} />;
   }
-  
-  const renderMainView = () => {
-    if (viewingStream) {
-      return (
-        <LiveStreamViewerScreen 
-          user={user} 
-          stream={viewingStream} 
-          onExit={handleExitStream}
-          onNavigateToChat={handleNavigateToChat}
-          onRequirePurchase={() => setPurchaseOverlay({ step: 'purchase' })}
-          onUpdateUser={handleUpdateUser}
-          onViewProtectors={handleViewProtectors}
-          onViewStream={handleViewStream}
-          onStreamEnded={handleStreamEnded}
-          onStopStream={handleStopStream}
-          onShowPrivateLiveInvite={(invite) => setIncomingPrivateLiveInvite(invite)}
-          onViewProfile={handleViewProfile}
-          onFollowToggle={handleFollowToggle}
-          onNavigateFromStream={handleNavigateFromStream}
-          giftNotificationSettings={giftNotificationSettings}
-          onTriggerGiftAnimation={setTriggeredGift}
-        />
-      );
-    }
-    
-    if (viewingOtherProfileId && !['following', 'visitors', 'fans'].includes(currentView)) {
-        return <EditProfileScreen user={user} isViewingOtherProfile viewedUserId={viewingOtherProfileId} onExit={handleExitProfileView} onFollowToggle={handleFollowToggle} onNavigateToChat={handleNavigateToChat} onViewStream={handleViewStream} onNavigate={handleNavigate} />;
-    }
+  if (!user.has_uploaded_real_photo) {
+    return <UploadPhotoScreen user={user} onPhotoUploaded={handlePhotoUploaded} />;
+  }
+  if (!user.has_completed_profile) {
+    return <ProfileEditorScreen user={user} onSave={handleProfileComplete} onExit={() => {}} />;
+  }
 
-    if (viewingEndedStreamSummary) {
-        return <LiveEndedScreen summary={viewingEndedStreamSummary} onExit={() => setViewingEndedStreamSummary(null)} />;
-    }
+  // Overlays and Full-Screen Modals
+  if (viewingStream) {
+    return <LiveStreamViewerScreen user={user} stream={viewingStream} onExit={handleExitStream} onNavigateToChat={(userId) => { setViewingConversationId(String(userId)); setCurrentView('chat'); }} onRequirePurchase={() => setCurrentView('diamond-purchase')} onUpdateUser={setUser} onViewProtectors={(userId) => { setViewingProtectorsFor(userId); setCurrentView('protectors'); }} onViewStream={handleViewStream} onStreamEnded={(streamId) => { setViewingStream(null); }} onStopStream={handleStopStream} onShowPrivateLiveInvite={setIncomingPrivateLiveInvite} onViewProfile={handleViewProfile} onNavigateFromStream={(view, userId) => handleNavigate(view, { userId })} onFollowToggle={handleFollowToggle} giftNotificationSettings={giftNotificationSettings} onTriggerGiftAnimation={handleTriggerGiftAnimation} />;
+  }
+  if (viewingEndedStreamSummary) {
+    return <LiveEndedScreen summary={viewingEndedStreamSummary} onExit={() => setViewingEndedStreamSummary(null)} />
+  }
+  if (purchaseOverlay?.step === 'confirm' && purchaseOverlay.pkg) {
+    return <PurchaseConfirmationScreen 
+        user={user}
+        selectedPackage={purchaseOverlay.pkg}
+        onExit={() => setPurchaseOverlay(null)}
+        onConfirm={(updatedUser, order) => {
+            setUser(updatedUser);
+            setPurchaseOverlay(null);
+            setWalletSuccessMessage(`+${order.package.diamonds.toLocaleString()} diamantes adicionados à sua carteira!`);
+        }}
+    />
+  }
 
-    let mainContent;
+  const renderCurrentView = () => {
     switch (currentView) {
-      case 'feed':
-        mainContent = <LiveFeedScreen user={user} onViewStream={handleViewStream} onGoLiveClick={handleGoLiveClick} activeCategory={activeCategory} onSelectCategory={setActiveCategory} onUpdateUser={handleUpdateUser} onNavigateToChat={handleNavigateToChat} onViewProtectors={handleViewProtectors} onNavigate={handleNavigate} locationPermission={locationPermission} setLocationPermission={setLocationPermission} />;
-        break;
-      case 'profile':
-        mainContent = <ProfileScreen user={user} onNavigate={handleNavigate} onGoLiveClick={handleGoLiveClick} />;
-        break;
+      case 'feed': return <LiveFeedScreen user={user} onViewStream={handleViewStream} onGoLiveClick={handleGoLive} activeCategory={activeCategory} onSelectCategory={setActiveCategory} onUpdateUser={setUser} onNavigateToChat={(userId) => {setViewingConversationId(String(userId)); setCurrentView('chat');}} onViewProtectors={(userId) => {setViewingProtectorsFor(userId); setCurrentView('protectors');}} onNavigate={(v) => setCurrentView(v)} locationPermission={locationPermission} setLocationPermission={setLocationPermission} />;
+      case 'profile': return <ProfileScreen user={user} onNavigate={(v) => setCurrentView(v)} onGoLiveClick={handleGoLive} />;
+      case 'messages': return <MessagesScreen user={user} onNavigate={(v) => setCurrentView(v)} onNavigateToChat={(userId) => { setViewingConversationId(String(userId)); setCurrentView('chat'); }} onViewProfile={handleViewProfile} onUpdateUser={setUser} />;
+      case 'chat': return <ChatScreen conversationId={viewingConversationId!} currentUserId={user.id} user={user} onUpdateUser={setUser} onExit={() => setCurrentView('messages')} onViewProtectors={(userId) => {setViewingProtectorsFor(userId); setCurrentView('protectors');}} onViewStream={handleViewStream} />;
+      case 'go-live-setup': return <GoLiveSetupScreen user={user} onStartStream={handleStartStream} onExit={() => setCurrentView('feed')} />;
+      case 'video': return <VideoScreen currentUser={user} onUpdateUser={setUser} onViewProfile={handleViewProfile} onFollowToggle={handleFollowToggle} onNavigateToChat={(userId) => {setViewingConversationId(String(userId)); setCurrentView('chat');}} />;
+      case 'edit':
+        if (!viewingOtherProfileId) {
+            setCurrentView('feed');
+            return null;
+        }
+        return <EditProfileScreen user={user} viewedUserId={viewingOtherProfileId} isViewingOtherProfile={true} onExit={() => { setViewingOtherProfileId(null); setCurrentView('feed'); }} onFollowToggle={handleFollowToggle} onNavigateToChat={(userId) => { setViewingOtherProfileId(null); setViewingConversationId(String(userId)); setCurrentView('chat'); }} onViewStream={(stream) => { setViewingOtherProfileId(null); handleViewStream(stream); }} onUpdateUser={setUser} onViewProfile={handleViewProfile} onNavigate={setCurrentView} />;
       case 'view-self-profile':
-        mainContent = <EditProfileScreen user={user} isViewingOtherProfile={false} viewedUserId={user.id} onExit={() => handleNavigate('profile')} onNavigate={handleNavigate} onFollowToggle={handleFollowToggle} onNavigateToChat={handleNavigateToChat} onViewStream={handleViewStream} />;
-        break;
-      case 'video':
-        mainContent = (
-          <VideoScreen 
-            currentUser={user}
-            onUpdateUser={handleUpdateUser}
-            onViewProfile={handleViewProfile}
-            onFollowToggle={handleFollowToggle}
-            onNavigateToChat={handleNavigateToChat}
-          />
-        );
-        break;
-      case 'messages':
-        mainContent = <MessagesScreen user={user} onNavigate={handleNavigate} onNavigateToChat={handleNavigateToChat} onViewProfile={handleViewProfile} onUpdateUser={handleUpdateUser} />;
-        break;
-      case 'chat':
-        if (viewingConversationId) {
-          mainContent = <ChatScreen conversationId={viewingConversationId} currentUserId={user.id} user={user} onUpdateUser={handleUpdateUser} onExit={() => setCurrentView('messages')} onViewProtectors={handleViewProtectors} onViewStream={handleViewStream} />;
-        } else {
-          setCurrentView('messages');
-        }
-        break;
-      case 'go-live-setup':
-        mainContent = <GoLiveSetupScreen user={user} onStartStream={handleStartStream} onExit={() => setCurrentView('feed')} />;
-        break;
-      case 'diamond-purchase':
-        mainContent = <DiamondPurchaseScreen user={user} onExit={() => { setCurrentView('profile'); setWalletSuccessMessage(null); }} onPurchase={handlePurchaseComplete} onNavigate={handleNavigate} onConfirmPurchase={handleConfirmPurchase} onUpdateUser={handleUpdateUser} onNavigateToSetup={() => setCurrentView('withdrawal-method-setup')} onWithdrawalComplete={handleWithdrawalComplete} successMessage={walletSuccessMessage} clearSuccessMessage={() => setWalletSuccessMessage(null)} />;
-        break;
-      case 'protectors':
-        if(viewingProtectorsFor) {
-            mainContent = <ProtectorsScreen streamerId={viewingProtectorsFor} onExit={() => setCurrentView('profile')} />;
-        }
-        break;
-      case 'blocked-list':
-        mainContent = <BlockedListScreen currentUserId={user.id} onExit={() => setCurrentView('profile')} />;
-        break;
-      case 'withdrawal':
-        mainContent = <WithdrawalScreen user={user} onUpdateUser={handleUpdateUser} onExit={() => setCurrentView('diamond-purchase')} onNavigateToSetup={() => setCurrentView('withdrawal-method-setup')} onWithdrawalComplete={handleWithdrawalComplete} />;
-        break;
-      case 'withdrawal-method-setup':
-        mainContent = <WithdrawalMethodSetupScreen user={user} onExit={() => setCurrentView('diamond-purchase')} onSetupComplete={(u) => { setUser(u); setCurrentView('diamond-purchase'); }} />;
-        break;
-      case 'withdrawal-confirmation':
-        mainContent = <WithdrawalConfirmationScreen transaction={lastWithdrawal} onExit={() => { setLastWithdrawal(null); setCurrentView('diamond-purchase'); }} />;
-        break;
-      case 'customer-service':
-        mainContent = <CustomerServiceScreen mode="full" onExit={() => setCurrentView('profile')} onViewArticle={(id) => { setViewingHelpArticleId(id); setCurrentView('help-article'); }} onViewSupportChat={() => setCurrentView('live-support-chat')} onNavigate={handleNavigate} />;
-        break;
-      case 'help-center':
-        mainContent = <CustomerServiceScreen mode="help_only" onExit={() => setCurrentView('profile')} onViewArticle={(id) => { setViewingHelpArticleId(id); setCurrentView('help-article'); }} onViewSupportChat={() => setCurrentView('live-support-chat')} onNavigate={handleNavigate} />;
-        break;
-      case 'useful-articles-list':
-        mainContent = <CustomerServiceScreen mode="articles_only" onExit={() => setCurrentView('profile')} onViewArticle={(id) => { setViewingHelpArticleId(id); setCurrentView('help-article'); }} />;
-        break;
-      case 'help-article':
-        if (viewingHelpArticleId) {
-            mainContent = <HelpArticleScreen articleId={viewingHelpArticleId} onExit={() => { setViewingHelpArticleId(null); setCurrentView('customer-service'); }} />;
-        }
-        break;
-      case 'live-support-chat':
-        mainContent = <LiveSupportChatScreen user={user} onExit={() => setCurrentView('customer-service')} />;
-        break;
-      case 'report-and-suggestion':
-        mainContent = <ReportAndSuggestionScreen user={user} onExit={() => setCurrentView('profile')} />;
-        break;
-      case 'event-center':
-        mainContent = <EventCenterScreen onExit={() => setCurrentView('feed')} onViewEvent={(id) => { setViewingEventId(id); setCurrentView('event-detail'); }} />;
-        break;
-      case 'event-detail':
-        if(viewingEventId) {
-            mainContent = <EventDetailScreen eventId={viewingEventId} onExit={() => setCurrentView('event-center')} onParticipate={() => { setCurrentView('feed'); }} />;
-        }
-        break;
-      case 'settings':
-        mainContent = <SettingsScreen user={user} onExit={() => setCurrentView('profile')} onLogout={handleLogout} onNavigate={handleNavigate} onDeleteAccount={handleDeleteAccount} onTriggerGiftNotification={handleTriggerGiftNotification} />;
-        break;
-      case 'copyright':
-        mainContent = <CopyrightScreen onExit={() => setCurrentView('settings')} />;
-        break;
-      case 'earnings-info':
-        mainContent = <EarningsInfoScreen onExit={() => setCurrentView('settings')} />;
-        break;
-      case 'connected-accounts':
-        mainContent = <ConnectedAccountsScreen user={user} onExit={() => setCurrentView('settings')} onLogout={handleLogout} />;
-        break;
-      case 'search':
-        mainContent = <SearchScreen currentUser={user} onExit={() => setCurrentView('feed')} onViewProfile={handleViewProfile} />;
-        break;
-      case 'app-version':
-        if (versionInfo) {
-            mainContent = <AppVersionScreen currentVersion={versionService.CURRENT_APP_VERSION} latestVersion={versionInfo.latestVersion} onExit={() => setCurrentView('settings')} />;
-        }
-        break;
-      case 'my-level':
-        mainContent = <MyLevelScreen user={user} onExit={() => setCurrentView('profile')} />;
-        break;
-      case 'developer-tools':
-        mainContent = <DeveloperToolsScreen onExit={() => setCurrentView('settings')} onNavigate={handleNavigate} />;
-        break;
-      case 'component-viewer':
-        mainContent = <ComponentViewerScreen onExit={() => setCurrentView('developer-tools')} />;
-        break;
-      case 'ranking':
-        mainContent = <RankingScreen currentUser={user} onExit={() => setCurrentView('feed')} onViewProfile={handleViewProfile} />;
-        break;
-      case 'documentation':
-        mainContent = <DocumentationScreen onExit={() => setCurrentView('developer-tools')} />;
-        break;
-      case 'purchase-history':
-        mainContent = <PurchaseHistoryScreen user={user} onExit={() => setCurrentView('diamond-purchase')} onUpdateUser={handleUpdateUser} />;
-        break;
-      case 'notification-settings':
-        mainContent = <NotificationSettingsScreen user={user} onExit={() => setCurrentView('settings')} onNavigate={handleNavigate} />;
-        break;
-       case 'gift-notification-settings':
-        mainContent = <GiftNotificationSettingsScreen user={user} onExit={() => setCurrentView('settings')} onUpdateSettings={handleUpdateGiftSettings} />;
-        break;
-      case 'push-settings':
-        mainContent = <PushSettingsScreen user={user} onExit={() => setCurrentView('notification-settings')} />;
-        break;
-      case 'private-live-invite-settings':
-        mainContent = <PrivateLiveInviteSettingsScreen user={user} onExit={() => setCurrentView('settings')} />;
-        break;
-      case 'privacy-settings':
-        mainContent = <PrivacySettingsScreen user={user} onExit={() => setCurrentView('settings')} />;
-        break;
-      case 'following':
-        mainContent = <FollowingScreen currentUser={user} viewedUserId={viewingOtherProfileId || user.id} onExit={() => setCurrentView('profile')} onUpdateUser={handleUpdateUser} onViewProfile={handleViewProfile} onFollowToggle={handleFollowToggle} />;
-        break;
-      case 'visitors':
-        mainContent = <VisitorsScreen currentUser={user} viewedUserId={viewingOtherProfileId || user.id} onExit={() => setCurrentView('profile')} onUpdateUser={handleUpdateUser} onViewProfile={handleViewProfile} onFollowToggle={handleFollowToggle} />;
-        break;
-      case 'fans':
-        mainContent = <FansScreen currentUser={user} viewedUserId={viewingOtherProfileId || user.id} onExit={() => setCurrentView('profile')} onUpdateUser={handleUpdateUser} onViewProfile={handleViewProfile} onFollowToggle={handleFollowToggle} />;
-        break;
-      case 'profile-editor':
-        mainContent = <ProfileEditorScreen user={user} onExit={() => setCurrentView('profile')} onSave={(u) => { setUser(u); setCurrentView('profile'); }} />;
-        break;
-      case 'avatar-protection':
-        mainContent = <AvatarProtectionScreen user={user} onExit={() => setCurrentView('profile')} onSave={(u) => { setUser(u); setCurrentView('profile'); }} />;
-        break;
-      case 'friend-requests':
-        mainContent = <FriendRequestScreen currentUser={user} onExit={() => setCurrentView('messages')} onUpdateUser={handleUpdateUser} onViewProfile={handleViewProfile} />;
-        break;
-      default:
-        mainContent = <LiveFeedScreen user={user} onViewStream={handleViewStream} onGoLiveClick={handleGoLiveClick} activeCategory={activeCategory} onSelectCategory={setActiveCategory} onUpdateUser={handleUpdateUser} onNavigateToChat={handleNavigateToChat} onViewProtectors={handleViewProtectors} onNavigate={handleNavigate} locationPermission={locationPermission} setLocationPermission={setLocationPermission} />;
+        return <EditProfileScreen user={user} viewedUserId={user.id} isViewingOtherProfile={true} onExit={() => setCurrentView('profile')} onFollowToggle={handleFollowToggle} onNavigateToChat={(userId) => { setViewingConversationId(String(userId)); setCurrentView('chat'); }} onViewStream={handleViewStream} onUpdateUser={setUser} onViewProfile={handleViewProfile} onNavigate={setCurrentView} />;
+      // FIX: Added missing onPurchase prop to fix TypeScript error.
+      case 'diamond-purchase': return <DiamondPurchaseScreen user={user} onExit={() => setCurrentView('profile')} onConfirmPurchase={handleConfirmPurchase} onNavigate={setCurrentView} onUpdateUser={setUser} onNavigateToSetup={() => setCurrentView('withdrawal-method-setup')} onWithdrawalComplete={handleWithdrawalComplete} successMessage={walletSuccessMessage} clearSuccessMessage={() => setWalletSuccessMessage(null)} onPurchase={handlePurchase} />;
+      case 'protectors': return <ProtectorsScreen streamerId={viewingProtectorsFor!} onExit={() => { setViewingProtectorsFor(null); setCurrentView('feed'); }} />;
+      case 'blocked-list': return <BlockedListScreen currentUserId={user.id} onExit={() => setCurrentView('profile')} />;
+      case 'withdrawal': return <WithdrawalScreen user={user} onUpdateUser={setUser} onExit={() => setCurrentView('profile')} onNavigateToSetup={() => setCurrentView('withdrawal-method-setup')} onWithdrawalComplete={handleWithdrawalComplete} />;
+      case 'withdrawal-method-setup': return <WithdrawalMethodSetupScreen user={user} onExit={() => setCurrentView('withdrawal')} onSetupComplete={handleWithdrawalSetupComplete} />;
+      case 'withdrawal-confirmation': return <WithdrawalConfirmationScreen transaction={lastWithdrawal} onExit={() => { setLastWithdrawal(null); setCurrentView('withdrawal'); }} />;
+      case 'customer-service': return <CustomerServiceScreen onExit={() => setCurrentView('profile')} onViewArticle={handleViewArticle} onViewSupportChat={() => setCurrentView('live-support-chat')} onNavigate={setCurrentView} />;
+      case 'backpack': return <BackpackScreen user={user} onExit={() => setCurrentView('profile')} onUpdateUser={setUser} onNavigate={setCurrentView} />;
+      case 'help-article': return <HelpArticleScreen articleId={viewingHelpArticleId!} onExit={() => { setViewingHelpArticleId(null); setCurrentView('customer-service'); }} />;
+      case 'live-support-chat': return <LiveSupportChatScreen user={user} onExit={() => setCurrentView('customer-service')} />;
+      case 'report-and-suggestion': return <ReportAndSuggestionScreen user={user} onExit={() => setCurrentView('profile')} />;
+      case 'event-center': return <EventCenterScreen onExit={() => setCurrentView('feed')} onViewEvent={handleViewEvent} />;
+      case 'event-detail': return <EventDetailScreen eventId={viewingEventId!} onExit={() => setCurrentView('event-center')} onParticipate={(event) => { console.log('Participating in event:', event); alert(`Participando em ${event.title}`);}} />;
+      case 'settings': return <SettingsScreen user={user} onExit={() => setCurrentView('profile')} onLogout={handleLogout} onNavigate={setCurrentView} onDeleteAccount={handleDeleteAccount} onTriggerGiftNotification={(gift) => {
+          const mockGiftMessage: ChatMessage = { id: Date.now(), type: 'gift', userId: user.id, username: user.nickname || user.name, message: `enviou ${gift.name}!`, giftId: gift.id, giftName: gift.name, giftValue: gift.price, giftAnimationUrl: gift.animationUrl, giftImageUrl: gift.imageUrl, recipientName: 'Você', quantity: 1, timestamp: new Date().toISOString() };
+          handleTriggerGiftAnimation(mockGiftMessage);
+      }} />;
+      case 'copyright': return <CopyrightScreen onExit={() => setCurrentView('settings')} />;
+      case 'earnings-info': return <EarningsInfoScreen onExit={() => setCurrentView('settings')} />;
+      case 'connected-accounts': return <ConnectedAccountsScreen user={user} onExit={() => setCurrentView('settings')} onLogout={handleLogout} />;
+      case 'search': return <SearchScreen currentUser={user} onExit={() => setCurrentView('feed')} onViewProfile={handleViewProfile} />;
+      case 'app-version': return <AppVersionScreen currentVersion={versionService.CURRENT_APP_VERSION} latestVersion={versionInfo?.latestVersion || '...'} onExit={() => setCurrentView('settings')} />;
+      case 'my-level': return <MyLevelScreen user={user} onExit={() => setCurrentView('profile')} />;
+      case 'developer-tools': return <DeveloperToolsScreen onExit={() => setCurrentView('settings')} onNavigate={setCurrentView} />;
+      case 'ranking': return <RankingScreen currentUser={user} onExit={() => setCurrentView('feed')} onViewProfile={handleViewProfile} />;
+      case 'documentation': return <DocumentationScreen onExit={() => setCurrentView('developer-tools')} />;
+      case 'purchase-history': return <PurchaseHistoryScreen user={user} onExit={() => setCurrentView('diamond-purchase')} onUpdateUser={setUser} />;
+      case 'notification-settings': return <NotificationSettingsScreen user={user} onExit={() => setCurrentView('settings')} onNavigate={setCurrentView} />;
+      case 'push-settings': return <PushSettingsScreen user={user} onExit={() => setCurrentView('notification-settings')} />;
+      case 'private-live-invite-settings': return <PrivateLiveInviteSettingsScreen user={user} onExit={() => setCurrentView('settings')} />;
+      case 'following': return <FollowingScreen currentUser={user} viewedUserId={viewingOtherProfileId || user.id} onExit={() => { setViewingOtherProfileId(null); setCurrentView('profile'); }} onUpdateUser={setUser} onViewProfile={handleViewProfile} onFollowToggle={handleFollowToggle} />;
+      case 'visitors': return <VisitorsScreen currentUser={user} viewedUserId={viewingOtherProfileId || user.id} onExit={() => { setViewingOtherProfileId(null); setCurrentView('profile'); }} onUpdateUser={setUser} onViewProfile={handleViewProfile} onFollowToggle={handleFollowToggle} />;
+      case 'fans': return <FansScreen currentUser={user} viewedUserId={viewingOtherProfileId || user.id} onExit={() => { setViewingOtherProfileId(null); setCurrentView('profile'); }} onUpdateUser={setUser} onViewProfile={handleViewProfile} onFollowToggle={handleFollowToggle} />;
+      case 'avatar-protection': return <AvatarProtectionScreen user={user} onExit={() => setCurrentView('profile')} onSave={setUser} />;
+      case 'friend-requests': return <FriendRequestScreen currentUser={user} onExit={() => setCurrentView('messages')} onUpdateUser={setUser} onViewProfile={handleViewProfile} />;
+      case 'privacy-settings': return <PrivacySettingsScreen user={user} onExit={() => setCurrentView('settings')} />;
+      case 'component-viewer': return <ComponentViewerScreen onExit={() => setCurrentView('developer-tools')} />;
+      case 'gift-notification-settings': return <GiftNotificationSettingsScreen user={user} onExit={() => setCurrentView('settings')} onUpdateSettings={handleUpdateGiftNotificationSettings} />;
+      case 'help-center': return <CustomerServiceScreen mode="help_only" onExit={() => setCurrentView('profile')} onViewArticle={handleViewArticle} onNavigate={setCurrentView} />;
+      case 'useful-articles-list': return <CustomerServiceScreen mode="articles_only" onExit={() => setCurrentView('help-center')} onViewArticle={handleViewArticle} onNavigate={setCurrentView} />;
+      case 'top-fans': return <TopFansScreen viewedUserId={viewingOtherProfileId || user.id} onExit={() => { setViewingOtherProfileId(null); setCurrentView('profile'); }} />;
+      case 'profile-editor': return <ProfileEditorScreen user={user} onSave={(updatedUser) => { setUser(updatedUser); setCurrentView('profile'); }} onExit={() => setCurrentView('profile')} />;
+      default: return <div>Not implemented: {currentView}</div>;
     }
-    
-    const showNav = !viewingOtherProfileId && !['go-live-setup', 'chat', 'settings', 'following', 'fans', 'visitors', 'report-and-suggestion', 'customer-service', 'diamond-purchase', 'avatar-protection', 'profile-editor', 'help-article', 'live-support-chat', 'connected-accounts', 'view-self-profile', 'help-center', 'useful-articles-list'].includes(currentView);
-
-    return (
-      <div className="h-full w-full flex flex-col bg-black">
-        <main className="flex-grow overflow-hidden">
-          {mainContent}
-        </main>
-        {showNav && <BottomNav user={user} activeView={currentView} onNavigate={handleNavigate} onGoLiveClick={handleGoLiveClick} />}
-      </div>
-    );
   }
 
   return (
-    <div className="h-screen w-full max-w-md mx-auto flex flex-col bg-black overflow-hidden shadow-2xl">
-      <GiftDisplayAnimation triggeredGift={triggeredGift} />
-      {liveNotification && (
-        <LiveNotificationModal 
-          streamerName={liveNotification.streamerName} 
-          streamerAvatarUrl={liveNotification.streamerAvatarUrl} 
-          onClose={() => setLiveNotification(null)}
-          onWatch={() => {
-            handleViewStream(liveNotification.stream);
-            setLiveNotification(null);
-          }}
-        />
-      )}
-      {purchaseOverlay?.step === 'purchase' && (
-          <DiamondPurchaseScreen 
-              user={user}
-              onExit={() => setPurchaseOverlay(null)}
-              onPurchase={handlePurchaseComplete}
-              onConfirmPurchase={handleConfirmPurchase}
-              isOverlay
-              onUpdateUser={handleUpdateUser}
-              onNavigateToSetup={() => {
-                  setPurchaseOverlay(null);
-                  setCurrentView('withdrawal-method-setup');
-              }}
-              onWithdrawalComplete={(t) => {
-                  setPurchaseOverlay(null);
-                  handleWithdrawalComplete(t);
-              }}
-              successMessage={walletSuccessMessage}
-              clearSuccessMessage={() => setWalletSuccessMessage(null)}
-              onNavigate={handleNavigate}
-          />
-      )}
-      {purchaseOverlay?.step === 'confirm' && purchaseOverlay.pkg && (
-          <PurchaseConfirmationScreen 
-              user={user}
-              selectedPackage={purchaseOverlay.pkg}
-              onExit={() => setPurchaseOverlay(null)}
-              onConfirm={handlePurchaseComplete}
-          />
-      )}
-      {incomingPrivateLiveInvite && (
-        <IncomingPrivateLiveInviteModal
-          invite={incomingPrivateLiveInvite}
-          onDecline={() => setIncomingPrivateLiveInvite(null)}
-          onAccept={() => {
-            handleViewStream(incomingPrivateLiveInvite.stream);
-            setIncomingPrivateLiveInvite(null);
-          }}
-        />
+    <div className="h-full w-full bg-black flex flex-col font-sans">
+      <main className="flex-grow overflow-hidden relative">
+        {renderCurrentView()}
+      </main>
+      
+      {['feed', 'video', 'messages', 'profile'].includes(currentView) && (
+        <BottomNav user={user} activeView={currentView} onNavigate={setCurrentView} onGoLiveClick={handleGoLive} />
       )}
 
-      {renderMainView()}
+      {/* Global Modals & Animations */}
+      {triggeredGift && <GiftDisplayAnimation triggeredGift={triggeredGift} />}
+      {liveNotification && <LiveNotificationModal {...liveNotification} onWatch={() => { setLiveNotification(null); handleViewStream(liveNotification.stream); }} onClose={() => setLiveNotification(null)} />}
+      {incomingPrivateLiveInvite && <IncomingPrivateLiveInviteModal invite={incomingPrivateLiveInvite} onAccept={() => { setIncomingPrivateLiveInvite(null); handleViewStream(incomingPrivateLiveInvite.stream); }} onDecline={() => setIncomingPrivateLiveInvite(null)} />}
+      {apiResponse && <ApiViewer title={apiResponse.title} data={apiResponse.data} onClose={hideApiResponse} />}
     </div>
   );
 };

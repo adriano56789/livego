@@ -38,44 +38,54 @@ export const ApiViewerProvider: React.FC<{ children: ReactNode }> = ({ children 
   const [apiResponse, setApiResponse] = useState<{ title: string; data: object } | null>(null);
   const [apiLog, setApiLog] = useState<ApiLogEntry[]>([]);
 
-  const showApiResponse = useCallback((title: string, data: object) => {
-    console.log(`[API Sim] ${title}`, data);
+  const logOnly = useCallback((title: string, data: object) => {
+    console.log(`[API Sim] (log only) ${title}`, data);
     const sanitizedData = sanitizeDataForViewer(data);
-    
-    // This now serves two purposes:
-    // 1. It powers the pop-up modal viewer.
-    // 2. It populates the persistent API Log in Developer Tools.
-    setApiResponse({ title, data: sanitizedData });
-
     setApiLog(prevLog => {
-        const newLogEntry: ApiLogEntry = {
-            id: Date.now(),
-            timestamp: new Date().toISOString(),
-            title,
-            data: sanitizedData,
-        };
-        const updatedLog = [newLogEntry, ...prevLog];
-        if (updatedLog.length > 50) {
-            updatedLog.pop();
-        }
-        return updatedLog;
+      const newLogEntry: ApiLogEntry = {
+          id: Date.now(),
+          timestamp: new Date().toISOString(),
+          title,
+          data: sanitizedData,
+      };
+      const updatedLog = [newLogEntry, ...prevLog];
+      if (updatedLog.length > 50) {
+          updatedLog.pop();
+      }
+      return updatedLog;
     });
   }, []);
-
-  useEffect(() => {
-    // Register the context's show function with the global logger
-    apiLogger.setListener(showApiResponse);
-    
-    // On unmount, clear the listener to prevent memory leaks
-    return () => apiLogger.setListener(() => {});
-  }, [showApiResponse]);
+  
+  const showAndLog = useCallback((title: string, data: object) => {
+    console.log(`[API Sim] (show) ${title}`, data);
+    const sanitizedData = sanitizeDataForViewer(data);
+    setApiLog(prevLog => {
+       const newLogEntry: ApiLogEntry = {
+          id: Date.now(),
+          timestamp: new Date().toISOString(),
+          title,
+          data: sanitizedData,
+      };
+       const updatedLog = [newLogEntry, ...prevLog];
+       if (updatedLog.length > 50) {
+           updatedLog.pop();
+       }
+       return updatedLog;
+    });
+    setApiResponse({ title, data: sanitizedData });
+  }, []);
 
   const hideApiResponse = useCallback(() => {
     setApiResponse(null);
   }, []);
 
+  useEffect(() => {
+    apiLogger.setListener({ logOnly, showAndLog });
+    return () => apiLogger.setListener(null);
+  }, [logOnly, showAndLog]);
+  
   return (
-    <ApiViewerContext.Provider value={{ showApiResponse, hideApiResponse, apiResponse, apiLog }}>
+    <ApiViewerContext.Provider value={{ showApiResponse: showAndLog, hideApiResponse, apiResponse, apiLog }}>
       {children}
     </ApiViewerContext.Provider>
   );

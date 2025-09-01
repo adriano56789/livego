@@ -173,6 +173,7 @@ const PrivateChatModal: React.FC<PrivateChatModalProps> = ({ user, onClose }) =>
         stats: { value: 0, icon: 'coin' },
         badges: [],
         protectors: [],
+        topFans: [],
         achievements: [],
         personalityTags: [],
         personalSignature: '',

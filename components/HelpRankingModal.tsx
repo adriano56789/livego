@@ -30,6 +30,7 @@ const HelpRankingModal: React.FC<HelpRankingModalProps> = ({
   const handleConfirm = async () => {
     setIsSubmitting(true);
     try {
+      // FIX: Call the correct service function for this action.
       const { updatedUser, success, message } = await liveStreamService.helpHostRankUp(currentUser.id, targetUser.userId, giftValue);
       showApiResponse('POST /api/ranking/help-host', { success, message, giftValue });
       if (success && updatedUser) {
@@ -54,7 +55,14 @@ const HelpRankingModal: React.FC<HelpRankingModalProps> = ({
           const flagBadge = user.badges.find(b => b.type === 'flag');
           if (flagBadge) return flagBadge.value;
       }
-      return '🇧🇷'; // Default flag for current user if not in ranking
+      // Fallback for current user who might not be in the ranking list with badges
+      if ('country' in user && user.country === 'BR') {
+          return '🇧🇷';
+      }
+      if ('country' in user && user.country === 'US') {
+          return '🇺🇸';
+      }
+      return '🇧🇷'; // Default flag
   }
 
   return (

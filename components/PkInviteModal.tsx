@@ -113,15 +113,13 @@ const PkInviteModal: React.FC<PkInviteModalProps> = ({ user, onClose, onEnterFri
     
     const handleMatchFound = (battle: PkBattle) => {
         setIsMatching(false);
-        // This would typically navigate to the battle, but for now, we just close and maybe alert.
-        // FIX: Cannot find name 'currentUser'. Changed to 'user' which is available in props.
         alert(`Partida encontrada! ${user.nickname} vs ${battle.streamer2.name}`);
         onClose();
     };
 
   return (
     <>
-        <div className="fixed inset-0 z-50 bg-transparent flex items-end" onClick={onClose}>
+        <div className="fixed inset-0 z-50 bg-black/70 flex items-end" onClick={onClose}>
         <div
             className="bg-[#1C1F24] w-full h-[75vh] max-h-[600px] rounded-t-2xl flex flex-col text-white animate-slide-up-fast"
             onClick={e => e.stopPropagation()}
@@ -194,7 +192,6 @@ const PkInviteModal: React.FC<PkInviteModalProps> = ({ user, onClose, onEnterFri
         </div>
 
         {isSettingsOpen && <PkSettingsModal userId={user.id} onClose={() => setIsSettingsOpen(false)} />}
-        {/* FIX: Cannot find name 'onMatchFound'. Passed the 'handleMatchFound' handler. */}
         {isMatching && <PkRandomMatchModal currentUser={user} onClose={() => setIsMatching(false)} onMatchFound={handleMatchFound} />}
     </>
   );

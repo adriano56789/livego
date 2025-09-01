@@ -1,24 +1,40 @@
 
+
 type ApiLogListener = (title: string, data: object) => void;
 
-let listener: ApiLogListener | null = null;
+interface ApiListeners {
+    logOnly: ApiLogListener;
+    showAndLog: ApiLogListener;
+}
+
+let listeners: ApiListeners | null = null;
+
+// A list of noisy, high-frequency paths to exclude from the automatic modal popup.
+// These will still be logged to the console and available in the Dev Tools API Log.
+const MODAL_BLOCKLIST = [
+    '/api/users/\\d+/live-status',
+    '/api/users/\\d+/following-live-status',
+    '/api/lives/\\d+$', // End of string to not match subpaths like /lives/123/viewers
+    '/api/chat/live/\\d+',
+    '/api/lives/\\d+/viewers',
+    '/api/batalhas-pk/\\d+',
+    '/api/pk/invites/status/.+', // Polling for PK invite status
+];
+
+const isBlocked = (path: string): boolean => {
+    return MODAL_BLOCKLIST.some(pattern => new RegExp(`^${pattern}$`).test(path));
+}
 
 export const apiLogger = {
-  setListener: (newListener: ApiLogListener) => {
-    listener = newListener;
+  setListener: (newListeners: ApiListeners | null) => {
+    listeners = newListeners;
   },
-  log: (title: string, data: object) => {
-    if (listener) {
-      // Filter out noisy, repetitive background calls from the modal viewer
-      // These will still appear in the console and the API Log dev tool.
-      const noisyEndpoints = [
-        '/api/users/10755083/live-status',
-        '/api/users/10755083/following-live-status',
-        '/api/users/10755083/pending-invites',
-        '/api/livekit/token', // This is a technical call, not a business logic one.
-      ];
-      if (!noisyEndpoints.some(endpoint => title.includes(endpoint))) {
-        listener(title, data);
+  log: (title: string, path: string, data: object) => {
+    if (listeners) {
+      if (isBlocked(path)) {
+        listeners.logOnly(title, data);
+      } else {
+        listeners.showAndLog(title, data);
       }
     }
   },

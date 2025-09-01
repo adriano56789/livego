@@ -259,15 +259,8 @@ const GoLiveSetupScreen: React.FC<GoLiveSetupScreenProps> = ({ user, onStartStre
         return;
     }
     setIsStarting(true);
-     // Silently save preferences on start
-    try {
-        await authService.updateUserProfile(user.id, {
-            lastLiveTitle: title,
-            lastLiveMeta: meta,
-        });
-    } catch (e) {
-        console.warn("Could not save title/meta preference on stream start", e);
-    }
+     // The startLiveStream API will now save these preferences.
+     // No need to call updateUserProfile here anymore.
 
     onStartStream({ 
         title,
@@ -279,7 +272,7 @@ const GoLiveSetupScreen: React.FC<GoLiveSetupScreenProps> = ({ user, onStartStre
         isPkEnabled: isPkEnabled,
         cameraUsed: facingMode,
     });
-  }, [title, meta, category, isLiveStreamPrivate, thumbnailBase64, entryFee, isPkEnabled, onStartStream, facingMode, user.id]);
+  }, [title, meta, category, isLiveStreamPrivate, thumbnailBase64, entryFee, isPkEnabled, onStartStream, facingMode]);
 
   const renderFeeInput = () => (
     <div className="flex items-center gap-3 mt-4 bg-gray-800/80 backdrop-blur-sm p-3 rounded-lg">

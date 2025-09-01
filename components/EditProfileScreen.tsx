@@ -20,6 +20,8 @@ import PlayOutlineIcon from './icons/PlayOutlineIcon';
 import ClockIcon from './icons/ClockIcon';
 import MenuIcon from './icons/MenuIcon';
 import PencilIcon from './icons/PencilIcon';
+import ChevronRightIcon from './icons/ChevronRightIcon';
+import CrownIcon from './icons/CrownIcon';
 
 
 // Action sheet that slides from the bottom
@@ -341,6 +343,30 @@ const EditProfileScreen: React.FC<EditProfileScreenProps> = ({
                          <Stat value={formatRecebidos(profile.recebidos)} label="Recebidos" icon={<CoinReceivedIcon />} />
                         <Stat value={formatStatNumber(profile.enviados)} label="Enviados" icon={<DiamondSentIcon />} />
                     </div>
+
+                    {profile.topFans && profile.topFans.length > 0 && (
+                        <button
+                            onClick={() => onNavigate?.('top-fans')}
+                            className="w-full bg-[#2c2c2e] rounded-lg p-3 -mt-2 mb-4 flex items-center justify-between text-left hover:bg-gray-700/50 transition-colors"
+                        >
+                            <span className="font-semibold text-white">Top fãs</span>
+                            <div className="flex items-center gap-2">
+                                <div className="flex items-center -space-x-4">
+                                    {profile.topFans.map((fan) => (
+                                        <div key={fan.userId} className="relative">
+                                            <img
+                                                src={fan.avatarUrl}
+                                                alt={fan.name}
+                                                className="w-9 h-9 rounded-full border-2 border-black object-cover"
+                                            />
+                                            {fan.rank === 1 && <CrownIcon className="absolute -top-2.5 left-1/2 -translate-x-1/2 w-5 h-5 text-yellow-400" />}
+                                        </div>
+                                    ))}
+                                </div>
+                                <ChevronRightIcon className="w-5 h-5 text-gray-500" />
+                            </div>
+                        </button>
+                    )}
 
                     <div className="w-full h-px bg-gray-800 my-4"></div>
 

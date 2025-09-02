@@ -1,4 +1,5 @@
 
+
 import { apiClient } from './apiClient';
 import type { User, LiveDetails, ChatMessage, Gift, Viewer, RankingContributor, Like, PkBattle, PkBattleState, PublicProfile, PkEventDetails, Conversation, SendGiftResponse, ProtectorDetails, WithdrawalTransaction, WithdrawalMethod, InventoryItem, AppEvent, LiveEndSummary, UserLevelInfo, GeneralRankingStreamer, GeneralRankingUser, WithdrawalBalance, EventStatus, PkRankingData, Stream, Category, StartLiveResponse, ConvitePK, LiveFollowUpdate, PrivateLiveInviteSettings, NotificationSettings, FacingMode, SoundEffectName, UniversalRankingData, UserListRankingPeriod, PkSettings, LiveCategory, StreamUpdateListener, MuteStatusListener, UserKickedListener, SoundEffectListener, MuteStatusUpdate, UserKickedUpdate, SoundEffectUpdate, UserBlockedUpdate, UserUnblockedUpdate, UserBlockedListener, UserUnblockedListener, Region, PrivacySettings, IncomingPrivateLiveInvite, GiftNotificationSettings, TopFanDetails } from '../types';
 
@@ -130,6 +131,8 @@ export const sendChatMessage = async (liveId: number, userId: number, message: s
         method: 'POST',
         body: JSON.stringify({ userId, message, imageUrl }),
     });
+    // Dispatch to all chat listeners to simulate real-time update
+    chatListeners.forEach(listener => listener(liveId, [newMsg]));
     liveUpdateManager.dispatch(liveId);
     return newMsg;
 };

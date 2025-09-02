@@ -3,7 +3,8 @@
 import { mongoObjectId } from './mongoObjectId';
 import * as levelService from './levelService';
 // FIX: Added missing type imports.
-import type { User, LiveStreamRecord, Stream, PkBattle, PkBattleState, PurchaseOrder, ConvitePK, LiveCategory, Category, StartLiveResponse, FacingMode, LiveDetails, ChatMessage, Viewer, PublicProfile, AppEvent, ArtigoAjuda, CanalContato, HealthCheckResult, PrivateLiveInviteSettings, NotificationSettings, GiftNotificationSettings, PrivacySettings, LiveFollowUpdate, WithdrawalBalance, UserLevelInfo, InventoryItem, WithdrawalTransaction, RankingContributor, Conversation, ConversationMessage, Gift, DiamondPackage, PkSettings, SelectableOption, SecurityLogEntry, UniversalRankingUser, LiveEndSummary } from '../types';
+// FIX: Added missing type imports for UniversalRankingData and GeneralRankingStreamer to resolve compilation errors.
+import type { User, LiveStreamRecord, Stream, PkBattle, PkBattleState, PurchaseOrder, ConvitePK, LiveCategory, Category, StartLiveResponse, FacingMode, LiveDetails, ChatMessage, Viewer, PublicProfile, AppEvent, ArtigoAjuda, CanalContato, HealthCheckResult, PrivateLiveInviteSettings, NotificationSettings, GiftNotificationSettings, PrivacySettings, LiveFollowUpdate, WithdrawalBalance, UserLevelInfo, InventoryItem, WithdrawalTransaction, RankingContributor, Conversation, ConversationMessage, Gift, DiamondPackage, PkSettings, SelectableOption, SecurityLogEntry, UniversalRankingUser, LiveEndSummary, TopFanDetails } from '../types';
 
 // --- INITIAL MOCK DATA (STRUCTURED LIKE MONGODB COLLECTIONS) ---
 const newUserTemplate = {
@@ -25,6 +26,7 @@ const newUserTemplate = {
   height: null,
   weight: null,
   pk_enabled_preference: true,
+  online_status: true,
   settings: {
     notifications: { newMessages: true, streamerLive: true, followedPost: true, order: true, interactive: true },
     privacy: { showLocation: true, showActiveStatus: true, showInNearby: true, protectionEnabled: false },
@@ -33,7 +35,8 @@ const newUserTemplate = {
   }
 };
 
-const userDefinitions: Omit<User, 'level' | 'followers' | 'visitors'>[] = [
+// FIX: Made the 'visitors' property optional in the base definition to match its usage.
+const userDefinitions: (Omit<User, 'level' | 'followers' | 'visitors'> & { visitors?: number })[] = [
     {
       id: 10755083,
       name: 'Você',
@@ -41,18 +44,20 @@ const userDefinitions: Omit<User, 'level' | 'followers' | 'visitors'>[] = [
       avatar_url: 'https://i.pravatar.cc/400?u=10755083',
       nickname: 'Seu Perfil',
       gender: 'male',
-      birthday: '1995-05-15',
-      age: null,
+      birthday: '2002-01-01',
+      age: 22,
+      level2: 6,
       has_uploaded_real_photo: true,
       has_completed_profile: true,
       invite_code: 'A1B2C3D4',
-      following: [55218901], // Following "Lest Go 500 K..."
+      following: [55218901, 14431934, 99887705], // Following "Lest Go 500 K..." and "PK Pro"
       wallet_diamonds: 50000,
       wallet_earnings: 125000,
       withdrawal_method: null,
       xp: 0,
       last_camera_used: 'user',
       country: 'BR',
+      region: 'São Paulo',
       personalSignature: "Apenas boas vibrações!",
       personalityTags: [{id: 'gamer', label: 'Gamer'}, {id: 'music', label: 'Música'}],
       emotionalState: null,
@@ -62,6 +67,9 @@ const userDefinitions: Omit<User, 'level' | 'followers' | 'visitors'>[] = [
       weight: null,
       pk_enabled_preference: true,
       photo_gallery: ['https://i.pravatar.cc/400?u=10755083'],
+      latitude: -23.5505, // São Paulo
+      longitude: -46.6333,
+      online_status: true,
       settings: {
         notifications: { newMessages: true, streamerLive: true, followedPost: true, order: true, interactive: true },
         privacy: { showLocation: true, showActiveStatus: true, showInNearby: true, protectionEnabled: false },
@@ -81,6 +89,11 @@ const userDefinitions: Omit<User, 'level' | 'followers' | 'visitors'>[] = [
       ...newUserTemplate,
       following: [10755083], 
       is_avatar_protected: true,
+      country: 'BR',
+      region: 'Rio de Janeiro',
+      latitude: -22.9068, // Rio de Janeiro
+      longitude: -43.1729,
+      online_status: true,
       photo_gallery: ['https://i.pravatar.cc/400?u=55218901'],
     },
     { 
@@ -90,10 +103,15 @@ const userDefinitions: Omit<User, 'level' | 'followers' | 'visitors'>[] = [
       nickname: 'PK Queen', 
       avatar_url: 'https://i.pravatar.cc/400?u=66345102', 
       gender: 'female',
-      birthday: '1998-10-20',
+      birthday: '2002-04-10',
       age: null,
       ...newUserTemplate,
+      level2: 6,
       country: 'US',
+      region: 'California',
+      latitude: 34.0522, // Los Angeles
+      longitude: -118.2437,
+      online_status: true,
       photo_gallery: ['https://i.pravatar.cc/400?u=66345102'],
     },
     { 
@@ -106,7 +124,30 @@ const userDefinitions: Omit<User, 'level' | 'followers' | 'visitors'>[] = [
       birthday: '1992-07-11',
       age: null,
       ...newUserTemplate,
+      country: 'BR',
+      region: 'Minas Gerais',
+      online_status: false,
+      last_visit_date: new Date(Date.now() - 5 * 60 * 1000).toISOString(), // 5 minutes ago
       photo_gallery: ['https://i.pravatar.cc/400?u=99887705'],
+    },
+     { 
+      id: 14431934, 
+      name: 'Fernando', 
+      email: 'fernando1135@example.com',
+      nickname: 'Fernando1135', 
+      avatar_url: 'https://i.pravatar.cc/400?u=14431934', 
+      gender: 'male',
+      birthday: '1993-02-18',
+      age: null,
+      ...newUserTemplate,
+      country: 'BR',
+      region: 'Bahia',
+      visitors: 29,
+      level2: 7,
+      latitude: -23.5507, // Close to São Paulo
+      longitude: -46.6335,
+      online_status: true,
+      photo_gallery: ['https://i.pravatar.cc/400?u=14431934'],
     },
     { 
       id: 999, 
@@ -118,7 +159,10 @@ const userDefinitions: Omit<User, 'level' | 'followers' | 'visitors'>[] = [
       birthday: null,
       age: null,
       ...newUserTemplate,
+      country: null,
+      region: 'Support Center',
       xp: 999999,
+      online_status: true,
       photo_gallery: ['https://storage.googleapis.com/genai-assets/LiveGoSupportAgent.png'],
     }
 ];
@@ -137,7 +181,7 @@ const initialData = {
     _id: mongoObjectId(),
     ...u,
     followers: followerCounts[u.id] || 0,
-    visitors: 0,
+    visitors: u.visitors || 0,
     following: u.following || [], // Ensure `following` is always an array
     level: levelService.calculateLevelFromXp(u.xp)
   })),

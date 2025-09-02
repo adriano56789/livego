@@ -1,4 +1,5 @@
 
+
 import React from 'react';
 import CrossIcon from './icons/CrossIcon';
 
@@ -96,6 +97,7 @@ const ArcoraToolModal: React.FC<ArcoraToolModalProps> = ({
         { icon: <SoundEffectIcon className={iconClass} />, label: 'Efeito sonoro', onClick: onOpenSoundEffectModal },
         { icon: isVoiceEnabled ? <VoiceIcon className={iconClass} /> : <MicOffIcon className={iconClass} />, label: 'Microfone', onClick: onToggleVoice, isActive: isVoiceEnabled },
         { icon: <ClarityIcon className={iconClass} />, label: 'Clareza', notImplemented: true },
+        { icon: <MessageIcon className={iconClass} />, label: 'Bate-papo', onClick: onOpenPrivateChat },
     ];
     
     if (isPrivateStream) {
@@ -111,7 +113,6 @@ const ArcoraToolModal: React.FC<ArcoraToolModalProps> = ({
     const basicTools = [
         { icon: <CameraFlipIcon className={iconClass} />, label: 'Giro', onClick: onSwitchCamera, subLabel: cameraFacingMode === 'user' ? 'Frontal' : 'Traseira' },
         { icon: <MuteIcon className={iconClass} />, label: 'Silenciamento', onClick: onOpenMuteModal },
-        { icon: <MessageIcon className={iconClass} />, label: 'Bate-papo', onClick: onOpenPrivateChat },
         { icon: <RotateIcon className={iconClass} />, label: 'Girar', notImplemented: true },
     ];
 

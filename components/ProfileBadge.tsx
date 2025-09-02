@@ -3,12 +3,13 @@ import MaleIcon from './icons/MaleIcon';
 import FemaleIcon from './icons/FemaleIcon';
 import FireIcon from './icons/FireIcon';
 import VideoIcon from './icons/VideoIcon';
+import LeafIcon from './icons/LeafIcon';
 
 interface ProfileBadgeProps {
     badge: {
         text: string;
-        type: 'gender_age' | 'level' | 'status' | 'regular' | 'top';
-        icon?: 'female' | 'male' | 'fire' | 'play';
+        type: 'gender_age' | 'level' | 'status' | 'regular' | 'top' | 'level2';
+        icon?: 'female' | 'male' | 'fire' | 'play' | 'leaf';
     };
 }
 
@@ -61,6 +62,12 @@ const ProfileBadge: React.FC<ProfileBadgeProps> = ({ badge }) => {
                 hasIcon = !!styles.icon;
             }
             break;
+        case 'level2':
+            bgColor = 'bg-cyan-500';
+            textColor = 'text-white';
+            IconComponent = LeafIcon;
+            hasIcon = true;
+            break;
         case 'status':
             bgColor = 'bg-red-600';
             textColor = 'text-white';
@@ -86,8 +93,8 @@ const ProfileBadge: React.FC<ProfileBadgeProps> = ({ badge }) => {
 
 
     return (
-        <span className={`px-2 py-1 rounded-md text-xs font-bold flex items-center justify-center gap-1 ${bgColor} ${textColor} shrink-0`}>
-            {hasIcon && IconComponent && <IconComponent className="w-3 h-3" />}
+        <span className={`px-2 py-1 rounded-full text-xs font-bold flex items-center justify-center gap-1.5 ${bgColor} ${textColor} shrink-0`}>
+            {hasIcon && IconComponent && <IconComponent className="w-3.5 h-3.5" />}
             <span>{badge.text}</span>
         </span>
     );

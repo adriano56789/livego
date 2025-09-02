@@ -1,3 +1,5 @@
+
+
 // This file contains the complete mock API server, including the in-memory database,
 // routing logic, and all endpoint handlers. It fully simulates the backend.
 
@@ -5,7 +7,8 @@ import * as levelService from './levelService';
 import { database, getRawDb } from './database';
 import { mongoObjectId } from './mongoObjectId';
 // FIX: Added missing type imports to resolve compilation errors.
-import type { User, LiveStreamRecord, Stream, PkBattle, PkBattleState, PurchaseOrder, ConvitePK, LiveCategory, Category, StartLiveResponse, FacingMode, LiveDetails, ChatMessage, Viewer, PublicProfile, AppEvent, ArtigoAjuda, CanalContato, HealthCheckResult, PrivateLiveInviteSettings, NotificationSettings, GiftNotificationSettings, PrivacySettings, LiveFollowUpdate, WithdrawalBalance, UserLevelInfo, InventoryItem, WithdrawalTransaction, RankingContributor, Conversation, ConversationMessage, Gift, DiamondPackage, PkSettings, SelectableOption, SecurityLogEntry, UniversalRankingUser, LiveEndSummary, TopFanDetails, UniversalRankingData, GeneralRankingStreamer } from '../types';
+// FIX: Added missing type imports for UniversalRankingData and GeneralRankingStreamer to resolve compilation errors.
+import type { User, LiveStreamRecord, Stream, PkBattle, PkBattleState, PurchaseOrder, ConvitePK, LiveCategory, Category, StartLiveResponse, FacingMode, LiveDetails, ChatMessage, Viewer, PublicProfile, AppEvent, ArtigoAjuda, CanalContato, HealthCheckResult, PrivateLiveInviteSettings, NotificationSettings, GiftNotificationSettings, PrivacySettings, LiveFollowUpdate, WithdrawalBalance, UserLevelInfo, InventoryItem, WithdrawalTransaction, RankingContributor, Conversation, ConversationMessage, Gift, DiamondPackage, PkSettings, SelectableOption, SecurityLogEntry, UniversalRankingUser, LiveEndSummary, TopFanDetails, UniversalRankingData, GeneralRankingStreamer, ProfileBadgeType } from '../types';
 
 // --- SIMULATED ENVIRONMENT VARIABLES ---
 const SRS_URL_PUBLISH = 'rtmp://localhost/live';
@@ -15,6 +18,19 @@ const SRS_URL_PLAY_HLS = 'http://localhost:8080/live';
 // FIX: Added missing delay function.
 // Helper function to simulate network delay
 const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
+
+function getDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
+  const R = 6371; // Radius of the earth in km
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  const d = R * c; // Distance in km
+  return d;
+}
 
 const mapLiveRecordToStream = (record: LiveStreamRecord): Stream => ({
     id: record.id,
@@ -88,6 +104,7 @@ const buildConversationViewModel = async (convo: any, currentUserId: number): Pr
         otherUserAvatarUrl: otherUser.avatar_url || '',
         isFriend: isFriend,
         unreadCount,
+        onlineStatus: otherUser.settings?.privacy.showActiveStatus ? otherUser.online_status : false,
         messages: messages.map((msg: any) => ({
             id: msg.id, 
             senderId: msg.senderId, 
@@ -360,6 +377,21 @@ export const handleApiRequest = async (method: string, path: string, body: any, 
                  const viewerId = query.get('viewerId') ? parseInt(query.get('viewerId')!, 10) : undefined;
                  const user = await database.users.findOne({ id: userId });
                  if (!user) throw new Error('User not found');
+                 
+                 const viewer = viewerId ? await database.users.findOne({ id: viewerId }) : null;
+                 
+                let userAge: number | null = user.age;
+                if (user.birthday && !user.age) {
+                    const birthDate = new Date(user.birthday);
+                    const today = new Date();
+                    let age = today.getFullYear() - birthDate.getFullYear();
+                    const m = today.getMonth() - birthDate.getMonth();
+                    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+                        age--;
+                    }
+                    userAge = age;
+                    await database.users.updateOne({ id: userId }, { $set: { age: userAge } });
+                }
         
                  const isFollowing = viewerId ? (await database.users.findOne({id: viewerId}))?.following.includes(userId) : false;
                  
@@ -388,13 +420,19 @@ export const handleApiRequest = async (method: string, path: string, body: any, 
                     }
                 }
                 const top3Fans = topFansList.slice(0, 3);
+                
+                const countryInfo = await database.countries.find();
+                const country = countryInfo.find(c => c.id === user.country);
+                const locationParts = [];
+                if (country) locationParts.push(country.label);
+                if (user.region) locationParts.push(user.region);
         
                  const publicProfile: PublicProfile = {
                     id: user.id,
                     name: user.name,
                     nickname: user.nickname || user.name,
                     avatarUrl: user.avatar_url || '',
-                    age: user.age,
+                    age: userAge,
                     gender: user.gender,
                     birthday: user.birthday,
                     isLive: (await database.liveStreams.findOne({ user_id: userId, ao_vivo: true })) !== null,
@@ -406,10 +444,7 @@ export const handleApiRequest = async (method: string, path: string, body: any, 
                     enviados: 0, // Mocked
                     coverPhotoUrl: 'https://images.pexels.com/photos/1763075/pexels-photo-1763075.jpeg',
                     stats: { value: 12345, icon: 'coin' },
-                    badges: [
-                        { text: String(user.level), type: 'level' },
-                        ...(user.gender && user.age ? [{ text: String(user.age), type: 'gender_age' as const, icon: user.gender as 'male'|'female' }] : [])
-                    ],
+                    badges: [],
                     protectors: [], // Mocked
                     topFans: top3Fans,
                     achievements: [], // Mocked
@@ -417,7 +452,22 @@ export const handleApiRequest = async (method: string, path: string, body: any, 
                     personalSignature: user.personalSignature || '',
                     is_avatar_protected: user.is_avatar_protected,
                     privacy: user.settings?.privacy,
+                    onlineStatus: (user.settings?.privacy.showActiveStatus && user.online_status) ? 'online' : 'offline',
+                    countryCode: user.country,
+                    location: locationParts.length > 0 ? locationParts.join(', ') : undefined,
+                    visitors: user.visitors || 0,
+                    level: user.level,
+                    level2: user.level2 || 0,
+                    lastVisitDate: user.last_visit_date,
                  };
+                 
+                 if (viewer && user.settings?.privacy.showInNearby && viewer.settings?.privacy.showInNearby && user.latitude && user.longitude && viewer.latitude && viewer.longitude) {
+                    publicProfile.distanceKm = getDistance(user.latitude, user.longitude, viewer.latitude, viewer.longitude);
+                 }
+                 
+                 publicProfile.age = user.age;
+                 publicProfile.gender = user.gender;
+                 publicProfile.level2 = user.level2 || 0;
                  return publicProfile;
             }
             case 'following': {
@@ -810,6 +860,7 @@ export const handleApiRequest = async (method: string, path: string, body: any, 
                 status: 'ao vivo',
                 likeCount: liveStream.like_count || 0,
                 streamerIsAvatarProtected: streamer.is_avatar_protected,
+                countryCode: streamer.country,
                 title: liveStream.titulo,
                 meta: liveStream.meta ?? undefined,
             };
@@ -1088,13 +1139,12 @@ export const handleApiRequest = async (method: string, path: string, body: any, 
                 messages: []
             };
             await database.conversations.insertOne(newConvoData);
-            // Re-fetch to get the full object from the "database"
-            convo = await database.conversations.findOne({ id: newConvoData.id });
+            // Do not re-fetch, use the object directly to avoid race conditions.
+            convo = newConvoData;
         }
-        
+
         if (!convo) {
-            // This should not happen if insert was successful.
-            throw new Error("Failed to create and then find conversation.");
+            throw new Error("Failed to create or find conversation.");
         }
         
         const viewModel = await buildConversationViewModel(convo, currentUserId);
@@ -1102,6 +1152,13 @@ export const handleApiRequest = async (method: string, path: string, body: any, 
             throw new Error("Could not build conversation view model");
         }
         return viewModel;
+    }
+    
+    if (method === 'POST' && path === '/api/chat/upload') {
+        const { imageDataUrl } = body;
+        // In a real app, this would upload to a cloud storage and return the URL.
+        // For the mock, we just return the data URL itself as if it were a permanent URL.
+        return { url: imageDataUrl };
     }
     
     // --- GIFTS ---

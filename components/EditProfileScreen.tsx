@@ -22,6 +22,8 @@ import MenuIcon from './icons/MenuIcon';
 import PencilIcon from './icons/PencilIcon';
 import ChevronRightIcon from './icons/ChevronRightIcon';
 import CrownIcon from './icons/CrownIcon';
+import LeafIcon from './icons/LeafIcon';
+import Flag from './Flag';
 
 
 // Action sheet that slides from the bottom
@@ -109,6 +111,19 @@ interface EditProfileScreenProps {
   onUpdateUser?: (user: User) => void;
   onViewProfile?: (userId: number) => void;
 }
+
+const formatLastVisit = (dateString: string): string => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+    if (diffSeconds < 60) return "agora mesmo";
+    if (diffSeconds < 3600) return `há ${Math.floor(diffSeconds / 60)} min`;
+    if (diffSeconds < 86400) return `há ${Math.floor(diffSeconds / 3600)} h`;
+    if (diffSeconds < 86400 * 7) return `há ${Math.floor(diffSeconds / 86400)} d`;
+    
+    return `visto em ${date.toLocaleDateString('pt-BR')}`;
+};
 
 const EditProfileScreen: React.FC<EditProfileScreenProps> = ({
   user,
@@ -307,8 +322,18 @@ const EditProfileScreen: React.FC<EditProfileScreenProps> = ({
                     </div>
 
                     <div className="absolute -bottom-8 sm:-bottom-10 left-4">
-                        <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full border-4 border-black bg-gray-800 overflow-hidden">
-                            <img src={profile.avatarUrl} alt={profile.nickname} className="w-full h-full object-cover" />
+                        <div className="relative w-20 h-20 sm:w-24 sm:h-24">
+                            <div className="w-full h-full rounded-full border-4 border-black bg-gray-800 overflow-hidden">
+                                <img src={profile.avatarUrl} alt={profile.nickname} className="w-full h-full object-cover" />
+                            </div>
+                            {profile.level >= 5 && (
+                                <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center border-2 border-black shadow-lg">
+                                    <span className="text-white font-black text-base sm:text-lg italic">V</span>
+                                </div>
+                            )}
+                            {profile.countryCode && (
+                                <Flag code={profile.countryCode} className="w-6 h-6 sm:w-7 sm:h-7 rounded-full border-2 border-black absolute bottom-0 right-0" />
+                            )}
                         </div>
                     </div>
                      {profile.isLive && (
@@ -322,7 +347,20 @@ const EditProfileScreen: React.FC<EditProfileScreenProps> = ({
                 </header>
 
                 <main className="px-4 pb-4">
-                    <div className="mt-10 sm:mt-12">
+                    <div className="flex justify-end pt-2">
+                         {profile.onlineStatus === 'online' ? (
+                            <div className="flex items-center gap-1.5 bg-gray-800/50 px-2 py-1 rounded-full">
+                                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                                <span className="text-green-400 font-semibold text-xs">Online</span>
+                            </div>
+                        ) : (
+                             <div className="flex items-center gap-1.5 bg-gray-800/50 px-2 py-1 rounded-full">
+                                <div className="w-2 h-2 bg-gray-600 rounded-full"></div>
+                                <span className="text-gray-400 text-xs">{profile.lastVisitDate ? formatLastVisit(profile.lastVisitDate) : 'Offline'}</span>
+                            </div>
+                        )}
+                    </div>
+                    <div className="mt-2">
                         <h1 className="text-2xl font-bold text-white">{profile.nickname}</h1>
                         <div className="flex items-center gap-2 text-sm text-gray-400 mt-1">
                             <span>ID: {profile.id}</span>
@@ -330,11 +368,21 @@ const EditProfileScreen: React.FC<EditProfileScreenProps> = ({
                                 {idCopied ? <span className="text-xs text-lime-400">Copiado</span> : <CopyIcon className="w-4 h-4 text-gray-500 hover:text-white" />}
                             </button>
                         </div>
-                        <div className="flex flex-wrap items-center gap-2 mt-2">
-                            {profile.badges?.map((badge, index) => (
-                                <ProfileBadge key={index} badge={badge} />
-                            ))}
+                        
+                        {/* Render user badges for age, level, etc. */}
+                        <div className="flex flex-wrap items-center gap-2 mt-3">
+                            {profile.age && profile.gender && (
+                                <ProfileBadge badge={{ text: String(profile.age), type: 'gender_age', icon: profile.gender }} />
+                            )}
+                            {profile.level2 > 0 && (
+                                <ProfileBadge badge={{ text: String(profile.level2), type: 'level2', icon: 'leaf' }} />
+                            )}
                         </div>
+
+                         <div className="flex items-center gap-2 text-sm text-gray-400 mt-2">
+                             <LocationPinIcon className="w-4 h-4 text-gray-500" />
+                             <span>{profile.location} | {(profile.distanceKm ?? 0).toFixed(2)}km</span>
+                         </div>
                     </div>
                     
                     <div className="grid grid-cols-4 gap-2 my-6 text-center">
@@ -382,21 +430,23 @@ const EditProfileScreen: React.FC<EditProfileScreenProps> = ({
             </div>
             
             <footer className="p-4 bg-black border-t border-gray-800/50 shrink-0">
-                {isFollowing ? (
-                    <button
-                        onClick={handleNavigateToChatWrapper}
-                        className="w-full py-3.5 rounded-full font-semibold transition-colors bg-gradient-to-r from-purple-600 to-fuchsia-500 text-white"
-                    >
-                        Conversar
-                    </button>
-                ) : (
-                    <button
-                        onClick={handleFollowToggleWrapper}
-                        disabled={isFollowLoading}
-                        className="w-full py-3.5 rounded-full font-semibold transition-colors bg-gradient-to-r from-purple-600 to-fuchsia-500 text-white disabled:opacity-50"
-                    >
-                        {isFollowLoading ? '...' : 'Seguir'}
-                    </button>
+                {!isOwnProfile && (
+                  isFollowing ? (
+                      <button
+                          onClick={handleNavigateToChatWrapper}
+                          className="w-full py-3.5 rounded-full font-semibold transition-colors bg-gradient-to-r from-purple-600 to-fuchsia-500 text-white"
+                      >
+                          Conversar
+                      </button>
+                  ) : (
+                      <button
+                          onClick={handleFollowToggleWrapper}
+                          disabled={isFollowLoading}
+                          className="w-full py-3.5 rounded-full font-semibold transition-colors bg-gradient-to-r from-purple-600 to-fuchsia-500 text-white disabled:opacity-50"
+                      >
+                          {isFollowLoading ? '...' : 'Seguir'}
+                      </button>
+                  )
                 )}
             </footer>
         </div>

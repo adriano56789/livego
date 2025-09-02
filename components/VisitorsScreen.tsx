@@ -12,9 +12,10 @@ interface VisitorsScreenProps {
   onUpdateUser: (user: User) => void;
   onViewProfile: (userId: number) => void;
   onFollowToggle: (userId: number) => void;
+  onNavigateToChat: (userId: number) => void;
 }
 
-const VisitorsScreen: React.FC<VisitorsScreenProps> = ({ currentUser, viewedUserId, onExit, onUpdateUser, onViewProfile, onFollowToggle }) => {
+const VisitorsScreen: React.FC<VisitorsScreenProps> = ({ currentUser, viewedUserId, onExit, onUpdateUser, onViewProfile, onFollowToggle, onNavigateToChat }) => {
     const [users, setUsers] = useState<User[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
@@ -60,6 +61,7 @@ const VisitorsScreen: React.FC<VisitorsScreenProps> = ({ currentUser, viewedUser
                         currentUser={currentUser}
                         onFollowToggle={handleFollowToggleWrapper}
                         onUserClick={onViewProfile}
+                        onAvatarClick={onNavigateToChat}
                         visitDate={user.last_visit_date}
                     />
                 ))}

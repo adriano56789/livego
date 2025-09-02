@@ -57,6 +57,7 @@ export interface User {
   last_camera_used?: FacingMode;
   last_selected_category?: Category;
   country: string | null;
+  region: string | null;
   personalSignature?: string;
   personalityTags?: { id: string, label: string }[];
   achievements?: string[];
@@ -95,8 +96,8 @@ export interface Achievement {
 
 export interface ProfileBadgeType {
     text: string;
-    type: 'gender_age' | 'level' | 'status' | 'regular' | 'top';
-    icon?: 'female' | 'male' | 'fire' | 'play';
+    type: 'gender_age' | 'level' | 'status' | 'regular' | 'top' | 'level2';
+    icon?: 'female' | 'male' | 'fire' | 'play' | 'leaf';
 }
 
 export interface PublicProfile {
@@ -127,6 +128,14 @@ export interface PublicProfile {
   personalSignature: string;
   is_avatar_protected?: boolean;
   privacy?: { protectionEnabled?: boolean };
+  onlineStatus?: 'online' | 'offline';
+  distanceKm?: number;
+  countryCode?: string;
+  location?: string;
+  visitors: number;
+  level: number;
+  level2: number;
+  lastVisitDate?: string;
 }
 
 // Stream-related types
@@ -268,6 +277,7 @@ export interface LiveDetails {
   status: 'ao vivo' | 'finalizada' | 'pausada';
   likeCount?: number;
   streamerIsAvatarProtected?: boolean;
+  countryCode?: string | null;
   title?: string;
   meta?: string;
 }
@@ -327,6 +337,7 @@ export interface Conversation {
   isFriend?: boolean; // Derived
   unreadCount: number; // Calculated
   messages: ConversationMessage[]; // Assembled from TabelaMensagem
+  onlineStatus?: boolean;
 }
 
 export interface ChatMessage {

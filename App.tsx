@@ -1,7 +1,6 @@
 
 
 
-
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import LoginScreen from './components/LoginScreen';
 import UploadPhotoScreen from './components/UploadPhotoScreen';
@@ -237,14 +236,14 @@ const AppContent: React.FC = () => {
         .then(response => {
             setIsUserLive(true);
             setCurrentView('feed');
-            alert("Stream started! In a real app, you'd be taken to a streamer dashboard.");
+            handleViewStream(response.live);
         })
         .catch(err => {
             console.error("Failed to start stream", err);
             setError("Failed to start stream");
             setCurrentView('feed');
         });
-  }, [user]);
+  }, [user, handleViewStream]);
   
   const handleStopStream = useCallback((streamerId: number, streamId: number) => {
       liveStreamService.stopLiveStream(streamerId).then(async () => {
@@ -275,6 +274,33 @@ const AppContent: React.FC = () => {
     if (meta?.conversationId) setViewingConversationId(meta.conversationId);
     setCurrentView(view);
   }, []);
+
+  const handleNavigateAwayFromStream = useCallback((view: AppView, meta?: any) => {
+    handleExitStream();
+    handleNavigate(view, meta);
+  }, [handleExitStream, handleNavigate]);
+
+  const handleExitChat = useCallback(() => {
+    setCurrentView('messages');
+  }, []);
+
+  const handleViewProtectors = useCallback((userId: number) => {
+    setViewingProtectorsFor(userId);
+    setCurrentView('protectors');
+  }, []);
+
+  const handleNavigateToChat = useCallback(async (otherUserId: number) => {
+    if (!user) return;
+    try {
+        setViewingOtherProfileId(null); // Clear viewing profile to avoid confusion
+        const conversation = await liveStreamService.getOrCreateConversationWithUser(user.id, otherUserId);
+        setViewingConversationId(conversation.id);
+        setCurrentView('chat');
+    } catch (err) {
+        setError('Não foi possível carregar a conversa.');
+        console.error(err);
+    }
+  }, [user]);
 
   // For settings
   const handleLogout = useCallback(() => {
@@ -347,7 +373,7 @@ const AppContent: React.FC = () => {
 
   // Overlays and Full-Screen Modals
   if (viewingStream) {
-    return <LiveStreamViewerScreen user={user} stream={viewingStream} onExit={handleExitStream} onNavigateToChat={(userId) => { setViewingConversationId(String(userId)); setCurrentView('chat'); }} onRequirePurchase={() => setCurrentView('diamond-purchase')} onUpdateUser={setUser} onViewProtectors={(userId) => { setViewingProtectorsFor(userId); setCurrentView('protectors'); }} onViewStream={handleViewStream} onStreamEnded={(streamId) => { setViewingStream(null); }} onStopStream={handleStopStream} onShowPrivateLiveInvite={setIncomingPrivateLiveInvite} onViewProfile={handleViewProfile} onNavigateFromStream={(view, userId) => handleNavigate(view, { userId })} onFollowToggle={handleFollowToggle} giftNotificationSettings={giftNotificationSettings} onTriggerGiftAnimation={handleTriggerGiftAnimation} />;
+    return <LiveStreamViewerScreen user={user} stream={viewingStream} onExit={handleExitStream} onNavigateToChat={handleNavigateToChat} onRequirePurchase={() => setCurrentView('diamond-purchase')} onUpdateUser={setUser} onViewProtectors={(userId) => { setViewingProtectorsFor(userId); setCurrentView('protectors'); }} onViewStream={handleViewStream} onStreamEnded={(streamId) => { setViewingStream(null); }} onStopStream={handleStopStream} onShowPrivateLiveInvite={setIncomingPrivateLiveInvite} onViewProfile={handleViewProfile} onNavigate={handleNavigateAwayFromStream} onFollowToggle={handleFollowToggle} giftNotificationSettings={giftNotificationSettings} onTriggerGiftAnimation={handleTriggerGiftAnimation} />;
   }
   if (viewingEndedStreamSummary) {
     return <LiveEndedScreen summary={viewingEndedStreamSummary} onExit={() => setViewingEndedStreamSummary(null)} />
@@ -367,20 +393,20 @@ const AppContent: React.FC = () => {
 
   const renderCurrentView = () => {
     switch (currentView) {
-      case 'feed': return <LiveFeedScreen user={user} onViewStream={handleViewStream} onGoLiveClick={handleGoLive} activeCategory={activeCategory} onSelectCategory={setActiveCategory} onUpdateUser={setUser} onNavigateToChat={(userId) => {setViewingConversationId(String(userId)); setCurrentView('chat');}} onViewProtectors={(userId) => {setViewingProtectorsFor(userId); setCurrentView('protectors');}} onNavigate={(v) => setCurrentView(v)} locationPermission={locationPermission} setLocationPermission={setLocationPermission} />;
+      case 'feed': return <LiveFeedScreen user={user} onViewStream={handleViewStream} onGoLiveClick={handleGoLive} activeCategory={activeCategory} onSelectCategory={setActiveCategory} onUpdateUser={setUser} onNavigateToChat={handleNavigateToChat} onViewProtectors={(userId) => {setViewingProtectorsFor(userId); setCurrentView('protectors');}} onNavigate={(v) => setCurrentView(v)} locationPermission={locationPermission} setLocationPermission={setLocationPermission} />;
       case 'profile': return <ProfileScreen user={user} onNavigate={(v) => setCurrentView(v)} onGoLiveClick={handleGoLive} />;
-      case 'messages': return <MessagesScreen user={user} onNavigate={(v) => setCurrentView(v)} onNavigateToChat={(userId) => { setViewingConversationId(String(userId)); setCurrentView('chat'); }} onViewProfile={handleViewProfile} onUpdateUser={setUser} />;
-      case 'chat': return <ChatScreen conversationId={viewingConversationId!} currentUserId={user.id} user={user} onUpdateUser={setUser} onExit={() => setCurrentView('messages')} onViewProtectors={(userId) => {setViewingProtectorsFor(userId); setCurrentView('protectors');}} onViewStream={handleViewStream} />;
+      case 'messages': return <MessagesScreen user={user} onNavigate={handleNavigate} onNavigateToChat={handleNavigateToChat} onViewProfile={handleViewProfile} onUpdateUser={setUser} />;
+      case 'chat': return <ChatScreen conversationId={viewingConversationId!} currentUserId={user.id} user={user} onUpdateUser={setUser} onExit={handleExitChat} onViewProtectors={handleViewProtectors} onViewStream={handleViewStream} />;
       case 'go-live-setup': return <GoLiveSetupScreen user={user} onStartStream={handleStartStream} onExit={() => setCurrentView('feed')} />;
-      case 'video': return <VideoScreen currentUser={user} onUpdateUser={setUser} onViewProfile={handleViewProfile} onFollowToggle={handleFollowToggle} onNavigateToChat={(userId) => {setViewingConversationId(String(userId)); setCurrentView('chat');}} />;
+      case 'video': return <VideoScreen currentUser={user} onUpdateUser={setUser} onViewProfile={handleViewProfile} onFollowToggle={handleFollowToggle} onNavigateToChat={handleNavigateToChat} />;
       case 'edit':
         if (!viewingOtherProfileId) {
             setCurrentView('feed');
             return null;
         }
-        return <EditProfileScreen user={user} viewedUserId={viewingOtherProfileId} isViewingOtherProfile={true} onExit={() => { setViewingOtherProfileId(null); setCurrentView('feed'); }} onFollowToggle={handleFollowToggle} onNavigateToChat={(userId) => { setViewingOtherProfileId(null); setViewingConversationId(String(userId)); setCurrentView('chat'); }} onViewStream={(stream) => { setViewingOtherProfileId(null); handleViewStream(stream); }} onUpdateUser={setUser} onViewProfile={handleViewProfile} onNavigate={setCurrentView} />;
+        return <EditProfileScreen user={user} viewedUserId={viewingOtherProfileId} isViewingOtherProfile={true} onExit={() => { setViewingOtherProfileId(null); setCurrentView('feed'); }} onFollowToggle={handleFollowToggle} onNavigateToChat={handleNavigateToChat} onViewStream={(stream) => { setViewingOtherProfileId(null); handleViewStream(stream); }} onUpdateUser={setUser} onViewProfile={handleViewProfile} onNavigate={setCurrentView} />;
       case 'view-self-profile':
-        return <EditProfileScreen user={user} viewedUserId={user.id} isViewingOtherProfile={true} onExit={() => setCurrentView('profile')} onFollowToggle={handleFollowToggle} onNavigateToChat={(userId) => { setViewingConversationId(String(userId)); setCurrentView('chat'); }} onViewStream={handleViewStream} onUpdateUser={setUser} onViewProfile={handleViewProfile} onNavigate={setCurrentView} />;
+        return <EditProfileScreen user={user} viewedUserId={user.id} isViewingOtherProfile={true} onExit={() => setCurrentView('profile')} onFollowToggle={handleFollowToggle} onNavigateToChat={handleNavigateToChat} onViewStream={handleViewStream} onUpdateUser={setUser} onViewProfile={handleViewProfile} onNavigate={setCurrentView} />;
       // FIX: Added missing onPurchase prop to fix TypeScript error.
       case 'diamond-purchase': return <DiamondPurchaseScreen user={user} onExit={() => setCurrentView('profile')} onConfirmPurchase={handleConfirmPurchase} onNavigate={setCurrentView} onUpdateUser={setUser} onNavigateToSetup={() => setCurrentView('withdrawal-method-setup')} onWithdrawalComplete={handleWithdrawalComplete} successMessage={walletSuccessMessage} clearSuccessMessage={() => setWalletSuccessMessage(null)} onPurchase={handlePurchase} />;
       case 'protectors': return <ProtectorsScreen streamerId={viewingProtectorsFor!} onExit={() => { setViewingProtectorsFor(null); setCurrentView('feed'); }} />;
@@ -413,7 +439,7 @@ const AppContent: React.FC = () => {
       case 'push-settings': return <PushSettingsScreen user={user} onExit={() => setCurrentView('notification-settings')} />;
       case 'private-live-invite-settings': return <PrivateLiveInviteSettingsScreen user={user} onExit={() => setCurrentView('settings')} />;
       case 'following': return <FollowingScreen currentUser={user} viewedUserId={viewingOtherProfileId || user.id} onExit={() => { setViewingOtherProfileId(null); setCurrentView('profile'); }} onUpdateUser={setUser} onViewProfile={handleViewProfile} onFollowToggle={handleFollowToggle} />;
-      case 'visitors': return <VisitorsScreen currentUser={user} viewedUserId={viewingOtherProfileId || user.id} onExit={() => { setViewingOtherProfileId(null); setCurrentView('profile'); }} onUpdateUser={setUser} onViewProfile={handleViewProfile} onFollowToggle={handleFollowToggle} />;
+      case 'visitors': return <VisitorsScreen currentUser={user} viewedUserId={viewingOtherProfileId || user.id} onExit={() => { setViewingOtherProfileId(null); setCurrentView('profile'); }} onUpdateUser={setUser} onViewProfile={handleViewProfile} onFollowToggle={handleFollowToggle} onNavigateToChat={handleNavigateToChat} />;
       case 'fans': return <FansScreen currentUser={user} viewedUserId={viewingOtherProfileId || user.id} onExit={() => { setViewingOtherProfileId(null); setCurrentView('profile'); }} onUpdateUser={setUser} onViewProfile={handleViewProfile} onFollowToggle={handleFollowToggle} />;
       case 'avatar-protection': return <AvatarProtectionScreen user={user} onExit={() => setCurrentView('profile')} onSave={setUser} />;
       case 'friend-requests': return <FriendRequestScreen currentUser={user} onExit={() => setCurrentView('messages')} onUpdateUser={setUser} onViewProfile={handleViewProfile} />;

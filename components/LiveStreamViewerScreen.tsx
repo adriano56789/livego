@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import type { User, Stream, PkBattle, ChatMessage, LiveDetails, PkInvitation, SoundEffectName, MuteStatusListener, UserKickedListener, SoundEffectListener, PublicProfile, PkBattleState, ConvitePK, IncomingPrivateLiveInvite, UserBlockedListener, UserUnblockedListener, Viewer, PkBattleStreamer, AppView, FacingMode, CameraStatus } from '../types';
+import type { User, Stream, PkBattle, ChatMessage, LiveDetails, PkInvitation, SoundEffectName, MuteStatusListener, UserKickedListener, SoundEffectListener, PublicProfile, PkBattleState, ConvitePK, IncomingPrivateLiveInvite, UserBlockedListener, UserUnblockedListener, Viewer, PkBattleStreamer, AppView, FacingMode, CameraStatus, Conversation } from '../types';
 import * as liveStreamService from '../services/liveStreamService';
 import * as authService from '../services/authService';
 import * as soundService from '../services/soundService';
@@ -18,9 +19,7 @@ import ChatInput from './ChatInput';
 import EndStreamConfirmationModal from './EndStreamConfirmationModal';
 import PkCompetitionInviteModal from './PkCompetitionInviteModal';
 import InviteToPrivateLiveModal from './InviteToPrivateLiveModal';
-import QuickChatModal from './QuickChatModal';
 import RankingListScreen from './RankingListScreen';
-import PrivateChatModal from './PrivateChatModal';
 import PkStartDisputeModal from './PkStartDisputeModal';
 import PkClashAnimation from './PkClashAnimation';
 import LiveStreamHeader from './LiveStreamHeader';
@@ -29,11 +28,13 @@ import PkInviteModal from './PkInviteModal';
 import PkInvitationModal from './PkInvitationModal';
 import PkTopSupporter from './PkTopSupporter';
 import EditProfileScreen from './EditProfileScreen';
-import EmbeddedChatView from './EmbeddedChatView';
+// FIX: Removed unused import for EmbeddedChatView as the file is not a module.
 import GiftDisplayAnimation from './GiftDisplayAnimation';
 import PkBattleOverlay from './PkBattleOverlay';
 // FIX: Added missing import for UserProfileModal.
 import UserProfileModal from './UserProfileModal';
+import { getConversations } from '../services/authService';
+import ConversationListItem from './ConversationListItem';
 
 
 // Icon Imports
@@ -51,6 +52,7 @@ import CrossIcon from './icons/CrossIcon';
 import AudioVisualizer from './AudioVisualizer';
 import CoinGIcon from './icons/CoinGIcon';
 import HeartPinkIcon from './icons/HeartPinkIcon';
+import MessageIcon from './icons/MessageIcon';
 
 
 interface LiveStreamViewerScreenProps {
@@ -66,7 +68,7 @@ interface LiveStreamViewerScreenProps {
   onStopStream: (streamerId: number, streamId: number) => void;
   onShowPrivateLiveInvite: (invite: IncomingPrivateLiveInvite) => void;
   onViewProfile: (userId: number) => void;
-  onNavigateFromStream: (view: AppView, userId: number) => void;
+  onNavigate: (view: AppView, meta?: any) => void;
   onFollowToggle: (userId: number, optimisticCallback?: (action: 'follow' | 'unfollow') => void) => Promise<void>;
   giftNotificationSettings: Record<number, boolean> | null;
   onTriggerGiftAnimation: (gift: ChatMessage) => void;
@@ -108,6 +110,75 @@ const CameraStatusOverlay: React.FC<{ status: CameraStatus }> = ({ status }) => 
     );
 };
 
+interface PrivateChatListModalProps {
+  user: User;
+  onClose: () => void;
+  onNavigate: (view: AppView, meta?: any) => void;
+}
+
+const PrivateChatListModal: React.FC<PrivateChatListModalProps> = ({ user, onClose, onNavigate }) => {
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchConversations = async () => {
+      setIsLoading(true);
+      try {
+        const convos = await getConversations(user.id);
+        setConversations(convos);
+      } catch (err) {
+        console.error("Failed to load conversations for modal:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchConversations();
+  }, [user.id]);
+
+  const handleConversationClick = (convo: Conversation) => {
+    // This local onClose call was likely causing a race condition with the parent navigation.
+    // Removing it allows the parent's navigation logic to unmount this component cleanly.
+    // onClose(); 
+    if (convo.type === 'friend_requests_summary') {
+      onNavigate('friend-requests');
+    } else {
+      onNavigate('chat', { conversationId: convo.id });
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/70 flex items-end" onClick={onClose}>
+      <div 
+        className="bg-[#121212] w-full h-[70vh] max-h-[600px] rounded-t-2xl flex flex-col animate-slide-up-fast"
+        onClick={e => e.stopPropagation()}
+      >
+        <header className="p-4 flex items-center justify-between border-b border-gray-800 shrink-0">
+          <div className="w-6 h-6"></div>
+          <h2 className="text-lg font-bold">Mensagens Privadas</h2>
+          <button onClick={onClose}><CrossIcon className="w-6 h-6 text-gray-400" /></button>
+        </header>
+        <main className="flex-grow overflow-y-auto scrollbar-hide">
+          {isLoading ? (
+            <div className="text-center text-gray-400 pt-10">Carregando...</div>
+          ) : conversations.length > 0 ? (
+            <div className="divide-y divide-gray-800">
+              {conversations.map(convo => (
+                <ConversationListItem 
+                  key={convo.id} 
+                  conversation={convo} 
+                  onClick={() => handleConversationClick(convo)}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="text-center text-gray-500 pt-20">Nenhuma mensagem.</div>
+          )}
+        </main>
+      </div>
+    </div>
+  );
+};
+
 
 const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
   user,
@@ -122,7 +193,7 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
   onStopStream,
   onShowPrivateLiveInvite,
   onViewProfile,
-  onNavigateFromStream,
+  onNavigate,
   onFollowToggle,
   giftNotificationSettings,
   onTriggerGiftAnimation,
@@ -156,9 +227,8 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
     const [isEndStreamModalOpen, setIsEndStreamModalOpen] = useState(false);
     const [isPkInviteModalOpen, setIsPkInviteModalOpen] = useState(false);
     const [isInviteToPrivateLiveModalOpen, setIsInviteToPrivateLiveModalOpen] = useState(false);
-    const [isQuickChatModalOpen, setIsQuickChatModalOpen] = useState(false);
-    const [isRankingListOpen, setIsRankingListOpen] = useState(false);
     const [isPrivateChatModalOpen, setIsPrivateChatModalOpen] = useState(false);
+    const [isRankingListOpen, setIsRankingListOpen] = useState(false);
     const [isPkStartDisputeModalOpen, setIsPkStartDisputeModalOpen] = useState(false);
     const [showPkClashAnimation, setShowPkClashAnimation] = useState(false);
     const [pkInvitationToAccept, setPkInvitationToAccept] = useState<PkInvitation | null>(null);
@@ -276,6 +346,37 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
         }
     }, [user.id]);
 
+    const handleMuteUser = useCallback(async (userIdToMute: number, mute: boolean) => {
+        try {
+            await liveStreamService.muteUser(streamId, userIdToMute, mute, 5); // Mute for 5 mins
+            if (mute) {
+                setMutedUsers(prev => ({ ...prev, [userIdToMute]: { mutedUntil: new Date(Date.now() + 5 * 60000).toISOString() } }));
+            } else {
+                setMutedUsers(prev => {
+                    const newState = { ...prev };
+                    delete newState[userIdToMute];
+                    return newState;
+                });
+            }
+            setIsMutedNotification(mute ? 'muted' : 'unmuted');
+        } catch (error) {
+            console.error("Failed to mute user:", error);
+            alert('Failed to update mute status.');
+        }
+    }, [streamId]);
+
+    const handleKickUser = useCallback(async (userIdToKick: number) => {
+        try {
+            await liveStreamService.kickUser(streamId, userIdToKick);
+            // The kicked user will receive an event. The host UI just needs to close the modal.
+            setIsMuteUserModalOpen(false);
+            alert(`User ${userIdToKick} has been kicked from the stream.`);
+        } catch (error) {
+            console.error("Failed to kick user:", error);
+            alert('Failed to kick user.');
+        }
+    }, [streamId]);
+
     // useEffect for managing media stream for the host
     useEffect(() => {
         if (!isCurrentUserHost) return;
@@ -370,6 +471,36 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
             liveStreamService.removeLiveUpdateListener(liveUpdateListener);
         };
     }, [streamId, onExit, onTriggerGiftAnimation]);
+    
+    useEffect(() => {
+        const muteListener: MuteStatusListener = (update) => {
+            if (update.liveId === streamId) {
+                setMutedUsers(prev => {
+                    const newState = { ...prev };
+                    if (update.isMuted && update.mutedUntil) {
+                        newState[update.userId] = { mutedUntil: update.mutedUntil };
+                    } else {
+                        delete newState[update.userId];
+                    }
+                    return newState;
+                });
+            }
+        };
+
+        const kickListener: UserKickedListener = (update) => {
+            if (update.liveId === streamId && update.kickedUserId === user.id) {
+                setKickedState('kicked');
+            }
+        };
+
+        liveStreamService.addMuteStatusListener(muteListener);
+        liveStreamService.addUserKickedListener(kickListener);
+
+        return () => {
+            liveStreamService.removeMuteStatusListener(muteListener);
+            liveStreamService.removeUserKickedListener(kickListener);
+        };
+    }, [streamId, user.id]);
 
     const handleStopStreamClick = () => {
         onStopStream(streamerId, streamId);
@@ -422,12 +553,13 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
                         isFollowing={user.following.includes(streamerId)}
                         onFollowToggle={() => onFollowToggle(streamerId)}
                         streamerIsAvatarProtected={liveDetails?.streamerIsAvatarProtected}
+                        countryCode={liveDetails?.countryCode}
                     />
                 </header>
 
                 {/* Main Content (Chat) */}
                 <main className="flex-grow flex flex-col justify-end overflow-hidden pointer-events-none">
-                     <ChatArea messages={chatMessages} onUserClick={onViewProfile} />
+                     <ChatArea messages={chatMessages} onUserClick={onNavigateToChat} />
                 </main>
                 
                 {/* Footer */}
@@ -437,12 +569,17 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
                         disabled={isBlockedByHost}
                         isUploading={isUploading}
                     />
-                     <button onClick={() => setIsGiftPanelOpen(true)} className="w-12 h-12 bg-black/40 rounded-full flex items-center justify-center shrink-0">
+                    <button onClick={() => setIsGiftPanelOpen(true)} className="w-12 h-12 bg-black/40 rounded-full flex items-center justify-center shrink-0">
                         <GiftBoxIcon className="w-8 h-8"/>
                     </button>
-                    {isCurrentUserHost && (
+                    
+                    {isCurrentUserHost ? (
                         <button onClick={() => setIsArcoraToolModalOpen(true)} className="w-12 h-12 bg-black/40 rounded-full flex items-center justify-center shrink-0">
                             <MoreToolsIcon className="w-8 h-8"/>
+                        </button>
+                    ) : (
+                        <button onClick={() => onNavigateToChat(streamerId)} className="w-12 h-12 bg-black/40 rounded-full flex items-center justify-center shrink-0">
+                            <MessageIcon className="w-7 h-7 text-white"/>
                         </button>
                     )}
                 </footer>
@@ -560,6 +697,16 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
                     }}
                 />
             )}
+            {isMuteUserModalOpen && (
+                <MuteUserModal
+                    liveId={streamId}
+                    mutedUsers={mutedUsers}
+                    onMuteUser={handleMuteUser}
+                    onKickUser={handleKickUser}
+                    onClose={() => setIsMuteUserModalOpen(false)}
+                />
+            )}
+            {isPrivateChatModalOpen && <PrivateChatListModal user={user} onClose={() => setIsPrivateChatModalOpen(false)} onNavigate={onNavigate} />}
         </div>
     );
 };

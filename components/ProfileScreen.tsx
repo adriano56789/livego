@@ -4,8 +4,10 @@
 
 
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import type { User, AppView } from '../types';
+import * as profileService from '../services/profileService';
+import Flag from './Flag';
 import CopyIcon from './icons/CopyIcon';
 import StarIcon from './icons/StarIcon';
 import CoinIcon from './icons/CoinIcon';
@@ -41,6 +43,18 @@ const StatItem: React.FC<{ value: string; label: string; onClick?: () => void; }
 
 const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onNavigate, onGoLiveClick }) => {
     
+    const [countryName, setCountryName] = useState('');
+
+    useEffect(() => {
+        if (user.country) {
+            profileService.getCountries().then(countries => {
+                const c = countries.find(c => c.id === user.country);
+                if (c) setCountryName(c.label);
+                else setCountryName(user.country || ''); // fallback to code
+            });
+        }
+    }, [user.country]);
+
     const userAge = useMemo(() => {
         if (!user.birthday) return null;
         const birthDate = new Date(user.birthday);
@@ -72,8 +86,8 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onNavigate, onGoLiv
                 
                 {/* Header */}
                 <header className="flex flex-col items-center gap-3 mb-6">
-                    <div className="relative">
-                        <button onClick={() => onNavigate('view-self-profile')} className="w-24 h-24 sm:w-28 sm:h-28 rounded-full overflow-hidden shrink-0 bg-gray-700 p-1.5 bg-gradient-to-tr from-purple-600 to-fuchsia-400">
+                    <div className="relative w-24 h-24 sm:w-28 sm:h-28">
+                        <button onClick={() => onNavigate('view-self-profile')} className="w-full h-full rounded-full overflow-hidden shrink-0 bg-gray-700 p-1.5 bg-gradient-to-tr from-purple-600 to-fuchsia-400">
                            <div className="w-full h-full rounded-full bg-black overflow-hidden flex items-center justify-center">
                              {user.avatar_url ? (
                                 <img src={user.avatar_url} alt={user.name} className="w-full h-full object-cover" />
@@ -82,6 +96,14 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onNavigate, onGoLiv
                             )}
                            </div>
                         </button>
+                        {user.level >= 5 && (
+                            <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center border-2 border-black shadow-lg">
+                                <span className="text-white font-black text-base sm:text-lg italic">V</span>
+                            </div>
+                        )}
+                        {user.country && (
+                           <Flag code={user.country} className="w-8 h-8 rounded-full border-2 border-black absolute bottom-0 right-0" />
+                        )}
                     </div>
                     <div className="text-center">
                         <h1 className="text-2xl font-bold">{user.nickname || user.name}</h1>
@@ -92,18 +114,22 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onNavigate, onGoLiv
                                    <span>Protegido</span>
                                </div>
                            )}
-                           <ProfileBadge badge={{ text: String(user.level), type: 'level' }} />
-                            {userAge && (
-                               <div className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-bold ${user.gender === 'female' ? 'bg-[#ff2d55]' : 'bg-[#007aff]'} text-white`}>
-                                   {user.gender === 'female' ? <FemaleIcon className="w-3 h-3" /> : <MaleIcon className="w-3 h-3" />}
-                                   <span>{userAge}</span>
-                               </div>
-                            )}
+                           {userAge && user.gender && (
+                                <ProfileBadge badge={{ text: String(userAge), type: 'gender_age', icon: user.gender }} />
+                           )}
+                           {user.level2 && user.level2 > 0 && (
+                                <ProfileBadge badge={{ text: String(user.level2), type: 'level2', icon: 'leaf' }} />
+                           )}
                         </div>
                         <div className="flex items-center justify-center gap-2 text-sm text-gray-400 mt-2">
                             <span>ID: {user.id}</span>
                             <button onClick={() => navigator.clipboard.writeText(String(user.id))}><CopyIcon className="w-4 h-4" /></button>
                         </div>
+                         {user.country && countryName && (
+                            <div className="flex items-center justify-center gap-2 text-sm text-gray-400 mt-2">
+                                <span>{countryName}{user.region ? `, ${user.region}` : ''}</span>
+                            </div>
+                        )}
                     </div>
                 </header>
 

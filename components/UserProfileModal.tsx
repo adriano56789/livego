@@ -25,7 +25,6 @@ import PleadingFaceIcon from './icons/PleadingFaceIcon';
 import JellyfishIcon from './icons/JellyfishIcon';
 import WaveIcon from './icons/WaveIcon';
 import SadButRelievedIcon from './icons/SadButRelievedIcon';
-import EmbeddedChatView from './EmbeddedChatView';
 import UserPlaceholderIcon from './icons/UserPlaceholderIcon';
 
 interface UserProfileModalProps {
@@ -62,7 +61,6 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ userId, currentUser
     const [idCopied, setIdCopied] = useState(false);
     const [isFollowing, setIsFollowing] = useState((currentUser.following || []).includes(userId));
     const [isFollowLoading, setIsFollowLoading] = useState(false);
-    const [isChatOpen, setIsChatOpen] = useState(false);
 
     const isOwnProfile = currentUser.id === userId;
 
@@ -167,6 +165,11 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ userId, currentUser
         setIsActionsModalOpen(false);
     };
     
+    const handleNavigateToChatWrapper = () => {
+        onClose();
+        onNavigateToChat(userId);
+    };
+    
     const renderNickname = (nickname: string) => {
         const name = nickname.replace(/🕷️|🦋|⚡|🍍|💡|😎|🎮|🥺|🐍|🌊|😥/g, '').trim();
         return (
@@ -198,8 +201,6 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ userId, currentUser
         };
         return icons[iconType] || null;
     }
-
-    const otherUserProfileForModal: PublicProfile | null = profile ? { ...profile } : null;
 
     if (isLoading || !profile) {
         return (
@@ -323,7 +324,7 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ userId, currentUser
           <footer className="p-4 bg-black border-t border-gray-800/50 shrink-0">
               <div className="flex items-center justify-center gap-4">
                   <button 
-                      onClick={() => setIsChatOpen(true)}
+                      onClick={handleNavigateToChatWrapper}
                       className="w-full py-3.5 rounded-full font-semibold transition-colors bg-[#2c2c2e] text-gray-300 hover:bg-gray-700"
                   >
                       Bate-papo
@@ -337,14 +338,6 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ userId, currentUser
                   </button>
               </div>
           </footer>
-          
-          {isChatOpen && profile && (
-              <EmbeddedChatView 
-                  currentUser={currentUser}
-                  otherUser={profile}
-                  onClose={() => setIsChatOpen(false)}
-              />
-          )}
           
           {isActionsModalOpen && profile && (
               <ActionsModal

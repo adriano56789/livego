@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect } from 'react';
 import type { User, AppView, Conversation } from '../types';
 import { getConversations, getFriends } from '../services/authService';
@@ -13,7 +14,7 @@ import MessageIcon from './icons/MessageIcon';
 
 interface MessagesScreenProps {
   user: User;
-  onNavigate: (view: AppView) => void;
+  onNavigate: (view: AppView, meta?: any) => void;
   onNavigateToChat: (userId: number) => void;
   onViewProfile: (userId: number) => void;
   onUpdateUser: (user: User) => void;
@@ -126,7 +127,7 @@ const MessagesScreen: React.FC<MessagesScreenProps> = ({ user, onNavigate, onNav
             <ConversationListItem 
               key={convo.id} 
               conversation={convo} 
-              onClick={() => onNavigateToChat(convo.otherUserId)}
+              onClick={() => onNavigate('chat', { conversationId: convo.id })}
             />
           )
         })}

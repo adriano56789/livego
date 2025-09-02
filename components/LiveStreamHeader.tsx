@@ -9,6 +9,7 @@ import UserPlaceholderIcon from './icons/UserPlaceholderIcon';
 import PlusIcon from './icons/PlusIcon';
 import CheckIcon from './icons/CheckIcon';
 import ShieldCheckIcon from './icons/ShieldCheckIcon';
+import Flag from './Flag';
 
 interface LiveStreamHeaderProps {
   variant: 'single' | 'pk-left' | 'pk-right';
@@ -27,6 +28,7 @@ interface LiveStreamHeaderProps {
   isFollowing: boolean;
   onFollowToggle: () => void;
   streamerIsAvatarProtected?: boolean;
+  countryCode?: string | null;
 }
 
 const Avatar: React.FC<{ src?: string; alt: string; className: string; }> = ({ src, alt, className }) => (
@@ -57,6 +59,7 @@ const LiveStreamHeader: React.FC<LiveStreamHeaderProps> = ({
   isFollowing,
   onFollowToggle,
   streamerIsAvatarProtected,
+  countryCode,
 }) => {
   const isSingle = variant === 'single';
 
@@ -96,7 +99,12 @@ const LiveStreamHeader: React.FC<LiveStreamHeaderProps> = ({
         <div className="flex flex-col items-start gap-2">
             <div className="flex items-center gap-2 pointer-events-auto">
                 <button onClick={onUserClick} className="flex items-center gap-2 bg-black/40 backdrop-blur-sm p-1 pr-3 rounded-full">
-                    <Avatar src={avatarUrl} alt={name} className="w-9 h-9" />
+                    <div className="relative">
+                        <Avatar src={avatarUrl} alt={name} className="w-9 h-9" />
+                        {countryCode && (
+                            <Flag code={countryCode} className="w-4 h-auto rounded-full border border-black absolute -bottom-0.5 -right-0.5" />
+                        )}
+                    </div>
                     <div className="max-w-[120px] sm:max-w-[150px]">
                     <div className="font-semibold text-sm text-white flex items-center gap-1.5">
                         <span className="truncate">{name}</span>
@@ -151,7 +159,12 @@ const LiveStreamHeader: React.FC<LiveStreamHeaderProps> = ({
   return (
     <div className={mainContainerClasses}>
         <button onClick={onUserClick} className="flex items-center gap-2 bg-black/40 backdrop-blur-sm p-1 pr-3 rounded-full">
-            <Avatar src={avatarUrl} alt={name} className="w-9 h-9" />
+            <div className="relative">
+                <Avatar src={avatarUrl} alt={name} className="w-9 h-9" />
+                {countryCode && (
+                     <Flag code={countryCode} className="w-4 h-auto rounded-full border border-black absolute -bottom-0.5 -right-0.5" />
+                )}
+            </div>
             <p className="font-semibold text-sm text-white truncate max-w-[100px]">{name}</p>
         </button>
         <FollowButton />

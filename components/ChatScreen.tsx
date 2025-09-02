@@ -73,7 +73,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ conversationId, currentUserId, 
     const fetchAndMarkRead = async () => {
       setIsLoading(true);
       try {
-        await liveStreamService.markMessagesAsSeen(conversationId, currentUserId);
+        // getConversationById now handles marking messages as seen on the backend simulation.
         const convo = await liveStreamService.getConversationById(conversationId, currentUserId);
         setConversation(convo);
       } catch (error) {

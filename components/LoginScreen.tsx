@@ -11,13 +11,13 @@ interface LoginScreenProps {
 
 const LoginScreen: React.FC<LoginScreenProps> = ({ onGoogleLogin, isLoading, error }) => (
     <div 
-        className="h-full w-full bg-black text-white p-8 flex flex-col justify-between items-center font-sans"
+        className="h-full w-full bg-black text-white p-4 sm:p-8 flex flex-col justify-between items-center font-sans"
         style={{
             backgroundImage: 'linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(20,20,20,1) 60%, rgba(45,45,45,1) 100%)',
         }}
     >
-        <div className="flex-grow flex flex-col justify-center items-center text-center -mt-16">
-            <h1 className="text-7xl font-extrabold tracking-tighter" style={{ fontFamily: "'Helvetica Neue', sans-serif" }}>
+        <div className="flex-grow flex flex-col justify-center items-center text-center -mt-8 sm:-mt-16">
+            <h1 className="text-5xl sm:text-7xl font-extrabold tracking-tighter" style={{ fontFamily: "'Helvetica Neue', sans-serif" }}>
                 LiveGo
             </h1>
             <p className="text-gray-300 mt-2 text-lg">Top Streamers, Boas Vibrações!</p>

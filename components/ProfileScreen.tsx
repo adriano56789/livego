@@ -73,7 +73,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onNavigate, onGoLiv
                 {/* Header */}
                 <header className="flex flex-col items-center gap-3 mb-6">
                     <div className="relative">
-                        <button onClick={() => onNavigate('view-self-profile')} className="w-28 h-28 rounded-full overflow-hidden shrink-0 bg-gray-700 p-1.5 bg-gradient-to-tr from-purple-600 to-fuchsia-400">
+                        <button onClick={() => onNavigate('view-self-profile')} className="w-24 h-24 sm:w-28 sm:h-28 rounded-full overflow-hidden shrink-0 bg-gray-700 p-1.5 bg-gradient-to-tr from-purple-600 to-fuchsia-400">
                            <div className="w-full h-full rounded-full bg-black overflow-hidden flex items-center justify-center">
                              {user.avatar_url ? (
                                 <img src={user.avatar_url} alt={user.name} className="w-full h-full object-cover" />

@@ -414,7 +414,7 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
                         headerViewers={headerViewers[streamId]}
                         coins={(liveDetails?.receivedGiftsValue || 0).toLocaleString()}
                         likes={(liveDetails?.likeCount || 0).toLocaleString()}
-                        onUserClick={() => onViewProfile(streamerId)}
+                        onUserClick={() => { onExit(); onViewProfile(streamerId); }}
                         onExitClick={isCurrentUserHost ? () => setIsEndStreamModalOpen(true) : onExit}
                         onCoinsClick={handleOpenHourlyRanking}
                         onViewersClick={handleOpenOnlineUsers}

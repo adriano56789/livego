@@ -291,7 +291,7 @@ const EditProfileScreen: React.FC<EditProfileScreenProps> = ({
       <>
         <div className="h-full w-full bg-black flex flex-col font-sans">
             <div className="flex-grow overflow-y-auto scrollbar-hide">
-                <header className="relative h-48">
+                <header className="relative h-36 sm:h-48">
                     <img src={profile.coverPhotoUrl} alt="Cover" className="w-full h-full object-cover"/>
                     <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent"></div>
                     <div className="absolute top-4 left-4 right-4 flex justify-between items-center z-10">
@@ -306,8 +306,8 @@ const EditProfileScreen: React.FC<EditProfileScreenProps> = ({
                         </div>
                     </div>
 
-                    <div className="absolute -bottom-10 left-4">
-                        <div className="w-24 h-24 rounded-full border-4 border-black bg-gray-800 overflow-hidden">
+                    <div className="absolute -bottom-8 sm:-bottom-10 left-4">
+                        <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full border-4 border-black bg-gray-800 overflow-hidden">
                             <img src={profile.avatarUrl} alt={profile.nickname} className="w-full h-full object-cover" />
                         </div>
                     </div>
@@ -322,7 +322,7 @@ const EditProfileScreen: React.FC<EditProfileScreenProps> = ({
                 </header>
 
                 <main className="px-4 pb-4">
-                    <div className="mt-12">
+                    <div className="mt-10 sm:mt-12">
                         <h1 className="text-2xl font-bold text-white">{profile.nickname}</h1>
                         <div className="flex items-center gap-2 text-sm text-gray-400 mt-1">
                             <span>ID: {profile.id}</span>

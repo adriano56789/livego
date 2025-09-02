@@ -64,14 +64,14 @@ const PkBattleCard: React.FC<PkBattleCardProps> = ({ battle, onViewStream }) => 
                 <div className="flex flex-col items-start">
                     <div className="flex items-center gap-2">
                         {streamer1.countryCode && <Flag code={streamer1.countryCode} className="w-5 h-auto rounded-sm" />}
-                        <h3 className="font-bold text-lg drop-shadow-md truncate max-w-[100px]">{streamer1.name}</h3>
+                        <h3 className="font-bold text-lg drop-shadow-md truncate">{streamer1.name}</h3>
                     </div>
                 </div>
 
                 {/* Streamer 2 Info */}
                 <div className="flex flex-col items-end">
                     <div className="flex items-center gap-2">
-                        <h3 className="font-bold text-lg drop-shadow-md truncate max-w-[100px]">{streamer2.name}</h3>
+                        <h3 className="font-bold text-lg drop-shadow-md truncate">{streamer2.name}</h3>
                         {streamer2.countryCode && <Flag code={streamer2.countryCode} className="w-5 h-auto rounded-sm" />}
                     </div>
                 </div>

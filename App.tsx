@@ -1,6 +1,7 @@
 
 
 
+
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import LoginScreen from './components/LoginScreen';
 import UploadPhotoScreen from './components/UploadPhotoScreen';
@@ -218,7 +219,7 @@ const AppContent: React.FC = () => {
   
   const handleViewProfile = useCallback((userId: number) => {
     if (user && userId === user.id) {
-        setCurrentView('profile');
+        setCurrentView('view-self-profile');
         setViewingOtherProfileId(null);
         return;
     }

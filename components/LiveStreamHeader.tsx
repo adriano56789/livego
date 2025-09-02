@@ -97,16 +97,16 @@ const LiveStreamHeader: React.FC<LiveStreamHeaderProps> = ({
             <div className="flex items-center gap-2 pointer-events-auto">
                 <button onClick={onUserClick} className="flex items-center gap-2 bg-black/40 backdrop-blur-sm p-1 pr-3 rounded-full">
                     <Avatar src={avatarUrl} alt={name} className="w-9 h-9" />
-                    <div>
+                    <div className="max-w-[120px] sm:max-w-[150px]">
                     <div className="font-semibold text-sm text-white flex items-center gap-1.5">
-                        <span>{name}</span>
+                        <span className="truncate">{name}</span>
                         {streamerIsAvatarProtected && (
                              <div className="p-0.5 bg-sky-500/80 rounded-full animate-protection-glow" title="Avatar Protegido">
                                 <ShieldCheckIcon className="w-2.5 h-2.5 text-white"/>
                             </div>
                         )}
                     </div>
-                    <p className="text-xs text-gray-300">{followers} {Number(followers) === 1 ? 'seguidor' : 'seguidores'}</p>
+                    <p className="text-xs text-gray-300 truncate">{followers} {Number(followers) === 1 ? 'seguidor' : 'seguidores'}</p>
                     </div>
                     <AudioVisualizer />
                 </button>

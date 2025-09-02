@@ -1016,6 +1016,35 @@ export const handleApiRequest = async (method: string, path: string, body: any, 
         return viewModel;
     }
     
+    if (method === 'POST' && path === '/api/chat/viewed') {
+        const { conversationId, viewerId } = body;
+        const convo = await database.conversations.findOne({ id: conversationId });
+        if (!convo) {
+            // This can happen for virtual conversations like "friend requests"
+            // or if the convo was deleted. Returning success prevents an error cascade.
+            return { success: true };
+        }
+
+        let modified = false;
+        (convo.messages || []).forEach((msg: any) => {
+            if (msg.senderId !== viewerId) {
+                if (!msg.seenBy) {
+                    msg.seenBy = [];
+                }
+                if (!msg.seenBy.includes(viewerId)) {
+                    msg.seenBy.push(viewerId);
+                    modified = true;
+                }
+            }
+        });
+        
+        if (modified) {
+            await database.conversations.updateOne({ id: conversationId }, { $set: { messages: convo.messages } });
+        }
+        
+        return { success: true };
+    }
+
     if (method === 'POST' && privateChatMatch) {
         const convoId = privateChatMatch[1];
         const { senderId, text, imageUrl } = body;

@@ -1,6 +1,7 @@
 
 
 
+
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import LoginScreen from './components/LoginScreen';
 import UploadPhotoScreen from './components/UploadPhotoScreen';
@@ -54,12 +55,13 @@ import ProfileEditorScreen from './components/ProfileEditorScreen';
 import AvatarProtectionScreen from './components/AvatarProtectionScreen';
 import FriendRequestScreen from './components/FriendRequestScreen';
 import PrivacySettingsScreen from './components/PrivacySettingsScreen';
+import MessagePrivacySettingsScreen from './components/MessagePrivacySettingsScreen';
 import TopFansScreen from './components/TopFansScreen';
 import { loginWithGoogle, deleteAccount, getUserProfile } from './services/authService';
 import * as liveStreamService from './services/liveStreamService';
 import * as versionService from './services/versionService';
 import * as soundService from './services/soundService';
-import type { User, AppView, Category, Stream, PkBattle, Conversation, WithdrawalTransaction, AppEvent, VersionInfo, LiveEndSummary, PurchaseOrder, DiamondPackage, FacingMode, IncomingPrivateLiveInvite, Gift, ChatMessage } from './types';
+import type { User, AppView, Category, Stream, PkBattle, Conversation, WithdrawalTransaction, AppEvent, VersionInfo, LiveEndSummary, PurchaseOrder, DiamondPackage, FacingMode, IncomingPrivateLiveInvite, Gift, ChatMessage, PrivacySettings } from './types';
 import { ApiViewerProvider, useApiViewer } from './components/ApiContext';
 import ProfileScreen from './components/ProfileScreen';
 import GiftDisplayAnimation from './components/GiftDisplayAnimation';
@@ -356,6 +358,22 @@ const AppContent: React.FC = () => {
   const handleUpdateGiftNotificationSettings = useCallback((newSettings: Record<number, boolean>) => {
     setGiftNotificationSettings(newSettings);
   }, []);
+  
+  const handleSavePrivacySettings = useCallback(async (newSettings: Partial<Omit<PrivacySettings, 'userId'>>) => {
+    if (!user) return;
+    try {
+        const updatedSettings = await liveStreamService.updatePrivacySettings(user.id, newSettings);
+        if(user.settings){
+            const updatedUser = { ...user, settings: { ...user.settings, privacy: updatedSettings }};
+            setUser(updatedUser);
+        }
+        setCurrentView('privacy-settings');
+    } catch (e) {
+        console.error(e);
+        alert("Failed to save settings.");
+    }
+  }, [user]);
+
 
   // Login/Onboarding Flow
   if (needsUpdate && versionInfo) {
@@ -443,13 +461,14 @@ const AppContent: React.FC = () => {
       case 'fans': return <FansScreen currentUser={user} viewedUserId={viewingOtherProfileId || user.id} onExit={() => { setViewingOtherProfileId(null); setCurrentView('profile'); }} onUpdateUser={setUser} onViewProfile={handleViewProfile} onFollowToggle={handleFollowToggle} />;
       case 'avatar-protection': return <AvatarProtectionScreen user={user} onExit={() => setCurrentView('profile')} onSave={setUser} />;
       case 'friend-requests': return <FriendRequestScreen currentUser={user} onExit={() => setCurrentView('messages')} onUpdateUser={setUser} onViewProfile={handleViewProfile} />;
-      case 'privacy-settings': return <PrivacySettingsScreen user={user} onExit={() => setCurrentView('settings')} />;
+      case 'privacy-settings': return <PrivacySettingsScreen user={user} onExit={() => setCurrentView('settings')} onNavigate={setCurrentView} />;
       case 'component-viewer': return <ComponentViewerScreen onExit={() => setCurrentView('developer-tools')} />;
       case 'gift-notification-settings': return <GiftNotificationSettingsScreen user={user} onExit={() => setCurrentView('settings')} onUpdateSettings={handleUpdateGiftNotificationSettings} />;
       case 'help-center': return <CustomerServiceScreen mode="help_only" onExit={() => setCurrentView('profile')} onViewArticle={handleViewArticle} onNavigate={setCurrentView} />;
       case 'useful-articles-list': return <CustomerServiceScreen mode="articles_only" onExit={() => setCurrentView('help-center')} onViewArticle={handleViewArticle} onNavigate={setCurrentView} />;
       case 'top-fans': return <TopFansScreen viewedUserId={viewingOtherProfileId || user.id} onExit={() => { setViewingOtherProfileId(null); setCurrentView('profile'); }} />;
       case 'profile-editor': return <ProfileEditorScreen user={user} onSave={(updatedUser) => { setUser(updatedUser); setCurrentView('profile'); }} onExit={() => setCurrentView('profile')} />;
+      case 'message-privacy-settings': return <MessagePrivacySettingsScreen user={user} onExit={() => setCurrentView('privacy-settings')} onSave={handleSavePrivacySettings} />;
       default: return <div>Not implemented: {currentView}</div>;
     }
   }

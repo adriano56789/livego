@@ -1,10 +1,11 @@
 
 
+
 import { mongoObjectId } from './mongoObjectId';
 import * as levelService from './levelService';
 // FIX: Added missing type imports.
 // FIX: Added missing type imports for UniversalRankingData and GeneralRankingStreamer to resolve compilation errors.
-import type { User, LiveStreamRecord, Stream, PkBattle, PkBattleState, PurchaseOrder, ConvitePK, LiveCategory, Category, StartLiveResponse, FacingMode, LiveDetails, ChatMessage, Viewer, PublicProfile, AppEvent, ArtigoAjuda, CanalContato, HealthCheckResult, PrivateLiveInviteSettings, NotificationSettings, GiftNotificationSettings, PrivacySettings, LiveFollowUpdate, WithdrawalBalance, UserLevelInfo, InventoryItem, WithdrawalTransaction, RankingContributor, Conversation, ConversationMessage, Gift, DiamondPackage, PkSettings, SelectableOption, SecurityLogEntry, UniversalRankingUser, LiveEndSummary, TopFanDetails } from '../types';
+import type { User, LiveStreamRecord, Stream, PkBattle, PkBattleState, PurchaseOrder, ConvitePK, LiveCategory, Category, StartLiveResponse, FacingMode, LiveDetails, ChatMessage, Viewer, PublicProfile, AppEvent, ArtigoAjuda, CanalContato, HealthCheckResult, PrivateLiveInviteSettings, NotificationSettings, GiftNotificationSettings, PrivacySettings, LiveFollowUpdate, WithdrawalBalance, UserLevelInfo, InventoryItem, WithdrawalTransaction, RankingContributor, Conversation, ConversationMessage, Gift, DiamondPackage, PkSettings, SelectableOption, SecurityLogEntry, UniversalRankingUser, LiveEndSummary, TopFanDetails, UniversalRankingData, GeneralRankingStreamer, ProfileBadgeType } from '../types';
 
 // --- INITIAL MOCK DATA (STRUCTURED LIKE MONGODB COLLECTIONS) ---
 const newUserTemplate = {
@@ -29,7 +30,8 @@ const newUserTemplate = {
   online_status: true,
   settings: {
     notifications: { newMessages: true, streamerLive: true, followedPost: true, order: true, interactive: true },
-    privacy: { showLocation: true, showActiveStatus: true, showInNearby: true, protectionEnabled: false },
+    // FIX: Added missing messagePrivacy property to match the PrivacySettings type.
+    privacy: { showLocation: true, showActiveStatus: true, showInNearby: true, protectionEnabled: false, messagePrivacy: 'everyone' },
     privateLiveInvite: { privateInvites: true, onlyFollowing: true, onlyFans: false, onlyFriends: false, acceptOnlyFriendPkInvites: false },
     giftNotifications: { enabledGifts: {} }
   }
@@ -72,7 +74,8 @@ const userDefinitions: (Omit<User, 'level' | 'followers' | 'visitors'> & { visit
       online_status: true,
       settings: {
         notifications: { newMessages: true, streamerLive: true, followedPost: true, order: true, interactive: true },
-        privacy: { showLocation: true, showActiveStatus: true, showInNearby: true, protectionEnabled: false },
+        // FIX: Added missing messagePrivacy property to match the PrivacySettings type.
+        privacy: { showLocation: true, showActiveStatus: true, showInNearby: true, protectionEnabled: false, messagePrivacy: 'everyone' },
         privateLiveInvite: { privateInvites: true, onlyFollowing: true, onlyFans: false, onlyFriends: false, acceptOnlyFriendPkInvites: false },
         giftNotifications: { enabledGifts: {} }
       }

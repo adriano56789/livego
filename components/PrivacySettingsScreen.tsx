@@ -1,13 +1,16 @@
 
+
 import React, { useState, useEffect } from 'react';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
 import ToggleSwitch from './ToggleSwitch';
-import type { User, PrivacySettings } from '../types';
+import type { User, PrivacySettings, AppView } from '../types';
 import { getPrivacySettings, updatePrivacySettings } from '../services/liveStreamService';
+import ChevronRightIcon from './icons/ChevronRightIcon';
 
 interface PrivacySettingsScreenProps {
     user: User;
     onExit: () => void;
+    onNavigate: (view: AppView) => void;
 }
 
 const SettingRow: React.FC<{
@@ -26,8 +29,20 @@ const SettingRow: React.FC<{
     </div>
 );
 
+const NavRow: React.FC<{ title: string; currentValue: string; onClick: () => void; }> = ({ title, currentValue, onClick }) => (
+    <button onClick={onClick} className="w-full flex justify-between items-center py-4 border-b border-gray-800/50">
+        <div>
+            <h3 className="text-white text-base font-medium">{title}</h3>
+        </div>
+        <div className="flex items-center gap-2">
+            <span className="text-gray-400">{currentValue}</span>
+            <ChevronRightIcon className="w-5 h-5 text-gray-500" />
+        </div>
+    </button>
+);
 
-const PrivacySettingsScreen: React.FC<PrivacySettingsScreenProps> = ({ user, onExit }) => {
+
+const PrivacySettingsScreen: React.FC<PrivacySettingsScreenProps> = ({ user, onExit, onNavigate }) => {
     const [settings, setSettings] = useState<Omit<PrivacySettings, 'userId'> | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
@@ -39,7 +54,7 @@ const PrivacySettingsScreen: React.FC<PrivacySettingsScreenProps> = ({ user, onE
                 setSettings(data);
             } catch (error) {
                 console.error("Failed to load privacy settings:", error);
-                setSettings({ showLocation: true, showActiveStatus: true, showInNearby: true, protectionEnabled: false });
+                setSettings({ showLocation: true, showActiveStatus: true, showInNearby: true, protectionEnabled: false, messagePrivacy: 'everyone' });
             } finally {
                 setIsLoading(false);
             }
@@ -77,6 +92,7 @@ const PrivacySettingsScreen: React.FC<PrivacySettingsScreenProps> = ({ user, onE
         );
     }
 
+    const messagePrivacyLabel = settings?.messagePrivacy === 'everyone' ? 'Todos' : 'Apenas seguidores mútuos';
 
     return (
         <div className="h-screen w-full bg-[#1c1c1c] text-white flex flex-col font-sans">
@@ -87,6 +103,11 @@ const PrivacySettingsScreen: React.FC<PrivacySettingsScreenProps> = ({ user, onE
             <main className="flex-grow px-4 py-2">
                 {settings && (
                     <>
+                        <NavRow
+                            title="Quem pode me enviar mensagem"
+                            currentValue={messagePrivacyLabel}
+                            onClick={() => onNavigate('message-privacy-settings')}
+                        />
                         <SettingRow
                             title="Mostrar local"
                             description="Desligar irá esconder sua localização de outros"

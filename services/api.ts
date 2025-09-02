@@ -1,5 +1,3 @@
-
-
 // This file contains the complete mock API server, including the in-memory database,
 // routing logic, and all endpoint handlers. It fully simulates the backend.
 
@@ -617,7 +615,7 @@ export const handleApiRequest = async (method: string, path: string, body: any, 
             }
             case 'privacy-settings': {
                 const user = await database.users.findOne({ id: userId });
-                return user?.settings?.privacy || { showLocation: true, showActiveStatus: true, showInNearby: true, protectionEnabled: false };
+                return user?.settings?.privacy || { showLocation: true, showActiveStatus: true, showInNearby: true, protectionEnabled: false, messagePrivacy: 'everyone' };
             }
             case 'pending-invites': {
                 return { invite: null }; // Mock as no pending invites for now to reduce noise

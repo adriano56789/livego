@@ -250,6 +250,8 @@ export interface PkInvitation extends ConvitePK {
     inviterAvatarUrl: string;
 }
 
+export type PkInviteListener = (invitation: PkInvitation) => void;
+
 export interface IncomingPrivateLiveInvite {
   stream: Stream;
   inviter: User;
@@ -710,6 +712,7 @@ export interface TabelaRankingApoiadores {
     streamer_apoiado_id: number;
     total_pontos_enviados: number;
     avatar_url?: string;
+    name?: string;
 }
 
 export interface PkSettings {

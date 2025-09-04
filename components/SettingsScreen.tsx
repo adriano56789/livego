@@ -40,10 +40,9 @@ interface SettingsScreenProps {
   onLogout: () => void;
   onNavigate: (view: AppView) => void;
   onDeleteAccount: () => void;
-  onTriggerGiftNotification: (gift: Gift) => void;
 }
 
-const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onExit, onLogout, onNavigate, onDeleteAccount, onTriggerGiftNotification }) => {
+const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onExit, onLogout, onNavigate, onDeleteAccount }) => {
   const [gifts, setGifts] = useState<Gift[]>([]);
   const [isGiftSectionLoading, setIsGiftSectionLoading] = useState(true);
 
@@ -96,42 +95,12 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, onExit, onLogout,
             />
           ))}
         </div>
-
-        <div className="mt-6">
-            <h2 className="text-sm font-semibold text-gray-500 mb-2 px-4">Simulador de Notificação de Presente</h2>
-            <div className="bg-[#1c1c1c] rounded-xl divide-y divide-gray-700/50">
-                {isGiftSectionLoading ? (
-                    <div className="p-4 text-center text-gray-400">Carregando presentes...</div>
-                ) : (
-                    gifts.map(gift => (
-                        <div key={gift.id} className="p-3 flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                                <img src={gift.imageUrl} alt={gift.name} className="w-10 h-10 object-contain" />
-                                <div>
-                                    <p className="font-semibold text-white">{gift.name}</p>
-                                    <div className="flex items-center gap-1 text-xs text-yellow-400">
-                                        <DiamondIcon className="w-3 h-3"/>
-                                        <span>{gift.price}</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <button
-                                onClick={() => onTriggerGiftNotification(gift)}
-                                className="bg-green-600 text-white font-semibold text-sm px-4 py-1.5 rounded-full hover:bg-green-500 transition-colors"
-                            >
-                                Testar
-                            </button>
-                        </div>
-                    ))
-                )}
-            </div>
-        </div>
       </main>
 
       <footer className="p-6 shrink-0 mt-auto">
         <button
             onClick={onLogout}
-            className="w-full bg-red-900/50 text-red-400 font-semibold py-3.5 rounded-xl text-lg transition-colors hover:bg-red-900/70"
+            className="w-full bg-red-900/50 text-red-400 font-semibold py-3.5 rounded-xl text-lg transition-colors hover:bg-red-800/50"
         >
           Sair
         </button>

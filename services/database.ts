@@ -1,11 +1,7 @@
 
-
-
 import { mongoObjectId } from './mongoObjectId';
 import * as levelService from './levelService';
-// FIX: Added missing type imports.
-// FIX: Added missing type imports for UniversalRankingData and GeneralRankingStreamer to resolve compilation errors.
-import type { User, LiveStreamRecord, Stream, PkBattle, PkBattleState, PurchaseOrder, ConvitePK, LiveCategory, Category, StartLiveResponse, FacingMode, LiveDetails, ChatMessage, Viewer, PublicProfile, AppEvent, ArtigoAjuda, CanalContato, HealthCheckResult, PrivateLiveInviteSettings, NotificationSettings, GiftNotificationSettings, PrivacySettings, LiveFollowUpdate, WithdrawalBalance, UserLevelInfo, InventoryItem, WithdrawalTransaction, RankingContributor, Conversation, ConversationMessage, Gift, DiamondPackage, PkSettings, SelectableOption, SecurityLogEntry, UniversalRankingUser, LiveEndSummary, TopFanDetails, UniversalRankingData, GeneralRankingStreamer, ProfileBadgeType } from '../types';
+import type { User, LiveStreamRecord, FacingMode, Gift, DiamondPackage, PurchaseOrder, WithdrawalTransaction, ConvitePK, PkSettings, PkBattleState, SelectableOption, SecurityLogEntry, ArtigoAjuda, CanalContato } from '../types';
 
 // --- INITIAL MOCK DATA (STRUCTURED LIKE MONGODB COLLECTIONS) ---
 const newUserTemplate = {
@@ -30,14 +26,12 @@ const newUserTemplate = {
   online_status: true,
   settings: {
     notifications: { newMessages: true, streamerLive: true, followedPost: true, order: true, interactive: true },
-    // FIX: Added missing messagePrivacy property to match the PrivacySettings type.
-    privacy: { showLocation: true, showActiveStatus: true, showInNearby: true, protectionEnabled: false, messagePrivacy: 'everyone' },
+    privacy: { showLocation: true, showActiveStatus: true, showInNearby: true, protectionEnabled: false, messagePrivacy: 'everyone' as const },
     privateLiveInvite: { privateInvites: true, onlyFollowing: true, onlyFans: false, onlyFriends: false, acceptOnlyFriendPkInvites: false },
     giftNotifications: { enabledGifts: {} }
   }
 };
 
-// FIX: Made the 'visitors' property optional in the base definition to match its usage.
 const userDefinitions: (Omit<User, 'level' | 'followers' | 'visitors'> & { visitors?: number })[] = [
     {
       id: 10755083,
@@ -52,7 +46,7 @@ const userDefinitions: (Omit<User, 'level' | 'followers' | 'visitors'> & { visit
       has_uploaded_real_photo: true,
       has_completed_profile: true,
       invite_code: 'A1B2C3D4',
-      following: [55218901, 14431934, 99887705], // Following "Lest Go 500 K..." and "PK Pro"
+      following: [55218901, 14431934, 99887705], 
       wallet_diamonds: 50000,
       wallet_earnings: 125000,
       withdrawal_method: null,
@@ -69,13 +63,12 @@ const userDefinitions: (Omit<User, 'level' | 'followers' | 'visitors'> & { visit
       weight: null,
       pk_enabled_preference: true,
       photo_gallery: ['https://i.pravatar.cc/400?u=10755083'],
-      latitude: -23.5505, // São Paulo
+      latitude: -23.5505, 
       longitude: -46.6333,
       online_status: true,
       settings: {
         notifications: { newMessages: true, streamerLive: true, followedPost: true, order: true, interactive: true },
-        // FIX: Added missing messagePrivacy property to match the PrivacySettings type.
-        privacy: { showLocation: true, showActiveStatus: true, showInNearby: true, protectionEnabled: false, messagePrivacy: 'everyone' },
+        privacy: { showLocation: true, showActiveStatus: true, showInNearby: true, protectionEnabled: false, messagePrivacy: 'everyone' as const },
         privateLiveInvite: { privateInvites: true, onlyFollowing: true, onlyFans: false, onlyFriends: false, acceptOnlyFriendPkInvites: false },
         giftNotifications: { enabledGifts: {} }
       }
@@ -94,7 +87,7 @@ const userDefinitions: (Omit<User, 'level' | 'followers' | 'visitors'> & { visit
       is_avatar_protected: true,
       country: 'BR',
       region: 'Rio de Janeiro',
-      latitude: -22.9068, // Rio de Janeiro
+      latitude: -22.9068, 
       longitude: -43.1729,
       online_status: true,
       photo_gallery: ['https://i.pravatar.cc/400?u=55218901'],
@@ -112,7 +105,7 @@ const userDefinitions: (Omit<User, 'level' | 'followers' | 'visitors'> & { visit
       level2: 6,
       country: 'US',
       region: 'California',
-      latitude: 34.0522, // Los Angeles
+      latitude: 34.0522, 
       longitude: -118.2437,
       online_status: true,
       photo_gallery: ['https://i.pravatar.cc/400?u=66345102'],
@@ -130,7 +123,7 @@ const userDefinitions: (Omit<User, 'level' | 'followers' | 'visitors'> & { visit
       country: 'BR',
       region: 'Minas Gerais',
       online_status: false,
-      last_visit_date: new Date(Date.now() - 5 * 60 * 1000).toISOString(), // 5 minutes ago
+      last_visit_date: new Date(Date.now() - 5 * 60 * 1000).toISOString(), 
       photo_gallery: ['https://i.pravatar.cc/400?u=99887705'],
     },
      { 
@@ -147,7 +140,7 @@ const userDefinitions: (Omit<User, 'level' | 'followers' | 'visitors'> & { visit
       region: 'Bahia',
       visitors: 29,
       level2: 7,
-      latitude: -23.5507, // Close to São Paulo
+      latitude: -23.5507, 
       longitude: -46.6335,
       online_status: true,
       photo_gallery: ['https://i.pravatar.cc/400?u=14431934'],
@@ -185,7 +178,7 @@ const initialData = {
     ...u,
     followers: followerCounts[u.id] || 0,
     visitors: u.visitors || 0,
-    following: u.following || [], // Ensure `following` is always an array
+    following: u.following || [], 
     level: levelService.calculateLevelFromXp(u.xp)
   })),
   liveStreams: [
@@ -258,13 +251,10 @@ const initialData = {
   reports: [],
   profileVisits: [],
   sentGifts: [
-    // Gifts for streamer 55218901
     { _id: mongoObjectId(), id: 1, senderId: 10755083, receiverId: 55218901, liveId: 101, giftId: 1, giftValue: 1, diamondCost: 1, quantity: 1, timestamp: new Date().toISOString() },
     { _id: mongoObjectId(), id: 2, senderId: 66345102, receiverId: 55218901, liveId: 101, giftId: 2, giftValue: 10, diamondCost: 10, quantity: 1, timestamp: new Date().toISOString() },
     { _id: mongoObjectId(), id: 3, senderId: 10755083, receiverId: 55218901, liveId: 101, giftId: 3, giftValue: 50, diamondCost: 50, quantity: 1, timestamp: new Date().toISOString() },
     { _id: mongoObjectId(), id: 4, senderId: 99887705, receiverId: 55218901, liveId: 101, giftId: 4, giftValue: 1000, diamondCost: 1000, quantity: 1, timestamp: new Date().toISOString() },
-
-    // Gifts for main user 10755083
     { _id: mongoObjectId(), id: 5, senderId: 55218901, receiverId: 10755083, liveId: 105, giftId: 5, giftValue: 5000, diamondCost: 5000, quantity: 1, timestamp: new Date().toISOString() },
     { _id: mongoObjectId(), id: 6, senderId: 66345102, receiverId: 10755083, liveId: 105, giftId: 6, giftValue: 20000, diamondCost: 20000, quantity: 1, timestamp: new Date().toISOString() },
     { _id: mongoObjectId(), id: 7, senderId: 55218901, receiverId: 10755083, liveId: 105, giftId: 1, giftValue: 1, diamondCost: 1, quantity: 1, timestamp: new Date().toISOString() },
@@ -400,9 +390,6 @@ export function getRawDb() {
   return db;
 }
 
-// Simulate network delay
-const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
-
 // Helper function to handle setting nested properties via dot notation
 const setNestedValue = (obj: any, path: string, value: any) => {
     const keys = path.split('.');
@@ -419,17 +406,15 @@ const setNestedValue = (obj: any, path: string, value: any) => {
 
 const createCollection = <T extends { _id: string }>(collectionName: keyof typeof db) => ({
     async find(query: any = {}): Promise<T[]> {
-        await delay(50);
+        await new Promise(res => setTimeout(res, 50)); // Simulate delay
         const collection = db[collectionName] as T[];
         return collection.filter(doc => {
             return Object.entries(query).every(([key, queryValue]: [string, any]) => {
                 const docValue = (doc as any)[key];
                 if (typeof queryValue === 'object' && queryValue !== null && '$in' in queryValue) {
                     if (Array.isArray(docValue)) {
-                        // Check for intersection between the doc's array and the query's array
                         return queryValue['$in'].some((v: any) => docValue.includes(v));
                     }
-                    // Original logic for non-array fields
                     return queryValue['$in'].includes(docValue);
                 }
                 if (typeof queryValue === 'object' && queryValue !== null && '$or' in queryValue) {
@@ -440,7 +425,7 @@ const createCollection = <T extends { _id: string }>(collectionName: keyof typeo
         });
     },
     async findOne(query: any): Promise<T | null> {
-        await delay(30);
+        await new Promise(res => setTimeout(res, 30)); // Simulate delay
         const collection = db[collectionName] as T[];
         return collection.find(doc => {
             return Object.entries(query).every(([key, queryValue]: [string, any]) => {
@@ -466,13 +451,13 @@ const createCollection = <T extends { _id: string }>(collectionName: keyof typeo
         }) || null;
     },
     async insertOne(doc: Omit<T, '_id'>): Promise<{ insertedId: string }> {
-        await delay(40);
+        await new Promise(res => setTimeout(res, 40)); // Simulate delay
         const newDoc = { _id: mongoObjectId(), ...doc } as T;
         db[collectionName].push(newDoc);
         return { insertedId: newDoc._id };
     },
     async updateOne(query: any, update: any): Promise<{ modifiedCount: number }> {
-        await delay(40);
+        await new Promise(res => setTimeout(res, 40)); // Simulate delay
         const collection = db[collectionName] as T[];
         const docIndex = collection.findIndex(doc => {
              return Object.entries(query).every(([key, value]) => {
@@ -509,7 +494,7 @@ const createCollection = <T extends { _id: string }>(collectionName: keyof typeo
         return { modifiedCount: 0 };
     },
      async deleteOne(query: any): Promise<{ deletedCount: number }> {
-        await delay(40);
+        await new Promise(res => setTimeout(res, 40)); // Simulate delay
         const collection = db[collectionName] as T[];
         const initialLength = collection.length;
         db[collectionName] = collection.filter(doc => {

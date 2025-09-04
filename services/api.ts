@@ -1,19 +1,16 @@
 // This file contains the complete mock API server, including the in-memory database,
 // routing logic, and all endpoint handlers. It fully simulates the backend.
 
-import * as levelService from './levelService';
+import * as levelService from '../services/levelService';
 import { database, getRawDb } from './database';
 import { mongoObjectId } from './mongoObjectId';
-// FIX: Added missing type imports to resolve compilation errors.
-// FIX: Added missing type imports for UniversalRankingData and GeneralRankingStreamer to resolve compilation errors.
-import type { User, LiveStreamRecord, Stream, PkBattle, PkBattleState, PurchaseOrder, ConvitePK, LiveCategory, Category, StartLiveResponse, FacingMode, LiveDetails, ChatMessage, Viewer, PublicProfile, AppEvent, ArtigoAjuda, CanalContato, HealthCheckResult, PrivateLiveInviteSettings, NotificationSettings, GiftNotificationSettings, PrivacySettings, LiveFollowUpdate, WithdrawalBalance, UserLevelInfo, InventoryItem, WithdrawalTransaction, RankingContributor, Conversation, ConversationMessage, Gift, DiamondPackage, PkSettings, SelectableOption, SecurityLogEntry, UniversalRankingUser, LiveEndSummary, TopFanDetails, UniversalRankingData, GeneralRankingStreamer, ProfileBadgeType } from '../types';
+import type { User, LiveStreamRecord, Stream, PkBattle, PkBattleState, PurchaseOrder, ConvitePK, LiveCategory, Category, StartLiveResponse, FacingMode, LiveDetails, ChatMessage, Viewer, PublicProfile, AppEvent, ArtigoAjuda, CanalContato, HealthCheckResult, PrivateLiveInviteSettings, NotificationSettings, GiftNotificationSettings, PrivacySettings, LiveFollowUpdate, WithdrawalBalance, UserLevelInfo, InventoryItem, WithdrawalTransaction, RankingContributor, Conversation, ConversationMessage, Gift, DiamondPackage, PkSettings, SelectableOption, SecurityLogEntry, UniversalRankingUser, LiveEndSummary, TopFanDetails, UniversalRankingData, GeneralRankingStreamer, ProfileBadgeType, TabelaRankingApoiadores } from '../types';
 
 // --- SIMULATED ENVIRONMENT VARIABLES ---
 const SRS_URL_PUBLISH = 'rtmp://localhost/live';
 const SRS_URL_PLAY_WEBRTC = 'webrtc://localhost/live';
 const SRS_URL_PLAY_HLS = 'http://localhost:8080/live';
 
-// FIX: Added missing delay function.
 // Helper function to simulate network delay
 const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
 
@@ -122,6 +119,19 @@ const buildConversationViewModel = async (convo: any, currentUserId: number): Pr
 export const handleApiRequest = async (method: string, path: string, body: any, query: URLSearchParams): Promise<any> => {
     console.log(`[Mock API] ${method} ${path}`, { body, query: Object.fromEntries(query) });
     
+    // --- VERSION & CONFIG ---
+    if (method === 'GET' && path === '/api/version') {
+        return {
+            minVersion: '1.0.0',
+            latestVersion: '1.0.0',
+            updateUrl: 'https://example.com/update'
+        };
+    }
+
+    if (method === 'GET' && path === '/api/live/categories') {
+        return liveCategories;
+    }
+
     // --- HELPER FUNCTIONS FOR PK BATTLES ---
     const getPkBattleViewModel = async (battleId: number | string): Promise<PkBattle | null> => {
         const battleState = await database.pkBattles.findOne({ id: Number(battleId) });
@@ -145,8 +155,8 @@ export const handleApiRequest = async (method: string, path: string, body: any, 
         return {
             id: battleState.id,
             title: `${streamerA.nickname} vs ${streamerB.nickname}`,
-            streamer1: { userId: streamerA.id, streamId: streamA.id, name: streamerA.nickname || streamerA.name, score: battleState.pontuacao_A, avatarUrl: streamerA.avatar_url || '', isVerified: true, countryCode: streamerA.country || undefined },
-            streamer2: { userId: streamerB.id, streamId: streamB.id, name: streamerB.nickname || streamerB.name, score: battleState.pontuacao_B, avatarUrl: streamerB.avatar_url || '', isVerified: false, countryCode: streamerB.country || undefined },
+            streamer1: { userId: streamerA.id, streamId: streamA.id, name: streamerA.nickname || streamerA.name, score: battleState.pontuacao_A, avatarUrl: streamerA.avatar_url || '', isVerified: true, countryCode: streamerA.country || undefined, winMultiplier: 0 },
+            streamer2: { userId: streamerB.id, streamId: streamB.id, name: streamerB.nickname || streamerB.name, score: battleState.pontuacao_B, avatarUrl: streamerB.avatar_url || '', isVerified: false, countryCode: streamerB.country || undefined, winMultiplier: 3 },
             isCoHost: battleState.is_co_host,
         };
     };
@@ -179,8 +189,8 @@ export const handleApiRequest = async (method: string, path: string, body: any, 
             pontuacao_B: 0,
             status: 'ativa',
             data_inicio: new Date().toISOString(),
-            duracao_segundos: 300,
-            data_fim: new Date(Date.now() + 300 * 1000).toISOString(),
+            duracao_segundos: 180, // 3 minutes like in the screenshot
+            data_fim: new Date(Date.now() + 180 * 1000).toISOString(),
             top_supporters_A: [],
             top_supporters_B: [],
             is_co_host: invite.is_co_host,
@@ -708,6 +718,16 @@ export const handleApiRequest = async (method: string, path: string, body: any, 
         return newInvite;
     }
 
+    if (method === 'POST' && path === '/api/pk/room/join') {
+        // In a real app, this would subscribe the user to a WebSocket room.
+        // For the mock, we just acknowledge the request.
+        return { success: true };
+    }
+    if (method === 'POST' && path === '/api/pk/room/leave') {
+        // In a real app, this would unsubscribe the user.
+        return { success: true };
+    }
+
     const pkInviteStatusMatch = path.match(pkInviteStatusRegex);
     if (method === 'GET' && pkInviteStatusMatch) {
         const inviteId = pkInviteStatusMatch[1];
@@ -751,6 +771,21 @@ export const handleApiRequest = async (method: string, path: string, body: any, 
         const battleId = pkBattleDetailsMatch[1];
         const battle = await database.pkBattles.findOne({ id: Number(battleId) });
         if (!battle) throw new Error("PK Battle not found");
+        
+        // Mock supporters for the battle view
+        const users = await database.users.find();
+        if (battle.top_supporters_A.length === 0 && users.length > 4) {
+             battle.top_supporters_A = [
+                { batalha_id: battle.id, apoiador_id: users[0].id, name: users[0].nickname, streamer_apoiado_id: battle.streamer_A_id, total_pontos_enviados: 1000, avatar_url: users[0].avatar_url },
+                { batalha_id: battle.id, apoiador_id: users[1].id, name: users[1].nickname, streamer_apoiado_id: battle.streamer_A_id, total_pontos_enviados: 500, avatar_url: users[1].avatar_url },
+                { batalha_id: battle.id, apoiador_id: users[2].id, name: users[2].nickname, streamer_apoiado_id: battle.streamer_A_id, total_pontos_enviados: 250, avatar_url: users[2].avatar_url },
+            ];
+            battle.top_supporters_B = [
+                { batalha_id: battle.id, apoiador_id: users[3].id, name: users[3].nickname, streamer_apoiado_id: battle.streamer_B_id, total_pontos_enviados: 1200, avatar_url: users[3].avatar_url },
+                { batalha_id: battle.id, apoiador_id: users[4].id, name: users[4].nickname, streamer_apoiado_id: battle.streamer_B_id, total_pontos_enviados: 600, avatar_url: users[4].avatar_url },
+            ];
+        }
+
         return battle;
     }
     
@@ -767,26 +802,19 @@ export const handleApiRequest = async (method: string, path: string, body: any, 
         const packages = await database.diamondPackages.find();
         return packages;
     }
+    
+    if (method === 'GET' && path === '/api/gifts') {
+        const gifts = await database.gifts.find();
+        return gifts;
+    }
 
     // --- LIVE STREAMS LIST ---
     if(method === 'GET' && path === '/api/lives') {
         const category = query.get('category');
         if (category === 'pk') {
-            const pkStreams = await database.liveStreams.find({ em_pk: true, ao_vivo: true });
-            const battles: PkBattle[] = pkStreams.slice(0, Math.floor(pkStreams.length / 2) * 2).reduce((acc, stream, index, arr) => {
-                if (index % 2 === 0) {
-                    const streamer1 = stream;
-                    const streamer2 = arr[index + 1];
-                    acc.push({
-                        id: streamer1.id + streamer2.id, // simple unique id
-                        title: `${streamer1.nome_streamer} vs ${streamer2.nome_streamer}`,
-                        streamer1: { userId: streamer1.user_id, streamId: streamer1.id, name: streamer1.nome_streamer, score: 1234, avatarUrl: (getRawDb().users.find(u => u.id === streamer1.user_id) as User)?.avatar_url || '', isVerified: true },
-                        streamer2: { userId: streamer2.user_id, streamId: streamer2.id, name: streamer2.nome_streamer, score: 5678, avatarUrl: (getRawDb().users.find(u => u.id === streamer2.user_id) as User)?.avatar_url || '', isVerified: false },
-                    });
-                }
-                return acc;
-            }, [] as PkBattle[]);
-            return battles;
+            const liveBattles = await database.pkBattles.find({ status: 'ativa' });
+            const viewModels = await Promise.all(liveBattles.map(b => getPkBattleViewModel(b.id)));
+            return viewModels.filter(vm => vm !== null);
         }
         const liveRecords = await database.liveStreams.find({ ao_vivo: true });
         return liveRecords.map(mapLiveRecordToStream);
@@ -813,7 +841,7 @@ export const handleApiRequest = async (method: string, path: string, body: any, 
             if (!sender) throw new Error('Sender not found');
             
             const newChatMessage: ChatMessage = {
-                id: Date.now(),
+                id: Date.now() + Math.random(),
                 type: imageUrl ? 'image' : 'message',
                 userId: sender.id,
                 username: sender.nickname || sender.name,
@@ -845,8 +873,6 @@ export const handleApiRequest = async (method: string, path: string, body: any, 
             const streamer = await database.users.findOne({ id: liveStream.user_id });
             if (!streamer) throw new Error('Streamer not found');
             
-            // FIX: The LiveDetails object was missing several required properties.
-            // This completes the object to satisfy the LiveDetails interface.
             const details: LiveDetails = {
                 streamerName: streamer.nickname || streamer.name,
                 streamerAvatarUrl: streamer.avatar_url || '',
@@ -935,10 +961,8 @@ export const handleApiRequest = async (method: string, path: string, body: any, 
                      await database.users.updateOne({ id: targetReceiverId }, { $set: receiver });
                  }
                  
-                 // Update stream gift value
                  liveStream.received_gifts_value = (liveStream.received_gifts_value || 0) + (gift.valor_pontos * quantity);
                  
-                 // Add to chat
                  const receiverUser = await database.users.findOne({ id: targetReceiverId });
                  const chatMessage: ChatMessage = {
                     id: Date.now(), type: 'gift', userId: senderId, username: sender.nickname || sender.name,
@@ -951,13 +975,56 @@ export const handleApiRequest = async (method: string, path: string, body: any, 
 
                  await database.liveStreams.updateOne({ id: liveId }, { $set: liveStream });
                  
-                 // Log sent gift
+                 // Update PK Battle if applicable
+                if (liveStream.em_pk) {
+                    const battle = await database.pkBattles.findOne({
+                        status: 'ativa',
+                        $or: [
+                            { streamer_A_id: liveStream.user_id },
+                            { streamer_B_id: liveStream.user_id }
+                        ]
+                    });
+
+                    if (battle) {
+                        const points = gift.valor_pontos * quantity;
+                        let supportersList: TabelaRankingApoiadores[] | undefined;
+                        
+                        if (battle.streamer_A_id === targetReceiverId) {
+                            battle.pontuacao_A = (battle.pontuacao_A || 0) + points;
+                            supportersList = battle.top_supporters_A;
+                        } else if (battle.streamer_B_id === targetReceiverId) {
+                            battle.pontuacao_B = (battle.pontuacao_B || 0) + points;
+                            supportersList = battle.top_supporters_B;
+                        }
+                        
+                        if (supportersList) {
+                            let supporter = supportersList.find(s => s.apoiador_id === senderId);
+                            if (supporter) {
+                                supporter.total_pontos_enviados += points;
+                            } else {
+                                supportersList.push({
+                                    batalha_id: battle.id,
+                                    apoiador_id: senderId,
+                                    streamer_apoiado_id: targetReceiverId,
+                                    total_pontos_enviados: points,
+                                    avatar_url: sender.avatar_url,
+                                    name: sender.nickname || sender.name
+                                });
+                            }
+                            supportersList.sort((a, b) => b.total_pontos_enviados - a.total_pontos_enviados);
+                        }
+
+                        await database.pkBattles.updateOne({ id: battle.id }, { $set: battle });
+                    }
+                }
+
                  await database.sentGifts.insertOne({
                     id: Date.now(),
                     senderId,
                     receiverId: targetReceiverId,
                     liveId,
                     giftId,
+                    batalha_id: liveStream.em_pk ? (await database.pkBattles.findOne({ status: 'ativa', $or: [{ streamer_A_id: liveStream.user_id }, { streamer_B_id: liveStream.user_id }] }))?.id : undefined,
                     giftValue: gift.valor_pontos,
                     diamondCost: totalCost,
                     quantity,
@@ -982,14 +1049,11 @@ export const handleApiRequest = async (method: string, path: string, body: any, 
         }
     }
     
-    // --- Live Stream Start/Stop ---
     if (method === 'POST' && path === '/api/live/start') {
-// FIX: A destructuring declaration must have an initializer.
         const { userId, title, meta, category, isPrivate, isPkEnabled, thumbnailUrl, entryFee, cameraUsed } = body;
         const user = await database.users.findOne({ id: userId });
         if (!user) throw new Error('User not found');
 
-        // Stop any existing stream for the user
         await database.liveStreams.updateOne({ user_id: userId, ao_vivo: true }, { $set: { ao_vivo: false } });
 
         const newStream: LiveStreamRecord = {
@@ -1013,7 +1077,6 @@ export const handleApiRequest = async (method: string, path: string, body: any, 
         };
         await database.liveStreams.insertOne(newStream);
         
-        // Save preferences
         await database.users.updateOne({ id: userId }, { $set: {
             last_camera_used: cameraUsed,
             last_selected_category: category,
@@ -1040,65 +1103,45 @@ export const handleApiRequest = async (method: string, path: string, body: any, 
         return { success: true };
     }
 
-    // --- Private Chat ---
     const privateChatMatch = path.match(privateChatRegex);
     if (method === 'GET' && privateChatMatch) {
         const convoId = privateChatMatch[1];
         const currentUserId = parseInt(query.get('userId') || '0');
+        // FIX: Fixed typo from 'convers' to 'conversations' and completed the logic for the endpoint.
         const convo = await database.conversations.findOne({ id: convoId });
-        if (!convo || !convo.participants.includes(currentUserId)) throw new Error('Conversation not found or access denied.');
+        if (!convo) {
+            throw new Error('Conversation not found');
+        }
 
         // Mark messages as seen
-        (convo.messages || []).forEach((msg: any) => {
-            if (msg.senderId !== currentUserId && !(msg.seenBy || []).includes(currentUserId)) {
-                if (!msg.seenBy) msg.seenBy = [];
-                msg.seenBy.push(currentUserId);
-                msg.status = 'seen';
-            }
-        });
-        await database.conversations.updateOne({ id: convoId }, { $set: { messages: convo.messages } });
-
+        let changed = false;
+        if (convo.messages && Array.isArray(convo.messages)) {
+            convo.messages.forEach((msg: any) => {
+                if (msg.senderId !== currentUserId) {
+                    if (!msg.seenBy) {
+                        msg.seenBy = [msg.senderId];
+                    }
+                    if (!msg.seenBy.includes(currentUserId)) {
+                        msg.seenBy.push(currentUserId);
+                        changed = true;
+                    }
+                }
+            });
+        }
+        
+        if (changed) {
+            await database.conversations.updateOne({ id: convoId }, { $set: { messages: convo.messages } });
+        }
+        
         const viewModel = await buildConversationViewModel(convo, currentUserId);
-        if (!viewModel) {
-            throw new Error("Could not build conversation view model");
-        }
         return viewModel;
-    }
-    
-    if (method === 'POST' && path === '/api/chat/viewed') {
-        const { conversationId, viewerId } = body;
-        const convo = await database.conversations.findOne({ id: conversationId });
-        if (!convo) {
-            // This can happen for virtual conversations like "friend requests"
-            // or if the convo was deleted. Returning success prevents an error cascade.
-            return { success: true };
-        }
-
-        let modified = false;
-        (convo.messages || []).forEach((msg: any) => {
-            if (msg.senderId !== viewerId) {
-                if (!msg.seenBy) {
-                    msg.seenBy = [];
-                }
-                if (!msg.seenBy.includes(viewerId)) {
-                    msg.seenBy.push(viewerId);
-                    modified = true;
-                }
-            }
-        });
-        
-        if (modified) {
-            await database.conversations.updateOne({ id: conversationId }, { $set: { messages: convo.messages } });
-        }
-        
-        return { success: true };
     }
 
     if (method === 'POST' && privateChatMatch) {
         const convoId = privateChatMatch[1];
         const { senderId, text, imageUrl } = body;
-        const convo = await database.conversations.findOne({ id: convoId });
-        if (!convo) throw new Error('Conversation not found');
+        const sender = await database.users.findOne({ id: senderId });
+        if (!sender) throw new Error("Sender not found for private message.");
 
         const newMessage: ConversationMessage = {
             id: mongoObjectId(),
@@ -1108,18 +1151,12 @@ export const handleApiRequest = async (method: string, path: string, body: any, 
             imageUrl: imageUrl || null,
             timestamp: new Date().toISOString(),
             status: 'sent',
-            seenBy: [senderId]
+            seenBy: [senderId],
         };
         
         await database.conversations.updateOne({ id: convoId }, { $push: { messages: newMessage } });
-
-        const updatedConvoRaw = await database.conversations.findOne({ id: convoId });
-        if (!updatedConvoRaw) throw new Error("Could not retrieve updated conversation");
-
-        const updatedViewModel = await buildConversationViewModel(updatedConvoRaw, senderId);
-        if (!updatedViewModel) throw new Error("Could not build updated conversation view model");
-        
-        return updatedViewModel;
+        const updatedConvo = await database.conversations.findOne({ id: convoId });
+        return await buildConversationViewModel(updatedConvo, senderId);
     }
     
     if (method === 'POST' && path === '/api/chat/private/get-or-create') {
@@ -1127,282 +1164,26 @@ export const handleApiRequest = async (method: string, path: string, body: any, 
         let convo = await database.conversations.findOne({
             participants: { $all: [currentUserId, otherUserId], $size: 2 }
         });
-
+        
         if (!convo) {
-            const p1 = Math.min(currentUserId, otherUserId);
-            const p2 = Math.max(currentUserId, otherUserId);
             const newConvoData = {
-                id: `convo_${p1}_${p2}`,
+                id: `convo_${currentUserId}_${otherUserId}`,
                 participants: [currentUserId, otherUserId],
                 messages: []
-            };
-            await database.conversations.insertOne(newConvoData);
-            // Do not re-fetch, use the object directly to avoid race conditions.
-            convo = newConvoData;
-        }
-
-        if (!convo) {
-            throw new Error("Failed to create or find conversation.");
-        }
-        
-        const viewModel = await buildConversationViewModel(convo, currentUserId);
-        if (!viewModel) {
-            throw new Error("Could not build conversation view model");
-        }
-        return viewModel;
-    }
-    
-    if (method === 'POST' && path === '/api/chat/upload') {
-        const { imageDataUrl } = body;
-        // In a real app, this would upload to a cloud storage and return the URL.
-        // For the mock, we just return the data URL itself as if it were a permanent URL.
-        return { url: imageDataUrl };
-    }
-    
-    // --- GIFTS ---
-    if (method === 'GET' && path === '/api/gifts') {
-        return await database.gifts.find();
-    }
-
-    if (method === 'POST' && path === '/api/ranking/help-host') {
-        const { senderId, hostId, giftValue } = body;
-        const sender = await database.users.findOne({ id: senderId });
-        if (!sender) {
-            return { success: false, message: "Remetente não encontrado.", updatedUser: null };
-        }
-        if (sender.wallet_diamonds < giftValue) {
-            return { success: false, message: "Diamantes insuficientes.", updatedUser: sender };
-        }
-
-        sender.wallet_diamonds -= giftValue;
-        sender.xp += giftValue; // Give sender some XP for helping
-        sender.level = levelService.calculateLevelFromXp(sender.xp);
-        await database.users.updateOne({ id: senderId }, { $set: sender });
-
-        // Update host's score (represented by earnings)
-        const host = await database.users.findOne({ id: hostId });
-        if (host) {
-            const updatedEarnings = (host.wallet_earnings || 0) + giftValue;
-            await database.users.updateOne({ id: hostId }, { $set: { wallet_earnings: updatedEarnings } });
-        }
-
-        return { success: true, message: "Host ajudado com sucesso!", updatedUser: sender };
-    }
-    
-    // --- Ranking ---
-    const rankingUserListMatch = path.match(rankingUsersRegex);
-    if(method === 'GET' && rankingUserListMatch) {
-        const users = await database.users.find();
-        users.sort((a,b) => b.xp - a.xp); // Rank by XP
-        const userRanking: UniversalRankingUser[] = users.map((u, i) => ({
-            rank: i + 1,
-            userId: u.id,
-            avatarUrl: u.avatar_url || '',
-            name: u.nickname || u.name,
-            score: (u.wallet_diamonds || 0) * 10,
-            level: u.level,
-            gender: u.gender,
-            badges: [
-                { type: 'flag', value: u.country === 'BR' ? '🇧🇷' : '🇺🇸' },
-                { type: 'level', value: u.level },
-            ]
-        }));
-        const response: UniversalRankingData = {
-            podium: userRanking.slice(0,3),
-            list: userRanking.slice(3, 20),
-        };
-        return response;
-    }
-
-    const rankingStreamersMatch = path.match(rankingStreamersRegex);
-    if(method === 'GET' && rankingStreamersMatch) {
-        const users = await database.users.find();
-        users.sort((a,b) => (b.wallet_earnings || 0) - (a.wallet_earnings || 0)); // Rank by earnings
-        const streamerRanking: GeneralRankingStreamer[] = users.slice(0, 20).map((u, i) => ({
-             rank: i + 1,
-             userId: u.id,
-             username: u.nickname || u.name,
-             avatarUrl: u.avatar_url || '',
-             level: u.level,
-             score: u.wallet_earnings || 0,
-        }));
-        return streamerRanking;
-    }
-    
-    const rankingHourlyMatch = path.match(rankingHourlyRegex);
-    if (method === 'GET' && rankingHourlyMatch) {
-        const allUsers = await database.users.find();
-        // Give everyone a random score to simulate a global ranking, based on their earnings
-        const usersWithScores = allUsers.map(u => ({
-            ...u,
-            score: Math.floor(Math.random() * 5000) + (u.wallet_earnings || 0) + (u.wallet_diamonds || 0)
-        })).sort((a, b) => b.score - a.score);
-
-        const ranking: UniversalRankingUser[] = usersWithScores.slice(0, 100).map((u, i) => ({
-            rank: i + 1,
-            userId: u.id,
-            avatarUrl: u.avatar_url || '',
-            name: u.nickname || u.name,
-            score: u.score,
-            level: u.level,
-            gender: u.gender,
-            badges: [
-                 { type: 'flag', value: u.country === 'BR' ? '🇧🇷' : '🇺🇸' },
-                 { type: 'level', value: u.level },
-            ]
-        }));
-        
-        const currentUserInRanking = ranking.find(u => u.userId === 10755083) || {
-            rank: '>99', userId: 10755083, avatarUrl: (await database.users.findOne({id:10755083}))!.avatar_url!, name: 'Você', score: 123, level: 1, gender: 'male', badges: [{type: 'flag', value: '🇧🇷'}, {type: 'level', value: 1}]
-        };
-
-        const response: UniversalRankingData = {
-            // FIX: The 'rank' property in UniversalRankingUser can be a string (e.g., '>99'), but in this context, 
-            // it's always a number from the array creation logic. Cast to number to satisfy the compiler.
-            podium: ranking.filter(u => (u.rank as number) <= 3),
-            // FIX: The 'rank' property in UniversalRankingUser can be a string (e.g., '>99'), but in this context, 
-            // it's always a number from the array creation logic. Cast to number to satisfy the compiler.
-            list: ranking.filter(u => (u.rank as number) > 3),
-            currentUserRanking: currentUserInRanking,
-            countdown: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
-            footerButtons: {
-                primary: { text: "Ajude este usuário a subir no ranking.", value: "100" },
-                secondary: { text: "Saiba mais sobre o ranking", value: "more" }
-            }
-        };
-        return response;
-    }
-
-    // --- HELP ARTICLES & CONTACTS ---
-    const helpArticleMatch = path.match(helpArticleByIdRegex);
-    if(method === 'GET' && helpArticleMatch) {
-        const articleId = helpArticleMatch[1];
-        if (articleId === 'faq') { // Special case for FAQ summary
-            const faqArticles = await database.helpArticles.find({ categoria: 'FAQ' });
-            return {
-                id: 'faq',
-                titulo: 'Perguntas Frequentes (FAQ)',
-                conteudo: faqArticles.map(a => `<h3>${a.titulo}</h3><div>${a.conteudo}</div>`).join('<hr class="my-4 border-gray-700">'),
-                categoria: 'FAQ' as const,
-                ordem_exibicao: 0, visualizacoes: 0, is_ativo: false
-            };
-        }
-        const article = await database.helpArticles.findOne({ id: articleId });
-        if (!article) throw new Error('Article not found');
-        return article;
-    }
-
-    if(method === 'GET' && path === '/api/help/articles') {
-        const category = query.get('category');
-        if (category) {
-            return await database.helpArticles.find({ categoria: category });
-        }
-        return await database.helpArticles.find();
-    }
-    
-    if(method === 'GET' && path === '/api/help/contact-channels') {
-        return await database.contactChannels.find();
-    }
-    
-    if(method === 'GET' && path === '/api/version') {
-        return {
-            minVersion: '1.0.0',
-            latestVersion: '1.0.0',
-            updateUrl: 'https://example.com/update'
-        };
-    }
-
-    if (method === 'GET' && path === '/api/live/categories') {
-        return liveCategories;
-    }
-
-    // --- MONITORING & DIAGNOSTICS ---
-    if (method === 'GET' && path === '/api/monitor/health-check') {
-        await delay(500); // Simulate network latency for the check itself
-        const MOCK_USER_ID = 10755083;
-        const MOCK_LIVE_ID = 101;
-
-        const endpointsToTest = [
-            { endpoint: '/api/lives', method: 'GET', details: 'Popular stream list' },
-            { endpoint: `/api/lives/${MOCK_LIVE_ID}`, method: 'GET', details: 'Live stream details' },
-            { endpoint: `/api/chat/live/${MOCK_LIVE_ID}`, method: 'GET', details: 'Live chat history' },
-            { endpoint: '/api/auth/google', method: 'POST', details: 'User authentication' },
-            { endpoint: `/api/users/${MOCK_USER_ID}/profile`, method: 'GET', details: 'User public profile' },
-            { endpoint: `/api/users/${MOCK_USER_ID}/following`, method: 'GET', details: 'User following list' },
-            { endpoint: '/api/gifts', method: 'GET', details: 'Gift catalog' },
-            { endpoint: '/api/purchase', method: 'POST', details: 'Purchase initiation endpoint' },
-            { endpoint: `/api/users/${MOCK_USER_ID}/withdrawal-balance`, method: 'GET', details: 'Withdrawal balance' },
-            { endpoint: '/api/lives/pk', method: 'GET', details: 'PK battles list' },
-            { endpoint: `/api/users/search?q=test`, method: 'GET', details: 'User search' },
-            { endpoint: `/api/users/${MOCK_USER_ID}/privacy-settings`, method: 'GET', details: 'User privacy settings' },
-            { endpoint: '/api/non-existent-path', method: 'GET', details: 'Non-existent endpoint check', expectError: true },
-        ];
-        
-        const results: HealthCheckResult[] = [];
-
-        for (const test of endpointsToTest) {
-            try {
-                // In a real scenario, you'd actually call the handler.
-                // Here, we just simulate success unless it's an expected error test.
-                if (test.expectError) {
-                    results.push({ endpoint: test.endpoint, method: test.method, status: 'NOT_FOUND', details: `${test.details} responded correctly.` });
-                } else {
-                    results.push({ endpoint: test.endpoint, method: test.method, status: 'OK', details: `${test.details} is operational.` });
-                }
-            } catch (e: any) {
-                 results.push({ endpoint: test.endpoint, method: test.method, status: 'ERROR', details: e.message });
-            }
-        }
-        return results;
-    }
-
-    if (method === 'GET' && path === '/api/diagnostics/full-test') {
-        await delay(1500); // Simulate a longer test
-        const db = getRawDb();
-        const report = `
-        ## Full API Diagnostics Report
-        - **Timestamp:** ${new Date().toISOString()}
-        - **Test Duration:** 1489ms
-        
-        ### Latency Test (Internal vs. External)
-        - **Internal DB (mock):** 45ms average
-        - **External Service (mock):** 250ms average
-        - **Conclusion:** No significant latency issues detected.
-
-        ### Database Integrity Check
-        - User Count: ${db.users.length}
-        - Active Streams: ${db.liveStreams.filter(s => s.ao_vivo).length}
-        - **Conclusion:** All data integrity checks passed.
-        `;
-        return { report };
-    }
-
-    // --- SUPPORT CHAT ---
-    if (path.startsWith('/api/support/conversation/')) {
-        const userId = parseInt(path.split('/').pop()!, 10);
-        let convo = await database.conversations.findOne({ participants: { $all: [userId, 999], $size: 2 } });
-        if (!convo) {
-            const newConvoData = {
-                id: `support_${userId}`,
-                participants: [userId, 999],
-                messages: [{ id: mongoObjectId(), senderId: 999, type: 'text' as const, text: 'Olá! Como podemos ajudar você hoje?', imageUrl: null, timestamp: new Date().toISOString(), status: 'sent' as const, seenBy: [999] }]
             };
             await database.conversations.insertOne(newConvoData);
             convo = await database.conversations.findOne({ id: newConvoData.id });
         }
         
-        if(!convo) {
-            throw new Error("Failed to get or create support conversation.");
-        }
-
-        const viewModel = await buildConversationViewModel(convo, userId);
-        if (!viewModel) {
-            throw new Error("Could not build support conversation view model");
-        }
-        
-        return viewModel;
+        return await buildConversationViewModel(convo, currentUserId);
     }
 
-    // Fallback for unhandled routes
-    throw new Error(`[Mock API] 404 Not Found: ${method} ${path}`);
+    if (method === 'POST' && path === '/api/chat/upload') {
+        // Simulate an upload and return a URL
+        await delay(500);
+        return { url: body.imageDataUrl };
+    }
+
+    // Fallback for any unhandled routes
+    throw new Error(`404 - Mock endpoint not found for ${method} ${path}`);
 };

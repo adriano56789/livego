@@ -1,7 +1,3 @@
-
-
-
-
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import LoginScreen from './components/LoginScreen';
 import UploadPhotoScreen from './components/UploadPhotoScreen';
@@ -64,7 +60,6 @@ import * as soundService from './services/soundService';
 import type { User, AppView, Category, Stream, PkBattle, Conversation, WithdrawalTransaction, AppEvent, VersionInfo, LiveEndSummary, PurchaseOrder, DiamondPackage, FacingMode, IncomingPrivateLiveInvite, Gift, ChatMessage, PrivacySettings } from './types';
 import { ApiViewerProvider, useApiViewer } from './components/ApiContext';
 import ProfileScreen from './components/ProfileScreen';
-import GiftDisplayAnimation from './components/GiftDisplayAnimation';
 import GoogleIcon from './components/icons/GoogleIcon';
 import ApiViewer from './components/ApiViewer';
 
@@ -98,7 +93,6 @@ const AppContent: React.FC = () => {
   const [viewingTopFansFor, setViewingTopFansFor] = useState<number | null>(null);
   const [locationPermission, setLocationPermission] = useState<LocationPermission>('prompt');
   const [walletSuccessMessage, setWalletSuccessMessage] = useState<string | null>(null);
-  const [triggeredGift, setTriggeredGift] = useState<ChatMessage | null>(null);
   const [giftNotificationSettings, setGiftNotificationSettings] = useState<Record<number, boolean> | null>(null);
   const { apiResponse, hideApiResponse } = useApiViewer();
 
@@ -266,11 +260,6 @@ const AppContent: React.FC = () => {
     setUser(updatedUser);
   }, [user]);
 
-  const handleTriggerGiftAnimation = useCallback((gift: ChatMessage) => {
-    setTriggeredGift(null);
-    setTimeout(() => setTriggeredGift(gift), 50);
-  }, []);
-
   const handleNavigate = useCallback((view: AppView, meta?: any) => {
     if (meta?.userId) setViewingOtherProfileId(meta.userId);
     if (meta?.conversationId) setViewingConversationId(meta.conversationId);
@@ -391,7 +380,7 @@ const AppContent: React.FC = () => {
 
   // Overlays and Full-Screen Modals
   if (viewingStream) {
-    return <LiveStreamViewerScreen user={user} stream={viewingStream} onExit={handleExitStream} onNavigateToChat={handleNavigateToChat} onRequirePurchase={() => setCurrentView('diamond-purchase')} onUpdateUser={setUser} onViewProtectors={(userId) => { setViewingProtectorsFor(userId); setCurrentView('protectors'); }} onViewStream={handleViewStream} onStreamEnded={(streamId) => { setViewingStream(null); }} onStopStream={handleStopStream} onShowPrivateLiveInvite={setIncomingPrivateLiveInvite} onViewProfile={handleViewProfile} onNavigate={handleNavigateAwayFromStream} onFollowToggle={handleFollowToggle} giftNotificationSettings={giftNotificationSettings} onTriggerGiftAnimation={handleTriggerGiftAnimation} />;
+    return <LiveStreamViewerScreen user={user} stream={viewingStream} onExit={handleExitStream} onNavigateToChat={handleNavigateToChat} onRequirePurchase={() => setCurrentView('diamond-purchase')} onUpdateUser={setUser} onViewProtectors={(userId) => { setViewingProtectorsFor(userId); setCurrentView('protectors'); }} onViewStream={handleViewStream} onStreamEnded={(streamId) => { setViewingStream(null); }} onStopStream={handleStopStream} onShowPrivateLiveInvite={setIncomingPrivateLiveInvite} onViewProfile={handleViewProfile} onNavigate={handleNavigateAwayFromStream} onFollowToggle={handleFollowToggle} giftNotificationSettings={giftNotificationSettings} />;
   }
   if (viewingEndedStreamSummary) {
     return <LiveEndedScreen summary={viewingEndedStreamSummary} onExit={() => setViewingEndedStreamSummary(null)} />
@@ -439,10 +428,7 @@ const AppContent: React.FC = () => {
       case 'report-and-suggestion': return <ReportAndSuggestionScreen user={user} onExit={() => setCurrentView('profile')} />;
       case 'event-center': return <EventCenterScreen onExit={() => setCurrentView('feed')} onViewEvent={handleViewEvent} />;
       case 'event-detail': return <EventDetailScreen eventId={viewingEventId!} onExit={() => setCurrentView('event-center')} onParticipate={(event) => { console.log('Participating in event:', event); alert(`Participando em ${event.title}`);}} />;
-      case 'settings': return <SettingsScreen user={user} onExit={() => setCurrentView('profile')} onLogout={handleLogout} onNavigate={setCurrentView} onDeleteAccount={handleDeleteAccount} onTriggerGiftNotification={(gift) => {
-          const mockGiftMessage: ChatMessage = { id: Date.now(), type: 'gift', userId: user.id, username: user.nickname || user.name, message: `enviou ${gift.name}!`, giftId: gift.id, giftName: gift.name, giftValue: gift.price, giftAnimationUrl: gift.animationUrl, giftImageUrl: gift.imageUrl, recipientName: 'Você', quantity: 1, timestamp: new Date().toISOString() };
-          handleTriggerGiftAnimation(mockGiftMessage);
-      }} />;
+      case 'settings': return <SettingsScreen user={user} onExit={() => setCurrentView('profile')} onLogout={handleLogout} onNavigate={setCurrentView} onDeleteAccount={handleDeleteAccount} />;
       case 'copyright': return <CopyrightScreen onExit={() => setCurrentView('settings')} />;
       case 'earnings-info': return <EarningsInfoScreen onExit={() => setCurrentView('settings')} />;
       case 'connected-accounts': return <ConnectedAccountsScreen user={user} onExit={() => setCurrentView('settings')} onLogout={handleLogout} />;
@@ -484,7 +470,6 @@ const AppContent: React.FC = () => {
       )}
 
       {/* Global Modals & Animations */}
-      {triggeredGift && <GiftDisplayAnimation triggeredGift={triggeredGift} />}
       {liveNotification && <LiveNotificationModal {...liveNotification} onWatch={() => { setLiveNotification(null); handleViewStream(liveNotification.stream); }} onClose={() => setLiveNotification(null)} />}
       {incomingPrivateLiveInvite && <IncomingPrivateLiveInviteModal invite={incomingPrivateLiveInvite} onAccept={() => { setIncomingPrivateLiveInvite(null); handleViewStream(incomingPrivateLiveInvite.stream); }} onDecline={() => setIncomingPrivateLiveInvite(null)} />}
       {apiResponse && <ApiViewer title={apiResponse.title} data={apiResponse.data} onClose={hideApiResponse} />}

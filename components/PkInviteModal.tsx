@@ -23,10 +23,8 @@ interface PkInviteModalProps {
 
 const FriendRow: React.FC<{ 
     friend: User; 
-    onEnter: () => void; 
     onInvite: () => void; 
-}> = ({ friend, onEnter, onInvite }) => {
-  const showEnterButton = friend.online_status;
+}> = ({ friend, onInvite }) => {
 
   return (
     <div className="flex items-center gap-4 py-2">
@@ -42,18 +40,12 @@ const FriendRow: React.FC<{
                 <p className="truncate">{friend.coHostHistory}</p>
             </div>
         </div>
-        {showEnterButton ? (
-            <button onClick={onEnter} className="bg-gray-700 text-white font-semibold text-sm px-5 py-2 rounded-full hover:bg-gray-600 transition-colors shrink-0">
-              Entrar
-            </button>
-        ) : (
-            <button 
-                onClick={onInvite} 
-                className={`font-semibold text-sm px-5 py-2 rounded-full transition-colors shrink-0 bg-pink-600 text-white hover:bg-pink-700`}
-            >
-              Convidar
-            </button>
-        )}
+        <button 
+            onClick={onInvite} 
+            className={`font-semibold text-sm px-5 py-2 rounded-full transition-colors shrink-0 bg-pink-600 text-white hover:bg-pink-700`}
+        >
+          Convidar
+        </button>
     </div>
   );
 };
@@ -179,7 +171,6 @@ const PkInviteModal: React.FC<PkInviteModalProps> = ({ user, onClose, onEnterFri
                             <FriendRow 
                                 key={friend.id} 
                                 friend={friend} 
-                                onEnter={() => onEnterFriendLive(friend)} 
                                 onInvite={() => onSendInvite(friend)}
                             />
                         ))}

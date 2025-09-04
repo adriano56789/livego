@@ -97,6 +97,15 @@
         animation-fill-mode: forwards;
         opacity: 0; /* Start hidden */
       }
+      
+      @keyframes slide-in-bottom {
+        from { transform: translateY(20px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+      }
+      .animate-slide-in-bottom {
+        animation: slide-in-bottom 0.25s ease-out forwards;
+      }
+
        /* Keyframes for PK End Animation */
       @keyframes fade-in-out-long {
         0% { opacity: 0; }
@@ -224,6 +233,23 @@
           border-bottom-color: transparent;
           border-radius: 0 100% 0 0;
           transform: rotate(35deg);
+      }
+
+      /* Floating Gift Avatar Animation */
+      @keyframes float-up {
+        0% { transform: translateY(100%); opacity: 0; }
+        20% { transform: translateY(0); opacity: 1; }
+        80% { transform: translateY(0); opacity: 1; }
+        100% { transform: translateY(-20px); opacity: 0; }
+      }
+      .animate-float-up {
+          animation: float-up 4s ease-in-out forwards;
+      }
+      
+      /* TikTok-style chat fade out */
+      .chat-fade-out-top {
+        -webkit-mask-image: linear-gradient(to bottom, transparent 5%, black 30%);
+        mask-image: linear-gradient(to bottom, transparent 5%, black 30%);
       }
     </style>
   <script type="importmap">

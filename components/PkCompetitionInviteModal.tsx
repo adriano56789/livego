@@ -72,7 +72,7 @@ const PkCompetitionInviteModal: React.FC<PkCompetitionInviteModalProps> = ({ cur
                 disabled={isProcessing} 
                 className="flex-[2] py-3.5 rounded-full font-bold text-white bg-pink-500 hover:bg-pink-600 transition-colors disabled:opacity-70"
             >
-                {isProcessing ? 'Aguarde...' : 'Aceitar'}
+                {isProcessing ? 'Entrando...' : 'Entrar'}
             </button>
         </div>
       </div>

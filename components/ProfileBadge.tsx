@@ -1,3 +1,4 @@
+
 import React from 'react';
 import MaleIcon from './icons/MaleIcon';
 import FemaleIcon from './icons/FemaleIcon';
@@ -93,8 +94,8 @@ const ProfileBadge: React.FC<ProfileBadgeProps> = ({ badge }) => {
 
 
     return (
-        <span className={`px-2 py-1 rounded-full text-xs font-bold flex items-center justify-center gap-1.5 ${bgColor} ${textColor} shrink-0`}>
-            {hasIcon && IconComponent && <IconComponent className="w-3.5 h-3.5" />}
+        <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-bold flex items-center justify-center gap-1 ${bgColor} ${textColor} shrink-0`}>
+            {hasIcon && IconComponent && <IconComponent className="w-2.5 h-2.5" />}
             <span>{badge.text}</span>
         </span>
     );

@@ -42,6 +42,7 @@ interface GiftPanelProps {
     streamer1: PkBattleStreamer;
     streamer2: PkBattleStreamer;
   };
+  isPkMode?: boolean;
 }
 
 const iconMap: Record<string, React.FC<any>> = {
@@ -73,7 +74,7 @@ const iconMap: Record<string, React.FC<any>> = {
   LegendaryDragon: LegendaryDragonIcon,
 };
 
-const GiftPanel: React.FC<GiftPanelProps> = ({ user, liveId, streamerId, isHost, onClose, onSendGift, onRechargeClick, pkBattleStreamers }) => {
+const GiftPanel: React.FC<GiftPanelProps> = ({ user, liveId, streamerId, isHost, onClose, onSendGift, onRechargeClick, pkBattleStreamers, isPkMode }) => {
   const [gifts, setGifts] = useState<Gift[]>([]);
   const [selectedGiftId, setSelectedGiftId] = useState<number | null>(null);
   const [quantity, setQuantity] = useState(1);
@@ -142,7 +143,7 @@ const GiftPanel: React.FC<GiftPanelProps> = ({ user, liveId, streamerId, isHost,
       onClick={onClose}
     >
       <div 
-        className="bg-[#212124]/90 backdrop-blur-md w-full rounded-t-2xl flex flex-col text-white animate-slide-up-fast"
+        className={`bg-[#212124]/90 backdrop-blur-md w-full rounded-t-2xl flex flex-col text-white animate-slide-up-fast ${isPkMode ? 'h-[35vh]' : ''}`}
         onClick={e => e.stopPropagation()}
       >
         {pkBattleStreamers && renderPkReceiverSelection()}

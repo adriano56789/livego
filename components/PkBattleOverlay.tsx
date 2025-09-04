@@ -1,8 +1,6 @@
-
 import React from 'react';
 import type { PkBattleState } from '../types';
-import StarIcon from './icons/StarIcon';
-import LightningIcon from './icons/LightningIcon';
+import PKClashIcon from './icons/PKClashIcon';
 
 interface PkTimerProps {
   startTime: string;
@@ -27,29 +25,52 @@ const PkTimer: React.FC<PkTimerProps> = ({ startTime, durationSeconds }) => {
         return () => clearInterval(timer);
     }, [calculateTimeLeft]);
 
-    return <span>{`PK ${String(timeLeft.m).padStart(2, '0')}:${String(timeLeft.s).padStart(2, '0')}`}</span>;
+    return <span>{`${String(timeLeft.m).padStart(2, '0')}:${String(timeLeft.s).padStart(2, '0')}`}</span>;
 };
 
 
 interface PkBattleOverlayProps {
   battle: PkBattleState;
-  streamer1WinMultiplier: number;
-  streamer2WinMultiplier: number;
-  isCoHost?: boolean;
+  streamer1Multiplier?: number;
+  streamer2Multiplier?: number;
 }
 
-const PkBattleOverlay: React.FC<PkBattleOverlayProps> = ({ battle, streamer1WinMultiplier, streamer2WinMultiplier, isCoHost }) => {
+const PkBattleOverlay: React.FC<PkBattleOverlayProps> = ({ battle, streamer1Multiplier, streamer2Multiplier }) => {
+    const totalScore = battle.pontuacao_A + battle.pontuacao_B;
+    const streamer1Percent = totalScore > 0 ? (battle.pontuacao_A / totalScore) * 100 : 50;
+
     return (
-        <div className="flex flex-col gap-2 pointer-events-none text-white font-sans w-full">
-            <div className="flex justify-between items-center px-4 mt-2">
-                <div className="bg-black/40 backdrop-blur-sm rounded-full px-3 py-1 font-bold text-sm">
-                    WIN &times; {streamer1WinMultiplier}
+        <div className="flex flex-col items-center gap-1 pointer-events-none text-white font-sans w-full px-4">
+            {/* Score Bar */}
+            <div className="relative h-6 w-full flex items-center">
+                <span className="absolute left-2 font-bold text-lg drop-shadow-md">{battle.pontuacao_A}</span>
+                <span className="absolute right-2 font-bold text-lg drop-shadow-md">{battle.pontuacao_B}</span>
+                <div className="w-full h-2 rounded-full flex overflow-hidden bg-blue-400/30">
+                    <div style={{ width: `${streamer1Percent}%` }} className="bg-yellow-400 rounded-l-full transition-all duration-500"></div>
+                    <div style={{ width: `${100 - streamer1Percent}%` }} className="bg-blue-400 rounded-r-full transition-all duration-500"></div>
                 </div>
-                <div className="bg-black/40 backdrop-blur-sm rounded-full px-4 py-1.5 font-black text-lg tracking-wider shadow-lg">
+            </div>
+
+            {/* Timer and Win Badges Area */}
+            <div className="relative w-full flex justify-center items-center h-8 -mt-2">
+                {/* Left Win Badge */}
+                <div className="absolute left-0">
+                    <div className="bg-gray-900/60 text-yellow-300 font-bold text-xs px-3 py-1 rounded-full">
+                        WIN <span className="font-sans">x</span>{streamer1Multiplier || 0}
+                    </div>
+                </div>
+
+                {/* Timer */}
+                <div className="bg-black/60 backdrop-blur-sm rounded-full px-3 py-1 text-sm font-semibold shadow-lg flex items-center gap-1.5">
+                    <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></div>
                     <PkTimer startTime={battle.data_inicio} durationSeconds={battle.duracao_segundos} />
                 </div>
-                <div className="bg-black/40 backdrop-blur-sm rounded-full px-3 py-1 font-bold text-sm">
-                    WIN &times; {streamer2WinMultiplier}
+
+                {/* Right Win Badge */}
+                <div className="absolute right-0">
+                     <div className="bg-gray-900/60 text-yellow-300 font-bold text-xs px-3 py-1 rounded-full">
+                        WIN <span className="font-sans">x</span>{streamer2Multiplier || 0}
+                    </div>
                 </div>
             </div>
         </div>

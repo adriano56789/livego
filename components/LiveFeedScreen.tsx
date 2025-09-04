@@ -1,30 +1,13 @@
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import type { User, Stream, Category, PkBattle, AppView, Region } from '../types';
-import { 
-    getPopularStreams,
-    getFollowingStreams,
-    getPkBattles,
-    getNewStreams,
-    getStreamsForCategory,
-    getPrivateStreams,
-    getNearbyStreams,
-    requestLocationPermission,
-    saveUserLocationPreference,
-} from '../services/liveStreamService';
+import React, { useState, useEffect, useCallback } from 'react';
+import type { User, Stream, PkBattle, Category, AppView } from '../types';
+import * as liveStreamService from '../services/liveStreamService';
 import StreamerCard from './StreamerCard';
 import PkBattleCard from './PkBattleCard';
-import HeaderTrophyIcon from './icons/HeaderTrophyIcon';
 import SearchIcon from './icons/SearchIcon';
-import UserProfileModal from './UserProfileModal';
-import RefreshIcon from './icons/RefreshIcon';
-import RegionSelectionModal from './RegionSelectionModal';
-import ChevronUpIcon from './icons/ChevronUpIcon';
-import Flag from './Flag';
-import LocationPermissionModal from './LocationPermissionModal';
+import TrophyIcon from './icons/TrophyIcon';
 import LocationPermissionBanner from './LocationPermissionBanner';
-
-type LocationPermission = 'prompt' | 'granted' | 'denied';
+import LocationPermissionModal from './LocationPermissionModal';
 
 interface LiveFeedScreenProps {
   user: User;
@@ -36,261 +19,170 @@ interface LiveFeedScreenProps {
   onNavigateToChat: (userId: number) => void;
   onViewProtectors: (userId: number) => void;
   onNavigate: (view: AppView) => void;
-  locationPermission: LocationPermission;
-  setLocationPermission: (permission: LocationPermission) => void;
+  locationPermission: 'prompt' | 'granted' | 'denied';
+  setLocationPermission: (permission: 'prompt' | 'granted' | 'denied') => void;
 }
 
-const NavItem: React.FC<{ children: React.ReactNode; isActive?: boolean, onClick: () => void }> = ({ children, isActive, onClick }) => (
-    <button
-        onClick={onClick}
-        className="relative px-3 py-2 shrink-0"
-    >
-        <span className={`font-semibold transition-colors text-lg ${isActive ? 'text-white' : 'text-gray-400'}`}>
-            {children}
-        </span>
-        {isActive && (
-            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-4 h-1 bg-white rounded-full mt-1"></div>
-        )}
-    </button>
-);
-
 export const LiveFeedScreen: React.FC<LiveFeedScreenProps> = ({
-    user,
-    onViewStream,
-    activeCategory,
-    onSelectCategory,
-    onUpdateUser,
-    onNavigateToChat,
-    onViewProtectors,
-    onNavigate,
-    locationPermission,
-    setLocationPermission,
+  user,
+  onViewStream,
+  activeCategory,
+  onSelectCategory,
+  onNavigate,
+  locationPermission,
+  setLocationPermission,
 }) => {
-    const [streams, setStreams] = useState<(Stream | PkBattle)[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
-    const [viewingUser, setViewingUser] = useState<User | null>(null);
-    const [isRegionModalOpen, setIsRegionModalOpen] = useState(false);
-    const [selectedRegion, setSelectedRegion] = useState<Region>({ name: 'Global', code: 'global' });
-    const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
+  const [streams, setStreams] = useState<(Stream | PkBattle)[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
 
-    // Pull-to-refresh state
-    const [isRefreshing, setIsRefreshing] = useState(false);
-    const [pullDistance, setPullDistance] = useState(0);
-    const pullStartY = useRef(0);
-    const mainRef = useRef<HTMLElement>(null);
-    const PULL_THRESHOLD = 70;
+  const categories: Category[] = ['Popular', 'Seguindo', 'Perto', 'PK', 'Novo', 'Música', 'Dança', 'Festa', 'Privada'];
 
-    const categories: Category[] = ['Popular', 'Seguindo', 'Perto', 'PK', 'Novo', 'Música', 'Dança'];
+  const fetchStreams = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      let fetchedStreams: (Stream | PkBattle)[] = [];
+      const region = user.country || 'global';
+      switch (activeCategory) {
+        case 'Popular':
+          fetchedStreams = await liveStreamService.getPopularStreams(region);
+          break;
+        case 'Seguindo':
+          fetchedStreams = await liveStreamService.getFollowingStreams(user.id, region);
+          break;
+        case 'PK':
+          fetchedStreams = await liveStreamService.getPkBattles(region);
+          break;
+        case 'Novo':
+          fetchedStreams = await liveStreamService.getNewStreams(region);
+          break;
+        case 'Privada':
+          fetchedStreams = await liveStreamService.getPrivateStreams(user.id, region);
+          break;
+        case 'Perto':
+          if (locationPermission === 'granted') {
+            fetchedStreams = await liveStreamService.getNearbyStreams(user.id, 'approximate');
+          } else {
+            fetchedStreams = [];
+          }
+          break;
+        case 'Música':
+        case 'Dança':
+        case 'Festa':
+          fetchedStreams = await liveStreamService.getStreamsForCategory(activeCategory, region);
+          break;
+        default:
+          fetchedStreams = await liveStreamService.getPopularStreams(region);
+      }
+      setStreams(fetchedStreams);
+    } catch (error) {
+      console.error(`Failed to fetch streams for category ${activeCategory}:`, error);
+      setStreams([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [activeCategory, user.id, user.country, locationPermission]);
 
-    const fetchStreams = useCallback(async (isRefresh: boolean = false) => {
-        if (!isRefresh) {
-            setIsLoading(true);
-        }
-        try {
-            let fetchedStreams: (Stream | PkBattle)[] = [];
-            switch (activeCategory) {
-                case 'Perto':
-                    if (locationPermission === 'granted') {
-                        fetchedStreams = await getNearbyStreams(user.id, 'exact');
-                    } else {
-                        // Show popular streams as a fallback if permission is not granted
-                        fetchedStreams = await getPopularStreams(selectedRegion.code);
-                    }
-                    break;
-                case 'Atualizado':
-                    fetchedStreams = await getNewStreams(selectedRegion.code);
-                    break;
-                case 'Popular':
-                    fetchedStreams = await getPopularStreams(selectedRegion.code);
-                    break;
-                case 'Seguindo':
-                    fetchedStreams = await getFollowingStreams(user.id, selectedRegion.code);
-                    break;
-                case 'Novo':
-                    fetchedStreams = await getNewStreams(selectedRegion.code);
-                    break;
-                case 'PK':
-                    fetchedStreams = await getPkBattles(selectedRegion.code);
-                    break;
-                case 'Privada':
-                    fetchedStreams = await getPrivateStreams(user.id, selectedRegion.code);
-                    break;
-                case 'Música':
-                case 'Dança':
-                    fetchedStreams = await getStreamsForCategory(activeCategory, selectedRegion.code);
-                    break;
-                default:
-                    fetchedStreams = await getPopularStreams(selectedRegion.code);
-            }
-            setStreams(fetchedStreams);
-        } catch (error) {
-            console.error('Failed to fetch streams:', error);
-        } finally {
-            if (isRefresh) {
-                setTimeout(() => {
-                    setIsRefreshing(false);
-                    setPullDistance(0);
-                }, 500);
-            } else {
-                setIsLoading(false);
-            }
-        }
-    }, [activeCategory, user.id, selectedRegion.code, locationPermission]);
+  useEffect(() => {
+    if (activeCategory === 'Perto' && locationPermission !== 'granted') {
+      setIsLoading(false);
+      setStreams([]);
+      return;
+    }
+    fetchStreams();
+  }, [fetchStreams, activeCategory, locationPermission]);
+  
+  const handleLocationAllow = (accuracy: 'exact' | 'approximate') => {
+    liveStreamService.requestLocationPermission(accuracy).then(({ latitude, longitude }) => {
+        console.log("Location granted:", { latitude, longitude });
+    });
+    setLocationPermission('granted');
+    setIsLocationModalOpen(false);
+  };
+  
+  const handleLocationDeny = () => {
+    setLocationPermission('denied');
+    setIsLocationModalOpen(false);
+  };
+  
+  const renderHeader = () => (
+    <header className="px-4 pt-6 pb-2 sticky top-0 bg-black/80 backdrop-blur-sm z-10">
+      <div className="flex justify-between items-center mb-4">
+        <h1 className="text-3xl font-bold tracking-tighter text-white">LiveGo</h1>
+        <div className="flex items-center gap-4">
+          <button onClick={() => onNavigate('ranking')} aria-label="Ranking"><TrophyIcon className="w-7 h-7 text-yellow-400" /></button>
+          <button onClick={() => onNavigate('search')} aria-label="Search"><SearchIcon className="w-6 h-6 text-white" /></button>
+        </div>
+      </div>
+      <div className="overflow-x-auto scrollbar-hide -mx-4 px-4">
+        <div className="flex items-center gap-4 border-b border-gray-800">
+          {categories.map(cat => (
+            <button
+              key={cat}
+              onClick={() => onSelectCategory(cat)}
+              className={`py-3 font-semibold whitespace-nowrap transition-colors ${
+                activeCategory === cat ? 'text-white border-b-2 border-white' : 'text-gray-500 hover:text-gray-300'
+              }`}
+            >
+              {cat}
+            </button>
+          ))}
+        </div>
+      </div>
+    </header>
+  );
 
-    useEffect(() => {
-        if (activeCategory === 'Perto' && locationPermission === 'prompt') {
-            setIsLocationModalOpen(true);
-        }
-        fetchStreams(false);
-    }, [fetchStreams, activeCategory, locationPermission]);
+  const renderContent = () => {
+    if (isLoading) {
+      return <div className="flex-grow flex items-center justify-center"><div className="w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full animate-spin"></div></div>;
+    }
     
-    // Pull-to-refresh handlers
-    const handleTouchStart = (e: React.TouchEvent) => {
-        if (mainRef.current && mainRef.current.scrollTop === 0 && !isRefreshing) {
-            pullStartY.current = e.touches[0].clientY;
-        } else {
-            pullStartY.current = 0;
-        }
-    };
+    if (activeCategory === 'Perto' && locationPermission !== 'granted') {
+        return (
+            <div className="flex-grow flex flex-col items-center justify-center text-center px-4">
+                <p className="text-gray-400 mb-4">Ative a permissão de localização para ver streamers perto de você.</p>
+                <button onClick={() => setIsLocationModalOpen(true)} className="bg-purple-600 text-white font-bold py-3 px-8 rounded-full">
+                    Ativar Localização
+                </button>
+            </div>
+        )
+    }
 
-    const handleTouchMove = (e: React.TouchEvent) => {
-        if (pullStartY.current > 0) {
-            const currentY = e.touches[0].clientY;
-            const distance = currentY - pullStartY.current;
-            if (distance > 0) {
-                e.preventDefault(); 
-                setPullDistance(distance);
-            }
-        }
-    };
-
-    const handleTouchEnd = () => {
-        if (pullDistance > PULL_THRESHOLD) {
-            setIsRefreshing(true);
-            fetchStreams(true);
-        } else {
-            setPullDistance(0);
-        }
-        pullStartY.current = 0;
-    };
-    
-    const handleRegionSelect = (region: Region) => {
-        setSelectedRegion(region);
-        setIsRegionModalOpen(false);
-    };
-
-    const handleAllowLocation = async (accuracy: 'exact' | 'approximate') => {
-        setIsLocationModalOpen(false);
-        await requestLocationPermission(accuracy);
-        await saveUserLocationPreference(user.id, accuracy);
-        setLocationPermission('granted');
-    };
-
-    const handleDenyLocation = () => {
-        setIsLocationModalOpen(false);
-        setLocationPermission('denied');
-    };
-    
-    const isNearbyTab = activeCategory === 'Perto';
+    if (streams.length === 0) {
+      return <div className="flex-grow flex items-center justify-center text-gray-500">Nenhuma transmissão ao vivo encontrada.</div>;
+    }
 
     return (
-        <div className="h-full w-full flex flex-col bg-black text-white font-sans">
-            <header className="px-4 pt-4 pb-2 flex items-center justify-between shrink-0 gap-4">
-                <div className="flex-1 min-w-0">
-                    <div className="overflow-x-auto scrollbar-hide -ml-2">
-                        <div className="flex items-center gap-x-1 whitespace-nowrap pl-2">
-                            {categories.map(cat => (
-                                <NavItem 
-                                    key={cat} 
-                                    isActive={activeCategory === cat} 
-                                    onClick={() => onSelectCategory(cat)}
-                                >
-                                    {cat}
-                                </NavItem>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-                
-                <div className="flex items-center gap-4 shrink-0">
-                     <button onClick={() => setIsRegionModalOpen(true)} className="flex items-center gap-1.5 p-2 -m-2 rounded-lg hover:bg-white/10 transition-colors text-white">
-                        <Flag code={selectedRegion.code} className="w-6 h-auto rounded-sm flex-shrink-0" />
-                        <span className="text-sm font-semibold">{selectedRegion.name}</span>
-                        <ChevronUpIcon className="w-4 h-4" />
-                    </button>
-                     <button onClick={() => onNavigate('search')} className="p-2 -m-2 rounded-lg hover:bg-white/10 transition-colors">
-                        <SearchIcon className="w-6 h-6" />
-                    </button>
-                    <button onClick={() => onNavigate('ranking')} className="p-2 -m-2 rounded-lg hover:bg-white/10 transition-colors">
-                        <HeaderTrophyIcon className="w-8 h-8"/>
-                    </button>
-                </div>
-            </header>
-            <main
-                ref={mainRef}
-                className="flex-grow p-2 overflow-y-auto relative scrollbar-hide flex flex-col"
-                onTouchStart={handleTouchStart}
-                onTouchMove={handleTouchMove}
-                onTouchEnd={handleTouchEnd}
-            >
-                {isNearbyTab && locationPermission !== 'granted' && (
-                    <LocationPermissionBanner onClick={() => setIsLocationModalOpen(true)} />
-                )}
-                <div
-                    className="absolute top-[-40px] left-1/2 -translate-x-1/2 transition-transform duration-200"
-                    style={{ transform: `translate(-50%, ${isRefreshing ? PULL_THRESHOLD : Math.min(pullDistance, PULL_THRESHOLD)}px)` }}
-                >
-                    <div className="p-2 bg-gray-800 rounded-full shadow-lg">
-                        <RefreshIcon className={`w-6 h-6 text-white transition-transform ${isRefreshing ? 'animate-spin' : ''}`} style={{transform: `rotate(${isRefreshing ? 0 : pullDistance * 2}deg)`}}/>
-                    </div>
-                </div>
-                {isLoading && !isRefreshing ? (
-                     <div className="flex justify-center items-center flex-grow">
-                        <div className="w-8 h-8 border-4 border-gray-500 border-t-transparent rounded-full animate-spin"></div>
-                    </div>
-                ) : streams.length > 0 ? (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
-                        {streams.map(stream =>
-                            'streamer1' in stream ? (
-                                <PkBattleCard key={`pk-${stream.id}`} battle={stream} onViewStream={onViewStream} />
-                            ) : (
-                                <StreamerCard key={`stream-${stream.id}`} stream={stream} onViewStream={onViewStream} currentUser={user} />
-                            )
-                        )}
-                    </div>
-                ) : (
-                    <div className="text-center text-gray-500 pt-20 flex-grow flex flex-col justify-center items-center">
-                        <p>Nenhuma transmissão ao vivo encontrada.</p>
-                        <p className="text-sm mt-2">Arraste para baixo para atualizar.</p>
-                    </div>
-                )}
-            </main>
-
-            <RegionSelectionModal 
-                isOpen={isRegionModalOpen}
-                onClose={() => setIsRegionModalOpen(false)}
-                onSelect={handleRegionSelect}
-            />
-
-            <LocationPermissionModal
-                isOpen={isLocationModalOpen}
-                onAllow={handleAllowLocation}
-                onDeny={handleDenyLocation}
-            />
-
-            {viewingUser && (
-                <UserProfileModal
-                    userId={viewingUser.id}
-                    currentUser={user}
-                    onUpdateUser={onUpdateUser}
-                    onClose={() => setViewingUser(null)}
-                    onNavigateToChat={onNavigateToChat}
-                    onViewProtectors={onViewProtectors}
-                    onViewStream={onViewStream}
-                />
-            )}
-        </div>
+      <div className="grid grid-cols-2 gap-2 p-2">
+        {streams.map(stream => {
+          if ('streamer1' in stream) {
+            return <PkBattleCard key={stream.id} battle={stream} onViewStream={onViewStream} />;
+          } else {
+            return <StreamerCard key={stream.id} stream={stream} onViewStream={onViewStream} currentUser={user} />;
+          }
+        })}
+      </div>
     );
+  };
+
+  return (
+    <div className="h-full w-full bg-black flex flex-col font-sans">
+      {renderHeader()}
+      {activeCategory === 'Perto' && locationPermission === 'prompt' && (
+        <div className="px-2 pt-2">
+            <LocationPermissionBanner onClick={() => setIsLocationModalOpen(true)} />
+        </div>
+      )}
+      <main className="flex-grow overflow-y-auto scrollbar-hide">
+        {renderContent()}
+      </main>
+      <LocationPermissionModal
+        isOpen={isLocationModalOpen}
+        onAllow={handleLocationAllow}
+        onDeny={handleLocationDeny}
+      />
+    </div>
+  );
 };
 
 export default LiveFeedScreen;

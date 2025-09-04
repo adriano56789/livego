@@ -83,7 +83,7 @@ const LiveStreamHeader: React.FC<LiveStreamHeaderProps> = ({
             className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 transition-colors ${isFollowing ? 'bg-gray-500/80' : 'bg-pink-500/80'} disabled:opacity-70`}
         >
             {isFollowLoading ? (
-                 <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                 <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w.3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
@@ -154,25 +154,35 @@ const LiveStreamHeader: React.FC<LiveStreamHeaderProps> = ({
   }
 
   // PK Battle Variants
-  const mainContainerClasses = `flex items-center gap-2 pointer-events-auto ${variant === 'pk-right' ? 'flex-row-reverse' : 'flex-row'}`;
+  const mainContainerClasses = `flex flex-col items-center gap-2 pointer-events-auto ${variant === 'pk-right' ? 'items-end' : 'items-start'}`;
   
   return (
     <div className={mainContainerClasses}>
-        <button onClick={onUserClick} className="flex items-center gap-2 bg-black/40 backdrop-blur-sm p-1 pr-3 rounded-full">
-            <div className="relative">
-                <Avatar src={avatarUrl} alt={name} className="w-9 h-9" />
-                {countryCode && (
-                     <Flag code={countryCode} className="w-4 h-auto rounded-full border border-black absolute -bottom-0.5 -right-0.5" />
-                )}
-            </div>
-            <p className="font-semibold text-sm text-white truncate max-w-[100px]">{name}</p>
-        </button>
-        <FollowButton />
-        {variant === 'pk-right' && onExitClick && (
-            <button onClick={onExitClick} className="w-9 h-9 flex-shrink-0 items-center justify-center bg-black/40 backdrop-blur-sm rounded-full">
-                <CrossIcon className="w-5 h-5" />
+        <div className={`flex items-center gap-2 ${variant === 'pk-right' ? 'flex-row-reverse' : 'flex-row'}`}>
+            <button onClick={onUserClick} className="flex items-center gap-2 bg-black/40 backdrop-blur-sm p-1 pr-3 rounded-full">
+                <div className="relative">
+                    <Avatar src={avatarUrl} alt={name} className="w-9 h-9" />
+                    {countryCode && (
+                        <Flag code={countryCode} className="w-4 h-auto rounded-full border border-black absolute -bottom-0.5 -right-0.5" />
+                    )}
+                </div>
+                <p className="font-semibold text-sm text-white truncate max-w-[100px]">{name}</p>
             </button>
-        )}
+            <button onClick={onViewersClick} className="flex items-center gap-1 bg-black/40 backdrop-blur-sm px-2.5 py-1.5 rounded-full text-sm font-semibold">
+                <ViewersIcon className="w-4 h-4" />
+                {viewerCount}
+            </button>
+            <FollowButton />
+            {variant === 'pk-right' && onExitClick && (
+                <button onClick={onExitClick} className="w-9 h-9 flex-shrink-0 items-center justify-center bg-black/40 backdrop-blur-sm rounded-full">
+                    <CrossIcon className="w-5 h-5" />
+                </button>
+            )}
+        </div>
+        <button onClick={onCoinsClick} className="flex items-center gap-1.5 bg-black/40 backdrop-blur-sm px-2.5 py-1 rounded-full">
+            <CoinBIcon className="w-5 h-5" />
+            <span className="text-sm font-semibold text-white">{coins}</span>
+        </button>
     </div>
   );
 };

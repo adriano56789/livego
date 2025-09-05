@@ -103,7 +103,7 @@ const GiftDisplayAnimation: React.FC<GiftDisplayAnimationProps> = ({ triggeredGi
   return (
     <div
       key={currentGift.id} // Use gift id to re-trigger animation on new gift
-      className={`absolute left-4 top-4 z-30 pointer-events-auto flex items-center p-1 bg-gradient-to-r from-purple-900/80 via-black/70 to-black/70 backdrop-blur-md rounded-full shadow-lg border border-purple-500/50 transform transition-all duration-500 ${isVisible ? 'animate-gift-banner-in' : 'animate-gift-banner-out'}`}
+      className={`absolute left-4 top-24 z-30 pointer-events-auto flex items-center p-1 bg-gradient-to-r from-purple-900/80 via-black/70 to-black/70 backdrop-blur-md rounded-full shadow-lg border border-purple-500/50 transform transition-all duration-500 ${isVisible ? 'animate-gift-banner-in' : 'animate-gift-banner-out'}`}
     >
       <div className="w-12 h-12 rounded-full bg-gray-700 overflow-hidden shrink-0 border-2 border-purple-400">
         {currentGift.senderAvatarUrl ? (
@@ -115,7 +115,7 @@ const GiftDisplayAnimation: React.FC<GiftDisplayAnimationProps> = ({ triggeredGi
 
       <div className="text-white text-sm text-left mx-3 flex-grow">
         <p className="font-bold">{currentGift.senderName}</p>
-        <p className="text-xs text-gray-300">enviou {currentGift.giftName}!</p>
+        <p className="text-xs text-gray-300">enviou {currentGift.giftName} para <span className="font-semibold text-purple-300">{currentGift.recipientName}</span></p>
       </div>
       
       <img src={currentGift.imageUrl} alt={currentGift.giftName} className="w-12 h-12 object-contain" />

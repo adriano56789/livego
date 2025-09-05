@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import LoginScreen from './components/LoginScreen';
 import UploadPhotoScreen from './components/UploadPhotoScreen';
@@ -374,8 +375,10 @@ const AppContent: React.FC = () => {
   if (!user.has_uploaded_real_photo) {
     return <UploadPhotoScreen user={user} onPhotoUploaded={handlePhotoUploaded} />;
   }
+  // FIX: Changed ProfileEditorScreen to EditProfileScreen to resolve component/prop mismatch.
+  // The ProfileEditorScreen component was not correctly defined, while EditProfileScreen is available and can handle profile completion with the `onSave` prop.
   if (!user.has_completed_profile) {
-    return <ProfileEditorScreen user={user} onSave={handleProfileComplete} onExit={() => {}} />;
+    return <EditProfileScreen user={user} onSave={handleProfileComplete} onExit={() => {}} isViewingOtherProfile={false} viewedUserId={user.id} onFollowToggle={handleFollowToggle} onNavigateToChat={handleNavigateToChat} />;
   }
 
   // Overlays and Full-Screen Modals
@@ -453,7 +456,9 @@ const AppContent: React.FC = () => {
       case 'help-center': return <CustomerServiceScreen mode="help_only" onExit={() => setCurrentView('profile')} onViewArticle={handleViewArticle} onNavigate={setCurrentView} />;
       case 'useful-articles-list': return <CustomerServiceScreen mode="articles_only" onExit={() => setCurrentView('help-center')} onViewArticle={handleViewArticle} onNavigate={setCurrentView} />;
       case 'top-fans': return <TopFansScreen viewedUserId={viewingOtherProfileId || user.id} onExit={() => { setViewingOtherProfileId(null); setCurrentView('profile'); }} />;
-      case 'profile-editor': return <ProfileEditorScreen user={user} onSave={(updatedUser) => { setUser(updatedUser); setCurrentView('profile'); }} onExit={() => setCurrentView('profile')} />;
+      // FIX: Changed ProfileEditorScreen to EditProfileScreen to resolve component/prop mismatch.
+      // The ProfileEditorScreen component was not correctly defined, while EditProfileScreen is available and can handle profile editing with the `onSave` prop.
+      case 'profile-editor': return <EditProfileScreen user={user} onSave={(updatedUser) => { setUser(updatedUser); setCurrentView('profile'); }} onExit={() => setCurrentView('profile')} isViewingOtherProfile={false} viewedUserId={user.id} onFollowToggle={handleFollowToggle} onNavigateToChat={handleNavigateToChat} />;
       case 'message-privacy-settings': return <MessagePrivacySettingsScreen user={user} onExit={() => setCurrentView('privacy-settings')} onSave={handleSavePrivacySettings} />;
       default: return <div>Not implemented: {currentView}</div>;
     }

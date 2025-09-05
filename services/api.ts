@@ -5,6 +5,7 @@ import * as levelService from '../services/levelService';
 import { database, getRawDb } from './database';
 import { mongoObjectId } from './mongoObjectId';
 import type { User, LiveStreamRecord, Stream, PkBattle, PkBattleState, PurchaseOrder, ConvitePK, LiveCategory, Category, StartLiveResponse, FacingMode, LiveDetails, ChatMessage, Viewer, PublicProfile, AppEvent, ArtigoAjuda, CanalContato, HealthCheckResult, PrivateLiveInviteSettings, NotificationSettings, GiftNotificationSettings, PrivacySettings, LiveFollowUpdate, WithdrawalBalance, UserLevelInfo, InventoryItem, WithdrawalTransaction, RankingContributor, Conversation, ConversationMessage, Gift, DiamondPackage, PkSettings, SelectableOption, SecurityLogEntry, UniversalRankingUser, LiveEndSummary, TopFanDetails, UniversalRankingData, GeneralRankingStreamer, ProfileBadgeType, TabelaRankingApoiadores } from '../types';
+import { addChatMessageListener } from './liveStreamService';
 
 // --- SIMULATED ENVIRONMENT VARIABLES ---
 const SRS_URL_PUBLISH = 'rtmp://localhost/live';
@@ -209,7 +210,9 @@ export const handleApiRequest = async (method: string, path: string, body: any, 
 
 
     const liveDetailRegex = /^\/api\/lives\/(\d+)$/;
-    const liveSubpathRegex = /^\/api\/lives\/(\d+)\/(\w+)$/;
+    // FIX: Updated regex to allow hyphens for endpoints like 'roulette-settings'.
+    const liveSubpathRegex = /^\/api\/lives\/(\d+)\/([\w-]+)$/;
+    const privacyUpdateRegex = /^\/api\/lives\/(\d+)\/privacy$/;
     const pkInvitePendingRegex = /^\/api\/pk\/invites\/pending\/(\d+)$/;
     const pkInviteStatusRegex = /^\/api\/pk\/invites\/status\/([\w-]+)$/;
     const pkInviteActionRegex = /^\/api\/pk\/invites\/([\w-]+)\/(accept|decline|cancel)$/;
@@ -227,6 +230,7 @@ export const handleApiRequest = async (method: string, path: string, body: any, 
     const helpArticleByIdRegex = /^\/api\/help\/articles\/([\w-]+)$/;
     const streamPkBattleRegex = /^\/api\/streams\/(\d+)\/batalha-pk$/;
     const privateLiveSettingsRegex = /^\/api\/users\/(\d+)\/private-live-invite-settings$/;
+    const giftNotificationSettingsRegex = /^\/api\/users\/(\d+)\/gift-notification-settings$/;
 
     const streamPkBattleMatch = path.match(streamPkBattleRegex);
     if (method === 'GET' && streamPkBattleMatch) {
@@ -697,6 +701,27 @@ export const handleApiRequest = async (method: string, path: string, body: any, 
         
         return updatedUser.settings?.privateLiveInvite;
     }
+    
+    const giftNotificationSettingsMatch = path.match(giftNotificationSettingsRegex);
+    if (method === 'PATCH' && giftNotificationSettingsMatch) {
+        const userId = parseInt(giftNotificationSettingsMatch[1], 10);
+        const { giftId, isEnabled } = body;
+        const user = await database.users.findOne({ id: userId });
+        if (!user) throw new Error('User not found');
+
+        const currentSettings = user.settings?.giftNotifications?.enabledGifts || {};
+        currentSettings[giftId] = isEnabled;
+        
+        await database.users.updateOne({ id: userId }, { $set: { 'settings.giftNotifications.enabledGifts': currentSettings } });
+        
+        const updatedUser = await database.users.findOne({ id: userId });
+        if (!updatedUser) throw new Error('Failed to retrieve updated user');
+        
+        return { 
+            userId: updatedUser.id, 
+            enabledGifts: updatedUser.settings?.giftNotifications?.enabledGifts || {}
+        };
+    }
 
     if (method === 'POST' && path === '/api/livekit/token') {
         return { token: `mock_token_for_${body.roomName}_user_${body.participantIdentity}` };
@@ -737,9 +762,20 @@ export const handleApiRequest = async (method: string, path: string, body: any, 
         if (invite.status === 'pendente') {
             const sentDate = new Date(invite.data_envio).getTime();
             if (Date.now() - sentDate > 4000) { // Simulate acceptance after 4 seconds
-                const { battle } = await acceptPkInvite(inviteId);
-                const acceptedInvite = await database.pkInvitations.findOne({ id: inviteId });
-                return { invitation: acceptedInvite, battle };
+                try {
+                    const { battle } = await acceptPkInvite(inviteId);
+                    const acceptedInvite = await database.pkInvitations.findOne({ id: inviteId });
+                    return { invitation: acceptedInvite, battle };
+                } catch (e) {
+                     if (e instanceof Error && e.message.includes("not live")) {
+                        await database.pkInvitations.updateOne({ id: inviteId }, { $set: { status: 'expirado' } });
+                        const expiredInvite = await database.pkInvitations.findOne({ id: inviteId });
+                        // Don't throw an error, just return the expired status. The frontend will handle it.
+                        return { invitation: expiredInvite, battle: null };
+                    }
+                    // Re-throw other unexpected errors
+                    throw e;
+                }
             }
         }
         
@@ -820,10 +856,80 @@ export const handleApiRequest = async (method: string, path: string, body: any, 
         return liveRecords.map(mapLiveRecordToStream);
     }
     
+    // --- RANKING ---
+    if (method === 'GET' && path === '/api/ranking/hourly') {
+        const liveId = query.get('liveId');
+        const region = query.get('region'); // 'brazil' or 'global'
+        
+        const allUsers = await database.users.find();
+        
+        // Let's create some mock data.
+        const rankingUsers: UniversalRankingUser[] = allUsers
+            .filter(u => u.id !== 999 && u.id !== 10755083) // exclude support and current user from main list for now
+            .map((u, i) => ({
+                rank: i + 1,
+                userId: u.id,
+                avatarUrl: u.avatar_url || '',
+                name: u.nickname || u.name,
+                score: Math.floor(Math.random() * (region === 'global' ? 100000 : 50000)) + 100 * (i + 1),
+                level: u.level,
+                gender: u.gender,
+                badges: [
+                    { type: 'flag' as const, value: u.country === 'BR' ? '🇧🇷' : u.country === 'US' ? '🇺🇸' : '🌐' },
+                    { type: 'level' as const, value: u.level },
+                ]
+            }))
+            .sort((a, b) => b.score - a.score)
+            .map((u, i) => ({ ...u, rank: i + 1 }));
+
+        const podium = rankingUsers.slice(0, Math.min(3, rankingUsers.length));
+        const list = rankingUsers.slice(3, 10);
+        const currentUser = allUsers.find(u => u.id === 10755083); // our main user
+        
+        const response: UniversalRankingData = {
+            podium: podium,
+            list: list,
+            currentUserRanking: currentUser ? {
+                rank: '99+',
+                userId: currentUser.id,
+                avatarUrl: currentUser.avatar_url || '',
+                name: currentUser.nickname || currentUser.name,
+                score: Math.floor(Math.random() * 90) + 10,
+                level: currentUser.level,
+                gender: currentUser.gender,
+                badges: [{ type: 'flag', value: '🇧🇷' }, { type: 'level', value: currentUser.level }]
+            } : undefined,
+            countdown: new Date(Date.now() + 55 * 60 * 1000).toISOString(), // 55 minutes from now
+            footerButtons: {
+                primary: { text: `Ajude-o a subir no ranking com 100`, value: '100' },
+                secondary: { text: 'Lista completa', value: 'full_list' }
+            }
+        };
+
+        return response;
+    }
+
     // --- LIVE STREAM DETAILS & ACTIONS ---
     const liveDetailMatch = path.match(liveDetailRegex);
     const liveSubpathMatch = path.match(liveSubpathRegex);
+    const privacyUpdateMatch = path.match(privacyUpdateRegex);
     const chatMatch = path.match(chatRegex);
+
+    if (method === 'PATCH' && privacyUpdateMatch) {
+        const liveId = parseInt(privacyUpdateMatch[1], 10);
+        const { isPrivate, entryFee } = body;
+        
+        const fee = (isPrivate && entryFee && parseInt(String(entryFee), 10) > 0) ? parseInt(String(entryFee), 10) : null;
+        
+        await database.liveStreams.updateOne(
+            { id: liveId },
+            { $set: { is_private: isPrivate, entry_fee: isPrivate ? fee : null } }
+        );
+        
+        const updatedStream = await database.liveStreams.findOne({ id: liveId });
+        if (!updatedStream) throw new Error("Updated stream not found");
+        return mapLiveRecordToStream(updatedStream);
+    }
 
     if (chatMatch) {
         const liveId = parseInt(chatMatch[1], 10);
@@ -887,6 +993,8 @@ export const handleApiRequest = async (method: string, path: string, body: any, 
                 countryCode: streamer.country,
                 title: liveStream.titulo,
                 meta: liveStream.meta ?? undefined,
+                isPrivate: liveStream.is_private,
+                entryFee: liveStream.entry_fee,
             };
             return details;
         }
@@ -899,6 +1007,51 @@ export const handleApiRequest = async (method: string, path: string, body: any, 
         if (!liveStream) throw new Error('Live stream not found for action');
 
         switch(action) {
+            case 'roulette-settings':
+                if (method === 'GET') {
+                    const currentStream = await database.liveStreams.findOne({ id: liveId });
+                    if (!currentStream?.roulette_settings || !currentStream.roulette_settings.isActive) {
+                        throw new Error("Roulette not active for this stream.");
+                    }
+                    return currentStream.roulette_settings;
+                }
+                if (method === 'POST') {
+                    const { settings } = body;
+                    await database.liveStreams.updateOne({ id: liveId }, { $set: { roulette_settings: settings } });
+                    return { success: true };
+                }
+                break;
+            case 'roulette-spin':
+                if (method === 'POST') {
+                    const { userId } = body;
+                    const stream = await database.liveStreams.findOne({ id: liveId });
+                    const user = await database.users.findOne({ id: userId });
+                    if (!stream || !stream.roulette_settings || !user) {
+                        throw new Error("Invalid roulette spin request.");
+                    }
+                    if (user.wallet_diamonds < stream.roulette_settings.cost) {
+                        throw new Error("Diamantes insuficientes.");
+                    }
+                    user.wallet_diamonds -= stream.roulette_settings.cost;
+                    await database.users.updateOne({ id: userId }, { $set: { wallet_diamonds: user.wallet_diamonds } });
+                    
+                    const result = stream.roulette_settings.items[Math.floor(Math.random() * stream.roulette_settings.items.length)];
+                    
+                    const announcement: ChatMessage = {
+                        id: Date.now(),
+                        type: 'roulette_result',
+                        userId: userId,
+                        username: user.nickname || user.name,
+                        message: result,
+                        timestamp: new Date().toISOString()
+                    };
+                    if (!stream.chatMessages) stream.chatMessages = [];
+                    stream.chatMessages.push(announcement);
+                    await database.liveStreams.updateOne({ id: liveId }, { $set: { chatMessages: stream.chatMessages } });
+                    
+                    return { updatedUser: user, result, announcementMessage: announcement };
+                }
+                break;
             case 'join':
                 if (!liveStream.current_viewers?.includes(body.userId)) {
                     await database.liveStreams.updateOne({ id: liveId }, { $push: { current_viewers: body.userId } });
@@ -1031,7 +1184,7 @@ export const handleApiRequest = async (method: string, path: string, body: any, 
                     timestamp: new Date().toISOString()
                  });
 
-                 return { success: true, updatedUser: sender, message: 'Presente enviado!' };
+                 return { success: true, updatedUser: sender, message: 'Presente enviado!', giftMessage: chatMessage };
             case 'summary':
                 const streamerForSummary = await database.users.findOne({ id: liveStream.user_id });
                 const summary: LiveEndSummary = {

@@ -1,5 +1,6 @@
 
 
+
 import React, { useState, useEffect, useCallback } from 'react';
 import type { User, AppView, PublicProfile, Stream, PkBattle } from '../types';
 import * as liveStreamService from '../services/liveStreamService';
@@ -110,6 +111,8 @@ interface EditProfileScreenProps {
   onViewStream?: (stream: Stream | PkBattle) => void;
   onUpdateUser?: (user: User) => void;
   onViewProfile?: (userId: number) => void;
+  // FIX: Added optional onSave prop to fix TypeScript errors where this component is used for profile creation/editing.
+  onSave?: (updatedUser: User) => void;
 }
 
 const formatLastVisit = (dateString: string): string => {

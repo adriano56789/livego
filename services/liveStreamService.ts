@@ -1,7 +1,5 @@
-
-
 import { apiClient } from './apiClient';
-import type { User, LiveDetails, ChatMessage, Gift, Viewer, RankingContributor, Like, PkBattle, PkBattleState, PublicProfile, PkEventDetails, Conversation, SendGiftResponse, ProtectorDetails, WithdrawalTransaction, WithdrawalMethod, InventoryItem, AppEvent, LiveEndSummary, UserLevelInfo, GeneralRankingStreamer, GeneralRankingUser, WithdrawalBalance, EventStatus, PkRankingData, Stream, Category, StartLiveResponse, ConvitePK, LiveFollowUpdate, PrivateLiveInviteSettings, NotificationSettings, FacingMode, SoundEffectName, UniversalRankingData, UserListRankingPeriod, PkSettings, LiveCategory, StreamUpdateListener, MuteStatusListener, UserKickedListener, SoundEffectListener, MuteStatusUpdate, UserKickedUpdate, SoundEffectUpdate, UserBlockedUpdate, UserUnblockedUpdate, UserBlockedListener, UserUnblockedListener, Region, PrivacySettings, IncomingPrivateLiveInvite, GiftNotificationSettings, TopFanDetails } from '../types';
+import type { User, LiveDetails, ChatMessage, Gift, Viewer, RankingContributor, Like, PkBattle, PkBattleState, PublicProfile, PkEventDetails, Conversation, SendGiftResponse, ProtectorDetails, WithdrawalTransaction, WithdrawalMethod, InventoryItem, AppEvent, LiveEndSummary, UserLevelInfo, GeneralRankingStreamer, GeneralRankingUser, WithdrawalBalance, EventStatus, PkRankingData, Stream, Category, StartLiveResponse, ConvitePK, LiveFollowUpdate, PrivateLiveInviteSettings, NotificationSettings, FacingMode, SoundEffectName, UniversalRankingData, UserListRankingPeriod, PkSettings, LiveCategory, StreamUpdateListener, MuteStatusListener, UserKickedListener, SoundEffectListener, MuteStatusUpdate, UserKickedUpdate, SoundEffectUpdate, UserBlockedUpdate, UserUnblockedUpdate, UserBlockedListener, UserUnblockedListener, Region, PrivacySettings, IncomingPrivateLiveInvite, GiftNotificationSettings, TopFanDetails, RouletteSettings } from '../types';
 
 // --- Listener Infrastructure ---
 type Listener<T> = (data: T) => void;
@@ -104,9 +102,15 @@ export const endPkBattle = (pkBattleId: number, userId: number): Promise<{ succe
 };
 
 export const payStreamEntryFee = (viewerId: number, streamId: number): Promise<User> => {
-    return apiClient(`/api/lives/${streamId}/pay-entry`, {
+    return apiClient<{ updatedUser: User, entryMessage: ChatMessage }>(`/api/lives/${streamId}/pay-entry`, {
         method: 'POST',
         body: JSON.stringify({ viewerId })
+    }).then(response => {
+        // Dispatch the system message to listeners
+        if (response.entryMessage) {
+            chatListeners.forEach(listener => listener(streamId, [response.entryMessage]));
+        }
+        return response.updatedUser;
     });
 };
 
@@ -145,6 +149,9 @@ export const sendGift = (liveId: number, senderId: number, giftId: number, quant
     }).then(response => {
         if (response.success) {
             liveUpdateManager.dispatch(liveId);
+            if (response.giftMessage) {
+                chatListeners.forEach(listener => listener(liveId, [response.giftMessage]));
+            }
         }
         return response;
     });
@@ -380,6 +387,43 @@ export const updateUserPkPreference = (userId: number, isPkEnabled: boolean): Pr
     return apiClient(`/api/users/${userId}/pk-preference`, {
         method: 'POST',
         body: JSON.stringify({ isPkEnabled })
+    });
+};
+
+export const updateStreamPrivacy = (liveId: number, isPrivate: boolean, entryFee?: number): Promise<Stream> => {
+    return apiClient<{ updatedStream: Stream, kickedUserIds: number[] }>(`/api/lives/${liveId}/privacy`, {
+        method: 'PATCH',
+        body: JSON.stringify({ isPrivate, entryFee: entryFee || null })
+    }).then(response => {
+        response.kickedUserIds.forEach(userId => {
+            userKickedManager.dispatch({ liveId, kickedUserId: userId });
+        });
+        liveUpdateManager.dispatch(liveId);
+        return response.updatedStream;
+    });
+};
+
+// FIX: Added missing 'getRouletteSettings' function.
+export const getRouletteSettings = (liveId: number): Promise<RouletteSettings> => apiClient(`/api/lives/${liveId}/roulette-settings`);
+
+export const updateRouletteSettings = (liveId: number, settings: RouletteSettings): Promise<{ success: boolean }> => {
+    return apiClient(`/api/lives/${liveId}/roulette-settings`, {
+        method: 'POST',
+        body: JSON.stringify({ settings })
+    });
+};
+
+// FIX: The `spinRoulette` function has been updated to handle the `announcementMessage` returned by the API.
+// It now dispatches this message to chat listeners, ensuring roulette results appear in the chat, and then returns the expected data structure to the component.
+export const spinRoulette = (liveId: number, userId: number): Promise<{ updatedUser: User; result: string; }> => {
+    return apiClient<{ updatedUser: User, result: string, announcementMessage: ChatMessage }>(`/api/lives/${liveId}/roulette-spin`, {
+        method: 'POST',
+        body: JSON.stringify({ userId })
+    }).then(response => {
+        if (response.announcementMessage) {
+            chatListeners.forEach(listener => listener(liveId, [response.announcementMessage]));
+        }
+        return { updatedUser: response.updatedUser, result: response.result };
     });
 };
 

@@ -140,6 +140,12 @@ export interface PublicProfile {
 
 // Stream-related types
 
+export interface RouletteSettings {
+  isActive: boolean;
+  items: string[];
+  cost: number;
+}
+
 // This is the single source of truth for a live stream in the database
 export interface LiveStreamRecord {
   id: number;
@@ -166,6 +172,7 @@ export interface LiveStreamRecord {
   country_code?: string;
   chatMessages?: ChatMessage[];
   current_viewers?: number[];
+  roulette_settings?: RouletteSettings;
 }
 
 // This is the VIEW MODEL for the frontend, derived from LiveStreamRecord
@@ -282,6 +289,8 @@ export interface LiveDetails {
   countryCode?: string | null;
   title?: string;
   meta?: string;
+  isPrivate: boolean;
+  entryFee: number | null;
 }
 
 export interface LiveEndSummary {
@@ -344,7 +353,7 @@ export interface Conversation {
 
 export interface ChatMessage {
   id: number;
-  type: 'message' | 'entry' | 'gift' | 'special_entry' | 'levelup' | 'announcement' | 'image';
+  type: 'message' | 'entry' | 'gift' | 'special_entry' | 'levelup' | 'announcement' | 'image' | 'roulette_result' | 'gift_roulette_win';
   globalLevel?: number; // Renamed from level
   streamLevel?: number; // New level for the current stream
   statusBadge?: { text: string; icon: string; }; // New badge for stream level
@@ -362,6 +371,9 @@ export interface ChatMessage {
   giftImageUrl?: string; // Static image for chat
   recipientName?: string; // Who received the gift
   quantity?: number;
+  // Roulette properties
+  multiplier?: number;
+  prizeAmount?: number;
   //
   timestamp: string;
   badgeText?: string;
@@ -615,6 +627,8 @@ export interface SendGiftResponse {
     success: boolean;
     updatedUser: User | null;
     message: string;
+    giftMessage?: ChatMessage;
+    rouletteWinMessage?: ChatMessage;
 }
 
 export interface UserLevelInfo {

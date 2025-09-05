@@ -120,8 +120,8 @@ const PkInviteModal: React.FC<PkInviteModalProps> = ({ user, onClose, onEnterFri
             <button onClick={onClose} className="z-10"><CrossIcon className="w-6 h-6 text-gray-400" /></button>
             <h2 className="font-bold text-lg absolute left-1/2 -translate-x-1/2">Co-host com criadores</h2>
             <div className="flex items-center gap-4 z-10">
-                <button onClick={() => alert("Histórico não implementado")}><ClockIcon className="w-6 h-6 text-gray-400"/></button>
-                <button onClick={() => setIsSettingsOpen(true)}><SettingsIcon className="w-6 h-6 text-gray-400"/></button>
+                <button onClick={() => setIsSettingsOpen(true)}><ClockIcon className="w-6 h-6 text-gray-400"/></button>
+                <button onClick={() => alert("Histórico não implementado")}><SettingsIcon className="w-6 h-6 text-gray-400"/></button>
             </div>
             </header>
 

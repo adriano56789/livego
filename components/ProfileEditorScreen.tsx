@@ -1,267 +1,466 @@
 
-import React, { useState, useEffect, useMemo, useRef } from 'react';
-import type { User, Gender, SelectableOption } from '../types';
+
+import React, { useState, useEffect, useCallback } from 'react';
+import type { User, AppView, PublicProfile, Stream, PkBattle } from '../types';
+import * as liveStreamService from '../services/liveStreamService';
+
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
+import EllipsisIcon from './icons/EllipsisIcon';
+import CopyIcon from './icons/CopyIcon';
+import BlockScreen from './BlockScreen';
+import MessageIcon from './icons/MessageIcon';
+import LocationPinIcon from './icons/LocationPinIcon';
+import ProfileBadge from './ProfileBadge';
+import MaleIcon from './icons/MaleIcon';
+import FemaleIcon from './icons/FemaleIcon';
+import LiveIndicatorIcon from './icons/LiveIndicatorIcon';
+import CoinReceivedIcon from './icons/CoinReceivedIcon';
+import DiamondSentIcon from './icons/DiamondSentIcon';
+import PlayOutlineIcon from './icons/PlayOutlineIcon';
+import ClockIcon from './icons/ClockIcon';
+import MenuIcon from './icons/MenuIcon';
+import PencilIcon from './icons/PencilIcon';
 import ChevronRightIcon from './icons/ChevronRightIcon';
-import PlusIcon from './icons/PlusIcon';
-import CrossIcon from './icons/CrossIcon';
-import { updateUserProfile, addProfilePhoto, deleteProfilePhoto } from '../services/authService';
-import * as profileService from '../services/profileService';
-import { useApiViewer } from './ApiContext';
-import SelectionModal from './SelectionModal';
-import DatePickerModal from './DatePickerModal';
-import PhotoViewerModal from './PhotoViewerModal';
-
-interface ProfileEditorScreenProps {
-  user: User;
-  onExit: () => void;
-  onSave: (user: User) => void;
-}
-
-const EditableInputRow: React.FC<{ label: string; value: string; onChange: (value: string) => void; placeholder?: string, type?: string, maxLength?: number }> = ({ label, value, onChange, placeholder, type = 'text', maxLength }) => (
-    <div className="w-full flex justify-between items-center py-4 text-left">
-        <span className="text-gray-400">{label}</span>
-        <input
-            type={type}
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            placeholder={placeholder || 'Não preenchido'}
-            maxLength={maxLength}
-            className="bg-transparent text-right text-white font-medium focus:outline-none w-48 truncate"
-        />
-    </div>
-);
-
-const EditableRow: React.FC<{ label: string; value: string | React.ReactNode; onClick?: () => void; }> = ({ label, value, onClick }) => (
-  <button onClick={onClick} className="w-full flex justify-between items-center py-4 text-left disabled:opacity-50" disabled={!onClick}>
-    <span className="text-gray-400">{label}</span>
-    <div className="flex items-center gap-2">
-      <div className="text-white font-medium truncate max-w-[200px] text-right">{value}</div>
-      <ChevronRightIcon className="w-5 h-5 text-gray-500" />
-    </div>
-  </button>
-);
-
-const ProfileEditorScreen: React.FC<ProfileEditorScreenProps> = ({ user, onExit, onSave }) => {
-    const [editedUser, setEditedUser] = useState<User>(user);
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    const { showApiResponse } = useApiViewer();
-
-    // Photo management state
-    const fileInputRef = useRef<HTMLInputElement>(null);
-    const [isUploading, setIsUploading] = useState(false);
-    const [viewingPhoto, setViewingPhoto] = useState<string | null>(null);
-    const [isDeleting, setIsDeleting] = useState(false);
-    
-    // Data for modals
-    const [genders, setGenders] = useState<SelectableOption[]>([]);
-    const [countries, setCountries] = useState<SelectableOption[]>([]);
-    const [emotionalStates, setEmotionalStates] = useState<SelectableOption[]>([]);
-    const [professions, setProfessions] = useState<SelectableOption[]>([]);
-    const [languages, setLanguages] = useState<SelectableOption[]>([]);
-
-    // Modal state
-    const [modalConfig, setModalConfig] = useState<{ title: string; options: SelectableOption[]; selectedValue: string | null; onSelect: (value: string) => void; } | null>(null);
-    const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
-
-    useEffect(() => {
-        const fetchData = async () => {
-            try {
-                const [gendersData, countriesData, statesData, professionsData, languagesData] = await Promise.all([
-                    profileService.getGenders(),
-                    profileService.getCountries(),
-                    profileService.getEmotionalStates(),
-                    profileService.getProfessions(),
-                    profileService.getLanguages(),
-                ]);
-                setGenders(gendersData);
-                setCountries(countriesData);
-                setEmotionalStates(statesData);
-                setProfessions(professionsData);
-                setLanguages(languagesData);
-            } catch (error) {
-                console.error("Failed to fetch profile options:", error);
-            }
-        };
-        fetchData();
-    }, []);
-
-    const handleFieldChange = (field: keyof User, value: any) => {
-        setEditedUser(prev => ({ ...prev, [field]: value }));
-    };
-
-    const handleTagsChange = (value: string) => {
-        const tags = value.split(',').map(tag => tag.trim()).filter(Boolean).map(label => ({ id: label.toLowerCase().replace(/\s+/g, '_'), label }));
-        setEditedUser(prev => ({ ...prev, personalityTags: tags }));
-    };
-    
-    const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
-        const file = event.target.files?.[0];
-        if (!file) return;
-
-        setIsUploading(true);
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onload = async () => {
-            try {
-                const photoDataUrl = reader.result as string;
-                const updatedUser = await addProfilePhoto(user.id, photoDataUrl);
-                showApiResponse(`POST /api/users/${user.id}/photos`, updatedUser);
-                setEditedUser(updatedUser);
-            } catch (error) {
-                console.error("Failed to upload photo:", error);
-                alert(error instanceof Error ? error.message : "Falha no upload da foto.");
-            } finally {
-                setIsUploading(false);
-            }
-        };
-        reader.onerror = () => {
-            setIsUploading(false);
-            alert("Falha ao ler o arquivo.");
-        };
-    };
-
-    const handleDeletePhoto = async () => {
-        if (!viewingPhoto) return;
-        setIsDeleting(true);
-        try {
-            const updatedUser = await deleteProfilePhoto(user.id, viewingPhoto);
-            showApiResponse(`DELETE /api/users/${user.id}/photos`, updatedUser);
-            setEditedUser(updatedUser);
-            setViewingPhoto(null);
-        } catch (error) {
-            console.error("Failed to delete photo:", error);
-            alert(error instanceof Error ? error.message : "Falha ao apagar a foto.");
-        } finally {
-            setIsDeleting(false);
-        }
-    };
+import CrownIcon from './icons/CrownIcon';
+import LeafIcon from './icons/LeafIcon';
+import Flag from './Flag';
 
 
-    const handleSave = async () => {
-        setIsSubmitting(true);
-        try {
-             const payload: Partial<User> = {
-                nickname: editedUser.nickname,
-                gender: editedUser.gender,
-                birthday: editedUser.birthday,
-                personalSignature: editedUser.personalSignature,
-                country: editedUser.country,
-                emotionalState: editedUser.emotionalState,
-                personalityTags: editedUser.personalityTags,
-                profession: editedUser.profession,
-                languages: editedUser.languages,
-                height: editedUser.height ? Number(editedUser.height) : null,
-                weight: editedUser.weight ? Number(editedUser.weight) : null,
-            };
-
-            const finalUpdatedUser = await updateUserProfile(user.id, payload);
-            showApiResponse(`PUT /api/users/${user.id}`, finalUpdatedUser);
-            onSave(finalUpdatedUser);
-        } catch (error) {
-            console.error("Failed to save profile:", error);
-            alert("Falha ao salvar o perfil.");
-        } finally {
-            setIsSubmitting(false);
-        }
-    };
-
-    const genderLabel = useMemo(() => genders.find(g => g.id === editedUser.gender)?.label || 'Não especificado', [editedUser.gender, genders]);
-    const countryLabel = useMemo(() => countries.find(c => c.id === editedUser.country)?.label || 'Não especificado', [editedUser.country, countries]);
-    const emotionalStateLabel = useMemo(() => emotionalStates.find(e => e.id === editedUser.emotionalState)?.label || 'Não especificado', [editedUser.emotionalState, emotionalStates]);
-    const professionLabel = useMemo(() => professions.find(p => p.id === editedUser.profession)?.label || 'Não especificado', [editedUser.profession, professions]);
-    const languageLabel = useMemo(() => languages.find(l => l.id === editedUser.languages?.[0])?.label || 'Não especificado', [editedUser.languages, languages]);
-    const birthdayLabel = useMemo(() => editedUser.birthday ? new Date(editedUser.birthday + 'T00:00:00').toLocaleDateString('pt-BR') : 'Não especificado', [editedUser.birthday]);
-
-    const photoGallery = editedUser.photo_gallery || (editedUser.avatar_url ? [editedUser.avatar_url] : []);
-    const tagsValue = (editedUser.personalityTags || []).map(t => t.label).join(', ');
+// Action sheet that slides from the bottom
+const ActionSheetMenu: React.FC<{
+  isOpen: boolean;
+  onClose: () => void;
+  onUnfriend: () => void;
+  onBlock: () => void;
+  onReport: () => void;
+  isFollowing: boolean;
+}> = ({ isOpen, onClose, onUnfriend, onBlock, onReport, isFollowing }) => {
+  if (!isOpen) return null;
 
   return (
-    <>
-      <div className="h-screen w-full bg-black text-white flex flex-col font-sans">
-        <header className="p-4 flex items-center shrink-0 border-b border-gray-800 relative">
-          <button onClick={onExit} className="p-2 -m-2 z-10"><ArrowLeftIcon className="w-6 h-6" /></button>
-          <h1 className="font-semibold text-xl absolute left-1/2 -translate-x-1/2">Editar o perfil</h1>
-          <button onClick={handleSave} disabled={isSubmitting} className="font-semibold text-green-500 hover:text-green-400 disabled:opacity-50 ml-auto z-10">
-              {isSubmitting ? 'Salvando...' : 'Salvar'}
+    <div className="fixed inset-0 bg-black/60 z-50 flex items-end" onClick={onClose}>
+      <div 
+        className="bg-[#1c1c1e] w-full max-w-md mx-auto p-2 flex flex-col gap-2 animate-slide-up-fast"
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="bg-[#2c2c2e] rounded-xl">
+          {isFollowing && (
+            <>
+              <button onClick={onUnfriend} className="w-full text-center p-3.5 text-red-500 text-lg">
+                Cancelar a amizade
+              </button>
+              <div className="h-px bg-gray-600/50 mx-4"></div>
+            </>
+          )}
+          <button onClick={onBlock} className="w-full text-center p-3.5 text-red-500 text-lg">
+            Adicionar à lista de bloqueio
           </button>
-        </header>
-
-        <main className="flex-grow p-4 overflow-y-auto scrollbar-hide">
-          <div className="bg-[#1c1c1c] p-3 rounded-lg flex items-center justify-between text-sm mb-6">
-            <span>Faça upload de fotos reais e nítidas, deixe o destino começar no avatar da beleza</span>
-            <button className="p-1 -m-1"><CrossIcon className="w-4 h-4 text-gray-400" /></button>
-          </div>
-          
-          <div className="grid grid-cols-4 gap-3 mb-2">
-            {photoGallery.map((photo, index) => (
-              <button key={index} onClick={() => setViewingPhoto(photo)} className="relative aspect-square bg-gray-800 rounded-lg overflow-hidden">
-                <img src={photo} alt={`Foto do perfil ${index + 1}`} className="w-full h-full object-cover" />
-                {photo === editedUser.avatar_url && (
-                  <div className="absolute bottom-0 left-0 right-0 bg-purple-600 text-white text-xs text-center py-0.5 font-semibold">Retrato</div>
-                )}
-              </button>
-            ))}
-            {photoGallery.length < 8 && (
-              <button onClick={() => fileInputRef.current?.click()} disabled={isUploading} className="aspect-square bg-[#1c1c1c] border-2 border-dashed border-gray-600 rounded-lg flex items-center justify-center">
-                 {isUploading ? <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : <PlusIcon className="w-8 h-8 text-gray-500" />}
-              </button>
-            )}
-             <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleFileSelect}
-                className="hidden"
-                accept="image/png, image/jpeg, image/webp"
-                aria-hidden="true"
-            />
-          </div>
-          <p className="text-xs text-gray-500 mb-6">{photoGallery.length}/8 Clique para ver e apagar imagens, segure para ordenar</p>
-
-          <div className="divide-y divide-gray-800">
-              <EditableInputRow label="Apelido" value={editedUser.nickname || ''} onChange={(val) => handleFieldChange('nickname', val)} />
-              <EditableRow label="Gênero" value={genderLabel} onClick={() => setModalConfig({ title: 'Selecione o Gênero', options: genders, selectedValue: editedUser.gender, onSelect: (val) => { handleFieldChange('gender', val as Gender); setModalConfig(null); } })} />
-              <EditableRow label="Aniversário" value={birthdayLabel} onClick={() => setIsDatePickerOpen(true)} />
-              <EditableInputRow label="Apresentar-se" value={editedUser.personalSignature || ''} onChange={(val) => handleFieldChange('personalSignature', val)} placeholder="Apresente-se" />
-              <EditableRow label="Residência atual" value={countryLabel} onClick={() => setModalConfig({ title: 'Selecione a Residência', options: countries, selectedValue: editedUser.country, onSelect: (val) => { handleFieldChange('country', val); setModalConfig(null); } })} />
-              <EditableRow label="Estado emocional" value={emotionalStateLabel} onClick={() => setModalConfig({ title: 'Selecione o Estado Emocional', options: emotionalStates, selectedValue: editedUser.emotionalState, onSelect: (val) => { handleFieldChange('emotionalState', val); setModalConfig(null); } })} />
-              <EditableInputRow label="Tags (separadas por vírgula)" value={tagsValue} onChange={handleTagsChange} placeholder="Interesses, hobbies, etc." />
-              <EditableRow label="Profissão" value={professionLabel} onClick={() => setModalConfig({ title: 'Selecione a Profissão', options: professions, selectedValue: editedUser.profession, onSelect: (val) => { handleFieldChange('profession', val); setModalConfig(null); } })} />
-              <EditableRow label="Língua dominada" value={languageLabel} onClick={() => setModalConfig({ title: 'Selecione o Idioma', options: languages, selectedValue: editedUser.languages?.[0] || null, onSelect: (val) => { handleFieldChange('languages', [val]); setModalConfig(null); } })} />
-              <EditableInputRow label="Altura (cm)" value={String(editedUser.height || '')} onChange={(val) => handleFieldChange('height', val)} type="number" maxLength={3} />
-              <EditableInputRow label="Peso corporal (Kg)" value={String(editedUser.weight || '')} onChange={(val) => handleFieldChange('weight', val)} type="number" maxLength={3} />
-          </div>
-        </main>
+          <div className="h-px bg-gray-600/50 mx-4"></div>
+          <button onClick={onReport} className="w-full text-center p-3.5 text-white text-lg">
+            Relatório
+          </button>
+        </div>
+        <button onClick={onClose} className="w-full text-center p-3.5 bg-[#2c2c2e] rounded-xl text-sky-400 text-lg font-semibold">
+          Cancelar
+        </button>
       </div>
-      
-      {modalConfig && (
-        <SelectionModal
-          isOpen={!!modalConfig}
-          onClose={() => setModalConfig(null)}
-          title={modalConfig.title}
-          options={modalConfig.options}
-          selectedValue={modalConfig.selectedValue}
-          onSelect={modalConfig.onSelect}
-        />
-      )}
-      
-      <DatePickerModal
-          isOpen={isDatePickerOpen}
-          onClose={() => setIsDatePickerOpen(false)}
-          onSelectDate={(date) => { handleFieldChange('birthday', date); setIsDatePickerOpen(false); }}
-          currentDate={editedUser.birthday}
-      />
-       {viewingPhoto && (
-        <PhotoViewerModal
-          photoUrl={viewingPhoto}
-          onClose={() => setViewingPhoto(null)}
-          onDelete={handleDeletePhoto}
-          isDeleting={isDeleting}
-          canDelete={photoGallery.length > 1}
-        />
-      )}
-    </>
+    </div>
   );
 };
 
-export default ProfileEditorScreen;
+
+const Stat: React.FC<{ value: string; label: string; icon?: React.ReactNode }> = ({ value, label, icon }) => (
+    <div className="flex flex-col items-center justify-center">
+        <p className="font-bold text-xl text-white">{value}</p>
+        <div className="flex items-center justify-center gap-1.5 mt-1">
+            {icon}
+            <p className="text-sm text-gray-400">{label}</p>
+        </div>
+    </div>
+);
+
+const StatButton: React.FC<{ value: string; label: string; onClick: () => void; }> = ({ value, label, onClick }) => (
+    <button onClick={onClick} className="text-center w-full hover:bg-gray-700/30 rounded-lg py-2 transition-colors flex flex-col items-center justify-center">
+        <p className="font-bold text-xl text-white">{value}</p>
+        <div className="flex items-center justify-center gap-1.5 mt-1">
+            <p className="text-sm text-gray-400">{label}</p>
+        </div>
+    </button>
+);
+
+type Tab = 'obras' | 'curtidas' | 'detalhes';
+
+const TabButton: React.FC<{ label: string; icon: React.ReactNode; isActive: boolean; onClick: () => void; }> = ({ label, icon, isActive, onClick }) => (
+    <button onClick={onClick} className="flex flex-col items-center gap-2 flex-1 pb-2 relative transition-opacity hover:opacity-80">
+        <div className={`w-7 h-7 ${isActive ? 'text-purple-400' : 'text-gray-500'}`}>{icon}</div>
+        <span className={`font-semibold text-sm ${isActive ? 'text-white' : 'text-gray-500'}`}>{label}</span>
+        {isActive && <div className="absolute bottom-0 w-8 h-1 bg-purple-500 rounded-full"></div>}
+    </button>
+);
+
+
+interface EditProfileScreenProps {
+  user: User; // The current logged-in user.
+  onNavigate?: (view: AppView) => void;
+  isViewingOtherProfile: boolean;
+  viewedUserId: number;
+  onExit: () => void;
+  onFollowToggle: (userId: number, optimisticCallback?: (action: 'follow' | 'unfollow') => void) => Promise<void>;
+  onNavigateToChat: (userId: number) => void;
+  onViewStream?: (stream: Stream | PkBattle) => void;
+  onUpdateUser?: (user: User) => void;
+  onViewProfile?: (userId: number) => void;
+}
+
+const formatLastVisit = (dateString: string): string => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+    if (diffSeconds < 60) return "agora mesmo";
+    if (diffSeconds < 3600) return `há ${Math.floor(diffSeconds / 60)} min`;
+    if (diffSeconds < 86400) return `há ${Math.floor(diffSeconds / 3600)} h`;
+    if (diffSeconds < 86400 * 7) return `há ${Math.floor(diffSeconds / 86400)} d`;
+    
+    return `visto em ${date.toLocaleDateString('pt-BR')}`;
+};
+
+const EditProfileScreen: React.FC<EditProfileScreenProps> = ({
+  user,
+  viewedUserId,
+  onExit,
+  onFollowToggle,
+  onNavigateToChat,
+  onNavigate,
+  onViewStream,
+}) => {
+    const [profile, setProfile] = useState<PublicProfile | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isOptionsMenuOpen, setIsOptionsMenuOpen] = useState(false);
+    const [isBlocked, setIsBlocked] = useState(false);
+    const [idCopied, setIdCopied] = useState(false);
+    const [isFollowing, setIsFollowing] = useState(false);
+    const [isFollowLoading, setIsFollowLoading] = useState(false);
+    const [activeTab, setActiveTab] = useState<Tab>('obras');
+
+    const isOwnProfile = user.id === viewedUserId;
+
+    useEffect(() => {
+        if (!viewedUserId) {
+            setIsLoading(false);
+            console.error("EditProfileScreen was rendered without a viewedUserId.");
+            return;
+        }
+        const fetchProfile = async () => {
+            setIsLoading(true);
+            try {
+                if (user.id !== viewedUserId) {
+                    const blockData = await liveStreamService.isUserBlocked(user.id, viewedUserId);
+                    if (blockData.isBlocked) {
+                        setIsBlocked(true);
+                        setIsLoading(false);
+                        return;
+                    }
+                }
+                const data = await liveStreamService.getPublicProfile(viewedUserId, user.id);
+                setProfile(data);
+                setIsFollowing(data.isFollowing);
+            } catch (error) {
+                console.error(`Failed to fetch profile for user ${viewedUserId}:`, error);
+                setProfile(null);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchProfile();
+    }, [viewedUserId, user.id]);
+    
+    const handleEnterLive = useCallback(async () => {
+        if (!profile || !profile.isLive || !onViewStream) return;
+        try {
+            const streamToEnter = await liveStreamService.getActiveStreamForUser(profile.id);
+            if (streamToEnter) {
+                const pkBattleDb = await liveStreamService.findActivePkBattleForStream(streamToEnter.id);
+                if (pkBattleDb) {
+                    const pkBattle = await liveStreamService.getPkBattleDetails(Number(pkBattleDb.id));
+                    onViewStream(pkBattle);
+                } else {
+                    onViewStream(streamToEnter);
+                }
+            } else {
+                alert("Não foi possível encontrar a transmissão ao vivo do usuário.");
+            }
+        } catch (error) {
+            console.error("Failed to enter live stream:", error);
+            alert("Ocorreu um erro ao tentar entrar na transmissão.");
+        }
+    }, [profile, onViewStream]);
+
+    const handleFollowToggleWrapper = async () => {
+        if (!profile) {
+            return;
+        }
+        
+        setIsFollowLoading(true);
+        const originalFollowingState = isFollowing;
+        setIsFollowing(!originalFollowingState);
+
+        try {
+             await onFollowToggle(profile.id, (action) => {
+                setProfile(p => p ? {...p, followers: p.followers + (action === 'follow' ? 1 : -1), isFollowing: action === 'follow'} : null);
+             });
+        } catch(e) {
+            setIsFollowing(originalFollowingState);
+        } finally {
+            setIsFollowLoading(false);
+        }
+    };
+    
+    const handleUnfriend = () => {
+        if (profile && isFollowing) {
+            handleFollowToggleWrapper();
+        }
+        setIsOptionsMenuOpen(false);
+    };
+
+    const handleBlockUser = async () => {
+        if (!profile) return;
+        await liveStreamService.blockUser(user.id, profile.id);
+        setIsOptionsMenuOpen(false);
+        setIsBlocked(true);
+    };
+
+    const handleReportUser = () => {
+        alert('A funcionalidade de relatório não está implementada.');
+        setIsOptionsMenuOpen(false);
+    };
+    
+    const handleUnblock = async () => {
+        if (!profile) return;
+        await liveStreamService.unblockUser(user.id, profile.id);
+        setIsBlocked(false);
+    };
+
+    const handleCopyId = () => {
+        if (!profile) return;
+        navigator.clipboard.writeText(String(profile.id));
+        setIdCopied(true);
+        setTimeout(() => setIdCopied(false), 2000);
+    };
+    
+    const handleNavigateToChatWrapper = () => {
+        if (profile) {
+            onNavigateToChat(profile.id);
+        }
+    };
+
+    const formatStatNumber = (num: number) => {
+        if (num > 999) {
+            return (num / 1000).toFixed(1).replace('.', ',') + ' mil';
+        }
+        return String(num);
+    };
+    
+    const formatRecebidos = (num: number) => {
+         if (num > 999999) { // Milhões
+            return (num / 1000000).toFixed(2).replace('.', ',') + ' mi';
+         }
+         if (num > 999) { // Mil
+            return (num / 1000).toFixed(2).replace('.', ',') + ' mil';
+        }
+        return String(num);
+    }
+
+    if (isLoading) {
+        return (
+            <div className="h-full w-full bg-black flex items-center justify-center">
+                <div className="w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+            </div>
+        );
+    }
+
+    if (!profile) {
+        return (
+             <div className="h-full w-full bg-black flex flex-col font-sans">
+                 <header className="relative h-48">
+                    <img src="https://images.pexels.com/photos/1763075/pexels-photo-1763075.jpeg" alt="Cover" className="w-full h-full object-cover opacity-30 blur-sm"/>
+                    <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent"></div>
+                    <div className="absolute top-4 left-4 right-4 flex justify-between items-center z-10">
+                        <button onClick={onExit} className="p-2 bg-black/40 rounded-full backdrop-blur-sm"><ArrowLeftIcon className="w-6 h-6 text-white"/></button>
+                    </div>
+                </header>
+                <main className="px-4 pb-4 text-center flex-grow flex flex-col items-center justify-center -mt-16">
+                     <h1 className="text-2xl font-bold text-red-400">Erro ao carregar perfil</h1>
+                     <p className="text-gray-400 mt-2">Não foi possível encontrar o usuário. Por favor, volte e tente novamente.</p>
+                </main>
+            </div>
+        );
+    }
+    
+    if (isBlocked) {
+        return <BlockScreen userName={profile.nickname} onUnblock={handleUnblock} onExit={onExit} bgColor="bg-black" />;
+    }
+
+    return (
+      <>
+        <div className="h-full w-full bg-black flex flex-col font-sans">
+            <div className="flex-grow overflow-y-auto scrollbar-hide">
+                <header className="relative h-36 sm:h-48">
+                    <img src={profile.coverPhotoUrl} alt="Cover" className="w-full h-full object-cover"/>
+                    <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent"></div>
+                    <div className="absolute top-4 left-4 right-4 flex justify-between items-center z-10">
+                        <button onClick={onExit} className="p-2 bg-black/40 rounded-full backdrop-blur-sm"><ArrowLeftIcon className="w-6 h-6 text-white"/></button>
+                        <div className="flex items-center gap-2">
+                           {isOwnProfile && (
+                                <button onClick={() => onNavigate?.('profile-editor')} className="p-2 bg-black/40 rounded-full backdrop-blur-sm" aria-label="Editar perfil">
+                                    <PencilIcon className="w-6 h-6 text-white"/>
+                                </button>
+                            )}
+                           <button onClick={() => setIsOptionsMenuOpen(true)} className="p-2 bg-black/40 rounded-full backdrop-blur-sm"><EllipsisIcon className="w-6 h-6 text-white"/></button>
+                        </div>
+                    </div>
+
+                    <div className="absolute -bottom-8 sm:-bottom-10 left-4">
+                        <div className="relative w-20 h-20 sm:w-24 sm:h-24">
+                            <div className="w-full h-full rounded-full border-4 border-black bg-gray-800 overflow-hidden">
+                                <img src={profile.avatarUrl} alt={profile.nickname} className="w-full h-full object-cover" />
+                            </div>
+                            {profile.level >= 5 && (
+                                <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center border-2 border-black shadow-lg">
+                                    <span className="text-white font-black text-base sm:text-lg italic">V</span>
+                                </div>
+                            )}
+                            {profile.countryCode && (
+                                <Flag code={profile.countryCode} className="w-6 h-6 sm:w-7 sm:h-7 rounded-full border-2 border-black absolute bottom-0 right-0" />
+                            )}
+                        </div>
+                    </div>
+                     {profile.isLive && (
+                         <button 
+                            onClick={handleEnterLive} 
+                            className="absolute bottom-4 right-4 z-10 flex items-center gap-2 bg-pink-500/80 backdrop-blur-sm text-white font-bold px-3 py-1.5 rounded-full text-sm hover:bg-pink-600/80 transition-colors">
+                            <LiveIndicatorIcon />
+                            <span>LIVE</span>
+                         </button>
+                     )}
+                </header>
+
+                <main className="px-4 pb-4">
+                    <div className="flex justify-end pt-2">
+                         {profile.onlineStatus === 'online' ? (
+                            <div className="flex items-center gap-1.5 bg-gray-800/50 px-2 py-1 rounded-full">
+                                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                                <span className="text-green-400 font-semibold text-xs">Online</span>
+                            </div>
+                        ) : (
+                             <div className="flex items-center gap-1.5 bg-gray-800/50 px-2 py-1 rounded-full">
+                                <div className="w-2 h-2 bg-gray-600 rounded-full"></div>
+                                <span className="text-gray-400 text-xs">{profile.lastVisitDate ? formatLastVisit(profile.lastVisitDate) : 'Offline'}</span>
+                            </div>
+                        )}
+                    </div>
+                    <div className="mt-2">
+                        <h1 className="text-2xl font-bold text-white">{profile.nickname}</h1>
+                        <div className="flex items-center gap-2 text-sm text-gray-400 mt-1">
+                            <span>ID: {profile.id}</span>
+                            <button onClick={handleCopyId} title="Copiar ID">
+                                {idCopied ? <span className="text-xs text-lime-400">Copiado</span> : <CopyIcon className="w-4 h-4 text-gray-500 hover:text-white" />}
+                            </button>
+                        </div>
+                        
+                        {/* Render user badges for age, level, etc. */}
+                        <div className="flex flex-wrap items-center gap-2 mt-3">
+                            {profile.age && profile.gender && (
+                                <ProfileBadge badge={{ text: String(profile.age), type: 'gender_age', icon: profile.gender }} />
+                            )}
+                            {profile.level2 > 0 && (
+                                <ProfileBadge badge={{ text: String(profile.level2), type: 'level2', icon: 'leaf' }} />
+                            )}
+                        </div>
+
+                         <div className="flex items-center gap-2 text-sm text-gray-400 mt-2">
+                             <LocationPinIcon className="w-4 h-4 text-gray-500" />
+                             <span>{profile.location} | {(profile.distanceKm ?? 0).toFixed(2)}km</span>
+                         </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-4 gap-2 my-6 text-center">
+                        <StatButton value={formatStatNumber(profile.followers)} label="Fãs" onClick={() => onNavigate?.('fans')} />
+                        <StatButton value={formatStatNumber(profile.followingCount)} label="Seguindo" onClick={() => onNavigate?.('following')} />
+                         <Stat value={formatRecebidos(profile.recebidos)} label="Recebidos" icon={<CoinReceivedIcon />} />
+                        <Stat value={formatStatNumber(profile.enviados)} label="Enviados" icon={<DiamondSentIcon />} />
+                    </div>
+
+                    {profile.topFans && profile.topFans.length > 0 && (
+                        <button
+                            onClick={() => onNavigate?.('top-fans')}
+                            className="w-full bg-[#2c2c2e] rounded-lg p-3 -mt-2 mb-4 flex items-center justify-between text-left hover:bg-gray-700/50 transition-colors"
+                        >
+                            <span className="font-semibold text-white">Top fãs</span>
+                            <div className="flex items-center gap-2">
+                                <div className="flex items-center -space-x-4">
+                                    {profile.topFans.map((fan) => (
+                                        <div key={fan.userId} className="relative">
+                                            <img
+                                                src={fan.avatarUrl}
+                                                alt={fan.name}
+                                                className="w-9 h-9 rounded-full border-2 border-black object-cover"
+                                            />
+                                            {fan.rank === 1 && <CrownIcon className="absolute -top-2.5 left-1/2 -translate-x-1/2 w-5 h-5 text-yellow-400" />}
+                                        </div>
+                                    ))}
+                                </div>
+                                <ChevronRightIcon className="w-5 h-5 text-gray-500" />
+                            </div>
+                        </button>
+                    )}
+
+                    <div className="w-full h-px bg-gray-800 my-4"></div>
+
+                     <div className="flex justify-around items-center">
+                        <TabButton label="Obras" icon={<PlayOutlineIcon />} isActive={activeTab === 'obras'} onClick={() => setActiveTab('obras')} />
+                        <TabButton label="Curtidas" icon={<ClockIcon />} isActive={activeTab === 'curtidas'} onClick={() => setActiveTab('curtidas')} />
+                        <TabButton label="Detalhes" icon={<MenuIcon />} isActive={activeTab === 'detalhes'} onClick={() => setActiveTab('detalhes')} />
+                    </div>
+                </main>
+                <div className="text-center text-gray-600 py-10">
+                    <p>Nenhuma obra publicada.</p>
+                </div>
+            </div>
+            
+            <footer className="p-4 bg-black border-t border-gray-800/50 shrink-0">
+                {!isOwnProfile && (
+                  isFollowing ? (
+                      <button
+                          onClick={handleNavigateToChatWrapper}
+                          className="w-full py-3.5 rounded-full font-semibold transition-colors bg-gradient-to-r from-purple-600 to-fuchsia-500 text-white"
+                      >
+                          Conversar
+                      </button>
+                  ) : (
+                      <button
+                          onClick={handleFollowToggleWrapper}
+                          disabled={isFollowLoading}
+                          className="w-full py-3.5 rounded-full font-semibold transition-colors bg-gradient-to-r from-purple-600 to-fuchsia-500 text-white disabled:opacity-50"
+                      >
+                          {isFollowLoading ? '...' : 'Seguir'}
+                      </button>
+                  )
+                )}
+            </footer>
+        </div>
+
+        <ActionSheetMenu 
+            isOpen={isOptionsMenuOpen}
+            onClose={() => setIsOptionsMenuOpen(false)}
+            isFollowing={isFollowing}
+            onUnfriend={handleUnfriend}
+            onBlock={handleBlockUser}
+            onReport={handleReportUser}
+        />
+      </>
+    );
+};
+
+export default EditProfileScreen;

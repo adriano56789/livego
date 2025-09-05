@@ -69,7 +69,8 @@ export const generateNickname = (): Promise<{ newNickname: string }> => {
     return apiClient('/api/users/generate-nickname', { method: 'POST' });
 };
 
-export const updateUserProfile = (userId: number, profileData: Partial<Pick<User, 'nickname' | 'gender' | 'birthday' | 'invite_code' | 'personalSignature' | 'country' | 'personalityTags' | 'profession' | 'languages' | 'height' | 'weight' | 'emotionalState' | 'lastLiveTitle' | 'lastLiveMeta'>>): Promise<User> => {
+// FIX: Added 'has_completed_profile' to the type definition to allow the profile editor to mark the profile as complete.
+export const updateUserProfile = (userId: number, profileData: Partial<Pick<User, 'nickname' | 'gender' | 'birthday' | 'invite_code' | 'personalSignature' | 'country' | 'personalityTags' | 'profession' | 'languages' | 'height' | 'weight' | 'emotionalState' | 'lastLiveTitle' | 'lastLiveMeta' | 'has_completed_profile'>>): Promise<User> => {
     return apiClient(`/api/users/${userId}`, {
         method: 'PUT',
         body: JSON.stringify(profileData),

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import type { User } from '../types';
 import * as liveStreamService from '../services/liveStreamService';
@@ -8,32 +9,37 @@ interface PkStartDisputeModalProps {
     currentUser: User;
     onClose: () => void;
     onProposeDispute: (opponent: User) => Promise<void>;
+    targetStreamer?: User | null;
 }
 
-const PkStartDisputeModal: React.FC<PkStartDisputeModalProps> = ({ currentUser, onClose, onProposeDispute }) => {
-    const [opponents, setOpponents] = useState<User[]>([]);
+const PkStartDisputeModal: React.FC<PkStartDisputeModalProps> = ({ currentUser, onClose, onProposeDispute, targetStreamer }) => {
     const [selectedOpponent, setSelectedOpponent] = useState<User | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     useEffect(() => {
-        const fetchOpponents = async () => {
+        const initializeOpponent = async () => {
             setIsLoading(true);
-            try {
-                const potentialOpponents = await liveStreamService.getCoHostFriends(currentUser.id);
-                setOpponents(potentialOpponents);
-                if (potentialOpponents.length > 0) {
-                    const defaultOpponent = potentialOpponents.find(p => p.id !== currentUser.id) || potentialOpponents[0];
-                    setSelectedOpponent(defaultOpponent);
+            if (targetStreamer) {
+                setSelectedOpponent(targetStreamer);
+            } else {
+                try {
+                    const potentialOpponents = await liveStreamService.getCoHostFriends(currentUser.id);
+                    if (potentialOpponents.length > 0) {
+                        const defaultOpponent = potentialOpponents.find(p => p.id !== currentUser.id) || potentialOpponents[0];
+                        setSelectedOpponent(defaultOpponent);
+                    } else {
+                        setSelectedOpponent(null);
+                    }
+                } catch (err) {
+                    console.error("Error fetching opponents:", err);
+                    setSelectedOpponent(null);
                 }
-            } catch (err) {
-                console.error("Error fetching opponents:", err);
-            } finally {
-                setIsLoading(false);
             }
+            setIsLoading(false);
         };
-        fetchOpponents();
-    }, [currentUser.id]);
+        initializeOpponent();
+    }, [currentUser.id, targetStreamer]);
 
     const handleStartClick = async () => {
         if (selectedOpponent) {
@@ -57,7 +63,7 @@ const PkStartDisputeModal: React.FC<PkStartDisputeModalProps> = ({ currentUser, 
                 </div>
 
                 {isLoading ? (
-                    <div className="text-center py-8 text-gray-500">Carregando oponentes...</div>
+                    <div className="text-center py-8 text-gray-500">Carregando...</div>
                 ) : selectedOpponent ? (
                     <div className="relative p-3 rounded-xl bg-gradient-to-r from-pink-50 via-purple-50 to-blue-50">
                         <div className="flex items-center justify-center gap-4">
@@ -71,15 +77,9 @@ const PkStartDisputeModal: React.FC<PkStartDisputeModalProps> = ({ currentUser, 
                         </div>
                     </div>
                 ) : (
-                    <div className="text-center py-8 text-gray-500">Nenhum amigo online para a disputa.</div>
+                    <div className="text-center py-8 text-gray-500">Nenhum oponente disponível para a disputa.</div>
                 )}
                 
-                {opponents.length > 0 && (
-                    <button className="text-center text-sm text-gray-500 font-semibold py-1 hover:text-black">
-                        Todos os Presentes &gt;
-                    </button>
-                )}
-
                 <div className="mt-2">
                     <button
                         onClick={handleStartClick}

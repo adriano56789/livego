@@ -193,6 +193,22 @@
         animation: gift-banner-out 0.5s ease-out forwards;
       }
       
+      /* Center Gift Animation Keyframes */
+      @keyframes gift-display-in {
+        from { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
+        to { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+      }
+      @keyframes gift-display-out {
+        from { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+        to { transform: translate(-50%, -50%) scale(0.8); opacity: 0; }
+      }
+      .animate-gift-display-in {
+        animation: gift-display-in 0.5s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+      }
+      .animate-gift-display-out {
+        animation: gift-display-out 0.5s ease-out forwards;
+      }
+
       /* Keyframes for Live Info Modal */
       @keyframes fade-in-out-short {
         0% { opacity: 0; transform: translateY(-20px); }
@@ -237,19 +253,72 @@
 
       /* Floating Gift Avatar Animation */
       @keyframes float-up {
-        0% { transform: translateY(100%); opacity: 0; }
-        20% { transform: translateY(0); opacity: 1; }
-        80% { transform: translateY(0); opacity: 1; }
-        100% { transform: translateY(-20px); opacity: 0; }
+        0% { transform: translateY(0); opacity: 1; }
+        100% { transform: translateY(-80px); opacity: 0; }
       }
       .animate-float-up {
           animation: float-up 4s ease-in-out forwards;
       }
       
+      /* Floating Heart Animation */
+      @keyframes float-up-and-away {
+        0% {
+          transform: translateY(0) scale(1);
+          opacity: 1;
+        }
+        100% {
+          transform: translateY(-250px) scale(0.5);
+          opacity: 0;
+        }
+      }
+      .animate-float-up-and-away {
+        animation: float-up-and-away 2.5s ease-out forwards;
+      }
+
       /* TikTok-style chat fade out */
       .chat-fade-out-top {
         -webkit-mask-image: linear-gradient(to bottom, transparent 5%, black 30%);
         mask-image: linear-gradient(to bottom, transparent 5%, black 30%);
+      }
+
+      /* Added fade-in animation for modals */
+      @keyframes fade-in-fast {
+        from { opacity: 0; transform: scale(0.95); }
+        to { opacity: 1; transform: scale(1); }
+      }
+      .animate-fade-in-fast {
+        animation: fade-in-fast 0.2s ease-out forwards;
+      }
+
+      /* Gift Roulette Animations (Old, can be removed or kept for other features) */
+      @keyframes gift-roulette-spin {
+        0% { transform: rotate(0deg) scale(0.5); opacity: 0; }
+        20% { transform: rotate(180deg) scale(1); opacity: 1; }
+        80% { transform: rotate(1080deg) scale(1); opacity: 1; }
+        100% { transform: rotate(1260deg) scale(0.5); opacity: 0; }
+      }
+      @keyframes gift-roulette-prize-glow {
+        0% { opacity: 0; transform: scale(0.5) translateY(20px); }
+        50% { opacity: 1; transform: scale(1.2) translateY(0); }
+        100% { opacity: 0; transform: scale(1.5) translateY(-20px); }
+      }
+      .animate-gift-roulette-prize-glow {
+        animation: gift-roulette-prize-glow 2s ease-in-out forwards;
+      }
+
+      /* New Roulette Widget Pulse */
+      @keyframes roulette-pulse {
+        0%, 100% {
+          transform: scale(1);
+          box-shadow: 0 0 0 0 rgba(236, 72, 153, 0.5);
+        }
+        50% {
+          transform: scale(1.05);
+          box-shadow: 0 0 10px 5px rgba(236, 72, 153, 0);
+        }
+      }
+      .animate-roulette-pulse {
+          animation: roulette-pulse 2.5s infinite;
       }
     </style>
   <script type="importmap">

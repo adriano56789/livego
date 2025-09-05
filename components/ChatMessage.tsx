@@ -5,6 +5,7 @@ import { Player } from '@lottiefiles/react-lottie-player';
 import FancyChatBubble from './FancyChatBubble';
 import ProfileBadge from './ProfileBadge';
 import UserPlaceholderIcon from './icons/UserPlaceholderIcon';
+import DiamondIcon from './icons/DiamondIcon';
 
 interface ChatMessageItemProps {
   message: ChatMessage;
@@ -12,6 +13,7 @@ interface ChatMessageItemProps {
   isPkMode?: boolean;
 }
 
+// FIX: Completed the component to handle all message types and added a default export.
 const ChatMessageItem: React.FC<ChatMessageItemProps> = ({ message, onUserClick, isPkMode }) => {
 
   if (message.type === 'entry') {
@@ -39,83 +41,87 @@ const ChatMessageItem: React.FC<ChatMessageItemProps> = ({ message, onUserClick,
     )
   }
 
-  if (message.type === 'gift') {
+  if (message.type === 'gift' || message.type === 'gift_roulette_win') {
+    const giftName = message.giftName || 'um presente';
+    const isRouletteWin = message.type === 'gift_roulette_win';
+    
     return (
-      <div className="flex items-start gap-1.5 animate-slide-in-bottom max-w-[90%] self-start">
-        <button onClick={() => onUserClick(message.userId)} className="w-8 h-8 rounded-full bg-gray-700 overflow-hidden shrink-0">
-          {message.avatarUrl ? <img src={message.avatarUrl} alt={message.username} className="w-full h-full object-cover" /> : <UserPlaceholderIcon className="w-full h-full p-1 text-gray-500"/>}
-        </button>
-        <div className="flex-grow bg-black/40 rounded-lg px-2.5 py-1.5">
-          <div className="flex items-center gap-1.5">
-            <button onClick={() => onUserClick(message.userId)} className="text-xs text-gray-300 font-medium">{message.username}</button>
-            {message.globalLevel && <ProfileBadge badge={{ text: String(message.globalLevel), type: 'level' }} />}
-          </div>
-          <div className="flex items-center justify-between mt-0.5">
-            <p className="text-sm text-white break-words flex items-center gap-1.5">
-              {message.message}
-              {message.giftImageUrl && <img src={message.giftImageUrl} alt={message.giftName || ''} className="w-7 h-7 object-contain inline-block" />}
-            </p>
-            {message.quantity && message.quantity > 1 && (
-              <div className="font-black italic text-yellow-300 drop-shadow-lg animate-combo-thump text-2xl ml-2">
-                <span className="text-base font-semibold not-italic">x</span>{message.quantity}
-              </div>
-            )}
-          </div>
+        <div className="py-1 self-start my-1 w-full flex justify-start">
+             <FancyChatBubble>
+                <div className="flex items-center gap-2 text-sm">
+                    <button onClick={() => onUserClick(message.userId)} className="font-semibold text-yellow-300 truncate max-w-[100px]">{message.username}</button>
+                    <span className="text-white">{isRouletteWin ? 'ganhou' : 'enviou'}</span>
+                    {message.giftImageUrl && <img src={message.giftImageUrl} alt={giftName} className="w-6 h-6 object-contain" />}
+                    <span className="font-semibold text-yellow-300 truncate max-w-[100px]">{giftName}</span>
+                    {message.quantity && message.quantity > 1 && <span className="font-bold text-white">x{message.quantity}</span>}
+                     {message.prizeAmount && (
+                         <span className="flex items-center gap-1 font-bold text-yellow-300">
+                             <DiamondIcon className="w-4 h-4" /> {message.prizeAmount.toLocaleString()}
+                         </span>
+                     )}
+                </div>
+            </FancyChatBubble>
         </div>
-      </div>
-    );
-  }
-
-  if (message.type === 'image') {
-    return (
-      <div className="flex items-start gap-1.5 animate-slide-in-bottom max-w-[90%] self-start">
-        <button onClick={() => onUserClick(message.userId)} className="w-8 h-8 rounded-full bg-gray-700 overflow-hidden shrink-0">
-            {message.avatarUrl ? <img src={message.avatarUrl} alt={message.username} className="w-full h-full object-cover" /> : <UserPlaceholderIcon className="w-full h-full p-1 text-gray-500"/>}
-        </button>
-        <div className="flex-grow bg-black/40 rounded-lg p-2">
-            <div className="flex items-center gap-1.5 mb-1 px-1">
-                <button onClick={() => onUserClick(message.userId)} className="text-xs text-gray-300 font-medium">{message.username}</button>
-                {message.globalLevel && <ProfileBadge badge={{ text: String(message.globalLevel), type: 'level' }} />}
-                {message.age && message.gender && <ProfileBadge badge={{ text: String(message.age), type: 'gender_age', icon: message.gender }} />}
-            </div>
-            <a href={message.imageUrl} target="_blank" rel="noopener noreferrer">
-                <img src={message.imageUrl} alt="Imagem enviada" className="rounded-md max-w-full h-auto max-h-40" />
-            </a>
-        </div>
-      </div>
     );
   }
   
-  if (message.type === 'announcement') {
+  if (message.type === 'announcement' || message.type === 'roulette_result') {
       return (
-          <div className="text-sm text-center text-yellow-300 bg-yellow-900/40 py-1 px-3 rounded-full self-center my-1 animate-fade-in-fast">
-              📢 {message.message}
+          <div className="text-center py-1 self-center animate-fade-in-fast text-sm">
+               <FancyChatBubble>
+                  <div className="flex items-center gap-2">
+                      <span className="text-yellow-300 font-bold">{message.message}</span>
+                  </div>
+              </FancyChatBubble>
           </div>
       );
   }
 
   if (message.type === 'levelup') {
       return (
-          <div className="text-sm text-center text-green-300 bg-green-900/40 py-1 px-3 rounded-full self-center my-1 animate-fade-in-fast">
-              🎉 <button onClick={() => onUserClick(message.userId)} className="font-semibold">{message.username}</button> alcançou o nível {message.globalLevel}!
+           <div className="text-center py-1 self-center animate-fade-in-fast text-sm">
+               <FancyChatBubble>
+                  <div className="flex items-center gap-2">
+                      <span className="text-white">Parabéns a</span>
+                      <button onClick={() => onUserClick(message.userId)} className="font-bold text-yellow-300">{message.username}</button>
+                      <span className="text-white">por alcançar o nível {message.globalLevel}!</span>
+                  </div>
+              </FancyChatBubble>
           </div>
-      );
+      )
   }
 
-  // Default 'message' type
+  // Default 'message' and 'image' types
+  const BubbleContent = () => {
+      if (message.type === 'image' && message.imageUrl) {
+          return <img src={message.imageUrl} alt="imagem enviada" className="max-w-[200px] max-h-[200px] rounded-lg object-cover" />;
+      }
+      return <p className="text-white text-sm break-words">{message.message}</p>;
+  };
+  
   return (
-    <div className="flex items-start gap-1.5 animate-slide-in-bottom max-w-[90%] self-start">
-      <button onClick={() => onUserClick(message.userId)} className="w-8 h-8 rounded-full bg-gray-700 overflow-hidden shrink-0">
-          {message.avatarUrl ? <img src={message.avatarUrl} alt={message.username} className="w-full h-full object-cover" /> : <UserPlaceholderIcon className="w-full h-full p-1 text-gray-500"/>}
-      </button>
-      <div className="flex-grow bg-black/40 rounded-lg px-2.5 py-1.5">
-          <div className="flex items-center gap-1.5">
-              <button onClick={() => onUserClick(message.userId)} className="text-xs text-gray-300 font-medium">{message.username}</button>
-              {message.globalLevel && <ProfileBadge badge={{ text: String(message.globalLevel), type: 'level' }} />}
-              {message.age && message.gender && <ProfileBadge badge={{ text: String(message.age), type: 'gender_age', icon: message.gender }} />}
-          </div>
-          <p className="text-sm text-white break-words mt-0.5">{message.message}</p>
-      </div>
+    <div className={`p-1 flex gap-2.5 self-start w-full max-w-[85%]`}>
+        <button onClick={() => onUserClick(message.userId)} className="w-9 h-9 rounded-full overflow-hidden shrink-0 self-start">
+            {message.avatarUrl ? (
+                <img src={message.avatarUrl} alt={message.username} className="w-full h-full object-cover" />
+            ) : (
+                <UserPlaceholderIcon className="w-full h-full text-gray-500 bg-gray-800" />
+            )}
+        </button>
+        <div className="flex flex-col items-start">
+             <div className="flex items-center gap-2">
+                 <p className="text-xs text-gray-400 px-1">{message.username}</p>
+                 {message.globalLevel && (
+                    <ProfileBadge badge={{ text: String(message.globalLevel), type: 'level' }}/>
+                 )}
+                 {message.streamLevel && (
+                    <ProfileBadge badge={{ text: String(message.streamLevel), type: 'level2', icon: 'leaf' }}/>
+                 )}
+            </div>
+            <div className={`relative mt-1 rounded-lg py-2 px-3 text-left ${isPkMode ? 'bg-gray-800/60' : 'bg-black/40'}`}>
+                <BubbleContent />
+            </div>
+        </div>
     </div>
   );
 };

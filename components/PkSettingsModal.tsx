@@ -9,10 +9,10 @@ interface PkSettingsModalProps {
 }
 
 const timeOptions = [
-    { label: '2 mins', value: 120 },
-    { label: '5 mins', value: 300 },
-    { label: '30 mins', value: 1800 },
-    { label: '60 mins', value: 3600 },
+    { label: '2 min 30 s', value: 150 },
+    { label: '5 min', value: 300 },
+    { label: '30 min', value: 1800 },
+    { label: '60 min', value: 3600 },
 ];
 
 const PkSettingsModal: React.FC<PkSettingsModalProps> = ({ userId, onClose }) => {
@@ -52,10 +52,10 @@ const PkSettingsModal: React.FC<PkSettingsModalProps> = ({ userId, onClose }) =>
   return (
     <div className="fixed inset-0 z-[80] bg-black/60 flex items-end" onClick={onClose}>
       <div
-        className="bg-white w-full rounded-t-2xl flex flex-col text-black animate-slide-up-fast"
+        className="bg-[#1C1F24] w-full rounded-t-2xl flex flex-col text-white animate-slide-up-fast"
         onClick={e => e.stopPropagation()}
       >
-        <header className="p-4 flex items-center justify-center relative border-b border-gray-200">
+        <header className="p-4 flex items-center justify-center relative border-b border-gray-700/50">
           <h2 className="font-bold text-lg">Configurações</h2>
            <button onClick={onClose} className="absolute top-1/2 right-4 -translate-y-1/2 p-2 -m-2">
             <CrossIcon className="w-6 h-6 text-gray-400" />
@@ -63,7 +63,7 @@ const PkSettingsModal: React.FC<PkSettingsModalProps> = ({ userId, onClose }) =>
         </header>
 
         <main className="p-6">
-          <h3 className="font-semibold text-gray-800 mb-3">Horário</h3>
+          <h3 className="font-semibold text-gray-300 mb-3">Horário</h3>
            {isLoading ? (
             <div className="h-10 flex items-center justify-center">
               <div className="w-6 h-6 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
@@ -76,8 +76,8 @@ const PkSettingsModal: React.FC<PkSettingsModalProps> = ({ userId, onClose }) =>
                         onClick={() => setSelectedTime(time.value)}
                         className={`py-2 rounded-full font-semibold transition-colors ${
                         selectedTime === time.value
-                            ? 'bg-purple-200 text-purple-700'
-                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                            ? 'bg-purple-500 text-white'
+                            : 'bg-[#2c2c2e] text-gray-200 hover:bg-[#3a3a3c]'
                         }`}
                     >
                         {time.label}

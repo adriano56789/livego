@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useCallback } from 'react';
 import type { User, Stream, PkBattle, Category, AppView } from '../types';
 import * as liveStreamService from '../services/liveStreamService';
@@ -6,6 +7,7 @@ import StreamerCard from './StreamerCard';
 import PkBattleCard from './PkBattleCard';
 import SearchIcon from './icons/SearchIcon';
 import TrophyIcon from './icons/TrophyIcon';
+import JoinPrivateStreamModal from './JoinPrivateStreamModal';
 import LocationPermissionBanner from './LocationPermissionBanner';
 import LocationPermissionModal from './LocationPermissionModal';
 
@@ -31,12 +33,14 @@ export const LiveFeedScreen: React.FC<LiveFeedScreenProps> = ({
   onNavigate,
   locationPermission,
   setLocationPermission,
+  onUpdateUser,
 }) => {
   const [streams, setStreams] = useState<(Stream | PkBattle)[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
+  const [streamToJoin, setStreamToJoin] = useState<Stream | null>(null);
 
-  const categories: Category[] = ['Popular', 'Seguindo', 'Perto', 'PK', 'Novo', 'Música', 'Dança', 'Festa', 'Privada'];
+  const categories: Category[] = ['Popular', 'Seguindo', 'Perto', 'Privada', 'PK', 'Novo', 'Música', 'Dança', 'Festa'];
 
   const fetchStreams = useCallback(async () => {
     setIsLoading(true);
@@ -105,6 +109,15 @@ export const LiveFeedScreen: React.FC<LiveFeedScreenProps> = ({
     setIsLocationModalOpen(false);
   };
   
+  const handleStreamCardClick = (stream: Stream) => {
+    // Check if the stream is private and the user hasn't paid yet and is not the host
+    if (stream.isPrivate && !user.paid_stream_ids?.includes(stream.id) && user.id !== stream.userId) {
+        setStreamToJoin(stream);
+    } else {
+        onViewStream(stream);
+    }
+  };
+
   const renderHeader = () => (
     <header className="px-4 pt-6 pb-2 sticky top-0 bg-black/80 backdrop-blur-sm z-10">
       <div className="flex justify-between items-center mb-4">
@@ -158,7 +171,7 @@ export const LiveFeedScreen: React.FC<LiveFeedScreenProps> = ({
           if ('streamer1' in stream) {
             return <PkBattleCard key={stream.id} battle={stream} onViewStream={onViewStream} />;
           } else {
-            return <StreamerCard key={stream.id} stream={stream} onViewStream={onViewStream} currentUser={user} />;
+            return <StreamerCard key={stream.id} stream={stream} onViewStream={handleStreamCardClick} currentUser={user} />;
           }
         })}
       </div>
@@ -176,6 +189,16 @@ export const LiveFeedScreen: React.FC<LiveFeedScreenProps> = ({
       <main className="flex-grow overflow-y-auto scrollbar-hide">
         {renderContent()}
       </main>
+       {streamToJoin && (
+        <JoinPrivateStreamModal
+          user={user}
+          stream={streamToJoin}
+          onClose={() => setStreamToJoin(null)}
+          onViewStream={onViewStream}
+          onUpdateUser={onUpdateUser}
+          onNavigate={() => onNavigate('diamond-purchase')}
+        />
+      )}
       <LocationPermissionModal
         isOpen={isLocationModalOpen}
         onAllow={handleLocationAllow}

@@ -1,5 +1,3 @@
-
-
 import React from 'react';
 import CrossIcon from './icons/CrossIcon';
 
@@ -8,18 +6,20 @@ import BeautifyStarIcon from './icons/BeautifyStarIcon';
 import SoundEffectIcon from './icons/SoundEffectIcon';
 import VoiceIcon from './icons/VoiceIcon';
 import ClarityIcon from './icons/ClarityIcon';
-import MailIcon from './icons/MailIcon';
+import MessageIcon from './icons/MessageIcon';
 import BoxingGlovesIcon from './icons/BoxingGlovesIcon';
 import GroupWhiteIcon from './icons/GroupWhiteIcon';
 import LinkedCirclesIcon from './icons/LinkedCirclesIcon';
 import MicOffIcon from './icons/MicOffIcon';
+import LockOpenIcon from './icons/LockOpenIcon';
+import LockSolidIcon from './icons/LockSolidIcon';
+import RouletteIcon from './icons/RouletteIcon';
 
 
 // Basic Tool Icons
 import CameraFlipIcon from './icons/CameraFlipIcon';
 import MuteIcon from './icons/MuteIcon';
 import RoomEffectsIcon from './icons/RoomEffectsIcon';
-import MessageIcon from './icons/MessageIcon';
 import MirrorImageIcon from './icons/MirrorImageIcon';
 import RotateIcon from './icons/RotateIcon';
 import { FacingMode } from '../types';
@@ -35,10 +35,11 @@ interface ArcoraToolModalProps {
   isVoiceEnabled: boolean;
   onOpenPrivateChat: () => void;
   isPrivateStream: boolean;
-  onOpenPrivateInviteModal: () => void;
   onOpenPkStartModal: () => void;
   isPkBattleActive: boolean;
   onOpenPkInviteModal: () => void;
+  onOpenPrivacyModal: () => void;
+  onOpenRouletteSetup: () => void;
 }
 
 const ToolButton: React.FC<{ icon: React.ReactNode; label: string; subLabel?: string; isNew?: boolean; notImplemented?: boolean; onClick?: () => void; isActive?: boolean; }> = ({ icon, label, subLabel, isNew, notImplemented, onClick, isActive }) => (
@@ -46,7 +47,7 @@ const ToolButton: React.FC<{ icon: React.ReactNode; label: string; subLabel?: st
         className="flex flex-col items-center justify-start gap-2 text-center relative h-24" 
         onClick={onClick || (() => alert(notImplemented ? `Funcionalidade "${label}" não implementada.` : `${label} clicado!`))}
     >
-        <div className={`w-14 h-14 rounded-full flex items-center justify-center transition-all duration-200 hover:scale-110 ${isActive ? 'bg-green-500' : 'bg-[#3d3d3d]/80'}`}>
+        <div className={`w-14 h-14 rounded-full flex items-center justify-center transition-all duration-200 hover:scale-110 ${isActive ? 'bg-purple-500' : 'bg-[#3d3d3d]/80'}`}>
         {icon}
         </div>
         <span className="text-xs text-gray-300 w-full truncate">{label}</span>
@@ -85,10 +86,11 @@ const ArcoraToolModal: React.FC<ArcoraToolModalProps> = ({
     isVoiceEnabled, 
     onOpenPrivateChat, 
     isPrivateStream,
-    onOpenPrivateInviteModal,
     onOpenPkStartModal,
     isPkBattleActive,
     onOpenPkInviteModal,
+    onOpenPrivacyModal,
+    onOpenRouletteSetup,
 }) => {
     const iconClass = "w-7 h-7 text-gray-200";
 
@@ -96,14 +98,11 @@ const ArcoraToolModal: React.FC<ArcoraToolModalProps> = ({
         { icon: <BeautifyStarIcon className={iconClass} />, label: 'Embelezar', notImplemented: true },
         { icon: <SoundEffectIcon className={iconClass} />, label: 'Efeito sonoro', onClick: onOpenSoundEffectModal },
         { icon: isVoiceEnabled ? <VoiceIcon className={iconClass} /> : <MicOffIcon className={iconClass} />, label: 'Microfone', onClick: onToggleVoice, isActive: isVoiceEnabled },
-        { icon: <ClarityIcon className={iconClass} />, label: 'Clareza', notImplemented: true },
+        { icon: <RouletteIcon className="w-8 h-8 text-yellow-300" />, label: 'Roleta da Sorte', isNew: true, onClick: onOpenRouletteSetup },
         { icon: <MessageIcon className={iconClass} />, label: 'Bate-papo', onClick: onOpenPrivateChat },
+        { icon: isPrivateStream ? <LockSolidIcon className="w-7 h-7 text-purple-400" /> : <LockOpenIcon className={iconClass} />, label: 'Privacidade', onClick: onOpenPrivacyModal, isActive: isPrivateStream },
     ];
     
-    if (isPrivateStream) {
-        anchorTools.push({ icon: <MailIcon className={iconClass} />, label: 'Convite Privado', onClick: onOpenPrivateInviteModal });
-    }
-
     const pkTools = [
         { icon: <LinkedCirclesIcon className="w-10 h-10" />, label: '+ Hosts', onClick: onOpenPkInviteModal },
         { icon: <BoxingGlovesIcon className="w-10 h-10" />, label: 'Batalha', onClick: onOpenPkStartModal },

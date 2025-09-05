@@ -39,6 +39,7 @@ import PkRankingModal from './PkRankingModal';
 import RouletteWidget from './RouletteWidget';
 import RouletteSetupModal from './RouletteSetupModal';
 import QuickChatModal from './QuickChatModal';
+import PrivateChatListModal from './PrivateChatListModal';
 
 
 // Icon Imports
@@ -190,6 +191,8 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
     const [isUploading, setIsUploading] = useState(false);
     const [triggeredGift, setTriggeredGift] = useState<ChatMessage | null>(null);
     const [rouletteWin, setRouletteWin] = useState<ChatMessage | null>(null);
+    // FIX: Add state for roulette settings to fix multiple 'cannot find name' errors.
+    const [rouletteSettings, setRouletteSettings] = useState<RouletteSettings | null>(null);
     
     // Modal states
     const [isGiftPanelOpen, setIsGiftPanelOpen] = useState(false);
@@ -211,9 +214,8 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
     const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
     const [purchaseConfirmationPackage, setPurchaseConfirmationPackage] = useState<DiamondPackage | null>(null);
     const [isRouletteOpen, setIsRouletteOpen] = useState(false);
-    const [rouletteSettings, setRouletteSettings] = useState<RouletteSettings | null>(null);
     const [isQuickChatModalOpen, setIsQuickChatModalOpen] = useState(false);
-
+    const [isPrivateChatListOpen, setIsPrivateChatListOpen] = useState(false);
     
     // State for PK invitations sent by the current user
     const [invitation, setInvitation] = useState<ConvitePK | null>(null);
@@ -684,7 +686,7 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
                         cameraFacingMode={facingMode}
                         onToggleVoice={() => {}}
                         isVoiceEnabled={isVoiceEnabled}
-                        onOpenPrivateChat={() => {}}
+                        onOpenPrivateChat={() => setIsPrivateChatListOpen(true)}
                         isPrivateStream={liveDetails?.isPrivate ?? false}
                         onOpenPkStartModal={handlePkDisputeClick}
                         isPkBattleActive={isPkBattle}
@@ -831,6 +833,16 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
                 }}
             />
         )}
+        {isPrivateChatListOpen && (
+            <PrivateChatListModal
+                currentUser={user}
+                onClose={() => setIsPrivateChatListOpen(false)}
+                onOpenConversation={(conversationId) => {
+                    // This will exit the stream and navigate to the chat
+                    onNavigate('chat', { conversationId });
+                }}
+            />
+        )}
         {isArcoraToolModalOpen && hostStreamId && (
             <ArcoraToolModal
                 onClose={() => setIsArcoraToolModalOpen(false)}
@@ -840,10 +852,7 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
                 cameraFacingMode={facingMode}
                 onToggleVoice={() => setIsVoiceEnabled(v => !v)}
                 isVoiceEnabled={isVoiceEnabled}
-                onOpenPrivateChat={() => {
-                    setIsArcoraToolModalOpen(false);
-                    setIsQuickChatModalOpen(true);
-                }}
+                onOpenPrivateChat={() => setIsPrivateChatListOpen(true)}
                 isPrivateStream={liveDetails?.isPrivate ?? false}
                 onOpenPkStartModal={handlePkDisputeClick}
                 isPkBattleActive={isPkBattle}

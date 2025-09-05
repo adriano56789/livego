@@ -38,6 +38,7 @@ import FloatingHearts, { FloatingHeartsRef } from './FloatingHearts';
 import PkRankingModal from './PkRankingModal';
 import RouletteWidget from './RouletteWidget';
 import RouletteSetupModal from './RouletteSetupModal';
+import QuickChatModal from './QuickChatModal';
 
 
 // Icon Imports
@@ -211,6 +212,7 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
     const [purchaseConfirmationPackage, setPurchaseConfirmationPackage] = useState<DiamondPackage | null>(null);
     const [isRouletteOpen, setIsRouletteOpen] = useState(false);
     const [rouletteSettings, setRouletteSettings] = useState<RouletteSettings | null>(null);
+    const [isQuickChatModalOpen, setIsQuickChatModalOpen] = useState(false);
 
     
     // State for PK invitations sent by the current user
@@ -779,7 +781,7 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
                 <footer className="shrink-0 flex items-center gap-2 p-2 pointer-events-auto">
                     {isCurrentUserHost ? (
                         <>
-                            <ChatInput onSendMessage={handleSendMessage} isUploading={isUploading} showSendButton={false} />
+                            <ChatInput onSendMessage={handleSendMessage} isUploading={isUploading} showSendButton={true} />
                             <button onClick={() => setIsGiftPanelOpen(true)} className="w-10 h-10 bg-black/40 rounded-full flex items-center justify-center shrink-0">
                                 <GiftBoxIcon className="w-7 h-7"/>
                             </button>
@@ -820,6 +822,15 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
                 }}
             />
         )}
+        {isQuickChatModalOpen && hostStreamId && (
+            <QuickChatModal
+                onClose={() => setIsQuickChatModalOpen(false)}
+                onSendMessage={(message) => {
+                    handleSendMessage(message);
+                    setIsQuickChatModalOpen(false);
+                }}
+            />
+        )}
         {isArcoraToolModalOpen && hostStreamId && (
             <ArcoraToolModal
                 onClose={() => setIsArcoraToolModalOpen(false)}
@@ -829,7 +840,10 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
                 cameraFacingMode={facingMode}
                 onToggleVoice={() => setIsVoiceEnabled(v => !v)}
                 isVoiceEnabled={isVoiceEnabled}
-                onOpenPrivateChat={() => setIsInviteToPrivateLiveModalOpen(true)}
+                onOpenPrivateChat={() => {
+                    setIsArcoraToolModalOpen(false);
+                    setIsQuickChatModalOpen(true);
+                }}
                 isPrivateStream={liveDetails?.isPrivate ?? false}
                 onOpenPkStartModal={handlePkDisputeClick}
                 isPkBattleActive={isPkBattle}

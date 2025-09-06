@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import type { RouletteSettings, User } from '../types';
 import * as liveStreamService from '../services/liveStreamService';
@@ -46,7 +47,7 @@ const RouletteWidget: React.FC<RouletteWidgetProps> = ({ user, liveId, initialSe
       const randomOffset = (Math.random() - 0.5) * degreesPerItem * 0.8;
       const targetRotation = 360 * 5 - (winningIndex * degreesPerItem + randomOffset);
       
-      setRotation(targetRotation);
+      setRotation(rotation + targetRotation);
 
       setTimeout(() => {
         setIsSpinning(false);
@@ -74,9 +75,9 @@ const RouletteWidget: React.FC<RouletteWidgetProps> = ({ user, liveId, initialSe
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/80 flex flex-col items-center justify-center p-4" onClick={() => !isSpinning && setIsOpen(false)}>
+    <div className="fixed inset-0 z-50 bg-black/80 flex flex-col items-center justify-center p-4 animate-fade-in-fast" onClick={() => !isSpinning && setIsOpen(false)}>
       <div 
-        className="relative flex flex-col items-center animate-fade-in-fast"
+        className="relative flex flex-col items-center"
         onClick={e => e.stopPropagation()}
       >
         <button onClick={() => !isSpinning && setIsOpen(false)} className="absolute -top-4 -right-4 bg-gray-800/50 p-2 rounded-full z-20"><CrossIcon className="w-6 h-6"/></button>

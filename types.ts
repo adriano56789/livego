@@ -146,6 +146,22 @@ export interface RouletteSettings {
   cost: number;
 }
 
+export interface RaffleParticipant {
+  userId: number;
+  username: string;
+  avatarUrl: string;
+}
+
+export interface RaffleState {
+  isActive: boolean;
+  prize: string;
+  winnersCount: number;
+  endTime: string;
+  participants: number[];
+  winners?: RaffleParticipant[];
+}
+
+
 // This is the single source of truth for a live stream in the database
 export interface LiveStreamRecord {
   id: number;
@@ -173,6 +189,7 @@ export interface LiveStreamRecord {
   chatMessages?: ChatMessage[];
   current_viewers?: number[];
   roulette_settings?: RouletteSettings;
+  raffle_state?: RaffleState | null;
 }
 
 // This is the VIEW MODEL for the frontend, derived from LiveStreamRecord
@@ -291,6 +308,7 @@ export interface LiveDetails {
   meta?: string;
   isPrivate: boolean;
   entryFee: number | null;
+  raffle_state?: RaffleState | null;
 }
 
 export interface LiveEndSummary {
@@ -353,7 +371,7 @@ export interface Conversation {
 
 export interface ChatMessage {
   id: number;
-  type: 'message' | 'entry' | 'gift' | 'special_entry' | 'levelup' | 'announcement' | 'image' | 'roulette_result' | 'gift_roulette_win';
+  type: 'message' | 'entry' | 'gift' | 'special_entry' | 'levelup' | 'announcement' | 'image' | 'roulette_result' | 'gift_roulette_win' | 'raffle_start' | 'raffle_win';
   globalLevel?: number; // Renamed from level
   streamLevel?: number; // New level for the current stream
   statusBadge?: { text: string; icon: string; }; // New badge for stream level
@@ -374,6 +392,10 @@ export interface ChatMessage {
   // Roulette properties
   multiplier?: number;
   prizeAmount?: number;
+  // Raffle properties
+  prize?: string;
+  winners?: RaffleParticipant[];
+  durationMinutes?: number;
   //
   timestamp: string;
   badgeText?: string;

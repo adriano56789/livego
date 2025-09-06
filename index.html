@@ -290,6 +290,15 @@
         animation: fade-in-fast 0.2s ease-out forwards;
       }
 
+      @keyframes fade-out-fast {
+        from { opacity: 1; transform: scale(1); }
+        to { opacity: 0; transform: scale(0.95); }
+      }
+      .animate-fade-out-fast {
+        animation: fade-out-fast 0.5s ease-in forwards;
+      }
+
+
       /* Gift Roulette Animations (Old, can be removed or kept for other features) */
       @keyframes gift-roulette-spin {
         0% { transform: rotate(0deg) scale(0.5); opacity: 0; }
@@ -319,6 +328,15 @@
       }
       .animate-roulette-pulse {
           animation: roulette-pulse 2.5s infinite;
+      }
+      
+      /* New Prize Wheel Animations */
+      @keyframes prize-wheel-glow {
+        0%, 100% { box-shadow: 0 0 15px #a855f7, 0 0 30px #a855f7; }
+        50% { box-shadow: 0 0 25px #d8b4fe, 0 0 50px #d8b4fe; }
+      }
+      .animate-prize-wheel-glow {
+        animation: prize-wheel-glow 2.5s ease-in-out infinite;
       }
     </style>
   <script type="importmap">

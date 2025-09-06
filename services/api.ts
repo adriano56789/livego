@@ -4,8 +4,9 @@
 import * as levelService from '../services/levelService';
 import { database, getRawDb } from './database';
 import { mongoObjectId } from './mongoObjectId';
-import type { User, LiveStreamRecord, Stream, PkBattle, PkBattleState, PurchaseOrder, ConvitePK, LiveCategory, Category, StartLiveResponse, FacingMode, LiveDetails, ChatMessage, Viewer, PublicProfile, AppEvent, ArtigoAjuda, CanalContato, HealthCheckResult, PrivateLiveInviteSettings, NotificationSettings, GiftNotificationSettings, PrivacySettings, LiveFollowUpdate, WithdrawalBalance, UserLevelInfo, InventoryItem, WithdrawalTransaction, RankingContributor, Conversation, ConversationMessage, Gift, DiamondPackage, PkSettings, SelectableOption, SecurityLogEntry, UniversalRankingUser, LiveEndSummary, TopFanDetails, UniversalRankingData, GeneralRankingStreamer, ProfileBadgeType, TabelaRankingApoiadores } from '../types';
-import { addChatMessageListener } from './liveStreamService';
+import type { User, LiveStreamRecord, Stream, PkBattle, PkBattleState, PurchaseOrder, ConvitePK, LiveCategory, Category, StartLiveResponse, FacingMode, LiveDetails, ChatMessage, Viewer, PublicProfile, AppEvent, ArtigoAjuda, CanalContato, HealthCheckResult, PrivateLiveInviteSettings, NotificationSettings, GiftNotificationSettings, PrivacySettings, LiveFollowUpdate, WithdrawalBalance, UserLevelInfo, InventoryItem, WithdrawalTransaction, RankingContributor, Conversation, ConversationMessage, Gift, DiamondPackage, PkSettings, SelectableOption, SecurityLogEntry, UniversalRankingUser, LiveEndSummary, TopFanDetails, UniversalRankingData, GeneralRankingStreamer, ProfileBadgeType, TabelaRankingApoiadores, RaffleState, RaffleParticipant } from '../types';
+// FIX: Changed import from `addChatMessageListener` to `dispatchChatMessage` to call the correct function for dispatching messages.
+import { dispatchChatMessage, liveUpdateManager } from './liveStreamService';
 
 // --- SIMULATED ENVIRONMENT VARIABLES ---
 const SRS_URL_PUBLISH = 'rtmp://localhost/live';
@@ -231,6 +232,8 @@ export const handleApiRequest = async (method: string, path: string, body: any, 
     const streamPkBattleRegex = /^\/api\/streams\/(\d+)\/batalha-pk$/;
     const privateLiveSettingsRegex = /^\/api\/users\/(\d+)\/private-live-invite-settings$/;
     const giftNotificationSettingsRegex = /^\/api\/users\/(\d+)\/gift-notification-settings$/;
+    const raffleRegex = /^\/api\/lives\/(\d+)\/raffle$/;
+    const raffleJoinRegex = /^\/api\/lives\/(\d+)\/raffle\/join$/;
 
     const streamPkBattleMatch = path.match(streamPkBattleRegex);
     if (method === 'GET' && streamPkBattleMatch) {
@@ -909,6 +912,129 @@ export const handleApiRequest = async (method: string, path: string, body: any, 
         return response;
     }
 
+    // --- RAFFLE ---
+    const drawRaffleWinners = async (liveId: number) => {
+        const liveStream = await database.liveStreams.findOne({ id: liveId });
+        if (!liveStream || !liveStream.raffle_state || !liveStream.raffle_state.isActive) {
+            return;
+        }
+
+        const raffle = liveStream.raffle_state;
+        const participants = [...new Set(raffle.participants)]; // Ensure unique participants
+        
+        // Shuffle participants
+        for (let i = participants.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [participants[i], participants[j]] = [participants[j], participants[i]];
+        }
+        
+        const winnerIds = participants.slice(0, raffle.winnersCount);
+        const winnerUsers = await database.users.find({ id: { $in: winnerIds } });
+        
+        const winnerList: RaffleParticipant[] = winnerUsers.map(u => ({
+            userId: u.id,
+            username: u.nickname || u.name,
+            avatarUrl: u.avatar_url || '',
+        }));
+
+        // Distribute prize (simplified: assumes prize is always diamonds)
+        const prizeMatch = raffle.prize.match(/(\d+[,.]?\d*)\s*diamantes/i);
+        if (prizeMatch) {
+            const prizeAmount = parseInt(prizeMatch[1].replace(/[.,]/g, ''), 10);
+            if (!isNaN(prizeAmount) && prizeAmount > 0 && winnerUsers.length > 0) {
+                const prizePerWinner = Math.floor(prizeAmount / winnerUsers.length);
+                for (const winner of winnerUsers) {
+                    await database.users.updateOne({ id: winner.id }, { $set: { wallet_diamonds: winner.wallet_diamonds + prizePerWinner } });
+                }
+            }
+        }
+
+        raffle.isActive = false;
+        raffle.winners = winnerList;
+        
+        const announcement: ChatMessage = {
+            id: Date.now(),
+            type: 'raffle_win',
+            userId: liveStream.user_id,
+            username: 'Sistema',
+            message: `O sorteio terminou! Parabéns aos vencedores!`,
+            prize: raffle.prize,
+            winners: winnerList,
+            timestamp: new Date().toISOString()
+        };
+        
+        liveStream.chatMessages = liveStream.chatMessages || [];
+        liveStream.chatMessages.push(announcement);
+        
+        await database.liveStreams.updateOne({ id: liveId }, { $set: { raffle_state: raffle, chatMessages: liveStream.chatMessages } });
+        
+        // FIX: Replaced incorrect call to `addChatMessageListener` with `dispatchChatMessage`.
+        dispatchChatMessage(liveId, [announcement]);
+        liveUpdateManager.dispatch(liveId);
+    };
+
+    const raffleMatch = path.match(raffleRegex);
+    if (method === 'POST' && raffleMatch) {
+        const liveId = parseInt(raffleMatch[1], 10);
+        const { prize, winnersCount, durationMinutes } = body;
+        const liveStream = await database.liveStreams.findOne({ id: liveId });
+        if (!liveStream) throw new Error("Live stream not found");
+
+        const endTime = new Date(Date.now() + durationMinutes * 60 * 1000).toISOString();
+        const newRaffle: RaffleState = {
+            isActive: true,
+            prize,
+            winnersCount,
+            endTime,
+            participants: [],
+            winners: []
+        };
+        
+        const announcement: ChatMessage = {
+            id: Date.now(),
+            type: 'raffle_start',
+            userId: liveStream.user_id,
+            username: 'Sistema',
+            message: `Sorteio iniciado! Prêmio: ${prize}`,
+            prize: prize,
+            durationMinutes: durationMinutes,
+            timestamp: new Date().toISOString()
+        };
+        
+        liveStream.chatMessages = liveStream.chatMessages || [];
+        liveStream.chatMessages.push(announcement);
+        
+        await database.liveStreams.updateOne({ id: liveId }, { $set: { raffle_state: newRaffle, chatMessages: liveStream.chatMessages } });
+
+        // FIX: Replaced incorrect call to `addChatMessageListener` with `dispatchChatMessage`.
+        dispatchChatMessage(liveId, [announcement]);
+        liveUpdateManager.dispatch(liveId);
+        
+        // "Server-side" timer
+        setTimeout(() => drawRaffleWinners(liveId), durationMinutes * 60 * 1000);
+
+        return newRaffle;
+    }
+
+    const raffleJoinMatch = path.match(raffleJoinRegex);
+    if (method === 'POST' && raffleJoinMatch) {
+        const liveId = parseInt(raffleJoinMatch[1], 10);
+        const { userId } = body;
+        const liveStream = await database.liveStreams.findOne({ id: liveId });
+        if (!liveStream || !liveStream.raffle_state || !liveStream.raffle_state.isActive) {
+            throw new Error("Sorteio não está ativo.");
+        }
+        
+        if (!liveStream.raffle_state.participants.includes(userId)) {
+            liveStream.raffle_state.participants.push(userId);
+            await database.liveStreams.updateOne({ id: liveId }, { $set: { raffle_state: liveStream.raffle_state } });
+            liveUpdateManager.dispatch(liveId);
+        }
+        
+        return { success: true };
+    }
+
+
     // --- LIVE STREAM DETAILS & ACTIONS ---
     const liveDetailMatch = path.match(liveDetailRegex);
     const liveSubpathMatch = path.match(liveSubpathRegex);
@@ -918,17 +1044,32 @@ export const handleApiRequest = async (method: string, path: string, body: any, 
     if (method === 'PATCH' && privacyUpdateMatch) {
         const liveId = parseInt(privacyUpdateMatch[1], 10);
         const { isPrivate, entryFee } = body;
-        
+
         const fee = (isPrivate && entryFee && parseInt(String(entryFee), 10) > 0) ? parseInt(String(entryFee), 10) : null;
-        
+
+        const streamBeforeUpdate = await database.liveStreams.findOne({ id: liveId });
+
         await database.liveStreams.updateOne(
             { id: liveId },
             { $set: { is_private: isPrivate, entry_fee: isPrivate ? fee : null } }
         );
+
+        const updatedStreamRecord = await database.liveStreams.findOne({ id: liveId });
+        if (!updatedStreamRecord) throw new Error("Updated stream not found");
+
+        let kickedUserIds: number[] = [];
+        // If the stream is becoming private, we might kick users. For this mock, we'll just keep it simple.
+        if (isPrivate && !streamBeforeUpdate?.is_private) {
+            // A real implementation would check viewers against a list of those who paid the fee.
+            // For now, we'll just return an empty array to satisfy the contract.
+        }
         
-        const updatedStream = await database.liveStreams.findOne({ id: liveId });
-        if (!updatedStream) throw new Error("Updated stream not found");
-        return mapLiveRecordToStream(updatedStream);
+        const updatedStreamViewModel = mapLiveRecordToStream(updatedStreamRecord);
+        
+        return { 
+            updatedStream: updatedStreamViewModel,
+            kickedUserIds // This will be an empty array, fixing the .forEach error
+        };
     }
 
     if (chatMatch) {
@@ -995,6 +1136,7 @@ export const handleApiRequest = async (method: string, path: string, body: any, 
                 meta: liveStream.meta ?? undefined,
                 isPrivate: liveStream.is_private,
                 entryFee: liveStream.entry_fee,
+                raffle_state: liveStream.raffle_state,
             };
             return details;
         }
@@ -1252,7 +1394,7 @@ export const handleApiRequest = async (method: string, path: string, body: any, 
 
     if (method === 'POST' && path.startsWith('/api/users/') && path.endsWith('/stop-live')) {
         const userId = parseInt(path.split('/')[3], 10);
-        await database.liveStreams.updateOne({ user_id: userId, ao_vivo: true }, { $set: { ao_vivo: false, em_pk: false } });
+        await database.liveStreams.updateOne({ user_id: userId, ao_vivo: true }, { $set: { ao_vivo: false, em_pk: false, raffle_state: null } });
         return { success: true };
     }
 

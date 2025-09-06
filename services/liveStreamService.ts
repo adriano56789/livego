@@ -1,5 +1,5 @@
 import { apiClient } from './apiClient';
-import type { User, LiveDetails, ChatMessage, Gift, Viewer, RankingContributor, Like, PkBattle, PkBattleState, PublicProfile, PkEventDetails, Conversation, SendGiftResponse, ProtectorDetails, WithdrawalTransaction, WithdrawalMethod, InventoryItem, AppEvent, LiveEndSummary, UserLevelInfo, GeneralRankingStreamer, GeneralRankingUser, WithdrawalBalance, EventStatus, PkRankingData, Stream, Category, StartLiveResponse, ConvitePK, LiveFollowUpdate, PrivateLiveInviteSettings, NotificationSettings, FacingMode, SoundEffectName, UniversalRankingData, UserListRankingPeriod, PkSettings, LiveCategory, StreamUpdateListener, MuteStatusListener, UserKickedListener, SoundEffectListener, MuteStatusUpdate, UserKickedUpdate, SoundEffectUpdate, UserBlockedUpdate, UserUnblockedUpdate, UserBlockedListener, UserUnblockedListener, Region, PrivacySettings, IncomingPrivateLiveInvite, GiftNotificationSettings, TopFanDetails, RouletteSettings } from '../types';
+import type { User, LiveDetails, ChatMessage, Gift, Viewer, RankingContributor, Like, PkBattle, PkBattleState, PublicProfile, PkEventDetails, Conversation, SendGiftResponse, ProtectorDetails, WithdrawalTransaction, WithdrawalMethod, InventoryItem, AppEvent, LiveEndSummary, UserLevelInfo, GeneralRankingStreamer, GeneralRankingUser, WithdrawalBalance, EventStatus, PkRankingData, Stream, Category, StartLiveResponse, ConvitePK, LiveFollowUpdate, PrivateLiveInviteSettings, NotificationSettings, FacingMode, SoundEffectName, UniversalRankingData, UserListRankingPeriod, PkSettings, LiveCategory, StreamUpdateListener, MuteStatusListener, UserKickedListener, SoundEffectListener, MuteStatusUpdate, UserKickedUpdate, SoundEffectUpdate, UserBlockedUpdate, UserUnblockedUpdate, UserBlockedListener, UserUnblockedListener, Region, PrivacySettings, IncomingPrivateLiveInvite, GiftNotificationSettings, TopFanDetails, RouletteSettings, RaffleState } from '../types';
 
 // --- Listener Infrastructure ---
 type Listener<T> = (data: T) => void;
@@ -22,7 +22,12 @@ const userKickedManager = createListenerManager<UserKickedUpdate>();
 const soundEffectManager = createListenerManager<SoundEffectUpdate>();
 const userBlockedManager = createListenerManager<UserBlockedUpdate>();
 const userUnblockedManager = createListenerManager<UserUnblockedUpdate>();
-const liveUpdateManager = createListenerManager<number>(); // dispatches liveId
+export const liveUpdateManager = createListenerManager<number>(); // dispatches liveId
+
+// FIX: Added an exported dispatch function for chat messages to fix circular dependency issues and wrong function calls in the mock API.
+export const dispatchChatMessage = (liveId: number, messages: ChatMessage[]) => {
+  chatListeners.forEach(listener => listener(liveId, messages));
+};
 
 export const addStreamListener = (listener: StreamUpdateListener) => streamUpdateManager.add(listener);
 export const removeStreamListener = (listener: StreamUpdateListener) => streamUpdateManager.remove(listener);
@@ -108,7 +113,7 @@ export const payStreamEntryFee = (viewerId: number, streamId: number): Promise<U
     }).then(response => {
         // Dispatch the system message to listeners
         if (response.entryMessage) {
-            chatListeners.forEach(listener => listener(streamId, [response.entryMessage]));
+            dispatchChatMessage(streamId, [response.entryMessage]);
         }
         return response.updatedUser;
     });
@@ -136,7 +141,7 @@ export const sendChatMessage = async (liveId: number, userId: number, message: s
         body: JSON.stringify({ userId, message, imageUrl }),
     });
     // Dispatch to all chat listeners to simulate real-time update
-    chatListeners.forEach(listener => listener(liveId, [newMsg]));
+    dispatchChatMessage(liveId, [newMsg]);
     liveUpdateManager.dispatch(liveId);
     return newMsg;
 };
@@ -150,7 +155,7 @@ export const sendGift = (liveId: number, senderId: number, giftId: number, quant
         if (response.success) {
             liveUpdateManager.dispatch(liveId);
             if (response.giftMessage) {
-                chatListeners.forEach(listener => listener(liveId, [response.giftMessage]));
+                dispatchChatMessage(liveId, [response.giftMessage]);
             }
         }
         return response;
@@ -421,11 +426,27 @@ export const spinRoulette = (liveId: number, userId: number): Promise<{ updatedU
         body: JSON.stringify({ userId })
     }).then(response => {
         if (response.announcementMessage) {
-            chatListeners.forEach(listener => listener(liveId, [response.announcementMessage]));
+            dispatchChatMessage(liveId, [response.announcementMessage]);
         }
         return { updatedUser: response.updatedUser, result: response.result };
     });
 };
+
+// --- RAFFLE ---
+export const startRaffle = (liveId: number, settings: { prize: string; winnersCount: number; durationMinutes: number }): Promise<RaffleState> => {
+  return apiClient(`/api/lives/${liveId}/raffle`, {
+    method: 'POST',
+    body: JSON.stringify(settings),
+  });
+};
+
+export const joinRaffle = (liveId: number, userId: number): Promise<{ success: true }> => {
+  return apiClient(`/api/lives/${liveId}/raffle/join`, {
+    method: 'POST',
+    body: JSON.stringify({ userId }),
+  });
+};
+
 
 // --- NEWLY ADDED FUNCTIONS TO FIX ERRORS ---
 

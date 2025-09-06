@@ -5,7 +5,6 @@ import CrossIcon from './icons/CrossIcon';
 import BeautifyStarIcon from './icons/BeautifyStarIcon';
 import SoundEffectIcon from './icons/SoundEffectIcon';
 import VoiceIcon from './icons/VoiceIcon';
-import ClarityIcon from './icons/ClarityIcon';
 import MessageIcon from './icons/MessageIcon';
 import BoxingGlovesIcon from './icons/BoxingGlovesIcon';
 import GroupWhiteIcon from './icons/GroupWhiteIcon';
@@ -14,6 +13,8 @@ import MicOffIcon from './icons/MicOffIcon';
 import LockOpenIcon from './icons/LockOpenIcon';
 import LockSolidIcon from './icons/LockSolidIcon';
 import RouletteIcon from './icons/RouletteIcon';
+import PrizeWheelIcon from './icons/PrizeWheelIcon';
+import TicketIcon from './icons/TicketIcon';
 
 
 // Basic Tool Icons
@@ -40,6 +41,8 @@ interface ArcoraToolModalProps {
   onOpenPkInviteModal: () => void;
   onOpenPrivacyModal: () => void;
   onOpenRouletteSetup: () => void;
+  onOpenPrizeWheel: () => void;
+  onOpenRaffleSetup: () => void;
 }
 
 const ToolButton: React.FC<{ icon: React.ReactNode; label: string; subLabel?: string; isNew?: boolean; notImplemented?: boolean; onClick?: () => void; isActive?: boolean; }> = ({ icon, label, subLabel, isNew, notImplemented, onClick, isActive }) => (
@@ -91,6 +94,8 @@ const ArcoraToolModal: React.FC<ArcoraToolModalProps> = ({
     onOpenPkInviteModal,
     onOpenPrivacyModal,
     onOpenRouletteSetup,
+    onOpenPrizeWheel,
+    onOpenRaffleSetup,
 }) => {
     const iconClass = "w-7 h-7 text-gray-200";
 
@@ -98,7 +103,8 @@ const ArcoraToolModal: React.FC<ArcoraToolModalProps> = ({
         { icon: <BeautifyStarIcon className={iconClass} />, label: 'Embelezar', notImplemented: true },
         { icon: <SoundEffectIcon className={iconClass} />, label: 'Efeito sonoro', onClick: onOpenSoundEffectModal },
         { icon: isVoiceEnabled ? <VoiceIcon className={iconClass} /> : <MicOffIcon className={iconClass} />, label: 'Microfone', onClick: onToggleVoice, isActive: isVoiceEnabled },
-        { icon: <RouletteIcon className="w-8 h-8 text-yellow-300" />, label: 'Roleta da Sorte', isNew: true, onClick: onOpenRouletteSetup },
+        { icon: <PrizeWheelIcon className="w-8 h-8 text-yellow-300" />, label: 'Roleta de Prêmios', onClick: onOpenPrizeWheel },
+        { icon: <TicketIcon className={iconClass} />, label: 'Sorteio', onClick: onOpenRaffleSetup },
         { icon: <MessageIcon className={iconClass} />, label: 'Bate-papo', onClick: onOpenPrivateChat },
         { icon: isPrivateStream ? <LockSolidIcon className="w-7 h-7 text-purple-400" /> : <LockOpenIcon className={iconClass} />, label: 'Privacidade', onClick: onOpenPrivacyModal, isActive: isPrivateStream },
     ];

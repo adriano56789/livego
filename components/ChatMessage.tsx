@@ -1,4 +1,3 @@
-
 import React from 'react';
 import type { ChatMessage } from '../types';
 import { Player } from '@lottiefiles/react-lottie-player';
@@ -6,6 +5,8 @@ import FancyChatBubble from './FancyChatBubble';
 import ProfileBadge from './ProfileBadge';
 import UserPlaceholderIcon from './icons/UserPlaceholderIcon';
 import DiamondIcon from './icons/DiamondIcon';
+import TicketIcon from './icons/TicketIcon';
+import TrophyIcon from './icons/TrophyIcon';
 
 interface ChatMessageItemProps {
   message: ChatMessage;
@@ -39,6 +40,34 @@ const ChatMessageItem: React.FC<ChatMessageItemProps> = ({ message, onUserClick,
             </FancyChatBubble>
         </div>
     )
+  }
+
+  if (message.type === 'raffle_start') {
+    return (
+      <div className="my-1 self-center animate-fade-in-fast text-sm w-full flex justify-center">
+        <div className="bg-gradient-to-r from-yellow-600/50 to-amber-700/50 backdrop-blur-sm p-2 rounded-xl border-2 border-amber-400/30 flex items-center gap-3 text-white">
+          <TicketIcon className="w-8 h-8 text-yellow-300 shrink-0" />
+          <div className="text-left">
+            <p className="font-bold">Sorteio iniciado!</p>
+            <p className="text-xs text-yellow-200">Prêmio: {message.prize}. Duração: {message.durationMinutes} min. Participe agora!</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (message.type === 'raffle_win') {
+    return (
+      <div className="my-1 self-center animate-fade-in-fast text-sm w-full flex justify-center">
+        <div className="bg-gradient-to-r from-purple-700/50 to-indigo-800/50 backdrop-blur-sm p-2 rounded-xl border-2 border-purple-400/30 flex items-center gap-3 text-white">
+          <TrophyIcon className="w-8 h-8 text-yellow-300 shrink-0" />
+          <div className="text-left">
+            <p className="font-bold">O sorteio de "{message.prize}" terminou!</p>
+            <p className="text-xs text-purple-200">Parabéns aos vencedores: {message.winners?.map(w => w.username).join(', ')}!</p>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (message.type === 'gift' || message.type === 'gift_roulette_win') {

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import type { User, Stream, PkBattle, ChatMessage, LiveDetails, PkInvitation, SoundEffectName, MuteStatusListener, UserKickedListener, SoundEffectListener, PublicProfile, PkBattleState, ConvitePK, IncomingPrivateLiveInvite, UserBlockedListener, UserUnblockedListener, Viewer, PkBattleStreamer, AppView, FacingMode, CameraStatus, Conversation, TabelaRankingApoiadores, DiamondPackage, RouletteSettings } from '../types';
+import type { User, Stream, PkBattle, ChatMessage, LiveDetails, PkInvitation, SoundEffectName, MuteStatusListener, UserKickedListener, SoundEffectListener, PublicProfile, PkBattleState, ConvitePK, IncomingPrivateLiveInvite, UserBlockedListener, UserUnblockedListener, Viewer, PkBattleStreamer, AppView, FacingMode, CameraStatus, Conversation, TabelaRankingApoiadores, DiamondPackage, RouletteSettings, RaffleState, RaffleParticipant } from '../types';
 import * as liveStreamService from '../services/liveStreamService';
 import * as authService from '../services/authService';
 import * as soundService from '../services/soundService';
@@ -40,6 +40,11 @@ import RouletteWidget from './RouletteWidget';
 import RouletteSetupModal from './RouletteSetupModal';
 import QuickChatModal from './QuickChatModal';
 import PrivateChatListModal from './PrivateChatListModal';
+import PrizeWheelWidget from './PrizeWheelWidget';
+import PrizeWheelModal from './PrizeWheelModal';
+import RaffleSetupModal from './RaffleSetupModal';
+import RaffleWidget from './RaffleWidget';
+import RaffleWinnerModal from './RaffleWinnerModal';
 
 
 // Icon Imports
@@ -191,8 +196,9 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
     const [isUploading, setIsUploading] = useState(false);
     const [triggeredGift, setTriggeredGift] = useState<ChatMessage | null>(null);
     const [rouletteWin, setRouletteWin] = useState<ChatMessage | null>(null);
-    // FIX: Add state for roulette settings to fix multiple 'cannot find name' errors.
     const [rouletteSettings, setRouletteSettings] = useState<RouletteSettings | null>(null);
+    const [raffleState, setRaffleState] = useState<RaffleState | null>(null);
+    const [isJoiningRaffle, setIsJoiningRaffle] = useState(false);
     
     // Modal states
     const [isGiftPanelOpen, setIsGiftPanelOpen] = useState(false);
@@ -216,6 +222,8 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
     const [isRouletteOpen, setIsRouletteOpen] = useState(false);
     const [isQuickChatModalOpen, setIsQuickChatModalOpen] = useState(false);
     const [isPrivateChatListOpen, setIsPrivateChatListOpen] = useState(false);
+    const [isPrizeWheelOpen, setIsPrizeWheelOpen] = useState(false);
+    const [isRaffleSetupOpen, setIsRaffleSetupOpen] = useState(false);
     
     // State for PK invitations sent by the current user
     const [invitation, setInvitation] = useState<ConvitePK | null>(null);
@@ -228,7 +236,6 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
     const heartsRef = useRef<FloatingHeartsRef>(null);
 
     // --- NEW LOGIC FOR STREAM IDs ---
-    // primaryStreamId is the main context for viewers (e.g., which chat to show). In PK, it defaults to streamer1.
     const primaryStreamId = useMemo(() => {
         if (!isPkBattle) {
             return (initialStreamOrBattle as Stream).id;
@@ -236,7 +243,6 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
         return (initialStreamOrBattle as PkBattle).streamer1.streamId;
     }, [initialStreamOrBattle, isPkBattle]);
 
-    // hostStreamId is the stream ID of the current user if they are a host. This is crucial for host actions.
     const hostStreamId = useMemo(() => {
         if (!isCurrentUserHost) return null;
         if (!isPkBattle) return (initialStreamOrBattle as Stream).id;
@@ -359,6 +365,7 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
                 setChatMessages(messages);
                 setHeaderViewers({ [primaryStreamId]: viewersData.slice(0, 3) });
                 setRouletteSettings(rouletteData);
+                setRaffleState(details1.raffle_state || null);
 
 
                 if (isPkBattle && streamer2Id && streamId2) {
@@ -395,7 +402,10 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
         
         const liveUpdateListener = (updatedLiveId: number) => {
             if (updatedLiveId === primaryStreamId) {
-                liveStreamService.getLiveStreamDetails(primaryStreamId).then(setLiveDetails);
+                liveStreamService.getLiveStreamDetails(primaryStreamId).then(details => {
+                    setLiveDetails(details);
+                    setRaffleState(details.raffle_state || null);
+                });
             }
             if (streamId2 && updatedLiveId === streamId2) {
                 liveStreamService.getLiveStreamDetails(streamId2).then(setLiveDetails2);
@@ -530,6 +540,36 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
             alert("Falha ao atualizar as configurações de privacidade.");
         }
     };
+
+    const handleStartRaffle = async (settings: { prize: string; winnersCount: number; durationMinutes: number }) => {
+        if (!hostStreamId) return;
+        try {
+            const newRaffleState = await liveStreamService.startRaffle(hostStreamId, settings);
+            setRaffleState(newRaffleState);
+            setIsRaffleSetupOpen(false);
+        } catch (error) {
+            alert('Falha ao iniciar o sorteio.');
+            console.error(error);
+        }
+    };
+
+    const handleJoinRaffle = async () => {
+        setIsJoiningRaffle(true);
+        try {
+            await liveStreamService.joinRaffle(primaryStreamId, user.id);
+            // The liveUpdate listener will refresh the raffle state with the new participant
+        } catch (error) {
+            alert('Falha ao participar do sorteio.');
+            console.error(error);
+        } finally {
+            setIsJoiningRaffle(false);
+        }
+    };
+
+    const isRaffleActive = raffleState?.isActive === true;
+    const raffleWinners = (raffleState?.isActive === false && raffleState.winners && raffleState.winners.length > 0) ? raffleState.winners : null;
+    const isRaffleParticipant = raffleState?.participants.includes(user.id) ?? false;
+
 
     if (isPkBattle && activePkBattle) {
         const s1 = (initialStreamOrBattle as PkBattle).streamer1;
@@ -696,6 +736,14 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
                             setIsArcoraToolModalOpen(false);
                             setIsRouletteOpen(true);
                         }}
+                        onOpenPrizeWheel={() => {
+                            setIsArcoraToolModalOpen(false);
+                            setIsPrizeWheelOpen(true);
+                        }}
+                        onOpenRaffleSetup={() => {
+                            setIsArcoraToolModalOpen(false);
+                            setIsRaffleSetupOpen(true);
+                        }}
                     />
                 )}
                  {isPkInviteModalOpen && (
@@ -808,6 +856,8 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
              <FloatingHearts ref={heartsRef} />
              <GiftDisplayAnimation triggeredGift={triggeredGift} />
              {rouletteSettings?.isActive && <RouletteWidget user={user} liveId={primaryStreamId} initialSettings={rouletteSettings} onUpdateUser={onUpdateUser} onRequirePurchase={() => setIsPurchaseModalOpen(true)} />}
+             {!isCurrentUserHost && <PrizeWheelWidget onClick={() => setIsPrizeWheelOpen(true)} />}
+             {isRaffleActive && raffleState && <RaffleWidget raffleState={raffleState} onJoin={handleJoinRaffle} isParticipant={isRaffleParticipant} isJoining={isJoiningRaffle} />}
         </div>
 
         {isGiftPanelOpen && (
@@ -862,6 +912,26 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
                     setIsArcoraToolModalOpen(false);
                     setIsRouletteOpen(true);
                 }}
+                onOpenPrizeWheel={() => {
+                    setIsArcoraToolModalOpen(false);
+                    setIsPrizeWheelOpen(true);
+                }}
+                onOpenRaffleSetup={() => {
+                    setIsArcoraToolModalOpen(false);
+                    setIsRaffleSetupOpen(true);
+                }}
+            />
+        )}
+        {isPrizeWheelOpen && (
+            <PrizeWheelModal 
+                user={user}
+                onUpdateUser={onUpdateUser}
+                onClose={() => setIsPrizeWheelOpen(false)}
+                onRechargeClick={() => {
+                    setIsPrizeWheelOpen(false);
+                    setIsPurchaseModalOpen(true);
+                }}
+                isHost={isCurrentUserHost}
             />
         )}
         {isSetPrivacyModalOpen && hostStreamId && (
@@ -882,6 +952,20 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
                     setRouletteSettings(newSettings);
                     setIsRouletteOpen(false);
                 }}
+            />
+        )}
+        {isRaffleSetupOpen && isCurrentUserHost && hostStreamId && (
+          <RaffleSetupModal
+            isOpen={isRaffleSetupOpen}
+            onClose={() => setIsRaffleSetupOpen(false)}
+            onStartRaffle={handleStartRaffle}
+          />
+        )}
+        {raffleWinners && raffleState && (
+            <RaffleWinnerModal
+                winners={raffleWinners}
+                prize={raffleState.prize}
+                onClose={() => setRaffleState(null)}
             />
         )}
         {isMuteUserModalOpen && hostStreamId && (

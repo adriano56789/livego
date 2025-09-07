@@ -1,5 +1,6 @@
 
 import React, { useState, useCallback, useEffect, useRef } from 'react';
+import './services/websocketClient'; // Importar para inicializar o WebSocket
 import LoginScreen from './components/LoginScreen';
 import UploadPhotoScreen from './components/UploadPhotoScreen';
 import EditProfileScreen from './components/EditProfileScreen';

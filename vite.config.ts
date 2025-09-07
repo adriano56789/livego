@@ -12,6 +12,16 @@ export default defineConfig(({ mode }) => {
         alias: {
           '@': path.resolve(__dirname, '.'),
         }
+      },
+      server: {
+        host: '0.0.0.0',
+        port: 5173,
+        cors: true,
+        allowedHosts: [
+          '5173-iutlks2qb2rjvz6y0nuke-501e7ed6.manusvm.computer',
+          'localhost',
+          '127.0.0.1'
+        ]
       }
     };
 });

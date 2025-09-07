@@ -1,36 +1,52 @@
-import { handleApiRequest } from './api';
 import { apiLogger } from './apiLogger';
 
+// Configuração da URL base da API
+const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+  ? 'http://localhost:3000' 
+  : 'https://3000-iutlks2qb2rjvz6y0nuke-501e7ed6.manusvm.computer';
+
 /**
- * A generic API client function that calls the in-browser mock API directly.
- * It automatically logs every request and response to the ApiViewer via the apiLogger.
- * @param path The API endpoint path (e.g., '/api/users/1').
- * @param options The standard RequestInit options object (method, body, etc.).
- * @returns A promise that resolves with the response data.
+ * Cliente da API que faz chamadas reais para o backend Express.js.
+ * Registra automaticamente todas as requisições e respostas no ApiViewer via apiLogger.
+ * @param path O caminho do endpoint da API (ex: '/api/users/1').
+ * @param options O objeto RequestInit padrão (method, body, etc.).
+ * @returns Uma promise que resolve com os dados da resposta.
  */
 export const apiClient = async <T>(path: string, options?: RequestInit): Promise<T> => {
     const method = options?.method || 'GET';
-    const body = options?.body ? JSON.parse(options.body as string) : null;
-    // Extract query params from path for the mock handler
-    const url = new URL(path, 'http://localhost');
-    const query = url.searchParams;
-    const cleanPath = url.pathname;
+    const url = `${API_BASE_URL}${path}`;
     
     const requestTitle = `${method} ${path}`;
 
     try {
-        // Direct call to the in-memory API handler
-        const responseData = await handleApiRequest(method, cleanPath, body, query);
+        // Configurar headers padrão
+        const headers = {
+            'Content-Type': 'application/json',
+            ...options?.headers
+        };
 
-        apiLogger.log(requestTitle, cleanPath, {
-            request: { method, path: cleanPath, body },
+        // Fazer a requisição real para o backend
+        const response = await fetch(url, {
+            ...options,
+            method,
+            headers
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const responseData = await response.json();
+
+        apiLogger.log(requestTitle, path, {
+            request: { method, path, body: options?.body ? JSON.parse(options.body as string) : null },
             response: responseData,
         });
         
         return responseData;
     } catch (error) {
-        apiLogger.log(requestTitle, cleanPath, {
-            request: { method, path: cleanPath, body },
+        apiLogger.log(requestTitle, path, {
+            request: { method, path, body: options?.body ? JSON.parse(options.body as string) : null },
             error: error instanceof Error ? error.message : String(error),
         });
         

@@ -20,30 +20,6 @@ services:
       timeout: 5s
       retries: 5
 
-  # SRS (Simple RTMP Server)
-  srs:
-    image: ossrs/srs:5
-    container_name: srs
-    ports:
-      - "1935:1935"  # RTMP
-      - "1985:1985"  # HTTP API
-      - "8080:8080"  # HLS/HTTP-FLV/WebRTC
-      - "8000:8000/udp"  # WebRTC
-    volumes:
-      - ./srs.conf:/usr/local/srs/conf/srs.conf
-    command: [
-      "/usr/local/srs/objs/srs",
-      "-c", "/usr/local/srs/conf/srs.conf"
-    ]
-    restart: always
-    networks:
-      - livego-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:1985/api/v1/summaries"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
   # LiveKit
   livekit:
     image: livekit/livekit-server:latest
@@ -52,15 +28,13 @@ services:
       - "7880:7880"  # WebSocket/HTTP
       - "7881:7881"  # RTC TCP
       - "3478:3478/udp"  # STUN
-      - "50000-60000:50000-60000/udp"  # RTC UDP range
+      - "50000-50100:50000-50100/udp"  # RTC UDP range
     environment:
       - LIVEKIT_CONFIG_FILE=/livekit.yaml
     volumes:
       - ./livekit.yaml:/livekit.yaml
     depends_on:
       mongodb:
-        condition: service_healthy
-      srs:
         condition: service_healthy
     restart: always
     networks:
@@ -85,12 +59,8 @@ services:
       - LIVEKIT_API_KEY=devkey
       - LIVEKIT_API_SECRET=secret
       - LIVEKIT_WS_URL=ws://livekit:7880
-      - SRS_API_URL=http://srs:1985/api/v1
-      - SRS_HTTP_URL=http://srs:8080
     depends_on:
       mongodb:
-        condition: service_healthy
-      srs:
         condition: service_healthy
       livekit:
         condition: service_healthy

@@ -1,0 +1,62 @@
+services:
+  # MongoDB
+  mongodb:
+    image: mongo:latest
+    container_name: mongodb
+    ports:
+      - "27017:27017"
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=admin123
+      - MONGO_INITDB_DATABASE=livego
+    volumes:
+      - mongodb_data:/data/db
+    restart: always
+    networks:
+      - livego-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend API
+  api:
+    build:
+      context: ./api-server
+      dockerfile: Dockerfile
+    container_name: livego-api
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - MONGO_URI=mongodb://admin:admin123@mongodb:27017/livego?authSource=admin
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    restart: always
+    volumes:
+      - ./api-server:/app
+      - /app/node_modules
+    networks:
+      - livego-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      interval: 15s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+networks:
+  livego-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.25.0.0/16
+          gateway: 172.25.0.1
+    driver_opts:
+      com.docker.network.bridge.name: livego-bridge
+      com.docker.network.driver.mtu: 1500
+
+volumes:
+  mongodb_data:

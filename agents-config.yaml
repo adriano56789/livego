@@ -1,0 +1,78 @@
+# Configuração para Agentes LiveKit
+# Este arquivo configura agentes para processamento em tempo real
+
+# Configuração da aplicação
+app:
+  name: "livego-agents"
+  version: "1.0.0"
+  
+# Configuração dos agentes
+agents:
+  # Agente de processamento de áudio
+  audio_processor:
+    enabled: true
+    instances: 2
+    resources:
+      memory: "512Mi"
+      cpu: "500m"
+    config:
+      sample_rate: 48000
+      channels: 2
+      buffer_size: 1024
+      
+  # Agente de processamento de vídeo
+  video_processor:
+    enabled: true
+    instances: 1
+    resources:
+      memory: "1Gi"
+      cpu: "1000m"
+    config:
+      resolution: "720p"
+      fps: 30
+      bitrate: 2000000
+      
+  # Agente de transcrição
+  transcription:
+    enabled: true
+    instances: 1
+    resources:
+      memory: "1Gi"
+      cpu: "500m"
+    config:
+      language: "pt-BR"
+      model: "whisper-small"
+      
+  # Agente de moderação de conteúdo
+  content_moderation:
+    enabled: true
+    instances: 1
+    resources:
+      memory: "512Mi"
+      cpu: "300m"
+    config:
+      profanity_filter: true
+      image_analysis: true
+      text_analysis: true
+
+# Configuração do LiveKit
+livekit:
+  url: "ws://livekit:7880"
+  api_key: "devkey"
+  api_secret: "secret"
+  
+# Configuração de logging
+logging:
+  level: "info"
+  format: "json"
+  
+# Configuração de saúde
+health:
+  port: 8080
+  path: "/health"
+  
+# Configuração de métricas
+metrics:
+  enabled: true
+  port: 9090
+  path: "/metrics"

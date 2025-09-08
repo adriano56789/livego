@@ -1,40 +1,94 @@
 const { MongoClient } = require('mongodb');
+require('dotenv').config();
 
-const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/livego';
+// Configuração mais robusta da URI do MongoDB
+// Para desenvolvimento local, usa localhost; para Docker, usa o nome do serviço
+const isDockerEnv = process.env.DOCKER_ENV === 'true';
+const mongoHost = isDockerEnv ? 'mongodb' : 'localhost';
+const MONGO_URI = process.env.MONGO_URI || `mongodb://admin:admin123@${mongoHost}:27017/livego?authSource=admin`;
+const DB_NAME = process.env.DB_NAME || "livego";
+
+// Log da configuração para debug
+console.log('🔧 Configuração MongoDB:');
+console.log(`   URI: ${MONGO_URI.replace(/\/\/.*@/, '//*****@')}`);
+console.log(`   Database: ${DB_NAME}`);
 
 let db = null;
 let client = null;
 
 async function connectToDatabase() {
   if (db) {
+    console.log('📦 Reutilizando conexão existente do MongoDB');
     return db;
   }
 
   try {
-    client = new MongoClient(MONGO_URI);
+    console.log('🔄 Iniciando conexão com MongoDB...');
+    
+    client = new MongoClient(MONGO_URI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+      connectTimeoutMS: 10000,
+      serverSelectionTimeoutMS: 5000,
+    });
+
     await client.connect();
-    db = client.db();
-    console.log('Conectado ao MongoDB com sucesso!');
+    
+    // Garantir que estamos usando o banco correto
+    db = client.db(DB_NAME);
+    
+    // Testar a conexão fazendo um ping
+    await db.admin().ping();
+    
+    console.log(`✅ Conectado ao MongoDB com sucesso!`);
+    console.log(`🗄️  Database: ${DB_NAME}`);
+    console.log(`🏠 Host: ${MONGO_URI.split('@')[1]?.split('/')[0] || 'desconhecido'}`);
     
     // Inicializar dados se necessário
     await initializeData();
     
     return db;
   } catch (error) {
-    console.error('Erro ao conectar ao MongoDB:', error);
+    console.error('❌ Erro ao conectar ao MongoDB:');
+    console.error(`   Mensagem: ${error.message}`);
+    console.error(`   Código: ${error.code || 'N/A'}`);
+    
+    // Sugestões baseadas no tipo de erro
+    if (error.message.includes('ECONNREFUSED')) {
+      console.error('💡 Sugestão: Verifique se o MongoDB está rodando');
+      console.error('   Docker: docker ps | grep mongodb');
+      console.error('   Local: sudo systemctl status mongod');
+    } else if (error.message.includes('Authentication')) {
+      console.error('💡 Sugestão: Verifique as credenciais (admin:admin123)');
+      console.error('   Teste: docker exec -it mongodb mongosh -u admin -p admin123 --authenticationDatabase admin');
+    } else if (error.message.includes('Server selection')) {
+      console.error('💡 Sugestão: Verifique a URI de conexão');
+      console.error(`   URI atual: ${MONGO_URI.replace(/\/\/.*@/, '//*****@')}`);
+    }
+    
     throw error;
   }
 }
 
 async function initializeData() {
   try {
+    console.log('🔍 Verificando dados iniciais do banco...');
+    
     // Verificar se já existem dados
     const usersCount = await db.collection('users').countDocuments();
+    const streamsCount = await db.collection('streams').countDocuments();
+    const giftsCount = await db.collection('gifts').countDocuments();
+    
+    console.log(`📄 Estatísticas atuais:`);
+    console.log(`   Usuários: ${usersCount}`);
+    console.log(`   Streams: ${streamsCount}`);
+    console.log(`   Presentes: ${giftsCount}`);
     
     if (usersCount === 0) {
-      console.log('Inicializando dados do banco...');
+      console.log('🏠 Inicializando dados do banco...');
       
       // Inserir usuários iniciais
+      console.log('👥 Criando usuários iniciais...');
       await db.collection('users').insertMany([
         {
           id: 10755083,
@@ -109,8 +163,10 @@ async function initializeData() {
           }
         }
       ]);
+      console.log('✅ Usuários criados com sucesso!');
 
       // Inserir streams iniciais
+      console.log('📺 Criando streams iniciais...');
       await db.collection('streams').insertMany([
         {
           id: 'stream_001',
@@ -134,8 +190,10 @@ async function initializeData() {
           updated_at: new Date()
         }
       ]);
+      console.log('✅ Streams criadas com sucesso!');
 
       // Inserir presentes
+      console.log('🎁 Criando presentes iniciais...');
       await db.collection('gifts').insertMany([
         {
           id: 'gift_001',
@@ -152,19 +210,25 @@ async function initializeData() {
           animation_url: 'https://example.com/heart_animation.json'
         }
       ]);
+      console.log('✅ Presentes criados com sucesso!');
 
-      console.log('Dados iniciais inseridos com sucesso!');
+      console.log('🎉 Dados iniciais inseridos com sucesso!');
+    } else {
+      console.log('📦 Dados já existem, pulando inicialização');
     }
   } catch (error) {
-    console.error('Erro ao inicializar dados:', error);
+    console.error('❌ Erro ao inicializar dados:', error.message);
+    console.error('💡 Sugestão: Verifique se o banco livego está acessível');
   }
 }
 
 async function closeConnection() {
   if (client) {
+    console.log('🔌 Fechando conexão com MongoDB...');
     await client.close();
     db = null;
     client = null;
+    console.log('✅ Conexão fechada com sucesso!');
   }
 }
 

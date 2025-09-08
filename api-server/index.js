@@ -58,7 +58,39 @@ function emitUpdate(event, data, streamId = null) {
 
 // Rotas da API
 
-// Rota de health check
+// Version endpoint - Retorna informações de versão no formato VersionInfo
+const APP_VERSION = '1.0.0';
+
+app.get('/api/version', (req, res) => {
+  res.json({
+    minVersion: '1.0.0',
+    latestVersion: APP_VERSION,
+    updateUrl: 'https://play.google.com/store/apps/details?id=com.livego.app',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Google Auth endpoint (placeholder - implement proper OAuth2 flow)
+app.post('/api/auth/google', async (req, res) => {
+  try {
+    // This is a placeholder - implement proper Google OAuth2 flow
+    // You'll need to validate the token and create/return a JWT
+    res.status(200).json({
+      token: 'dummy-jwt-token',
+      user: {
+        id: 'user-id',
+        name: 'Test User',
+        email: 'test@example.com',
+        avatar: 'https://i.pravatar.cc/150?img=1'
+      }
+    });
+  } catch (error) {
+    console.error('Google auth error:', error);
+    res.status(500).json({ error: 'Authentication failed' });
+  }
+});
+
+// Health check endpoint
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });

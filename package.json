@@ -10,6 +10,9 @@
   },
   "dependencies": {
     "@lottiefiles/react-lottie-player": "3.5.3",
+    "livekit-client": "^2.15.6",
+    "livekit-server-sdk": "^2.13.3",
+    "mongodb": "^6.19.0",
     "react": "18.2.0",
     "react-dom": "18.2.0",
     "socket.io-client": "^4.8.1"

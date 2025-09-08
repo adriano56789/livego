@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  srs:
+    image: ossrs/srs:5.0.193
+    container_name: srs
+    ports:
+      - "1935:1935"  # RTMP
+      - "1985:1985"  # HTTP API
+      - "8080:8080"  # HLS/HTTP-FLV/WebRTC
+      - "8000:8000/udp"  # WebRTC
+    volumes:
+      - ./srs.conf:/usr/local/srs/conf/srs.conf
+    command: [
+      "/usr/local/srs/objs/srs",
+      "-c", "/usr/local/srs/conf/srs.conf"
+    ]
+    restart: always

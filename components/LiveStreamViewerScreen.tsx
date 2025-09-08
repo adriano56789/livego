@@ -3,6 +3,9 @@ import type { User, Stream, PkBattle, ChatMessage, LiveDetails, PkInvitation, So
 import * as liveStreamService from '../services/liveStreamService';
 import * as authService from '../services/authService';
 import * as soundService from '../services/soundService';
+// Importar serviços do LiveKit
+import { useLiveKit } from '../hooks/useLiveKit';
+import { liveKitService } from '../services/liveKitService';
 
 // Modal Imports
 import OnlineUsersModal from './OnlineUsersModal';
@@ -50,23 +53,25 @@ import RaffleWinnerModal from './RaffleWinnerModal';
 // Icon Imports
 import SwordsIcon from './icons/SwordsIcon';
 import HeartSolidIcon from './icons/HeartSolidIcon';
-import GiftBoxIcon from './icons/GiftBoxIcon';
-import MoreToolsIcon from './icons/MoreToolsIcon';
-import UserPlusIcon from './icons/UserPlusIcon';
-import CameraOffIcon from './icons/CameraOffIcon';
-import PlusIcon from './icons/PlusIcon';
-import CheckIcon from './icons/CheckIcon';
-import StarIcon from './icons/StarIcon';
-import LightningIcon from './icons/LightningIcon';
-import CrossIcon from './icons/CrossIcon';
+import {
+  GiftBoxIcon,
+  MoreToolsIcon,
+  UserPlusIcon,
+  CameraOffIcon,
+  PlusIcon,
+  CheckIcon,
+  StarIcon,
+  LightningIcon,
+  CrossIcon,
+  CoinGIcon,
+  HeartPinkIcon,
+  LinkedCirclesIcon,
+  BoxingGlovesIcon,
+  MessageIcon,
+  DiamondIcon,
+  RouletteIcon
+} from './icons';
 import AudioVisualizer from './AudioVisualizer';
-import CoinGIcon from './icons/CoinGIcon';
-import HeartPinkIcon from './icons/HeartPinkIcon';
-import LinkedCirclesIcon from './icons/LinkedCirclesIcon';
-import BoxingGlovesIcon from './icons/BoxingGlovesIcon';
-import MessageIcon from './icons/MessageIcon';
-import DiamondIcon from './icons/DiamondIcon';
-import RouletteIcon from './icons/RouletteIcon';
 
 
 interface LiveStreamViewerScreenProps {
@@ -100,8 +105,26 @@ const LiveInfoModal: React.FC<{ title: string; meta: string; }> = ({ title, meta
     );
 };
 
-const CameraStatusOverlay: React.FC<{ status: CameraStatus }> = ({ status }) => {
-    if (status === 'success' || status === 'idle') return null;
+const CameraStatusOverlay: React.FC<{ status: CameraStatus; liveKitConnected?: boolean; liveKitError?: string }> = ({ status, liveKitConnected, liveKitError }) => {
+    if (status === 'success' || status === 'idle') {
+        // Mostrar status do LiveKit se a câmera estiver funcionando
+        if (status === 'success' && (liveKitError || !liveKitConnected)) {
+            return (
+                <div className="absolute top-4 left-4 bg-black/70 backdrop-blur-sm rounded-lg p-3 text-white max-w-xs">
+                    <div className="flex items-center gap-2 mb-2">
+                        <div className={`w-2 h-2 rounded-full ${liveKitConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                        <span className="text-sm font-semibold">
+                            {liveKitConnected ? 'LiveKit Conectado' : 'LiveKit Desconectado'}
+                        </span>
+                    </div>
+                    {liveKitError && (
+                        <p className="text-red-400 text-xs">{liveKitError}</p>
+                    )}
+                </div>
+            );
+        }
+        return null;
+    }
 
     let message = '';
     switch (status) {
@@ -119,6 +142,9 @@ const CameraStatusOverlay: React.FC<{ status: CameraStatus }> = ({ status }) => 
             {status !== 'loading' && <CameraOffIcon className="w-16 h-16 mb-4 text-red-500" />}
             {status === 'loading' && <div className="w-12 h-12 border-4 border-gray-600 border-t-transparent rounded-full animate-spin mb-4"></div>}
             <p className="text-white font-semibold">{message}</p>
+            {liveKitError && (
+                <p className="text-red-400 text-sm mt-2">LiveKit: {liveKitError}</p>
+            )}
         </div>
     );
 };
@@ -181,6 +207,19 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
 }) => {
     const isPkBattle = 'streamer1' in initialStreamOrBattle;
     const pkBattleId = isPkBattle ? (initialStreamOrBattle as PkBattle).id : null;
+
+    // Hook do LiveKit para gerenciar WebRTC
+    const {
+        isConnected: isLiveKitConnected,
+        conectar: conectarLiveKit,
+        desconectar: desconectarLiveKit,
+        habilitarCamera,
+        desabilitarCamera,
+        participants: liveKitParticipants,
+        error: liveKitError,
+        isCameraEnabled: isLiveKitCameraEnabled,
+        isMicrophoneEnabled: isLiveKitMicEnabled
+    } = useLiveKit();
 
     const [activePkBattle, setActivePkBattle] = useState<PkBattleState | null>(null);
     const [finalPkBattleState, setFinalPkBattleState] = useState<PkBattleState | null>(null);
@@ -256,6 +295,8 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
 
     // Host camera/mic state
     const videoRef = useRef<HTMLVideoElement>(null);
+    const remoteVideoRef = useRef<HTMLVideoElement>(null); // Para vídeos remotos do LiveKit
+    const remoteVideoRef2 = useRef<HTMLVideoElement>(null); // Para PK battles
     const [mediaStream, setMediaStream] = useState<MediaStream | null>(null);
     const [cameraStatus, setCameraStatus] = useState<CameraStatus>(isCurrentUserHost ? 'loading' : 'idle');
     const [facingMode, setFacingMode] = useState<FacingMode>('user');
@@ -274,6 +315,31 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
         let isMounted = true;
         let stream: MediaStream | null = null;
         
+        // Função para conectar à sala LiveKit se for host
+        const iniciarLiveKit = async () => {
+            try {
+                console.log('🎥 Conectando como host ao LiveKit...');
+                const roomName = `stream-${primaryStreamId}`;
+                const participantName = user.name || `Host-${user.id}`;
+                
+                await conectarLiveKit(roomName, participantName);
+                console.log('✅ Conectado ao LiveKit como host!');
+                
+                // Habilitar câmera após conectar
+                setTimeout(async () => {
+                    try {
+                        await habilitarCamera();
+                        console.log('📹 Câmera habilitada no LiveKit');
+                    } catch (error) {
+                        console.error('❌ Erro ao habilitar câmera:', error);
+                    }
+                }, 1000);
+                
+            } catch (error) {
+                console.error('❌ Erro ao conectar LiveKit:', error);
+            }
+        };
+        
         const requestCamera = async () => {
             if (!window.isSecureContext) {
                 setCameraStatus('insecure');
@@ -289,12 +355,15 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
                 if (isMounted) {
                     setMediaStream(stream);
                     setCameraStatus('success');
+                    
+                    // Iniciar LiveKit após obter stream local
+                    iniciarLiveKit();
                 } else {
                     stream.getTracks().forEach(track => track.stop());
                 }
             } catch (err) {
                 if (isMounted) {
-                    console.error("Camera access error:", err);
+                    console.error("Erro de acesso à câmera:", err);
                     if (err instanceof DOMException) {
                         switch (err.name) {
                             case 'NotAllowedError':
@@ -329,8 +398,13 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
             const currentStream = stream || mediaStream;
             currentStream?.getTracks().forEach(track => track.stop());
             setMediaStream(null);
+            
+            // Desconectar do LiveKit ao desmontar
+            if (isLiveKitConnected) {
+                desconectarLiveKit();
+            }
         };
-      }, [isCurrentUserHost, facingMode]);
+      }, [isCurrentUserHost, facingMode, primaryStreamId, user.name, user.id, conectarLiveKit, habilitarCamera, isLiveKitConnected, desconectarLiveKit, mediaStream]);
 
       useEffect(() => {
         const videoElement = videoRef.current;
@@ -338,9 +412,83 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
             if (videoElement.srcObject !== mediaStream) {
                 videoElement.srcObject = mediaStream;
             }
-            videoElement.play().catch(e => console.error("Video play error:", e));
+            videoElement.play().catch(e => console.error("Erro no play do vídeo:", e));
         }
       }, [isCurrentUserHost, mediaStream]);
+
+      // Conectar espectadores ao LiveKit
+      useEffect(() => {
+        if (!isCurrentUserHost && !isLiveKitConnected) {
+            const conectarComoEspectador = async () => {
+                try {
+                    console.log('👥 Conectando como espectador ao LiveKit...');
+                    const roomName = `stream-${primaryStreamId}`;
+                    const participantName = user.name || `Viewer-${user.id}`;
+                    
+                    await conectarLiveKit(roomName, participantName);
+                    console.log('✅ Conectado ao LiveKit como espectador!');
+                    
+                } catch (error) {
+                    console.error('❌ Erro ao conectar como espectador:', error);
+                }
+            };
+            
+            // Delay para garantir que o host já iniciou a sala
+            setTimeout(conectarComoEspectador, 2000);
+        }
+        
+        return () => {
+            if (!isCurrentUserHost && isLiveKitConnected) {
+                desconectarLiveKit();
+            }
+        };
+      }, [isCurrentUserHost, isLiveKitConnected, primaryStreamId, user.name, user.id, conectarLiveKit, desconectarLiveKit]);
+
+      // Gerenciar tracks de vídeo do LiveKit
+      useEffect(() => {
+        const handleLiveKitTracks = (event: CustomEvent) => {
+            const { track, participant } = event.detail;
+            
+            if (track.kind === 'video') {
+                console.log(`🎥 Nova track de vídeo recebida de: ${participant.name}`);
+                
+                // Para PK battles, usar referências separadas
+                if (isPkBattle) {
+                    if (participant.identity.includes('streamer1') || liveKitParticipants.indexOf(participant) === 0) {
+                        if (remoteVideoRef.current && track.track) {
+                            track.track.attach(remoteVideoRef.current);
+                        }
+                    } else {
+                        if (remoteVideoRef2.current && track.track) {
+                            track.track.attach(remoteVideoRef2.current);
+                        }
+                    }
+                } else {
+                    // Stream único: usar primeira referência
+                    if (remoteVideoRef.current && track.track) {
+                        track.track.attach(remoteVideoRef.current);
+                    }
+                }
+            }
+        };
+        
+        const handleLiveKitTrackUnsubscribed = (event: CustomEvent) => {
+            const { track } = event.detail;
+            if (track.kind === 'video') {
+                console.log('📄 Track de vídeo removida');
+                // As tracks são automaticamente removidas quando desanexadas
+            }
+        };
+        
+        // Adicionar listeners dos eventos LiveKit
+        window.addEventListener('livekit-track-subscribed', handleLiveKitTracks as EventListener);
+        window.addEventListener('livekit-track-unsubscribed', handleLiveKitTrackUnsubscribed as EventListener);
+        
+        return () => {
+            window.removeEventListener('livekit-track-subscribed', handleLiveKitTracks as EventListener);
+            window.removeEventListener('livekit-track-unsubscribed', handleLiveKitTrackUnsubscribed as EventListener);
+        };
+      }, [isPkBattle, liveKitParticipants]);
 
     useEffect(() => {
         // Private Stream Access Control
@@ -580,13 +728,44 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
                 
                 {/* Top part: Video streams */}
                 <div className="h-[65%] relative flex">
-                    {/* Streamer 1 Video Placeholder */}
+                    {/* Streamer 1 Video - LiveKit Integration */}
                     <div className="relative w-1/2 h-full bg-gray-900 flex items-center justify-center">
-                        <p className="text-gray-500">Stream de {s1.name}</p>
+                        {isLiveKitConnected && liveKitParticipants.length > 0 ? (
+                            <video
+                                ref={remoteVideoRef}
+                                autoPlay
+                                playsInline
+                                className="w-full h-full object-cover"
+                            />
+                        ) : (
+                            <div className="text-center">
+                                <p className="text-gray-500">Stream de {s1.name}</p>
+                                {liveKitError && (
+                                    <p className="text-red-400 text-sm mt-2">Erro LiveKit: {liveKitError}</p>
+                                )}
+                                {!isLiveKitConnected && (
+                                    <p className="text-yellow-400 text-sm mt-2">Conectando ao LiveKit...</p>
+                                )}
+                            </div>
+                        )}
                     </div>
-                    {/* Streamer 2 Video Placeholder */}
+                    {/* Streamer 2 Video - LiveKit Integration */}
                     <div className="relative w-1/2 h-full bg-gray-800 flex items-center justify-center">
-                        <p className="text-gray-500">Stream de {s2.name}</p>
+                        {isLiveKitConnected && liveKitParticipants.length > 1 ? (
+                            <video
+                                ref={remoteVideoRef2}
+                                autoPlay
+                                playsInline
+                                className="w-full h-full object-cover"
+                            />
+                        ) : (
+                            <div className="text-center">
+                                <p className="text-gray-500">Stream de {s2.name}</p>
+                                {!isLiveKitConnected && (
+                                    <p className="text-yellow-400 text-sm mt-2">Aguardando conexão...</p>
+                                )}
+                            </div>
+                        )}
                     </div>
 
                     {/* Overlays for the video part */}
@@ -780,17 +959,64 @@ const LiveStreamViewerScreen: React.FC<LiveStreamViewerScreenProps> = ({
     return (
       <>
         <div className="h-full w-full bg-black text-white flex flex-col font-sans relative">
-            {/* Video Player in the background */}
+            {/* Video Player com LiveKit */}
             <div className="absolute inset-0 z-0">
                 {isCurrentUserHost ? (
                     <>
                         <video ref={videoRef} autoPlay playsInline muted className={`w-full h-full object-cover ${facingMode === 'user' ? 'transform scale-x-[-1]' : ''}`} />
-                        <CameraStatusOverlay status={cameraStatus} />
+                        <CameraStatusOverlay 
+                            status={cameraStatus} 
+                            liveKitConnected={isLiveKitConnected}
+                            liveKitError={liveKitError || undefined}
+                        />
+                        {/* Overlay com informações do LiveKit para host */}
+                        {isLiveKitConnected && (
+                            <div className="absolute top-4 right-4 bg-black/50 backdrop-blur-sm rounded-lg p-2 text-xs text-white">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                                    <span>LiveKit Ativo ({liveKitParticipants.length + 1} participantes)</span>
+                                </div>
+                                {isLiveKitCameraEnabled && (
+                                    <div className="text-green-400 text-xs mt-1">✓ Câmera transmitindo</div>
+                                )}
+                            </div>
+                        )}
                     </>
                 ) : (
-                    <div className="w-full h-full bg-gray-900 flex items-center justify-center">
-                        <p className="text-gray-500">Live Stream Video</p>
-                    </div>
+                    // Espectador: mostrar vídeo remoto do LiveKit
+                    <>
+                        {isLiveKitConnected && liveKitParticipants.length > 0 ? (
+                            <video
+                                ref={remoteVideoRef}
+                                autoPlay
+                                playsInline
+                                className="w-full h-full object-cover"
+                            />
+                        ) : (
+                            <div className="w-full h-full bg-gray-900 flex flex-col items-center justify-center">
+                                <div className="text-center">
+                                    <div className="w-16 h-16 border-4 border-gray-600 border-t-transparent rounded-full animate-spin mb-4"></div>
+                                    <p className="text-gray-500 text-lg mb-2">Conectando ao stream...</p>
+                                    {liveKitError && (
+                                        <p className="text-red-400 text-sm">Erro: {liveKitError}</p>
+                                    )}
+                                    {!isLiveKitConnected && (
+                                        <p className="text-yellow-400 text-sm">Aguardando LiveKit...</p>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+                        {/* Overlay com informações para espectadores */}
+                        {isLiveKitConnected && (
+                            <div className="absolute top-4 right-4 bg-black/50 backdrop-blur-sm rounded-lg p-2 text-xs text-white">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                                    <span>Assistindo ao vivo</span>
+                                </div>
+                                <div className="text-blue-400 text-xs mt-1">{liveKitParticipants.length + 1} espectadores</div>
+                            </div>
+                        )}
+                    </>
                 )}
             </div>
             

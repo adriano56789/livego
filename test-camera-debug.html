@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste de Câmera - LiveGo Debug</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #000;
+            color: #fff;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        video {
+            width: 100%;
+            max-width: 640px;
+            height: 480px;
+            background: #333;
+            border-radius: 8px;
+        }
+        button {
+            background: #34C759;
+            color: #000;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 10px;
+        }
+        button:disabled {
+            background: #666;
+            color: #999;
+            cursor: not-allowed;
+        }
+        .status {
+            background: #1c1c1e;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+        .error {
+            background: #ff3b30;
+            color: #fff;
+        }
+        .success {
+            background: #34c759;
+            color: #000;
+        }
+        .warning {
+            background: #ff9500;
+            color: #000;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎥 Teste de Câmera - LiveGo Debug</h1>
+        
+        <div class="status" id="status">
+            <strong>Status:</strong> Aguardando teste...
+        </div>
+        
+        <video id="videoElement" autoplay playsinline muted></video>
+        
+        <div>
+            <button id="startCamera">Iniciar Câmera</button>
+            <button id="stopCamera" disabled>Parar Câmera</button>
+            <button id="switchCamera" disabled>Alternar Câmera</button>
+        </div>
+        
+        <div class="status">
+            <h3>Informações do Sistema:</h3>
+            <div id="systemInfo"></div>
+        </div>
+        
+        <div class="status">
+            <h3>Log de Eventos:</h3>
+            <div id="eventLog"></div>
+        </div>
+    </div>
+
+    <script>
+        const video = document.getElementById('videoElement');
+        const startBtn = document.getElementById('startCamera');
+        const stopBtn = document.getElementById('stopCamera');
+        const switchBtn = document.getElementById('switchCamera');
+        const status = document.getElementById('status');
+        const systemInfo = document.getElementById('systemInfo');
+        const eventLog = document.getElementById('eventLog');
+        
+        let currentStream = null;
+        let currentFacingMode = 'user';
+        
+        // Função para log
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.innerHTML = `<strong>[${timestamp}]</strong> ${message}`;
+            
+            if (type === 'error') {
+                logEntry.style.color = '#ff3b30';
+            } else if (type === 'success') {
+                logEntry.style.color = '#34c759';
+            } else if (type === 'warning') {
+                logEntry.style.color = '#ff9500';
+            }
+            
+            eventLog.appendChild(logEntry);
+            eventLog.scrollTop = eventLog.scrollHeight;
+        }
+        
+        // Função para atualizar status
+        function updateStatus(message, type = 'info') {
+            status.innerHTML = `<strong>Status:</strong> ${message}`;
+            status.className = `status ${type}`;
+        }
+        
+        // Verificar informações do sistema
+        function checkSystemInfo() {
+            const info = [];
+            
+            info.push(`<strong>User Agent:</strong> ${navigator.userAgent}`);
+            info.push(`<strong>Protocolo:</strong> ${window.location.protocol}`);
+            info.push(`<strong>Host:</strong> ${window.location.host}`);
+            info.push(`<strong>HTTPS:</strong> ${window.location.protocol === 'https:' ? 'Sim' : 'Não'}`);
+            info.push(`<strong>Localhost:</strong> ${window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'Sim' : 'Não'}`);
+            info.push(`<strong>MediaDevices:</strong> ${navigator.mediaDevices ? 'Disponível' : 'Não disponível'}`);
+            info.push(`<strong>getUserMedia:</strong> ${navigator.mediaDevices?.getUserMedia ? 'Disponível' : 'Não disponível'}`);
+            
+            systemInfo.innerHTML = info.join('<br>');
+        }
+        
+        // Iniciar câmera
+        async function startCamera() {
+            try {
+                updateStatus('Iniciando câmera...', 'warning');
+                log('Solicitando acesso à câmera...');
+                
+                const constraints = {
+                    video: {
+                        facingMode: currentFacingMode,
+                        width: { ideal: 640 },
+                        height: { ideal: 480 }
+                    },
+                    audio: true
+                };
+                
+                log(`Constraints: ${JSON.stringify(constraints)}`);
+                
+                currentStream = await navigator.mediaDevices.getUserMedia(constraints);
+                
+                log(`Stream obtido: ${currentStream.id}`, 'success');
+                log(`Tracks de vídeo: ${currentStream.getVideoTracks().length}`);
+                log(`Tracks de áudio: ${currentStream.getAudioTracks().length}`);
+                
+                video.srcObject = currentStream;
+                
+                await video.play();
+                
+                updateStatus('Câmera ativa!', 'success');
+                log('Câmera iniciada com sucesso!', 'success');
+                
+                startBtn.disabled = true;
+                stopBtn.disabled = false;
+                switchBtn.disabled = false;
+                
+            } catch (error) {
+                updateStatus(`Erro: ${error.message}`, 'error');
+                log(`Erro ao iniciar câmera: ${error.name} - ${error.message}`, 'error');
+                
+                // Diagnóstico detalhado
+                if (error.name === 'NotAllowedError') {
+                    log('❌ Permissão negada pelo usuário', 'error');
+                } else if (error.name === 'NotFoundError') {
+                    log('❌ Nenhuma câmera encontrada', 'error');
+                } else if (error.name === 'NotReadableError') {
+                    log('❌ Câmera em uso por outro aplicativo', 'error');
+                } else if (error.name === 'OverconstrainedError') {
+                    log('❌ Constraints não suportadas', 'error');
+                } else if (error.name === 'SecurityError') {
+                    log('❌ Erro de segurança (HTTPS necessário?)', 'error');
+                }
+            }
+        }
+        
+        // Parar câmera
+        function stopCamera() {
+            if (currentStream) {
+                log('Parando câmera...');
+                
+                currentStream.getTracks().forEach(track => {
+                    track.stop();
+                    log(`Track parada: ${track.kind}`);
+                });
+                
+                video.srcObject = null;
+                currentStream = null;
+                
+                updateStatus('Câmera parada', 'info');
+                log('Câmera parada com sucesso', 'success');
+                
+                startBtn.disabled = false;
+                stopBtn.disabled = true;
+                switchBtn.disabled = true;
+            }
+        }
+        
+        // Alternar câmera
+        async function switchCamera() {
+            if (currentStream) {
+                log('Alternando câmera...');
+                
+                // Parar stream atual
+                currentStream.getTracks().forEach(track => track.stop());
+                
+                // Alternar facing mode
+                currentFacingMode = currentFacingMode === 'user' ? 'environment' : 'user';
+                log(`Novo facing mode: ${currentFacingMode}`);
+                
+                // Iniciar nova stream
+                await startCamera();
+            }
+        }
+        
+        // Event listeners
+        startBtn.addEventListener('click', startCamera);
+        stopBtn.addEventListener('click', stopCamera);
+        switchBtn.addEventListener('click', switchCamera);
+        
+        // Inicializar
+        checkSystemInfo();
+        log('Sistema de teste de câmera inicializado');
+        
+        // Teste automático se for localhost
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+            log('Ambiente localhost detectado - iniciando teste automático em 2 segundos...');
+            setTimeout(() => {
+                startCamera();
+            }, 2000);
+        }
+    </script>
+</body>
+</html>
+

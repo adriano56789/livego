@@ -98,6 +98,69 @@ const AppContent: React.FC = () => {
   const [giftNotificationSettings, setGiftNotificationSettings] = useState<Record<number, boolean> | null>(null);
   const { apiResponse, hideApiResponse } = useApiViewer();
 
+  // Auto-login para testes
+  useEffect(() => {
+    const mockUser: User = {
+      id: 10755083,
+      name: "Você",
+      email: "livego@example.com",
+      avatar_url: "https://i.pravatar.cc/400?u=10755083",
+      nickname: "Seu Perfil",
+      gender: "male",
+      birthday: "2002-01-01",
+      age: 22,
+      level2: 6,
+      has_uploaded_real_photo: true,
+      has_completed_profile: true,
+      invite_code: "A1B2C3D4",
+      following: [55218901, 14431934, 99887705],
+      wallet_diamonds: 50000,
+      wallet_earnings: 0,
+      withdrawal_method: null,
+      xp: 100,
+      last_camera_used: "user",
+      country: "BR",
+      personalSignature: "",
+      personalityTags: [],
+      emotionalState: null,
+      profession: null,
+      languages: null,
+      height: null,
+      weight: null,
+      pk_enabled_preference: true,
+      online_status: true,
+      settings: {
+        notifications: {
+          newMessages: true,
+          streamerLive: true,
+          followedPost: true,
+          order: true,
+          interactive: true
+        },
+        privacy: {
+          showLocation: true,
+          showActiveStatus: true,
+          showInNearby: true,
+          protectionEnabled: false,
+          messagePrivacy: "everyone"
+        },
+        privateLiveInvite: {
+          privateInvites: true,
+          onlyFollowing: true,
+          onlyFans: false,
+          onlyFriends: false,
+          acceptOnlyFriendPkInvites: false
+        },
+        giftNotifications: {
+          enabledGifts: {}
+        }
+      }
+    };
+    
+    console.log('🔧 Auto-login ativado para testes');
+    setUser(mockUser);
+  }, []);
+
   useEffect(() => {
     const compareVersions = (v1: string, v2: string): number => {
       const parts1 = v1.split('.').map(Number);

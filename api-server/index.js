@@ -16,7 +16,12 @@ const io = new Server(server, {
 const PORT = process.env.PORT || 3000;
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
+}));
 app.use(express.json());
 
 // Conectar ao banco de dados
@@ -57,6 +62,255 @@ function emitUpdate(event, data, streamId = null) {
 }
 
 // Rotas da API
+
+// ===== API DE BUSCA =====
+app.get('/api/users/search', async (req, res) => {
+  try {
+    const query = req.query.q || '';
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const skip = (page - 1) * limit;
+    
+    // Criar regex para busca case-insensitive
+    const searchRegex = new RegExp(query, 'i');
+    
+    // Buscar usuários que correspondam à query no nome, username ou ID
+    const users = await db.collection('users')
+      .find({
+        $or: [
+          { nome: { $regex: searchRegex } },
+          { username: { $regex: searchRegex } },
+          { id: isNaN(query) ? 0 : parseInt(query) }
+        ]
+      })
+      .skip(skip)
+      .limit(limit)
+      .toArray();
+
+    res.json({
+      success: true,
+      data: users.map(user => ({
+        id: user.id,
+        nome: user.nome,
+        username: user.username,
+        foto_perfil: user.foto_perfil,
+        nivel: user.nivel || 1,
+        online: user.online || false
+      })),
+      pagination: {
+        page,
+        limit,
+        total: users.length
+      }
+    });
+  } catch (error) {
+    console.error('Erro na busca de usuários:', error);
+    res.status(500).json({ success: false, message: 'Erro ao buscar usuários' });
+  }
+});
+
+// ===== API DE CONVERSAS =====
+app.get('/api/users/:userId/conversations', async (req, res) => {
+  try {
+    const userId = parseInt(req.params.userId);
+    
+    // Buscar conversas do usuário
+    const conversations = await db.collection('conversations')
+      .find({
+        participants: userId
+      })
+      .sort({ last_message_at: -1 })
+      .toArray();
+
+    // Adicionar informações dos participantes
+    const conversationsWithDetails = await Promise.all(
+      conversations.map(async (conv) => {
+        const otherParticipantId = conv.participants.find(id => id !== userId);
+        const otherUser = await db.collection('users').findOne({ id: otherParticipantId });
+        
+        return {
+          id: conv.id,
+          last_message: conv.last_message,
+          last_message_at: conv.last_message_at,
+          unread_count: conv.unread_count || 0,
+          participant: otherUser ? {
+            id: otherUser.id,
+            nome: otherUser.nome,
+            username: otherUser.username,
+            foto_perfil: otherUser.foto_perfil,
+            online: otherUser.online || false
+          } : null
+        };
+      })
+    );
+
+    res.json({
+      success: true,
+      data: conversationsWithDetails
+    });
+  } catch (error) {
+    console.error('Erro ao buscar conversas:', error);
+    res.status(500).json({ success: false, message: 'Erro ao buscar conversas' });
+  }
+});
+
+// ===== API DE CATEGORIAS DE LIVE =====
+app.get('/api/live/categories', async (req, res) => {
+  try {
+    // Categorias fixas para o aplicativo
+    const categories = [
+      { id: 'popular', nome: 'Popular', icone: '🔥' },
+      { id: 'seguindo', nome: 'Seguindo', icone: '👥', requiresAuth: true },
+      { id: 'perto', nome: 'Perto de você', icone: '📍', requiresLocation: true },
+      { id: 'privada', nome: 'Privada', icone: '🔒' },
+      { id: 'pk', nome: 'PK', icone: '🥊' },
+      { id: 'novo', nome: 'Novo', icone: '🆕' },
+      { id: 'musica', nome: 'Música', icone: '🎵' },
+      { id: 'danca', nome: 'Dança', icone: '💃' },
+      { id: 'festa', nome: 'Festa', icone: '🎉' },
+      { id: 'jogos', nome: 'Jogos', icone: '🎮' },
+      { id: 'esportes', nome: 'Esportes', icone: '⚽' },
+      { id: 'educacao', nome: 'Educação', icone: '📚' },
+      { id: 'culinaria', nome: 'Culinária', icone: '🍳' },
+      { id: 'beleza', nome: 'Beleza', icone: '💄' },
+      { id: 'moda', nome: 'Moda', icone: '👗' }
+    ];
+
+    res.json({
+      success: true,
+      data: categories
+    });
+  } catch (error) {
+    console.error('Erro ao buscar categorias:', error);
+    res.status(500).json({ success: false, message: 'Erro ao buscar categorias' });
+  }
+});
+
+// ===== API DE PACOTES DE DIAMANTES =====
+app.get('/api/diamonds/packages', async (req, res) => {
+  try {
+    // Pacotes de diamantes fixos
+    const packages = [
+      { id: 1, diamantes: 100, preco: 4.99, desconto: 0, moeda: 'BRL', mais_vendido: false },
+      { id: 2, diamantes: 310, preco: 14.99, desconto: 10, moeda: 'BRL', mais_vendido: true },
+      { id: 3, diamantes: 520, preco: 24.99, desconto: 15, moeda: 'BRL', mais_vendido: false },
+      { id: 4, diamantes: 1100, preco: 49.99, desconto: 20, moeda: 'BRL', mais_vendido: false },
+      { id: 5, diamantes: 2300, preco: 99.99, desconto: 25, moeda: 'BRL', mais_vendido: false },
+      { id: 6, diamantes: 4800, preco: 199.99, desconto: 30, moeda: 'BRL', mais_vendido: false }
+    ];
+
+    res.json({
+      success: true,
+      data: packages
+    });
+  } catch (error) {
+    console.error('Erro ao buscar pacotes de diamantes:', error);
+    res.status(500).json({ success: false, message: 'Erro ao buscar pacotes de diamantes' });
+  }
+});
+
+// ===== API DE PREFERÊNCIAS DE LIVE =====
+app.get('/api/users/:userId/live-preferences', async (req, res) => {
+  try {
+    const userId = parseInt(req.params.userId);
+    
+    // Buscar preferências do usuário
+    const user = await db.collection('users').findOne({ id: userId });
+    
+    // Preferências padrão
+    const defaultPreferences = {
+      qualidade: 'auto', // auto, 720p, 1080p
+      notificacoes: true,
+      mensagens_privadas: true,
+      comentarios_live: true,
+      idioma: 'pt-BR',
+      tema: 'claro', // claro, escuro, sistema
+      salvar_gravacoes: true,
+      idade_verificada: false,
+      privacidade: 'publico' // publico, seguidores, ninguem
+    };
+    
+    // Mesclar com preferências salvas, se existirem
+    const preferences = user?.preferences ? { ...defaultPreferences, ...user.preferences } : defaultPreferences;
+    
+    res.json({
+      success: true,
+      data: preferences
+    });
+  } catch (error) {
+    console.error('Erro ao buscar preferências de live:', error);
+    res.status(500).json({ success: false, message: 'Erro ao buscar preferências de live' });
+  }
+});
+
+// ===== API DE STATUS DE LIVE =====
+app.get('/api/users/:userId/live-status', async (req, res) => {
+  try {
+    const userId = parseInt(req.params.userId);
+    
+    // Verificar se o usuário está em uma live ativa
+    const live = await db.collection('lives').findOne({ 
+      user_id: userId,
+      status: 'live'
+    });
+    
+    if (live) {
+      res.json({
+        success: true,
+        is_live: true,
+        live_id: live.id,
+        started_at: live.started_at,
+        viewer_count: live.viewer_count || 0,
+        thumbnail: live.thumbnail || null
+      });
+    } else {
+      res.json({
+        success: true,
+        is_live: false
+      });
+    }
+  } catch (error) {
+    console.error('Erro ao verificar status de live:', error);
+    res.status(500).json({ success: false, message: 'Erro ao verificar status de live' });
+  }
+});
+
+// ===== API DE PAÍSES =====
+app.get('/api/countries', async (req, res) => {
+  try {
+    // Lista de países com código e nome em português
+    const countries = [
+      { code: 'BR', name: 'Brasil' },
+      { code: 'PT', name: 'Portugal' },
+      { code: 'US', name: 'Estados Unidos' },
+      { code: 'ES', name: 'Espanha' },
+      { code: 'FR', name: 'França' },
+      { code: 'DE', name: 'Alemanha' },
+      { code: 'IT', name: 'Itália' },
+      { code: 'GB', name: 'Reino Unido' },
+      { code: 'JP', name: 'Japão' },
+      { code: 'CN', name: 'China' },
+      { code: 'IN', name: 'Índia' },
+      { code: 'RU', name: 'Rússia' },
+      { code: 'CA', name: 'Canadá' },
+      { code: 'AU', name: 'Austrália' },
+      { code: 'MX', name: 'México' },
+      { code: 'AR', name: 'Argentina' },
+      { code: 'CL', name: 'Chile' },
+      { code: 'CO', name: 'Colômbia' },
+      { code: 'PE', name: 'Peru' },
+      { code: 'VE', name: 'Venezuela' }
+    ];
+    
+    res.json({
+      success: true,
+      data: countries
+    });
+  } catch (error) {
+    console.error('Erro ao buscar países:', error);
+    res.status(500).json({ success: false, message: 'Erro ao buscar países' });
+  }
+});
 
 // Version endpoint - Retorna informações de versão no formato VersionInfo
 const APP_VERSION = '1.0.0';

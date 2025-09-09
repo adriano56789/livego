@@ -65,11 +65,11 @@ export const getLiveKitToken = (roomName: string, participantIdentity: string): 
     });
 };
 
-export const getPopularStreams = (regionCode: string): Promise<Stream[]> => apiClient<Stream[]>(`/api/lives?category=popular&region=${regionCode}`).then(d => { streamUpdateManager.dispatch(d); return d; });
-export const getFollowingStreams = (userId: number, regionCode: string): Promise<Stream[]> => apiClient<Stream[]>(`/api/lives?category=seguindo&userId=${userId}&region=${regionCode}`).then(d => { streamUpdateManager.dispatch(d); return d; });
-export const getNewStreams = (regionCode: string): Promise<Stream[]> => apiClient<Stream[]>(`/api/lives?category=novo&region=${regionCode}`).then(d => { streamUpdateManager.dispatch(d); return d; });
-export const getStreamsForCategory = (category: Category, regionCode: string): Promise<Stream[]> => apiClient<Stream[]>(`/api/lives?category=${category.toLowerCase()}&region=${regionCode}`).then(d => { streamUpdateManager.dispatch(d); return d; });
-export const getPrivateStreams = (userId: number, regionCode: string): Promise<Stream[]> => apiClient<Stream[]>(`/api/lives?category=privada&userId=${userId}&region=${regionCode}`).then(d => { streamUpdateManager.dispatch(d); return d; });
+export const getPopularStreams = (regionCode: string): Promise<Stream[]> => apiClient<{lives: Stream[]}>(`/api/lives?category=popular&region=${regionCode}`).then(({lives}) => { streamUpdateManager.dispatch(lives); return lives; });
+export const getFollowingStreams = (userId: number, regionCode: string): Promise<Stream[]> => apiClient<{lives: Stream[]}>(`/api/lives?category=seguindo&userId=${userId}&region=${regionCode}`).then(({lives}) => { streamUpdateManager.dispatch(lives); return lives; });
+export const getNewStreams = (regionCode: string): Promise<Stream[]> => apiClient<{lives: Stream[]}>(`/api/lives?category=novo&region=${regionCode}`).then(({lives}) => { streamUpdateManager.dispatch(lives); return lives; });
+export const getStreamsForCategory = (category: Category, regionCode: string): Promise<Stream[]> => apiClient<{lives: Stream[]}>(`/api/lives?category=${category.toLowerCase()}&region=${regionCode}`).then(({lives}) => { streamUpdateManager.dispatch(lives); return lives; });
+export const getPrivateStreams = (userId: number, regionCode: string): Promise<Stream[]> => apiClient<{lives: Stream[]}>(`/api/lives?category=privada&userId=${userId}&region=${regionCode}`).then(({lives}) => { streamUpdateManager.dispatch(lives); return lives; });
 export const getPkBattles = (regionCode: string): Promise<PkBattle[]> => apiClient<PkBattle[]>(`/api/lives/pk?region=${regionCode}`);
 export const getPkBattleDetails = (pkId: number): Promise<PkBattle> => apiClient(`/api/pk-battles/${pkId}`);
 export const getActivePkBattle = (pkBattleId: number | string): Promise<PkBattleState> => apiClient(`/api/batalhas-pk/${pkBattleId}`);

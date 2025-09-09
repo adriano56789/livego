@@ -9,6 +9,9 @@ COPY package*.json ./
 
 RUN npm install
 
+# Copiar o arquivo .env
+COPY .env ./
+
 COPY . .
 
 # Torna o script executável
@@ -18,4 +21,3 @@ EXPOSE 3000
 
 # Usa o script de inicialização
 CMD ["/app/startup.sh"]
-

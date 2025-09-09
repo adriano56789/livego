@@ -3,6 +3,7 @@ services:
   mongodb:
     image: mongo:latest
     container_name: mongodb
+    hostname: mongodb
     ports:
       - "27017:27017"
     environment:
@@ -19,6 +20,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 30s
 
   # SRS (Simple RTMP Server)
   srs:
@@ -81,6 +83,7 @@ services:
       - "3000:3000"
     environment:
       - NODE_ENV=development
+      - DOCKER_ENV=true
       - MONGO_URI=mongodb://admin:admin123@mongodb:27017/livego?authSource=admin
       - LIVEKIT_API_KEY=devkey
       - LIVEKIT_API_SECRET=secret
@@ -95,9 +98,6 @@ services:
       livekit:
         condition: service_healthy
     restart: always
-    volumes:
-      - ./api-server:/app
-      - /app/node_modules
     networks:
       - livego-network
     healthcheck:
@@ -112,8 +112,8 @@ networks:
     driver: bridge
     ipam:
       config:
-        - subnet: 172.25.0.0/16
-          gateway: 172.25.0.1
+        - subnet: 172.26.0.0/16
+          gateway: 172.26.0.1
     driver_opts:
       com.docker.network.bridge.name: livego-bridge
       com.docker.network.driver.mtu: 1500

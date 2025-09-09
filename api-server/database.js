@@ -3,13 +3,16 @@ require('dotenv').config();
 
 // Configuração mais robusta da URI do MongoDB
 // Para desenvolvimento local, usa localhost; para Docker, usa o nome do serviço
-const isDockerEnv = process.env.DOCKER_ENV === 'true';
+const isDockerEnv = process.env.DOCKER_ENV === 'true' || process.env.NODE_ENV === 'production';
 const mongoHost = isDockerEnv ? 'mongodb' : 'localhost';
-const MONGO_URI = process.env.MONGO_URI || `mongodb://admin:admin123@${mongoHost}:27017/livego?authSource=admin`;
+const defaultMongoUri = `mongodb://admin:admin123@${mongoHost}:27017/livego?authSource=admin`;
+const MONGO_URI = process.env.MONGO_URI || defaultMongoUri;
 const DB_NAME = process.env.DB_NAME || "livego";
 
 // Log da configuração para debug
 console.log('🔧 Configuração MongoDB:');
+console.log(`   Ambiente Docker: ${isDockerEnv}`);
+console.log(`   Host: ${mongoHost}`);
 console.log(`   URI: ${MONGO_URI.replace(/\/\/.*@/, '//*****@')}`);
 console.log(`   Database: ${DB_NAME}`);
 

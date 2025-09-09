@@ -1,8 +1,6 @@
-version: '3.8'
-
 services:
   srs:
-    image: ossrs/srs:5.0.193
+    image: ossrs/srs:5
     container_name: srs
     ports:
       - "1935:1935"  # RTMP

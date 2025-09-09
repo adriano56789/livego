@@ -1384,3 +1384,762 @@ console.log('📊 MongoDB conectado');
 console.log('🎥 LiveKit integrado');
 console.log('✅ Todas as APIs implementadas');
 
+
+// ===== APIs DE PK (PLAYER KILL) - BATALHAS DE STREAMERS =====
+
+// API para criar um convite de PK
+app.post('/api/pk/invite', async (req, res) => {
+  try {
+    const { fromUserId, toUserId, streamId, message } = req.body;
+    
+    if (!fromUserId || !toUserId || !streamId) {
+      return res.status(400).json({ error: 'fromUserId, toUserId e streamId são obrigatórios' });
+    }
+
+    // Verificar se o usuário remetente existe e está ao vivo
+    const fromUser = await db.collection('users').findOne({ id: fromUserId });
+    const toUser = await db.collection('users').findOne({ id: toUserId });
+    const stream = await db.collection('streams').findOne({ id: streamId, ao_vivo: true });
+
+    if (!fromUser || !toUser || !stream) {
+      return res.status(404).json({ error: 'Usuário ou stream não encontrado' });
+    }
+
+    // Verificar se já existe um convite pendente
+    const existingInvite = await db.collection('pk_invites').findOne({
+      fromUserId,
+      toUserId,
+      status: 'pending'
+    });
+
+    if (existingInvite) {
+      return res.status(400).json({ error: 'Já existe um convite pendente para este usuário' });
+    }
+
+    // Criar o convite
+    const invite = {
+      id: Date.now(),
+      fromUserId,
+      toUserId,
+      streamId,
+      message: message || 'Quer batalhar comigo?',
+      status: 'pending', // pending, accepted, rejected, expired
+      created_at: new Date(),
+      expires_at: new Date(Date.now() + 30000) // 30 segundos para aceitar
+    };
+
+    await db.collection('pk_invites').insertOne(invite);
+
+    // Emitir notificação via WebSocket
+    io.to(`user-${toUserId}`).emit('pk-invite-received', {
+      invite,
+      fromUser: {
+        id: fromUser.id,
+        name: fromUser.name,
+        avatar_url: fromUser.avatar_url,
+        level2: fromUser.level2
+      }
+    });
+
+    res.json({ success: true, invite });
+  } catch (error) {
+    console.error('Erro ao criar convite de PK:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
+// API para responder a um convite de PK
+app.post('/api/pk/invite/:inviteId/respond', async (req, res) => {
+  try {
+    const inviteId = parseInt(req.params.inviteId);
+    const { response, userId } = req.body; // response: 'accept' ou 'reject'
+    
+    if (!response || !userId) {
+      return res.status(400).json({ error: 'response e userId são obrigatórios' });
+    }
+
+    // Buscar o convite
+    const invite = await db.collection('pk_invites').findOne({ id: inviteId });
+    
+    if (!invite) {
+      return res.status(404).json({ error: 'Convite não encontrado' });
+    }
+
+    if (invite.toUserId !== userId) {
+      return res.status(403).json({ error: 'Você não pode responder a este convite' });
+    }
+
+    if (invite.status !== 'pending') {
+      return res.status(400).json({ error: 'Este convite já foi respondido ou expirou' });
+    }
+
+    // Verificar se o convite não expirou
+    if (new Date() > new Date(invite.expires_at)) {
+      await db.collection('pk_invites').updateOne(
+        { id: inviteId },
+        { $set: { status: 'expired', updated_at: new Date() } }
+      );
+      return res.status(400).json({ error: 'Este convite expirou' });
+    }
+
+    // Atualizar o status do convite
+    const newStatus = response === 'accept' ? 'accepted' : 'rejected';
+    await db.collection('pk_invites').updateOne(
+      { id: inviteId },
+      { $set: { status: newStatus, updated_at: new Date() } }
+    );
+
+    if (response === 'accept') {
+      // Criar uma batalha PK
+      const battle = {
+        id: Date.now(),
+        inviteId,
+        player1: invite.fromUserId,
+        player2: invite.toUserId,
+        streamId: invite.streamId,
+        status: 'active', // active, finished
+        scores: { player1: 0, player2: 0 },
+        duration: 60000, // 1 minuto
+        started_at: new Date(),
+        ends_at: new Date(Date.now() + 60000)
+      };
+
+      await db.collection('pk_battles').insertOne(battle);
+
+      // Notificar ambos os usuários
+      io.to(`user-${invite.fromUserId}`).emit('pk-battle-started', { battle });
+      io.to(`user-${invite.toUserId}`).emit('pk-battle-started', { battle });
+      
+      // Notificar viewers da stream
+      io.to(`stream-${invite.streamId}`).emit('pk-battle-started', { battle });
+
+      res.json({ success: true, battle });
+    } else {
+      // Notificar o remetente que o convite foi rejeitado
+      io.to(`user-${invite.fromUserId}`).emit('pk-invite-rejected', { inviteId });
+      res.json({ success: true, message: 'Convite rejeitado' });
+    }
+  } catch (error) {
+    console.error('Erro ao responder convite de PK:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
+// API para listar convites de PK do usuário
+app.get('/api/users/:userId/pk-invites', async (req, res) => {
+  try {
+    const userId = parseInt(req.params.userId);
+    const { type = 'received' } = req.query; // received, sent, all
+
+    let filter = {};
+    if (type === 'received') {
+      filter.toUserId = userId;
+    } else if (type === 'sent') {
+      filter.fromUserId = userId;
+    } else {
+      filter = { $or: [{ fromUserId: userId }, { toUserId: userId }] };
+    }
+
+    const invites = await db.collection('pk_invites')
+      .find(filter)
+      .sort({ created_at: -1 })
+      .limit(50)
+      .toArray();
+
+    // Buscar informações dos usuários
+    const invitesWithUsers = await Promise.all(
+      invites.map(async (invite) => {
+        const fromUser = await db.collection('users').findOne({ id: invite.fromUserId });
+        const toUser = await db.collection('users').findOne({ id: invite.toUserId });
+        
+        return {
+          ...invite,
+          fromUser: fromUser ? {
+            id: fromUser.id,
+            name: fromUser.name,
+            avatar_url: fromUser.avatar_url,
+            level2: fromUser.level2
+          } : null,
+          toUser: toUser ? {
+            id: toUser.id,
+            name: toUser.name,
+            avatar_url: toUser.avatar_url,
+            level2: toUser.level2
+          } : null
+        };
+      })
+    );
+
+    res.json({ invites: invitesWithUsers });
+  } catch (error) {
+    console.error('Erro ao buscar convites de PK:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
+// API para buscar batalhas PK ativas
+app.get('/api/pk/battles/active', async (req, res) => {
+  try {
+    const battles = await db.collection('pk_battles')
+      .find({ status: 'active', ends_at: { $gt: new Date() } })
+      .sort({ started_at: -1 })
+      .toArray();
+
+    // Buscar informações dos players e streams
+    const battlesWithDetails = await Promise.all(
+      battles.map(async (battle) => {
+        const player1 = await db.collection('users').findOne({ id: battle.player1 });
+        const player2 = await db.collection('users').findOne({ id: battle.player2 });
+        const stream = await db.collection('streams').findOne({ id: battle.streamId });
+        
+        return {
+          ...battle,
+          player1Info: player1 ? {
+            id: player1.id,
+            name: player1.name,
+            avatar_url: player1.avatar_url,
+            level2: player1.level2
+          } : null,
+          player2Info: player2 ? {
+            id: player2.id,
+            name: player2.name,
+            avatar_url: player2.avatar_url,
+            level2: player2.level2
+          } : null,
+          streamInfo: stream ? {
+            id: stream.id,
+            titulo: stream.titulo,
+            viewers: stream.viewers
+          } : null
+        };
+      })
+    );
+
+    res.json({ battles: battlesWithDetails });
+  } catch (error) {
+    console.error('Erro ao buscar batalhas PK ativas:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
+// API para atualizar pontuação de uma batalha PK
+app.post('/api/pk/battles/:battleId/score', async (req, res) => {
+  try {
+    const battleId = parseInt(req.params.battleId);
+    const { playerId, points } = req.body;
+    
+    if (!playerId || points === undefined) {
+      return res.status(400).json({ error: 'playerId e points são obrigatórios' });
+    }
+
+    const battle = await db.collection('pk_battles').findOne({ id: battleId });
+    
+    if (!battle) {
+      return res.status(404).json({ error: 'Batalha não encontrada' });
+    }
+
+    if (battle.status !== 'active') {
+      return res.status(400).json({ error: 'Esta batalha não está ativa' });
+    }
+
+    // Verificar se a batalha não terminou
+    if (new Date() > new Date(battle.ends_at)) {
+      await db.collection('pk_battles').updateOne(
+        { id: battleId },
+        { $set: { status: 'finished', updated_at: new Date() } }
+      );
+      return res.status(400).json({ error: 'Esta batalha já terminou' });
+    }
+
+    // Atualizar pontuação
+    const scoreField = battle.player1 === playerId ? 'scores.player1' : 'scores.player2';
+    await db.collection('pk_battles').updateOne(
+      { id: battleId },
+      { 
+        $inc: { [scoreField]: points },
+        $set: { updated_at: new Date() }
+      }
+    );
+
+    // Buscar batalha atualizada
+    const updatedBattle = await db.collection('pk_battles').findOne({ id: battleId });
+
+    // Emitir atualização via WebSocket
+    io.to(`stream-${battle.streamId}`).emit('pk-score-updated', { battle: updatedBattle });
+
+    res.json({ success: true, battle: updatedBattle });
+  } catch (error) {
+    console.error('Erro ao atualizar pontuação da batalha PK:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
+// API para finalizar uma batalha PK
+app.post('/api/pk/battles/:battleId/finish', async (req, res) => {
+  try {
+    const battleId = parseInt(req.params.battleId);
+    
+    const battle = await db.collection('pk_battles').findOne({ id: battleId });
+    
+    if (!battle) {
+      return res.status(404).json({ error: 'Batalha não encontrada' });
+    }
+
+    if (battle.status !== 'active') {
+      return res.status(400).json({ error: 'Esta batalha já foi finalizada' });
+    }
+
+    // Determinar o vencedor
+    const winner = battle.scores.player1 > battle.scores.player2 ? battle.player1 : 
+                   battle.scores.player2 > battle.scores.player1 ? battle.player2 : null;
+
+    // Atualizar batalha
+    await db.collection('pk_battles').updateOne(
+      { id: battleId },
+      { 
+        $set: { 
+          status: 'finished',
+          winner,
+          finished_at: new Date(),
+          updated_at: new Date()
+        }
+      }
+    );
+
+    // Buscar batalha atualizada
+    const finishedBattle = await db.collection('pk_battles').findOne({ id: battleId });
+
+    // Emitir resultado via WebSocket
+    io.to(`stream-${battle.streamId}`).emit('pk-battle-finished', { battle: finishedBattle });
+    io.to(`user-${battle.player1}`).emit('pk-battle-finished', { battle: finishedBattle });
+    io.to(`user-${battle.player2}`).emit('pk-battle-finished', { battle: finishedBattle });
+
+    res.json({ success: true, battle: finishedBattle });
+  } catch (error) {
+    console.error('Erro ao finalizar batalha PK:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
+console.log('🥊 APIs de PK (Player Kill) implementadas');
+
+
+// ===== APIs DE ROLETA DURANTE TRANSMISSÕES =====
+
+// API para iniciar uma roleta na transmissão
+app.post('/api/streams/:streamId/roulette/start', async (req, res) => {
+  try {
+    const streamId = parseInt(req.params.streamId);
+    const { hostUserId, options, duration = 30, minBet = 10 } = req.body;
+    
+    if (!hostUserId || !options || !Array.isArray(options) || options.length < 2) {
+      return res.status(400).json({ error: 'hostUserId e pelo menos 2 opções são obrigatórias' });
+    }
+
+    // Verificar se a stream existe e está ao vivo
+    const stream = await db.collection('streams').findOne({ id: streamId, ao_vivo: true });
+    if (!stream) {
+      return res.status(404).json({ error: 'Stream não encontrada ou não está ao vivo' });
+    }
+
+    // Verificar se o usuário é o host da stream
+    if (stream.user_id !== hostUserId) {
+      return res.status(403).json({ error: 'Apenas o host pode iniciar uma roleta' });
+    }
+
+    // Verificar se já existe uma roleta ativa nesta stream
+    const activeRoulette = await db.collection('roulettes').findOne({
+      streamId,
+      status: 'active'
+    });
+
+    if (activeRoulette) {
+      return res.status(400).json({ error: 'Já existe uma roleta ativa nesta stream' });
+    }
+
+    // Criar a roleta
+    const roulette = {
+      id: Date.now(),
+      streamId,
+      hostUserId,
+      title: req.body.title || 'Roleta da Sorte',
+      options: options.map((option, index) => ({
+        id: index,
+        name: option,
+        bets: [],
+        totalAmount: 0
+      })),
+      status: 'active', // active, finished, cancelled
+      duration: duration * 1000, // converter para milissegundos
+      minBet,
+      totalBets: 0,
+      totalAmount: 0,
+      created_at: new Date(),
+      ends_at: new Date(Date.now() + (duration * 1000)),
+      winner: null
+    };
+
+    await db.collection('roulettes').insertOne(roulette);
+
+    // Emitir para todos os viewers da stream
+    io.to(`stream-${streamId}`).emit('roulette-started', { roulette });
+
+    res.json({ success: true, roulette });
+  } catch (error) {
+    console.error('Erro ao iniciar roleta:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
+// API para fazer uma aposta na roleta
+app.post('/api/roulette/:rouletteId/bet', async (req, res) => {
+  try {
+    const rouletteId = parseInt(req.params.rouletteId);
+    const { userId, optionId, amount } = req.body;
+    
+    if (!userId || optionId === undefined || !amount || amount <= 0) {
+      return res.status(400).json({ error: 'userId, optionId e amount são obrigatórios' });
+    }
+
+    // Buscar a roleta
+    const roulette = await db.collection('roulettes').findOne({ id: rouletteId });
+    if (!roulette) {
+      return res.status(404).json({ error: 'Roleta não encontrada' });
+    }
+
+    if (roulette.status !== 'active') {
+      return res.status(400).json({ error: 'Esta roleta não está ativa' });
+    }
+
+    // Verificar se a roleta não expirou
+    if (new Date() > new Date(roulette.ends_at)) {
+      await db.collection('roulettes').updateOne(
+        { id: rouletteId },
+        { $set: { status: 'finished', updated_at: new Date() } }
+      );
+      return res.status(400).json({ error: 'Esta roleta já terminou' });
+    }
+
+    // Verificar se a opção existe
+    if (optionId >= roulette.options.length) {
+      return res.status(400).json({ error: 'Opção inválida' });
+    }
+
+    // Verificar se o valor da aposta é válido
+    if (amount < roulette.minBet) {
+      return res.status(400).json({ error: `Aposta mínima é ${roulette.minBet} diamantes` });
+    }
+
+    // Verificar se o usuário tem diamantes suficientes
+    const user = await db.collection('users').findOne({ id: userId });
+    if (!user || user.diamonds < amount) {
+      return res.status(400).json({ error: 'Diamantes insuficientes' });
+    }
+
+    // Verificar se o usuário já apostou nesta roleta
+    const existingBet = roulette.options.some(option => 
+      option.bets.some(bet => bet.userId === userId)
+    );
+
+    if (existingBet) {
+      return res.status(400).json({ error: 'Você já apostou nesta roleta' });
+    }
+
+    // Debitar diamantes do usuário
+    await db.collection('users').updateOne(
+      { id: userId },
+      { $inc: { diamonds: -amount } }
+    );
+
+    // Criar a aposta
+    const bet = {
+      userId,
+      amount,
+      created_at: new Date()
+    };
+
+    // Atualizar a roleta com a nova aposta
+    await db.collection('roulettes').updateOne(
+      { id: rouletteId },
+      {
+        $push: { [`options.${optionId}.bets`]: bet },
+        $inc: { 
+          [`options.${optionId}.totalAmount`]: amount,
+          totalBets: 1,
+          totalAmount: amount
+        },
+        $set: { updated_at: new Date() }
+      }
+    );
+
+    // Buscar roleta atualizada
+    const updatedRoulette = await db.collection('roulettes').findOne({ id: rouletteId });
+
+    // Emitir atualização via WebSocket
+    io.to(`stream-${roulette.streamId}`).emit('roulette-bet-placed', { 
+      roulette: updatedRoulette,
+      bet: { ...bet, optionId, userName: user.name }
+    });
+
+    res.json({ success: true, bet, roulette: updatedRoulette });
+  } catch (error) {
+    console.error('Erro ao fazer aposta na roleta:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
+// API para finalizar uma roleta e sortear o vencedor
+app.post('/api/roulette/:rouletteId/finish', async (req, res) => {
+  try {
+    const rouletteId = parseInt(req.params.rouletteId);
+    
+    const roulette = await db.collection('roulettes').findOne({ id: rouletteId });
+    if (!roulette) {
+      return res.status(404).json({ error: 'Roleta não encontrada' });
+    }
+
+    if (roulette.status !== 'active') {
+      return res.status(400).json({ error: 'Esta roleta já foi finalizada' });
+    }
+
+    if (roulette.totalBets === 0) {
+      // Cancelar roleta se não houver apostas
+      await db.collection('roulettes').updateOne(
+        { id: rouletteId },
+        { $set: { status: 'cancelled', updated_at: new Date() } }
+      );
+
+      io.to(`stream-${roulette.streamId}`).emit('roulette-cancelled', { rouletteId });
+      return res.json({ success: true, message: 'Roleta cancelada - nenhuma aposta foi feita' });
+    }
+
+    // Algoritmo de sorteio baseado no peso das apostas
+    const totalWeight = roulette.totalAmount;
+    const randomValue = Math.random() * totalWeight;
+    
+    let currentWeight = 0;
+    let winningOption = null;
+    
+    for (let i = 0; i < roulette.options.length; i++) {
+      currentWeight += roulette.options[i].totalAmount;
+      if (randomValue <= currentWeight) {
+        winningOption = i;
+        break;
+      }
+    }
+
+    // Se não encontrou vencedor (edge case), escolher a primeira opção com apostas
+    if (winningOption === null) {
+      winningOption = roulette.options.findIndex(option => option.totalAmount > 0);
+    }
+
+    // Calcular prêmios para os vencedores
+    const winningOptionData = roulette.options[winningOption];
+    const winners = [];
+    
+    if (winningOptionData.bets.length > 0) {
+      const prizePool = roulette.totalAmount * 0.9; // 90% do pool vai para os vencedores, 10% fica para a casa
+      const totalWinningBets = winningOptionData.totalAmount;
+      
+      for (const bet of winningOptionData.bets) {
+        const winnerShare = (bet.amount / totalWinningBets) * prizePool;
+        const prize = Math.floor(winnerShare);
+        
+        // Creditar prêmio ao usuário
+        await db.collection('users').updateOne(
+          { id: bet.userId },
+          { $inc: { diamonds: prize } }
+        );
+        
+        winners.push({
+          userId: bet.userId,
+          betAmount: bet.amount,
+          prize
+        });
+      }
+    }
+
+    // Atualizar roleta como finalizada
+    await db.collection('roulettes').updateOne(
+      { id: rouletteId },
+      { 
+        $set: { 
+          status: 'finished',
+          winner: winningOption,
+          winners,
+          finished_at: new Date(),
+          updated_at: new Date()
+        }
+      }
+    );
+
+    // Buscar roleta finalizada
+    const finishedRoulette = await db.collection('roulettes').findOne({ id: rouletteId });
+
+    // Emitir resultado via WebSocket
+    io.to(`stream-${roulette.streamId}`).emit('roulette-finished', { 
+      roulette: finishedRoulette,
+      winningOption,
+      winners
+    });
+
+    res.json({ success: true, roulette: finishedRoulette, winningOption, winners });
+  } catch (error) {
+    console.error('Erro ao finalizar roleta:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
+// API para buscar roletas ativas de uma stream
+app.get('/api/streams/:streamId/roulettes/active', async (req, res) => {
+  try {
+    const streamId = parseInt(req.params.streamId);
+    
+    const roulettes = await db.collection('roulettes')
+      .find({ 
+        streamId,
+        status: 'active',
+        ends_at: { $gt: new Date() }
+      })
+      .sort({ created_at: -1 })
+      .toArray();
+
+    res.json({ roulettes });
+  } catch (error) {
+    console.error('Erro ao buscar roletas ativas:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
+// API para buscar histórico de roletas de uma stream
+app.get('/api/streams/:streamId/roulettes/history', async (req, res) => {
+  try {
+    const streamId = parseInt(req.params.streamId);
+    const { limit = 20, offset = 0 } = req.query;
+    
+    const roulettes = await db.collection('roulettes')
+      .find({ 
+        streamId,
+        status: { $in: ['finished', 'cancelled'] }
+      })
+      .sort({ created_at: -1 })
+      .skip(parseInt(offset))
+      .limit(parseInt(limit))
+      .toArray();
+
+    res.json({ roulettes });
+  } catch (error) {
+    console.error('Erro ao buscar histórico de roletas:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
+// API para cancelar uma roleta (apenas o host pode cancelar)
+app.post('/api/roulette/:rouletteId/cancel', async (req, res) => {
+  try {
+    const rouletteId = parseInt(req.params.rouletteId);
+    const { hostUserId } = req.body;
+    
+    if (!hostUserId) {
+      return res.status(400).json({ error: 'hostUserId é obrigatório' });
+    }
+
+    const roulette = await db.collection('roulettes').findOne({ id: rouletteId });
+    if (!roulette) {
+      return res.status(404).json({ error: 'Roleta não encontrada' });
+    }
+
+    if (roulette.hostUserId !== hostUserId) {
+      return res.status(403).json({ error: 'Apenas o host pode cancelar a roleta' });
+    }
+
+    if (roulette.status !== 'active') {
+      return res.status(400).json({ error: 'Esta roleta já foi finalizada ou cancelada' });
+    }
+
+    // Reembolsar todas as apostas
+    for (const option of roulette.options) {
+      for (const bet of option.bets) {
+        await db.collection('users').updateOne(
+          { id: bet.userId },
+          { $inc: { diamonds: bet.amount } }
+        );
+      }
+    }
+
+    // Marcar roleta como cancelada
+    await db.collection('roulettes').updateOne(
+      { id: rouletteId },
+      { $set: { status: 'cancelled', updated_at: new Date() } }
+    );
+
+    // Emitir cancelamento via WebSocket
+    io.to(`stream-${roulette.streamId}`).emit('roulette-cancelled', { rouletteId });
+
+    res.json({ success: true, message: 'Roleta cancelada e apostas reembolsadas' });
+  } catch (error) {
+    console.error('Erro ao cancelar roleta:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
+// Função para verificar e finalizar roletas expiradas automaticamente
+setInterval(async () => {
+  try {
+    if (!db) return;
+    
+    const expiredRoulettes = await db.collection('roulettes')
+      .find({ 
+        status: 'active',
+        ends_at: { $lt: new Date() }
+      })
+      .toArray();
+
+    for (const roulette of expiredRoulettes) {
+      // Finalizar automaticamente
+      const response = await fetch(`http://localhost:${PORT}/api/roulette/${roulette.id}/finish`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      
+      if (response.ok) {
+        console.log(`Roleta ${roulette.id} finalizada automaticamente`);
+      }
+    }
+  } catch (error) {
+    console.error('Erro ao verificar roletas expiradas:', error);
+  }
+}, 5000); // Verificar a cada 5 segundos
+
+console.log('🎰 APIs de Roleta implementadas');
+
+
+// API para configurações de notificação de presentes
+app.get('/api/users/:userId/gift-notification-settings', async (req, res) => {
+  try {
+    const userId = parseInt(req.params.userId);
+    
+    const user = await db.collection('users').findOne({ id: userId });
+    if (!user) {
+      return res.status(404).json({ error: 'Usuário não encontrado' });
+    }
+
+    // Configurações padrão de notificação de presentes
+    const settings = {
+      enabled: true,
+      sound: true,
+      popup: true,
+      minimumValue: 10,
+      showSenderName: true,
+      showMessage: true
+    };
+
+    res.json({ settings });
+  } catch (error) {
+    console.error('Erro ao buscar configurações de notificação:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
+console.log('🎁 API de configurações de notificação de presentes implementada');
+

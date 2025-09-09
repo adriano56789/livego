@@ -7,7 +7,7 @@ RUN apk add --no-cache netcat-openbsd
 
 COPY package*.json ./
 
-RUN npm install
+RUN yarn install
 
 # Copiar o arquivo .env
 COPY .env ./

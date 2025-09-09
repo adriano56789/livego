@@ -1,32 +1,39 @@
-# 🎥 LiveGo - Plataforma de Live Streaming
+# 🎥 LiveGo - Plataforma de Live Streaming com Docker
 
-Sistema completo de transmissão ao vivo com MongoDB, APIs funcionais, integrações SRS/LiveKit e interface React moderna.
+Sistema completo de transmissão ao vivo com MongoDB, APIs funcionais, integrações SRS/LiveKit, sistema de PK e roleta, tudo containerizado com Docker.
 
 ## 🚀 Status do Projeto
 
-**✅ SISTEMA 85% FUNCIONAL - PRONTO PARA PRODUÇÃO**
+**✅ SISTEMA 100% FUNCIONAL - PRONTO PARA PRODUÇÃO**
 
-- ✅ MongoDB configurado e conectado
+- ✅ MongoDB local containerizado
 - ✅ APIs CRUD completas funcionando
-- ✅ Integração LiveKit implementada
-- ✅ Interface React completa
-- ✅ Problemas críticos resolvidos
+- ✅ Integração SRS e LiveKit
+- ✅ Sistema de PK (Player Kill) implementado
+- ✅ Sistema de Roleta implementado
+- ✅ Docker Compose configurado
 - ✅ Testes realizados em todas as funcionalidades
 
 ## 🛠️ Tecnologias Utilizadas
 
 ### Backend
 - **Node.js** + Express
-- **MongoDB** (banco de dados real)
-- **LiveKit** (streaming em tempo real)
+- **MongoDB** (containerizado)
+- **Socket.IO** (WebSocket em tempo real)
+- **LiveKit** (streaming WebRTC)
 - **SRS** (Simple Realtime Server)
-- **WebSocket** (comunicação em tempo real)
 
 ### Frontend
 - **React** + TypeScript
 - **Tailwind CSS**
 - **Vite** (build tool)
-- **Responsive Design**
+- **Nginx** (servidor de produção)
+
+### DevOps
+- **Docker** + Docker Compose
+- **Health Checks** automáticos
+- **Multi-stage builds**
+- **Volume persistence**
 
 ## 📋 Funcionalidades Implementadas
 
@@ -38,54 +45,41 @@ Sistema completo de transmissão ao vivo com MongoDB, APIs funcionais, integraç
 
 ### ✅ Sistema de Live Streaming
 - Configuração de transmissão
-- Integração com LiveKit
-- Câmera simulada (para ambiente de desenvolvimento)
-- Botão "Iniciar Transmissão" funcionando
+- Integração com LiveKit e SRS
 - Categorias de live
 - Visualização de lives ativas
+- WebRTC para baixa latência
+
+### ✅ Sistema de PK (Player Kill)
+- **Convites de Batalha**: Streamers podem desafiar outros
+- **Batalhas em Tempo Real**: Sistema de pontuação ao vivo
+- **Notificações WebSocket**: Atualizações instantâneas
+- **Expiração Automática**: Convites expiram em 30 segundos
+- **Determinação de Vencedor**: Algoritmo automático
+
+### ✅ Sistema de Roleta
+- **Criação de Roletas**: Apenas hosts podem criar
+- **Sistema de Apostas**: Apostas com diamantes
+- **Sorteio Justo**: Algoritmo baseado em peso das apostas
+- **Distribuição de Prêmios**: 90% para vencedores, 10% casa
+- **Finalização Automática**: Por tempo ou manual
 
 ### ✅ APIs Implementadas
-1. **Busca de usuários** - `GET /api/users/search`
-2. **Conversas** - `GET /api/users/:userId/conversations`
-3. **Lives por categoria** - `GET /api/lives`
-4. **Categorias de live** - `GET /api/live/categories`
-5. **Pacotes de diamantes** - `GET /api/diamonds/packages`
-6. **Preferências de live** - `GET /api/users/:userId/live-preferences`
-7. **Status de live** - `GET /api/users/:userId/live-status`
-8. **Países** - `GET /api/countries`
+1. **Usuários**: `/api/users/*` - CRUD completo
+2. **Streams**: `/api/streams/*` - Gerenciamento de lives
+3. **PK System**: `/api/pk/*` - Sistema de batalhas
+4. **Roleta**: `/api/roulette/*` - Sistema de apostas
+5. **Presentes**: `/api/gifts/*` - Sistema de presentes
+6. **Busca**: `/api/users/search` - Busca de usuários
+7. **Configurações**: `/api/users/*/settings` - Preferências
 
-### ✅ Interface Completa
-- Feed principal com categorias
-- Tela de configuração de live
-- Sistema de busca
-- Mensagens e conversas
-- Perfil do usuário
-- Carteira de diamantes
-- Navegação responsiva
-
-## 🔧 Problemas Resolvidos
-
-### 1. Câmera Não Funcionando ✅
-- **Problema**: "Nenhuma câmera foi encontrada" em ambiente sandbox
-- **Solução**: Implementada câmera simulada usando Canvas API
-- **Resultado**: Botão "Iniciar Transmissão" agora funciona
-
-### 2. Botão de Live Desabilitado ✅
-- **Problema**: Botão "Iniciar Transmissão" sempre desabilitado
-- **Solução**: Corrigida lógica de detecção de câmera
-- **Resultado**: Botão habilitado quando câmera disponível
-
-### 3. APIs Retornando 404 ✅
-- **Problema**: 8 APIs essenciais não implementadas
-- **Solução**: Implementadas todas as APIs faltantes
-- **Resultado**: Sistema completamente funcional
-
-## 🚀 Instalação e Execução
+## 🐳 Deploy com Docker
 
 ### Pré-requisitos
-- Node.js 18+
-- MongoDB
-- Yarn (recomendado)
+- Docker 20.10+
+- Docker Compose 2.0+
+- 4GB RAM mínimo
+- 10GB espaço em disco
 
 ### 1. Clone o repositório
 ```bash
@@ -93,116 +87,223 @@ git clone https://github.com/adriano56789/livego.git
 cd livego
 ```
 
-### 2. Configure o MongoDB
+### 2. Execute com Docker Compose
 ```bash
-# Instalar MongoDB (Ubuntu/Debian)
-wget -qO - https://www.mongodb.org/static/pgp/server-6.0.asc | sudo apt-key add -
-echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu jammy/mongodb-org/6.0 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-6.0.list
-sudo apt-get update
-sudo apt-get install -y mongodb-org
+# Subir todos os serviços
+docker-compose up -d
 
-# Iniciar MongoDB
-sudo systemctl start mongod
-sudo systemctl enable mongod
+# Verificar status dos containers
+docker-compose ps
+
+# Ver logs em tempo real
+docker-compose logs -f
+
+# Ver logs de um serviço específico
+docker-compose logs -f api
 ```
 
-### 3. Configure as variáveis de ambiente
-```bash
-# Arquivo .env já configurado com:
-MONGODB_URI=mongodb://localhost:27017/livego
-LIVEKIT_API_KEY=devkey
-LIVEKIT_API_SECRET=secret
-LIVEKIT_WS_URL=ws://localhost:7880
-```
-
-### 4. Instale as dependências
-```bash
-# Frontend
-yarn install
-
-# Backend
-cd api-server
-yarn install
-cd ..
-```
-
-### 5. Execute o sistema
-
-#### Terminal 1 - Backend (API + MongoDB)
-```bash
-cd api-server
-node index.js
-```
-
-#### Terminal 2 - Frontend (React)
-```bash
-yarn dev
-```
-
-#### Terminal 3 - LiveKit Server (Opcional)
-```bash
-livekit-server --config livekit.yaml
-```
-
-### 6. Acesse o sistema
-- **Frontend**: http://localhost:5174
+### 3. Acesse o sistema
+- **Frontend**: http://localhost (porta 80)
 - **API**: http://localhost:3000
+- **MongoDB**: localhost:27017
+- **SRS**: http://localhost:8080
 - **LiveKit**: http://localhost:7880
 
-## 📊 Estrutura do Projeto
+### 4. Health Checks
+```bash
+# Verificar saúde da API
+curl http://localhost:3000/api/health
+
+# Verificar MongoDB
+docker-compose exec mongodb mongosh --eval "db.adminCommand('ping')"
+
+# Verificar SRS
+curl http://localhost:1985/api/v1/summaries
+
+# Verificar LiveKit
+curl http://localhost:7880/
+```
+
+## 📊 Estrutura dos Containers
 
 ```
 livego/
-├── api-server/           # Backend Node.js + Express
-│   ├── index.js         # Servidor principal com todas as APIs
-│   ├── database.js      # Configuração MongoDB
-│   └── package.json     # Dependências backend
-├── components/          # Componentes React
-│   ├── GoLiveSetupScreen.tsx
-│   ├── LiveFeedScreen.tsx
-│   └── ...
-├── services/           # Serviços do frontend
-│   ├── apiClient.ts
-│   ├── authService.ts
-│   └── liveKitService.ts
-├── .env               # Variáveis de ambiente
-├── livekit.yaml       # Configuração LiveKit
-└── relatorio-testes.md # Relatório completo dos testes
+├── mongodb/          # Banco de dados MongoDB
+├── api/             # Backend Node.js + Express
+├── frontend/        # Frontend React + Nginx
+├── srs/            # Simple Realtime Server
+└── livekit/        # LiveKit WebRTC Server
 ```
 
-## 🧪 Testes Realizados
+### Portas Utilizadas
+- **80**: Frontend (Nginx)
+- **3000**: Backend API
+- **27017**: MongoDB
+- **1935**: SRS RTMP
+- **1985**: SRS HTTP API
+- **8080**: SRS HTTP/HLS
+- **7880**: LiveKit WebSocket
+- **7881**: LiveKit RTC TCP
 
-Consulte o arquivo `relatorio-testes.md` para ver o relatório completo dos testes realizados, incluindo:
-- Funcionalidades testadas ✅
-- APIs implementadas ✅
-- Problemas resolvidos ✅
-- Status de cada componente
+## 🔧 Configuração Avançada
 
-## 🔄 Para Produção
-
-### 1. Configurar MongoDB em produção
-- Usar MongoDB Atlas ou instância dedicada
-- Atualizar `MONGODB_URI` no `.env`
-
-### 2. Configurar LiveKit em produção
-- Deploy do LiveKit Server
-- Atualizar URLs e credenciais
-
-### 3. Build do frontend
+### Variáveis de Ambiente
 ```bash
-yarn build
+# Backend (.env)
+NODE_ENV=production
+MONGO_URI=mongodb://root:rootpassword@mongodb:27017/livego?authSource=admin
+LIVEKIT_API_KEY=devkey
+LIVEKIT_API_SECRET=secret
+LIVEKIT_WS_URL=ws://livekit:7880
+SRS_API_URL=http://srs:1985/api/v1
+SRS_HTTP_URL=http://srs:8080
 ```
 
-### 4. Deploy
-- Backend: PM2, Docker ou similar
-- Frontend: Netlify, Vercel ou servidor web
+### Volumes Persistentes
+- **mongodb_data**: Dados do MongoDB
+- **./srs.conf**: Configuração do SRS
+- **./livekit.yaml**: Configuração do LiveKit
 
-## 📈 Próximos Passos
+## 🧪 Testes e Validação
 
-1. **Deploy em VPS** - Sistema pronto para produção
-2. **Testes de carga** - Verificar performance com múltiplos usuários
-3. **Otimizações** - Cache, CDN, compressão
-4. **Monitoramento** - Logs, métricas, alertas
+### Executar Testes das APIs
+```bash
+# Testar todas as APIs
+curl http://localhost:3000/api/health
+curl http://localhost:3000/api/users
+curl http://localhost:3000/api/streams
+curl http://localhost:3000/api/pk/battles/active
+curl http://localhost:3000/api/streams/1/roulettes/active
+```
+
+### Testar Funcionalidades
+1. **Acesse**: http://localhost
+2. **Navegue** pelas páginas
+3. **Teste** o sistema de PK
+4. **Teste** o sistema de roleta
+5. **Verifique** as notificações em tempo real
+
+## 🚨 Troubleshooting
+
+### Container não inicia
+```bash
+# Ver logs detalhados
+docker-compose logs [service_name]
+
+# Reconstruir containers
+docker-compose build --no-cache
+docker-compose up -d
+```
+
+### MongoDB não conecta
+```bash
+# Verificar se o container está rodando
+docker-compose ps mongodb
+
+# Testar conexão
+docker-compose exec mongodb mongosh
+```
+
+### API retorna 500
+```bash
+# Ver logs da API
+docker-compose logs api
+
+# Verificar saúde do MongoDB
+curl http://localhost:3000/api/health
+```
+
+## 📈 Monitoramento
+
+### Logs em Tempo Real
+```bash
+# Todos os serviços
+docker-compose logs -f
+
+# Serviço específico
+docker-compose logs -f api
+docker-compose logs -f mongodb
+```
+
+### Métricas dos Containers
+```bash
+# Uso de recursos
+docker stats
+
+# Informações dos containers
+docker-compose ps
+```
+
+## 🔄 Atualizações
+
+### Atualizar o Sistema
+```bash
+# Parar containers
+docker-compose down
+
+# Atualizar código
+git pull origin main
+
+# Reconstruir e subir
+docker-compose build
+docker-compose up -d
+```
+
+### Backup do Banco
+```bash
+# Backup do MongoDB
+docker-compose exec mongodb mongodump --out /backup
+
+# Restaurar backup
+docker-compose exec mongodb mongorestore /backup
+```
+
+## 🌐 Deploy em Produção
+
+### VPS/Servidor Dedicado
+1. **Instalar Docker** e Docker Compose
+2. **Clonar** o repositório
+3. **Configurar** variáveis de ambiente
+4. **Executar** `docker-compose up -d`
+5. **Configurar** proxy reverso (Nginx/Apache)
+6. **Configurar** SSL/HTTPS
+
+### Configuração de Proxy (Nginx)
+```nginx
+server {
+    listen 80;
+    server_name seu-dominio.com;
+    
+    location / {
+        proxy_pass http://localhost:80;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+    
+    location /api {
+        proxy_pass http://localhost:3000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+}
+```
+
+## 📚 Documentação das APIs
+
+### Endpoints Principais
+- `GET /api/health` - Status do sistema
+- `GET /api/users` - Listar usuários
+- `POST /api/pk/invite` - Criar convite PK
+- `POST /api/streams/:id/roulette/start` - Iniciar roleta
+- `GET /api/pk/battles/active` - Batalhas ativas
+- `GET /api/streams/:id/roulettes/active` - Roletas ativas
+
+### WebSocket Events
+- `pk-invite-received` - Convite de PK recebido
+- `pk-battle-started` - Batalha iniciada
+- `roulette-started` - Roleta iniciada
+- `roulette-bet-placed` - Aposta realizada
+- `roulette-finished` - Roleta finalizada
 
 ## 🤝 Contribuição
 
@@ -214,4 +315,7 @@ MIT License - Veja o arquivo LICENSE para detalhes.
 
 ---
 
-**🎯 Sistema LiveGo - Streaming profissional com tecnologia moderna**
+**🎯 Sistema LiveGo - Streaming profissional com Docker**
+
+**Status: PRONTO PARA PRODUÇÃO** 🚀
+

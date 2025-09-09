@@ -1,18 +1,16 @@
+version: '3.8'
+
 services:
-  # MongoDB
   mongodb:
     image: mongo:latest
-    container_name: mongodb
-    hostname: mongodb
+    container_name: livego-mongodb
     ports:
       - "27017:27017"
-    environment:
-      - MONGO_INITDB_ROOT_USERNAME=admin
-      - MONGO_INITDB_ROOT_PASSWORD=admin123
-      - MONGO_INITDB_DATABASE=livego
     volumes:
       - mongodb_data:/data/db
-    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: rootpassword
     networks:
       - livego-network
     healthcheck:
@@ -22,10 +20,9 @@ services:
       retries: 5
       start_period: 30s
 
-  # SRS (Simple RTMP Server)
   srs:
     image: ossrs/srs:5
-    container_name: srs
+    container_name: livego-srs
     ports:
       - "1935:1935"  # RTMP
       - "1985:1985"  # HTTP API
@@ -46,10 +43,9 @@ services:
       timeout: 5s
       retries: 5
 
-  # LiveKit
   livekit:
     image: livekit/livekit-server:latest
-    container_name: livekit
+    container_name: livego-livekit
     ports:
       - "7880:7880"  # WebSocket/HTTP
       - "7881:7881"  # RTC TCP
@@ -73,7 +69,6 @@ services:
       timeout: 5s
       retries: 5
 
-  # Backend API
   api:
     build:
       context: ./api-server
@@ -82,9 +77,9 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - NODE_ENV=development
+      - NODE_ENV=production
       - DOCKER_ENV=true
-      - MONGO_URI=mongodb://admin:admin123@mongodb:27017/livego?authSource=admin
+      - MONGO_URI=mongodb://root:rootpassword@mongodb:27017/livego?authSource=admin
       - LIVEKIT_API_KEY=devkey
       - LIVEKIT_API_SECRET=secret
       - LIVEKIT_WS_URL=ws://livekit:7880
@@ -107,16 +102,25 @@ services:
       retries: 3
       start_period: 30s
 
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: livego-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - livego-network
+    restart: always
+
 networks:
   livego-network:
     driver: bridge
-    ipam:
-      config:
-        - subnet: 172.26.0.0/16
-          gateway: 172.26.0.1
-    driver_opts:
-      com.docker.network.bridge.name: livego-bridge
-      com.docker.network.driver.mtu: 1500
 
 volumes:
   mongodb_data:
+
+

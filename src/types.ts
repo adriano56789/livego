@@ -1,5 +1,3 @@
-
-
 import React, { ReactNode, ReactElement, SVGProps } from "react";
 
 export interface Streamer {

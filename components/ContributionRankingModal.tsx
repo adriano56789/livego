@@ -1,6 +1,3 @@
-
-
-
 import React, { useState, useEffect } from 'react';
 import { CloseIcon, YellowDiamondIcon, CrownIcon, FemaleIcon, MaleIcon, RankIcon } from './icons';
 import { RankedUser, User } from '../types';

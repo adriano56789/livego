@@ -1,101 +1,25 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-// Importing only the components that exist in the project
+import OnlineUsersModal from '../../components/live/OnlineUsersModal';
 import ChatMessage from './live/ChatMessage';
+import CoHostModal from '../../components/CoHostModal';
 import EntryChatMessage from './live/EntryChatMessage';
+import ToolsModal from '../../components/ToolsModal';
+import ResolutionPanel from '../../components/live/ResolutionPanel';
+import BeautyEffectsPanel from '../../components/live/BeautyEffectsPanel';
+import { GiftIcon, MessageIcon, SendIcon, MoreIcon, CloseIcon, PlusIcon, ViewerIcon, StarIcon, HeartIcon, GoldCoinWithGIcon, BellIcon } from '../../components/icons';
 import { Streamer, User, Gift, RankedUser, LiveSessionState, ToastType } from '../types';
-// Importando componentes locais
+import ContributionRankingModal from '../../components/ContributionRankingModal';
+import GiftModal from '../../components/live/GiftModal';
+import GiftAnimationOverlay, { GiftPayload } from '../../components/live/GiftAnimationOverlay';
+import { useTranslation } from '../../i18n';
+import { api } from '../../services/api';
 import { LoadingSpinner } from './Loading';
-
-// Mock das funções de API e banco de dados para evitar erros de compilação
-const api = {
-  sendGift: async () => ({ success: true }),
-  kickUser: async () => ({ success: true }),
-  makeModerator: async () => ({ success: true }),
-  sendPKHeart: async () => ({ success: true }),
-  getOnlineUsers: async () => ([]),
-  toggleMicrophone: async () => ({ success: true }),
-  toggleStreamSound: async () => ({ success: true }),
-  toggleAutoFollow: async () => ({ success: true }),
-  toggleAutoPrivateInvite: async () => ({ success: true }),
-  // Função para lidar com erros genéricos
-  handleError: (error: any) => ({
-    success: false,
-    error: error?.message || 'Erro desconhecido',
-    updatedSender: null,
-    updatedReceiver: null
-  })
-};
-
-// Mock das funções do banco de dados
-const getRemainingDays = () => 0;
-const getFrameGlowClass = () => '';
-const avatarFrames: any[] = [];
-
-// Mocking missing components with empty implementations to prevent errors
-const OnlineUsersModal = () => null;
-const CoHostModal = () => null;
-const ToolsModal = () => null;
-const ResolutionPanel = () => null;
-const BeautyEffectsPanel = () => null;
-const ContributionRankingModal = () => null;
-const GiftModal = () => null;
-const UserActionModal = () => null;
-const FriendRequestNotification = () => null;
-const RankedAvatar = () => null;
-const FullScreenGiftAnimation = () => null;
-
-// Mocking icons
-const GiftIcon = () => <span>🎁</span>;
-const MessageIcon = () => <span>💬</span>;
-const SendIcon = () => <span>📤</span>;
-const MoreIcon = () => <span>⋮</span>;
-const CloseIcon = () => <span>✕</span>;
-const PlusIcon = () => <span>+</span>;
-const ViewerIcon = () => <span>👥</span>;
-const StarIcon = () => <span>★</span>;
-const HeartIcon = () => <span>❤️</span>;
-const GoldCoinWithGIcon = () => <span>🪙</span>;
-const BellIcon = () => <span>🔔</span>;
-
-// Implementação do WebSocketManager com os métodos necessários
-const webSocketManager = {
-  on: (event: string, callback: Function) => {
-    // Implementação básica para evitar erros
-    console.log(`Evento ${event} registrado`);
-  },
-  off: (event: string, callback: Function) => {
-    // Implementação básica para evitar erros
-    console.log(`Evento ${event} removido`);
-  },
-  sendStreamGift: (data: any) => {
-    console.log('Enviando presente:', data);
-    // Implementação básica para evitar erros
-    return Promise.resolve({ success: true });
-  },
-  sendStreamMessage: (data: any) => {
-    console.log('Enviando mensagem:', data);
-    // Implementação básica para evitar erros
-    return Promise.resolve({ success: true });
-  }
-};
-
-// Mocking i18n
-const useTranslation = () => ({
-  t: (key: string) => key,
-  i18n: { language: 'pt' }
-});
-
-// Mocking GiftAnimationOverlay
-const GiftAnimationOverlay = ({ gifts, onGiftAnimationComplete }: any) => null;
-interface GiftPayload {
-  id: string;
-  roomId: string;
-  fromUser: User;
-  gift: Gift;
-  toUser: User;
-  quantity: number;
-  // Outras propriedades necessárias
-}
+import UserActionModal from '../../components/UserActionModal';
+import { webSocketManager } from '../../services/websocket';
+import FriendRequestNotification from '../../components/live/FriendRequestNotification';
+import { RankedAvatar } from '../../components/live/RankedAvatar';
+import FullScreenGiftAnimation from '../../components/live/FullScreenGiftAnimation';
+import { avatarFrames, getRemainingDays, getFrameGlowClass } from '../../services/database';
 
 interface ChatMessageType {
     id: number;
@@ -217,11 +141,11 @@ export default function PKBattleScreen({
         setUserActionModalState({ isOpen: false, user: null });
     };
     const handleKickUser = (user: User) => {
-        api.kickUser();
+        api.kickUser(streamer.id, user.id, currentUser.id);
         addToast(ToastType.Info, `Usuário ${user.name} foi expulso.`);
     };
     const handleMakeModerator = (user: User) => {
-        api.makeModerator();
+        api.makeModerator(streamer.id, user.id, currentUser.id);
         addToast(ToastType.Success, `${user.name} agora é um moderador.`);
     };
     const handleMentionUser = (user: User) => {
@@ -231,50 +155,26 @@ export default function PKBattleScreen({
     const totalScore = myScore + opponentScore;
     const myProgress = totalScore > 0 ? (myScore / totalScore) * 100 : 50;
     
-    const isStreamerFollowed = useMemo(() => followingUsers?.some(u => u?.id === streamer?.hostId) || false, [followingUsers, streamer?.hostId]);
+    const isStreamerFollowed = useMemo(() => followingUsers.some(u => u.id === streamer.hostId), [followingUsers, streamer.hostId]);
 
     const streamerUser = useMemo(() => ({
-        id: streamer?.hostId || '', 
-        identification: streamer?.hostId || '', 
-        name: streamer?.name || 'Streamer', 
-        avatarUrl: streamer?.avatar || '',
-        coverUrl: `https://picsum.photos/seed/${streamer?.hostId || 'streamer'}/400/800`, 
-        country: streamer?.country || 'br',
-        age: 23, 
-        gender: 'female' as const, 
-        level: 1, 
-        location: streamer?.location || '', 
-        distance: 'desconhecida',
-        fans: 0, 
-        following: 0, 
-        receptores: 0, 
-        enviados: 0, 
-        topFansAvatars: [], 
-        isLive: true,
-        diamonds: 0, 
-        earnings: 0, 
-        earnings_withdrawn: 0, 
-        bio: 'Amante de streams!', 
-        obras: [], 
-        curtidas: [], 
-        xp: 0, 
-        ownedFrames: [], 
-        activeFrameId: null, 
-        frameExpiration: null,
-        isModerator: false,
-        isVIP: false,
-        isSubscriber: false,
-        isVerified: false
+        id: streamer.hostId, identification: streamer.hostId, name: streamer.name, avatarUrl: streamer.avatar,
+        coverUrl: `https://picsum.photos/seed/${streamer.hostId}/400/800`, country: streamer.country || 'br',
+        age: 23, gender: 'female' as 'female', level: 1, location: streamer.location, distance: 'desconhecida',
+        fans: 0, following: 0, receptores: 0, enviados: 0, topFansAvatars: [], isLive: true,
+        diamonds: 0, earnings: 0, 
+        earnings_withdrawn: 0, bio: 'Amante de streams!', obras: [], curtidas: [], 
+        xp: 0, ownedFrames: [], activeFrameId: null, frameExpiration: null
     } as User), [streamer]);
 
     const streamerDisplayUser = isBroadcaster ? currentUser : streamerUser;
 
-    const remainingDays = streamerDisplayUser?.frameExpiration ? getRemainingDays() : 0;
-    const activeFrame = (streamerDisplayUser?.activeFrameId && remainingDays > 0)
+    const remainingDays = getRemainingDays(streamerDisplayUser.frameExpiration);
+    const activeFrame = (streamerDisplayUser.activeFrameId && remainingDays && remainingDays > 0)
         ? avatarFrames.find(f => f.id === streamerDisplayUser.activeFrameId)
         : null;
     const ActiveFrameComponent = activeFrame ? activeFrame.component : null;
-    const frameGlowClass = getFrameGlowClass();
+    const frameGlowClass = getFrameGlowClass(streamerDisplayUser.activeFrameId);
 
     const handleRecharge = () => {
         setGiftModalOpen(false);
@@ -285,47 +185,36 @@ export default function PKBattleScreen({
         if (isSendingGift) return;
         setIsSendingGift(true);
         try {
-            const response = { success: true };
+            const { success, error, updatedSender, updatedReceiver } = await api.sendGift(currentUser.id, streamer.id, gift.name, quantity);
             
-            if (response.success) {
+            if (success && updatedSender && updatedReceiver) {
+                updateUser(updatedSender);
+                updateUser(updatedReceiver);
+
+                if (gift.triggersAutoFollow && !isStreamerFollowed) {
+                    onFollowUser(streamerUser, streamer.id);
+                }
+        
+                const coinsAdded = (gift.price || 0) * quantity;
+                if (liveSession) {
+                    updateLiveSession({ coins: (liveSession.coins || 0) + coinsAdded });
+                    logLiveEvent('gift', { from: currentUser.id, to: streamer.hostId, gift: gift.name, coins: coinsAdded });
+                }
+                
+                refreshStreamRoomData(streamer.hostId);
                 const giftPayload: GiftPayload = {
-                    id: Date.now().toString(),
                     fromUser: currentUser,
-                    toUser: { 
-                        id: streamer.hostId, 
-                        name: streamer.name,
-                        // Adicionando propriedades mínimas necessárias para o tipo User
-                        identification: '',
-                        avatarUrl: '',
-                        level: 1,
-                        fans: 0,
-                        following: 0,
-                        receptores: 0,
-                        enviados: 0,
-                        diamonds: 0,
-                        earnings: 0,
-                        earnings_withdrawn: 0,
-                        ownedFrames: [],
-                    },
+                    toUser: { id: streamer.hostId, name: streamer.name },
                     gift,
                     quantity,
                     roomId: streamer.id
                 };
                 setEffectsQueue(prev => [...prev, giftPayload]);
-                webSocketManager.sendStreamGift({
-                    roomId: streamer.id,
-                    gift,
-                    quantity,
-                    fromUserId: currentUser.id,
-                    toUserId: streamer.hostId
-                });
+                webSocketManager.sendStreamGift(streamer.id, gift, quantity);
                 
-            } else {
-                addToast(ToastType.Error, 'Erro ao enviar gift');
+            } else if (error === 'Not enough diamonds') {
+                handleRecharge();
             }
-        } catch (error) {
-            console.error('Erro ao enviar gift:', error);
-            addToast(ToastType.Error, 'Erro ao enviar gift');
         } finally {
             setIsSendingGift(false);
         }
@@ -340,7 +229,7 @@ export default function PKBattleScreen({
         earnings_withdrawn: 0, bio: 'Usuário da plataforma', obras: [], curtidas: [], 
         ownedFrames: [], activeFrameId: user.activeFrameId || null, frameExpiration: user.frameExpiration || null,
     });
-
+    
     const handleViewChatUserProfile = (user: ChatMessageType) => {
         if (!user.user || !user.avatar) return;
         const userProfile = constructUserFromMessage(user);
@@ -364,8 +253,7 @@ export default function PKBattleScreen({
       if (side === 'mine') setMyHearts(prev => prev + 1);
       else setOpponentHearts(prev => prev + 1);
       
-      // Envia o coração sem parâmetros, já que a função mockada não espera argumentos
-      api.sendPKHeart();
+      api.sendPKHeart(streamer.id, side === 'mine' ? 'A' : 'B');
 
       setTimeout(() => {
         setHearts(prev => prev.filter(h => h.id !== newHeart.id));
@@ -380,7 +268,7 @@ export default function PKBattleScreen({
         };
         setMessages([currentUserEntryMessage]);
     
-        api.getOnlineUsers().then((users: any[]) => {
+        api.getOnlineUsers(streamer.id).then(users => {
             setOnlineUsers(users || []);
             previousOnlineUsersRef.current = users || [];
         });
@@ -433,7 +321,7 @@ export default function PKBattleScreen({
                 level: fromUser.level,
                 message: (
                     <span className="inline-flex items-center">
-                        {t(messageKey)}
+                        {t(messageKey, messageOptions)}
                         {gift.component ? React.cloneElement(gift.component as React.ReactElement<any>, { className: "w-5 h-5 inline-block ml-1.5" }) : <span className="ml-1.5">{gift.icon}</span>}
                     </span>
                 ),
@@ -501,13 +389,7 @@ export default function PKBattleScreen({
     const handleSendMessage = (e: React.MouseEvent | React.KeyboardEvent) => {
         e.stopPropagation();
         if (chatInput.trim() === '' || !currentUser) return;
-// Envia a mensagem com o formato esperado
-        webSocketManager.sendStreamMessage({
-            roomId: streamer.id,
-            message: chatInput.trim(),
-            userId: currentUser.id,
-            userName: currentUser.name
-        });
+        webSocketManager.sendStreamMessage(streamer.id, chatInput.trim());
         setChatInput('');
     };
     
@@ -520,14 +402,14 @@ export default function PKBattleScreen({
     const handleToggleMicrophone = async (e: React.MouseEvent) => {
         e.stopPropagation();
         if (!isBroadcaster) return;
-        await api.toggleMicrophone();
+        await api.toggleMicrophone(streamer.id);
     };
 
     const handleToggleSound = async (e: React.MouseEvent) => {
         e.stopPropagation();
         if (!isBroadcaster) return;
         addToast(ToastType.Info, !(liveSession?.isStreamMuted) ? 'Áudio da live silenciado.' : 'Áudio da live ativado.');
-        await api.toggleStreamSound();
+        await api.toggleStreamSound(streamer.id);
     };
 
     const handleToggleAutoFollow = async (e: React.MouseEvent) => {
@@ -535,7 +417,7 @@ export default function PKBattleScreen({
         if (!isBroadcaster || !liveSession) return;
         const newAutoFollowState = !liveSession.isAutoFollowEnabled;
         try {
-            await api.toggleAutoFollow();
+            await api.toggleAutoFollow(streamer.id, newAutoFollowState);
             updateLiveSession({ isAutoFollowEnabled: newAutoFollowState });
             addToast(ToastType.Success, newAutoFollowState ? 'Seguimento automático ativado.' : 'Seguimento automático desativado.');
         } catch (error) {
@@ -548,10 +430,7 @@ export default function PKBattleScreen({
         if (!isBroadcaster) return;
         const newAutoInviteState = !isAutoPrivateInviteEnabled;
         try {
-// Atualiza o estado local diretamente já que estamos em um mock
-            setIsAutoPrivateInviteEnabled(newAutoInviteState);
-            // Chama a API sem argumentos para manter compatibilidade com o mock
-            await api.toggleAutoPrivateInvite();
+            await api.toggleAutoPrivateInvite(streamer.id, newAutoInviteState);
             // The state will be updated via WebSocket broadcast
             addToast(ToastType.Success, newAutoInviteState ? 'Convite automático ativado.' : 'Convite automático desativado.');
         } catch (error) {
@@ -673,18 +552,29 @@ export default function PKBattleScreen({
                                     isFollowed={followingUsers.some(u => u.id === msg.fullUser!.id)} />;
                             }
                             if (msg.type === 'chat' && msg.user && msg.avatar) {
-                                const chatUser = constructUserFromMessage(msg);
-                                const shouldShowFollow = !isBroadcaster && chatUser.id !== currentUser.id && chatUser.name !== streamer.name;
-                                return <ChatMessage 
-                                    key={msg.id} 
-                                    userObject={chatUser}
-                                    message={msg.message}
-                                    onAvatarClick={() => handleViewChatUserProfile(msg)} 
-                                    onFollow={shouldShowFollow ? () => onFollowUser(chatUser, streamer.id) : undefined}
-                                    isFollowed={followingUsers.some(f => f.id === chatUser.id)}
-                                    onModerationClick={isBroadcaster && isModerationMode && msg.user !== currentUser.name && msg.user !== streamer.name ? () => handleOpenUserActions(msg) : undefined}
-                                    isModerator={msg.isModerator}
-                                />;
+                                try {
+                                    const chatUser = constructUserFromMessage(msg);
+                                    // Verifica se o chatUser é válido antes de renderizar
+                                    if (chatUser && chatUser.id && chatUser.name) {
+                                        const shouldShowFollow = !isBroadcaster && chatUser.id !== currentUser.id && chatUser.name !== streamer.name;
+                                        return <ChatMessage 
+                                            key={msg.id} 
+                                            userObject={chatUser}
+                                            message={msg.message}
+                                            onAvatarClick={() => handleViewChatUserProfile(msg)} 
+                                            onFollow={shouldShowFollow ? () => onFollowUser(chatUser, streamer.id) : undefined}
+                                            isFollowed={followingUsers.some(f => f.id === chatUser.id)}
+                                            onModerationClick={isBroadcaster && isModerationMode && msg.user !== currentUser.name && msg.user !== streamer.name ? () => handleOpenUserActions(msg) : undefined}
+                                            isModerator={msg.isModerator}
+                                        />;
+                                    } else {
+                                        console.warn('ChatMessage ignorado - usuário inválido:', chatUser);
+                                        return null;
+                                    }
+                                } catch (error) {
+                                    console.error('Erro ao processar mensagem de chat:', error, msg);
+                                    return null;
+                                }
                             }
                             if (msg.type === 'follow' && msg.user && msg.followedUser) {
                                 return <FollowChatMessage key={msg.id} follower={msg.user} followed={msg.followedUser} />;

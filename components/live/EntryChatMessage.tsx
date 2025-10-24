@@ -12,8 +12,9 @@ interface EntryChatMessageProps {
 }
 
 const EntryChatMessage: React.FC<EntryChatMessageProps> = ({ user, currentUser, onClick, onFollow, isFollowed }) => {
-    const remainingDays = getRemainingDays(user.frameExpiration);
-    const activeFrame = (user.activeFrameId && remainingDays && remainingDays > 0)
+    const activeOwnedFrame = user.ownedFrames?.find(f => f.frameId === user.activeFrameId);
+    const remainingDays = getRemainingDays(activeOwnedFrame?.expirationDate);
+    const activeFrame = (user.activeFrameId && activeOwnedFrame && remainingDays && remainingDays > 0)
         ? avatarFrames.find(f => f.id === user.activeFrameId)
         : null;
     const ActiveFrameComponent = activeFrame ? activeFrame.component : null;

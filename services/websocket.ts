@@ -238,6 +238,10 @@ class SimulatedWebSocketServer {
         });
     }
 
+    public isUserConnected(userId: string): boolean {
+        return this.connections.has(userId);
+    }
+
     public broadcastTransactionUpdate(record: PurchaseRecord) {
         console.log(`[WS Server] Broadcasting transaction update for record ${record.id} to user ${record.userId}.`);
         const payload = { record };
@@ -254,7 +258,7 @@ class SimulatedWebSocketServer {
         const { type, payload } = data;
         switch (type) {
             case 'sendMessage':
-                this.handleSendMessage(fromUserId, payload.to, payload.text, data.tempId);
+                this.handleSendMessage(fromUserId, payload.to, payload.text, data.tempId, payload.imageUrl);
                 break;
             case 'markAsRead':
                 this.handleMarkAsRead(fromUserId, payload.messageIds, payload.otherUserId);
@@ -460,7 +464,7 @@ class SimulatedWebSocketServer {
         });
     }
 
-    private handleSendMessage(from: string, to: string, text: string, tempId?: string) {
+    private handleSendMessage(from: string, to: string, text: string, tempId?: string, imageUrl?: string) {
         const chatKey = createChatKey(from, to);
         const message: Message = {
             id: crypto.randomUUID(),
@@ -468,8 +472,10 @@ class SimulatedWebSocketServer {
             from,
             to,
             text,
+            ...(imageUrl && { imageUrl }),
             timestamp: new Date().toISOString(),
             status: this.connections.has(to) ? 'delivered' : 'sent',
+            type: imageUrl ? 'image' : 'text'
         };
         db.messages.set(message.id, message);
 
@@ -529,9 +535,13 @@ class WebSocketManager extends EventEmitter {
         console.log('[WS Client] Disconnected.');
     }
 
-    sendMessage(to: string, text: string, tempId: string) {
+    sendMessage(to: string, text: string, tempId: string, imageUrl?: string) {
         if (!this.isConnected || !this.userId) return;
-        webSocketServerInstance.handleMessage(this.userId, { type: 'sendMessage', payload: { to, text }, tempId });
+        webSocketServerInstance.handleMessage(this.userId, { 
+            type: 'sendMessage', 
+            payload: { to, text, ...(imageUrl && { imageUrl }) }, 
+            tempId 
+        });
     }
 
     markAsRead(messageIds: string[], otherUserId: string) {

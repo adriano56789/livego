@@ -513,6 +513,7 @@ export const mockApiRouter = (method: string, path: string, body?: any): ApiResp
                 // If frameId is null, we are unequipping
                 if (frameId === null) {
                     user.activeFrameId = null;
+                    user.frameExpiration = null;
                     db.users.set(id, user);
                     saveDb();
                     webSocketServerInstance.broadcastUserUpdate(user);
@@ -523,6 +524,7 @@ export const mockApiRouter = (method: string, path: string, body?: any): ApiResp
                 const ownedFrame = user.ownedFrames.find(f => f.frameId === frameId);
                 if (ownedFrame && new Date(ownedFrame.expirationDate) > new Date()) {
                     user.activeFrameId = frameId;
+                    user.frameExpiration = ownedFrame.expirationDate;
                     db.users.set(id, user);
                     saveDb();
                     webSocketServerInstance.broadcastUserUpdate(user);
@@ -899,7 +901,8 @@ export const mockApiRouter = (method: string, path: string, body?: any): ApiResp
             
             const existingFrameIndex = user.ownedFrames.findIndex(f => f.frameId === frameId);
             const expirationDate = new Date();
-            expirationDate.setDate(expirationDate.getDate() + frame.duration);
+            
+            let finalExpirationDate;
 
             if (existingFrameIndex > -1) {
                 // Extend duration
@@ -907,9 +910,16 @@ export const mockApiRouter = (method: string, path: string, body?: any): ApiResp
                 const newExp = new Date(Math.max(currentExp.getTime(), Date.now()));
                 newExp.setDate(newExp.getDate() + frame.duration);
                 user.ownedFrames[existingFrameIndex].expirationDate = newExp.toISOString();
+                finalExpirationDate = newExp.toISOString();
             } else {
-                user.ownedFrames.push({ frameId, expirationDate: expirationDate.toISOString() });
+                expirationDate.setDate(expirationDate.getDate() + frame.duration);
+                finalExpirationDate = expirationDate.toISOString();
+                user.ownedFrames.push({ frameId, expirationDate: finalExpirationDate });
             }
+            
+            // Auto-equip the frame upon purchase
+            user.activeFrameId = frameId;
+            user.frameExpiration = finalExpirationDate;
             
             const purchase: PurchaseRecord = {
                 id: `frame_${Date.now()}`,
@@ -1001,7 +1011,59 @@ export const mockApiRouter = (method: string, path: string, body?: any): ApiResp
         }
     }
 
-    if (entity === 'chats' && id && subEntity === 'messages' && method === 'GET') {
+    if (entity === 'chats' && id && subEntity === 'messages') {
+    if (method === 'POST') {
+      const otherUserId = id;
+      const chatKey = createChatKey(CURRENT_USER_ID, otherUserId);
+      const messageId = `msg_${Date.now()}`;
+      const newMessage: Message = {
+        id: messageId,
+        chatId: chatKey,
+        from: CURRENT_USER_ID,
+        to: otherUserId,
+        text: body.text || '',
+        ...(body.imageUrl && { imageUrl: body.imageUrl }),
+        timestamp: new Date().toISOString(),
+        status: 'sent',
+        type: body.imageUrl ? 'image' : 'text'
+      };
+      
+      // Save the message
+      db.messages.set(messageId, newMessage);
+      saveDb();
+      
+      // Notify via WebSocket
+      const currentUser = db.users.get(CURRENT_USER_ID);
+      if (currentUser) {
+        // Garantir que a imagem seja incluída na mensagem
+        const messageToSend = {
+          ...newMessage,
+          // Incluir a URL da imagem se existir
+          ...(body.imageUrl && { imageUrl: body.imageUrl }),
+          // Informações do remetente
+          user: currentUser.name,
+          avatar: currentUser.avatarUrl,
+          level: currentUser.level || 1,
+          gender: currentUser.gender,
+          age: currentUser.age,
+          activeFrameId: currentUser.activeFrameId,
+          frameExpiration: currentUser.frameExpiration,
+          // Para compatibilidade
+          senderId: currentUser.id,
+          senderName: currentUser.name,
+          senderAvatar: currentUser.avatarUrl,
+          senderLevel: currentUser.level || 1,
+          isVIP: currentUser.isVIP || false
+        };
+        
+        console.log('Enviando mensagem via WebSocket:', messageToSend); // Log para depuração
+        webSocketServerInstance.broadcastNewMessageToChat(chatKey, messageToSend, body.tempId);
+      }
+      
+      return { status: 201, data: { ...newMessage, id: messageId } };
+    }
+    
+    // Handle GET /api/chats/:id/messages
         const otherUserId = id;
         const chatKey = createChatKey(CURRENT_USER_ID, otherUserId);
         const allMessages = Array.from(db.messages.values());
@@ -1035,6 +1097,68 @@ export const mockApiRouter = (method: string, path: string, body?: any): ApiResp
   } catch (e) {
     console.error(`[API MOCK] Error processing ${method} ${path}:`, e);
     return { status: 500, error: 'Internal Server Error' };
+  }
+  
+  // Handle user status
+  if (method === 'GET' && path.match(/^\/api\/users\/\w+\/status$/)) {
+    try {
+      const userId = path.split('/')[3];
+      const user = db.users.get(userId);
+      
+      if (!user) {
+        return { status: 404, error: 'User not found' };
+      }
+      
+      // Check if user is connected via WebSocket
+      const isOnline = webSocketServerInstance.isUserConnected(userId);
+      
+      return {
+        status: 200,
+        data: {
+          isOnline,
+          lastSeen: user.lastSeen || new Date().toISOString()
+        }
+      };
+    } catch (error) {
+      console.error('Error fetching user status:', error);
+      return { status: 500, error: 'Failed to fetch user status' };
+    }
+  }
+
+  // Handle photo uploads
+  if (method === 'POST' && path.match(/^\/api\/photos\/upload\/\d+$/)) {
+    try {
+      const userId = path.split('/').pop();
+      if (!userId) {
+        return { status: 400, error: 'User ID is required' };
+      }
+      
+      const imageData = body?.image;
+      if (!imageData) {
+        return { status: 400, error: 'No image data provided' };
+      }
+      
+      // In a real app, you would save the image to a storage service
+      // For this mock, we'll use the data URL directly
+      const photoUrl = imageData;
+      
+      // Return the URL in the expected format
+      return {
+        status: 200,
+        data: { 
+          url: photoUrl,  // The frontend expects a 'url' field in the response
+          success: true,
+          message: 'Image uploaded successfully'
+        }
+      };
+    } catch (error) {
+      console.error('Error uploading photo:', error);
+      return { 
+        status: 500, 
+        error: 'Failed to upload image',
+        data: null
+      };
+    }
   }
   
   // Return a 404 for any unhandled routes

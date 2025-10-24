@@ -162,29 +162,77 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ user, onBack, isModal, currentU
         fetchInitialData();
     }, [fetchInitialData]);
 
+    // Memoize handlers to prevent unnecessary re-renders
+    const handlePresenceUpdate = useCallback((data: { userId: string; isOnline: boolean; lastSeen: string }) => {
+        if (data.userId === user.id) {
+            setUserStatus({
+                isOnline: data.isOnline,
+                lastSeen: data.lastSeen
+            });
+        }
+    }, [user.id]);
+
+    const handleUserUpdate = useCallback((data: { user: User }) => {
+        if (data.user.id === user.id) {
+            setUserStatus(prev => ({
+                ...prev,
+                isOnline: data.user.isOnline,
+                lastSeen: data.user.lastSeen || prev?.lastSeen
+            }));
+        }
+    }, [user.id]);
+
+    const handleNewMessage = useCallback((message: Message & { tempId?: string }) => {
+        if (message.chatId === chatKey) {
+            setMessages(prev => {
+                const tempId = message.tempId;
+                // If it's an ack for an optimistic message, replace it
+                if (tempId && prev.some(m => m.id === tempId)) {
+                    return prev.map(m => (m.id === tempId ? { ...message, tempId: undefined } : m));
+                }
+                // If it's a new message from the other user, or a duplicate broadcast (already replaced)
+                else if (!prev.some(m => m.id === message.id)) {
+                    return [...prev, message];
+                }
+                return prev; // It's a duplicate, do nothing
+            });
+        }
+    }, [chatKey]);
+
+    // Handle WebSocket messages and presence updates
     useEffect(() => {
-        const handleNewMessage = (message: Message & { tempId?: string }) => {
-            if (message.chatId === chatKey) {
-                setMessages(prev => {
-                    const tempId = message.tempId;
-                    // If it's an ack for an optimistic message, replace it
-                    if (tempId && prev.some(m => m.id === tempId)) {
-                        return prev.map(m => (m.id === tempId ? { ...message, tempId: undefined } : m));
-                    }
-                    // If it's a new message from the other user, or a duplicate broadcast (already replaced)
-                    else if (!prev.some(m => m.id === message.id)) {
-                        return [...prev, message];
-                    }
-                    return prev; // It's a duplicate, do nothing
-                });
+
+        // Set up WebSocket listeners with stable references
+        const newMessageListener = (message: Message & { tempId?: string }) => handleNewMessage(message);
+        const presenceUpdateListener = (data: { userId: string; isOnline: boolean; lastSeen: string }) => handlePresenceUpdate(data);
+        const userUpdateListener = (data: { user: User }) => handleUserUpdate(data);
+        
+        webSocketManager.on('newMessage', newMessageListener);
+        webSocketManager.on('presenceUpdate', presenceUpdateListener);
+        webSocketManager.on('userUpdate', userUpdateListener);
+
+        // Initial status check
+        const checkUserStatus = async () => {
+            try {
+                const status = await api.getUserStatus(user.id);
+                setUserStatus(prev => ({
+                    ...prev,
+                    isOnline: status.isOnline,
+                    lastSeen: status.lastSeen || prev?.lastSeen
+                }));
+            } catch (error) {
+                console.error('Failed to fetch user status:', error);
             }
         };
+        
+        checkUserStatus();
 
-        webSocketManager.on('newMessage', handleNewMessage);
         return () => {
-            webSocketManager.off('newMessage', handleNewMessage);
+            webSocketManager.off('newMessage', newMessageListener);
+            webSocketManager.off('presenceUpdate', presenceUpdateListener);
+            webSocketManager.off('userUpdate', userUpdateListener);
         };
-    }, [chatKey]);
+    }, [handleNewMessage, handlePresenceUpdate, handleUserUpdate]);
     
     useEffect(() => {
         const observer = new IntersectionObserver(

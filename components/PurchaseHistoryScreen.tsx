@@ -1,6 +1,7 @@
 
 
 import React, { useMemo } from 'react';
+// FIX: Import 'BankIcon' to resolve the 'Cannot find name' error.
 import { BackIcon, YellowDiamondIcon, GoldCoinWithGIcon, BankIcon } from './icons';
 import { useTranslation } from '../i18n';
 import { PurchaseRecord } from '../types';

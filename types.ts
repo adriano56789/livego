@@ -163,7 +163,7 @@ export interface Message {
   imageUrl?: string;
   timestamp: string;
   status: 'sent' | 'delivered' | 'read' | 'sending' | 'failed';
-  type?: 'system-friend-notification';
+  type?: 'system-friend-notification' | 'text' | 'image';
 }
 
 export type RankedUser = User & { contribution: number; gender: 'male' | 'female' | 'not_specified'; age: number; };

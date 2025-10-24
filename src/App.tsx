@@ -1,6 +1,3 @@
-
-
-
 import React, { useState, useCallback, useEffect } from 'react';
 import LoginScreen from './components/LoginScreen';
 import MainScreen from './components/MainScreen';

@@ -9,8 +9,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "react-dom": "^19.2.0",
+    "@supabase/supabase-js": "^2.76.1",
     "react": "^19.2.0",
+    "react-dom": "^19.2.0",
     "styled-components": "^6.1.19"
   },
   "devDependencies": {

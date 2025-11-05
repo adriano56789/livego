@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { CloseIcon, ClockIcon, FilterIcon, SearchIcon, BellOffIcon, QuestionMarkIcon, UserIcon, LiveIndicatorIcon } from './icons';
 import { User, ToastType } from '../types';
@@ -15,6 +16,12 @@ interface CoHostModalProps {
   streamId: string;
 }
 
+interface QuickCompleteFriend {
+  id: string;
+  name: string;
+  status: 'concluido' | 'pendente';
+}
+
 const CoHostModal: React.FC<CoHostModalProps> = ({ isOpen, onClose, onInvite, onOpenTimerSettings, currentUser, addToast, streamId }) => {
   const { t } = useTranslation();
   const [friends, setFriends] = useState<User[]>([]);
@@ -22,6 +29,8 @@ const CoHostModal: React.FC<CoHostModalProps> = ({ isOpen, onClose, onInvite, on
   const [invitedFriends, setInvitedFriends] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState('');
   const [invitingFriendId, setInvitingFriendId] = useState<string | null>(null);
+  const [quickCompleteFriends, setQuickCompleteFriends] = useState<QuickCompleteFriend[]>([]);
+  const [isLoadingQuick, setIsLoadingQuick] = useState(true);
 
 
   useEffect(() => {
@@ -31,11 +40,19 @@ const CoHostModal: React.FC<CoHostModalProps> = ({ isOpen, onClose, onInvite, on
         .then(data => setFriends(data || []))
         .catch(console.error)
         .finally(() => setIsLoading(false));
+        
+      setIsLoadingQuick(true);
+      api.getQuickCompleteFriends()
+        .then(data => setQuickCompleteFriends(data || []))
+        .catch(console.error)
+        .finally(() => setIsLoadingQuick(false));
+
     } else if (!isOpen) {
       // Reset state when modal closes
       setInvitedFriends(new Set());
       setSearchTerm('');
       setInvitingFriendId(null);
+      setQuickCompleteFriends([]);
     }
   }, [isOpen, currentUser]);
 
@@ -59,6 +76,31 @@ const CoHostModal: React.FC<CoHostModalProps> = ({ isOpen, onClose, onInvite, on
       addToast(ToastType.Error, (err as Error).message || 'Erro de rede ao enviar convite.');
     } finally {
       setInvitingFriendId(null);
+    }
+  };
+
+  const handleQuickInvite = async (quickFriend: QuickCompleteFriend) => {
+    const friendToInvite = friends.find(f => f.id === quickFriend.id);
+    if (!friendToInvite) {
+        addToast(ToastType.Error, "Amigo não encontrado na sua lista.");
+        return;
+    }
+
+    // This calls the existing invite logic which has its own state management
+    handleInviteClick(friendToInvite); 
+
+    // And also update the quick complete status
+    try {
+        const { success, friend: updatedFriendData } = await api.completeQuickFriendTask(quickFriend.id);
+        if (success && updatedFriendData) {
+            setQuickCompleteFriends(prev => 
+                prev.map(f => f.id === quickFriend.id ? { ...f, status: 'concluido' } : f)
+            );
+        } else {
+            throw new Error("Falha ao atualizar status da tarefa.");
+        }
+    } catch (err) {
+        addToast(ToastType.Error, (err as Error).message);
     }
   };
 
@@ -124,25 +166,38 @@ const CoHostModal: React.FC<CoHostModalProps> = ({ isOpen, onClose, onInvite, on
           </div>
           
           {/* Quick invites */}
-          <div className="flex items-center justify-between bg-[#2C2C2E] p-3 rounded-lg">
-              <div className="flex items-center space-x-3">
-                  <div className="flex -space-x-2">
-                      <img className="inline-block h-8 w-8 rounded-full ring-2 ring-[#2C2C2E] bg-gradient-to-br from-gray-900 via-purple-900/20 to-gray-900" src="https://picsum.photos/seed/q1/32/32" alt=""/>
-                      <img className="inline-block h-8 w-8 rounded-full ring-2 ring-[#2C2C2E] bg-gradient-to-br from-gray-900 via-purple-900/20 to-gray-900" src="https://picsum.photos/seed/q2/32/32" alt=""/>
-                      <img className="inline-block h-8 w-8 rounded-full ring-2 ring-[#2C2C2E] bg-gradient-to-br from-gray-900 via-purple-900/20 to-gray-900" src="https://picsum.photos/seed/q3/32/32" alt=""/>
-                  </div>
-                  <div className="relative">
-                      <p className="text-white text-sm">{t('cohost.quickInviteTitle')}</p>
-                      <p className="text-white text-sm">{t('cohost.quickInviteSubtitle')}</p>
-                      <div className="absolute -top-1 -left-4">
-                          <QuestionMarkIcon className="w-4 h-4 text-gray-400 bg-gray-600 rounded-full p-0.5" />
-                      </div>
-                  </div>
+          <div className="bg-[#2C2C2E] p-3 rounded-lg">
+              <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-white text-sm font-semibold">Faça novos amigos</h3>
+                  <span className="text-xs text-gray-400">Concluídos rápidos</span>
               </div>
-              <button className="bg-pink-600 text-white font-semibold px-6 py-2 rounded-full hover:bg-pink-700 transition-colors text-sm">
-                  {t('common.invite')}
-              </button>
+              {isLoadingQuick ? <div className="flex justify-center py-4"><LoadingSpinner /></div> : (
+              <div className="space-y-2">
+                  {quickCompleteFriends.slice(0, 7).map(friend => {
+                      const fullFriend = friends.find(f => f.id === friend.id);
+                      const buttonState = friend.status === 'concluido' 
+                          ? { text: "Concluído", disabled: true, className: "bg-gray-700 text-gray-400 cursor-not-allowed" }
+                          : getButtonState(friend.id);
+
+                      return (
+                      <div key={friend.id} className="flex items-center justify-between">
+                          <div className="flex items-center space-x-2">
+                              <img src={fullFriend?.avatarUrl || `https://i.pravatar.cc/32?u=${friend.id}`} alt={friend.name} className="w-8 h-8 rounded-full object-cover" />
+                              <span className="text-gray-200 text-sm">{friend.name}</span>
+                          </div>
+                          <button
+                              onClick={() => handleQuickInvite(friend)}
+                              disabled={buttonState.disabled}
+                              className={`text-xs font-semibold px-4 py-1.5 rounded-full ${buttonState.className}`}
+                          >
+                              {buttonState.text}
+                          </button>
+                      </div>
+                  )})}
+              </div>
+              )}
           </div>
+
 
           {/* Friends List */}
           <div>

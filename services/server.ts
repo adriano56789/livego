@@ -1,3 +1,4 @@
+
 import { db, CURRENT_USER_ID, createChatKey, saveDb, levelProgression, avatarFrames } from './database';
 import { User, Streamer, Message, RankedUser, Gift, Conversation, PurchaseRecord, EligibleUser, FeedPhoto, Obra, GoogleAccount, LiveSessionState, StreamHistoryEntry, Visitor, NotificationSettings, BeautySettings, LevelInfo, Comment, MusicTrack } from '../types';
 import { webSocketServerInstance } from './websocket';
@@ -1402,6 +1403,23 @@ export const mockApiRouter = (method: string, path: string, body?: any): ApiResp
     }
     
     if (entity === 'pk') {
+        if (pathParts[2] === 'coapresentador' && pathParts[3] === 'novos-amigos' && method === 'GET') {
+            const data = db.quickCompleteFriends.get(CURRENT_USER_ID) || [];
+            return { status: 200, data: data.slice(0, 7) };
+        }
+        if (pathParts[2] === 'coapresentador' && pathParts[3] === 'complete' && pathParts[4] && method === 'POST') {
+            const friendId = pathParts[4];
+            const friendsList = db.quickCompleteFriends.get(CURRENT_USER_ID);
+            if (friendsList) {
+                const friend = friendsList.find(f => f.id === friendId);
+                if (friend) {
+                    friend.status = 'concluido';
+                    saveDb();
+                    return { status: 200, data: { success: true, friend } };
+                }
+            }
+            return { status: 404, error: 'Friend task not found' };
+        }
         if (id === 'config') {
             if (method === 'GET') {
                 return { status: 200, data: db.pkDefaultConfig };

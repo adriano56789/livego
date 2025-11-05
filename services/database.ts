@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { User, Gift, Streamer, Message, RankedUser, Country, Conversation, NotificationSettings, BeautySettings, PurchaseRecord, EligibleUser, FeedPhoto, Obra, GoogleAccount, LiveSessionState, StreamHistoryEntry, Visitor, LevelInfo, Comment } from '../types';
+import { User, Gift, Streamer, Message, RankedUser, Country, Conversation, NotificationSettings, BeautySettings, PurchaseRecord, EligibleUser, FeedPhoto, Obra, GoogleAccount, LiveSessionState, StreamHistoryEntry, Visitor, LevelInfo, Comment, MusicTrack } from '../types';
 import { 
     RocketGiftIcon, 
     PrivateJetGiftIcon, 
@@ -35,6 +35,7 @@ import {
     FrameBlazingSunIcon,
 } from '../components/icons/frames';
 import { dbConfig } from './config';
+import * as websocket from './websocket';
 
 const DB_VERSION = 2; // Increment to trigger migration
 
@@ -218,6 +219,15 @@ const constructInitialDb = () => {
     };
 
     const friendsData: User[] = [jumaUser, anaUser];
+    const quickCompleteFriendsData = [
+        { id: 'user-juma', name: 'Juma', status: 'concluido' as const },
+        { id: 'user-ana', name: 'Ana', status: 'pendente' as const },
+        { id: 'user-c', name: 'Biazinha ✨', status: 'pendente' as const },
+        { id: 'user-d', name: 'marina da samara 👄', status: 'concluido' as const },
+        { id: 'user-e', name: 'MineiraFake ✨ Ui ✨', status: 'pendente' as const },
+        { id: 'user-a', name: 'QUALITY', status: 'pendente' as const },
+        { id: 'user-b', name: 'nachodaddy', status: 'pendente' as const },
+    ];
 
     const livercoreUser: User = { id: 'support-livercore', identification: 'support-livercore', name: 'Livercore', avatarUrl: 'https://static.vecteezy.com/system/resources/previews/000/423/908/original/headset-icon-vector-illustration.jpg', level: 1, xp: 0, isOnline: true, lastSeen: new Date().toISOString(), bio: 'Suporte oficial da plataforma LiveGo.', isFollowed: true, fans: 0, following: 0, receptores: 0, enviados: 0, diamonds: 0, earnings: 0, earnings_withdrawn: 0, ownedFrames: [], activeFrameId: null, frameExpiration: null, };
     const followingUsersData: User[] = [];
@@ -672,6 +682,7 @@ const constructInitialDb = () => {
         chatMetadata: new Map<string, { systemNotificationSent: boolean }>(),
         googleAccounts: googleAccountsData,
         userConnectedAccounts,
+        quickCompleteFriends: new Map([[CURRENT_USER_ID, quickCompleteFriendsData]]),
     };
 };
 

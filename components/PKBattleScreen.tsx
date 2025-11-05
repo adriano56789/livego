@@ -100,14 +100,14 @@ const FollowChatMessage: React.FC<{ follower: string; followed: string }> = ({ f
     );
 };
 
-export default function PKBattleScreen({ 
+// FIX: Changed component declaration to a React.FC constant to resolve JSX component type error.
+const PKBattleScreen: React.FC<PKBattleScreenProps> = ({ 
     streamer, opponent, onEndPKBattle, onRequestEndStream, onLeaveStreamView, onViewProfile, currentUser,
     onOpenWallet, onFollowUser, onOpenPrivateChat, onOpenPrivateInviteModal, onStartChatWithStreamer,
     onOpenPKTimerSettings, onOpenFans, onOpenFriendRequests, gifts, receivedGifts, liveSession,
     updateLiveSession, logLiveEvent, updateUser, onStreamUpdate, refreshStreamRoomData, addToast,
-    followingUsers, pkBattleDuration, onOpenVIPCenter, streamers, onSelectStream,
-    onOpenFanClubMembers
-}: PKBattleScreenProps) {
+    followingUsers, pkBattleDuration, onOpenVIPCenter, streamers, onSelectStream, onOpenFanClubMembers
+}) => {
     const { t, language } = useTranslation();
     
     const [isUiVisible, setIsUiVisible] = useState(true);
@@ -897,3 +897,5 @@ export default function PKBattleScreen({
         </div>
     );
 }
+// FIX: Added default export to resolve module import error.
+export default PKBattleScreen;

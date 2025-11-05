@@ -1,3 +1,4 @@
+
 import { mockApiRouter } from './server';
 import { User, Gift, Streamer, Message, RankedUser, Country, Conversation, NotificationSettings, BeautySettings, PurchaseRecord, Visitor, EligibleUser, FeedPhoto, LiveSessionState, LevelInfo, GoogleAccount, StreamHistoryEntry, Comment, MusicTrack } from '../types';
 import { delay, CURRENT_USER_ID } from './database';
@@ -102,6 +103,8 @@ export const api = {
     endPKBattle: (streamId: string) => callApi<{ success: boolean }>('POST', '/api/pk/end', { streamId }),
     sendPKHeart: (roomId: string, team: 'A' | 'B') => callApi<{ success: boolean }>('POST', '/api/pk/heart', { roomId, team }),
     getGiftSendersForStream: (streamId: string) => callApi<EligibleUser[]>('GET', `/api/presents/live/${streamId}`),
+    getQuickCompleteFriends: () => callApi<{ id: string; name: string; status: 'concluido' | 'pendente' }[]>('GET', '/api/pk/coapresentador/novos-amigos'),
+    completeQuickFriendTask: (friendId: string) => callApi<{ success: boolean; friend: any }>('POST', `/api/pk/coapresentador/complete/${friendId}`),
     
     // --- Live Moderation ---
     kickUser: (roomId: string, userId: string, byUserId: string) => webSocketManager.sendKickRequest(roomId, userId, byUserId),

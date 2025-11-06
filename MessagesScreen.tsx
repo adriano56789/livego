@@ -1,128 +1,95 @@
 import React, { useState } from 'react';
-import { Conversation, User } from '../types';
-import { useTranslation } from '../i18n';
+import { GoogleGenAI } from "@google/genai";
+import { Message } from '../types';
 
-interface MessagesScreenProps {
-  onStartChat: (friend: User) => void;
-  onViewProfile: (friend: User) => void;
-  conversations: Conversation[];
-  friends: User[];
+interface ChatMessageProps {
+  message: Message;
 }
 
-const LevelBadge: React.FC<{ level: number }> = ({ level }) => (
-    <span className="bg-pink-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-sm flex items-center">
-        ♀ {level}
-    </span>
-);
+const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
+  const { avatarUrl, username, badgeLevel, text } = message;
+  const [translatedText, setTranslatedText] = useState<string | null>(null);
+  const [isTranslating, setIsTranslating] = useState(false);
+  const [showTranslation, setShowTranslation] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-const RankBadge: React.FC<{ rank: number }> = ({ rank }) => (
-    <span className="bg-orange-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-sm flex items-center">
-        🔥 {rank}
-    </span>
-);
+  const handleToggleTranslation = async () => {
+    // If translation is already fetched, just toggle visibility
+    if (translatedText) {
+      setShowTranslation(!showTranslation);
+      return;
+    }
 
-interface ConversationItemProps {
-    conversation: Conversation;
-    onStartChat: (user: User) => void;
-    onViewProfile: (user: User) => void;
-}
+    // Prevent multiple requests
+    if (isTranslating) return;
 
-const ConversationItem: React.FC<ConversationItemProps> = ({ conversation, onStartChat, onViewProfile }) => (
-    <div className="flex items-center p-4 space-x-4 cursor-pointer hover:bg-gray-800/50" onClick={() => onStartChat(conversation.friend)}>
-        <button onClick={(e) => { e.stopPropagation(); onViewProfile(conversation.friend); }} className="flex-shrink-0 focus:outline-none rounded-full">
-            <img src={conversation.friend.avatarUrl} alt={conversation.friend.name} className="w-14 h-14 rounded-full object-cover" />
-        </button>
-        <div className="flex-grow">
-            <div className="flex justify-between items-center">
-                <h3 className="font-semibold text-white">{conversation.friend.name}</h3>
-                <span className="text-xs text-gray-500">{conversation.timestamp}</span>
+    setIsTranslating(true);
+    setError(null);
+    try {
+      // Detect user's browser language to use as the target for translation
+      const targetLanguage = navigator.language.split('-')[0];
+
+      const ai = new GoogleGenAI({apiKey: process.env.API_KEY});
+      const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: `Detect the language of the following text and translate it to '${targetLanguage}'. Your response should ONLY contain the translated text and nothing else. The text is: "${text}"`,
+      });
+      setTranslatedText(response.text);
+      setShowTranslation(true);
+    } catch (e) {
+      console.error("Translation failed:", e);
+      setError("Failed to translate.");
+      setShowTranslation(false);
+    } finally {
+      setIsTranslating(false);
+    }
+  };
+
+
+  return (
+    <div className="flex items-start space-x-3 bg-black/60 backdrop-blur-sm p-2 rounded-lg max-w-full">
+      <img
+        src={avatarUrl}
+        alt={`${username}'s avatar`}
+        className="w-9 h-9 rounded-full flex-shrink-0 border-2 border-white/20"
+      />
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center space-x-2">
+            <div className="bg-orange-600/90 w-5 h-5 rounded-full flex items-center justify-center ring-1 ring-white/20 flex-shrink-0">
+                <span className="text-white text-xs font-bold">{badgeLevel}</span>
             </div>
-            <div className="flex items-center space-x-1.5 mt-1">
-                <LevelBadge level={conversation.friend.level} />
-                {conversation.friend.rank && <RankBadge rank={conversation.friend.rank} />}
-            </div>
-            <p className="text-sm text-gray-400 mt-1 truncate">{conversation.lastMessage}</p>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" className="h-4 w-4 text-cyan-400 flex-shrink-0">
+              <path fill="currentColor" d="M378.7 32H133.3L256 182.7L378.7 32zM512 192l-107.4-141.3L256 182.7L363.4 50.7L512 192zm-4.7 22.7L416 137.3l-50.6 66.7l94 123.3L507.3 214.7zM4.7 214.7L101.3 338l94-123.3L144.7 148l-91.3 120.7L4.7 214.7zM256 480l122.7-160.7H133.3L256 480z"/>
+            </svg>
+            <span className="font-semibold text-white text-sm leading-none truncate">{username}</span>
         </div>
+        <div className="flex items-start justify-between space-x-2">
+            <p className="text-white text-sm leading-snug mt-1 break-words flex-1">
+              {text}
+            </p>
+            <button
+                onClick={handleToggleTranslation}
+                disabled={isTranslating}
+                className={`mt-1 text-white font-bold w-6 h-6 rounded-full flex items-center justify-center text-xs transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0 ${
+                    showTranslation && translatedText
+                    ? 'bg-purple-600 hover:bg-purple-700'
+                    : 'bg-white/10 hover:bg-white/20'
+                }`}
+                aria-label={showTranslation && translatedText ? "Hide translation" : "Translate to your language"}
+            >
+                P
+            </button>
+        </div>
+        {isTranslating && <p className="text-gray-400 text-sm italic mt-1">Translating...</p>}
+        {error && <p className="text-red-400 text-sm mt-1">{error}</p>}
+        {showTranslation && translatedText && (
+            <div className="mt-2 pt-2 border-t border-white/10">
+                 <p className="text-green-300 text-sm italic">{translatedText}</p>
+            </div>
+        )}
+      </div>
     </div>
-);
-
-interface FriendItemProps {
-    friend: User;
-    onStartChat: (user: User) => void;
-    onViewProfile: (user: User) => void;
-}
-
-const FriendItem: React.FC<FriendItemProps> = ({ friend, onStartChat, onViewProfile }) => {
-    const { t } = useTranslation();
-    return (
-        <div className="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-800/50" onClick={() => onStartChat(friend)}>
-            <div className="flex items-center space-x-4">
-                <button onClick={(e) => { e.stopPropagation(); onViewProfile(friend); }} className="flex-shrink-0 focus:outline-none rounded-full">
-                    <img src={friend.avatarUrl} alt={friend.name} className="w-14 h-14 rounded-full object-cover" />
-                </button>
-                <div>
-                    <h3 className="font-semibold text-white">{friend.name}</h3>
-                    <p className="text-sm text-gray-400">{t('profile.id')}: {friend.identification}</p>
-                </div>
-            </div>
-            {friend.isFollowed && (
-                 <button className="bg-gray-700 text-gray-300 text-sm font-semibold px-4 py-1.5 rounded-full">
-                    {t('common.followed')}
-                </button>
-            )}
-        </div>
-    );
+  );
 };
 
-const MessagesScreen: React.FC<MessagesScreenProps> = ({ onStartChat, onViewProfile, conversations, friends }) => {
-    const [activeTab, setActiveTab] = useState<'messages' | 'friends'>('messages');
-    const { t } = useTranslation();
-
-    return (
-        <div className="h-full flex flex-col bg-[#111111] text-white">
-            <header className="flex-shrink-0">
-                <nav className="flex items-center justify-center p-2">
-                    <div className="flex space-x-8">
-                        <button
-                            onClick={() => setActiveTab('messages')}
-                            className={`text-lg font-bold transition-colors ${activeTab === 'messages' ? 'text-white' : 'text-gray-500 hover:text-white'}`}
-                        >
-                            {t('footer.message')}
-                            {activeTab === 'messages' && <div className="h-0.5 bg-white mt-1 rounded-full"></div>}
-                        </button>
-                        <button
-                            onClick={() => setActiveTab('friends')}
-                            className={`text-lg font-bold transition-colors ${activeTab === 'friends' ? 'text-white' : 'text-gray-500 hover:text-white'}`}
-                        >
-                            {t('common.friends')}
-                             {activeTab === 'friends' && <div className="h-0.5 bg-white mt-1 rounded-full"></div>}
-                        </button>
-                    </div>
-                </nav>
-            </header>
-            <main className="flex-grow overflow-y-auto no-scrollbar pb-24">
-                {activeTab === 'messages' ? (
-                    <div>
-                        {conversations.map(convo => (
-                            <ConversationItem key={convo.id} conversation={convo} onStartChat={onStartChat} onViewProfile={onViewProfile} />
-                        ))}
-                    </div>
-                ) : (
-                    <div>
-                         {friends.map(friend => (
-                            <FriendItem key={friend.id} friend={friend} onStartChat={onStartChat} onViewProfile={onViewProfile} />
-                        ))}
-                    </div>
-                )}
-                 { (activeTab === 'messages' && conversations.length === 0) || (activeTab === 'friends' && friends.length === 0) ? (
-                    <div className="flex flex-col items-center justify-center h-full text-center text-gray-500 p-8">
-                        <p>Nenhum item aqui.</p>
-                        <p className="text-sm">Comece a conversar com pessoas!</p>
-                    </div>
-                ) : null}
-            </main>
-        </div>
-    );
-};
-
-export default MessagesScreen;
+export default ChatMessage;

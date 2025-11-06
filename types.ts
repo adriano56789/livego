@@ -173,7 +173,7 @@ export interface Conversation {
   timestamp: string;
 }
 
-export interface Message {
+export interface ChatMessage {
   id: string;
   chatId: string;
   from: string;
@@ -189,6 +189,14 @@ export interface Message {
     streamerName: string;
     level: number;
   };
+}
+
+export interface Message {
+  id: number;
+  avatarUrl: string;
+  username: string;
+  badgeLevel: number;
+  text: string;
 }
 
 export type RankedUser = User & { contribution: number; gender: 'male' | 'female' | 'not_specified'; age: number; };

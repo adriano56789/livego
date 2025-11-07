@@ -1,6 +1,5 @@
 
 
-
 import React, { useState } from 'react';
 import { TranslateIcon, FanBadgeIcon } from '../icons';
 import { avatarFrames, getRemainingDays, getFrameGlowClass } from '../../services/database';
@@ -12,11 +11,28 @@ interface ChatMessageProps {
     translatedText?: string;
     onAvatarClick: () => void;
     streamerId: string;
+    onTranslate?: (text: string) => Promise<string>;
+    isTranslated?: boolean;
+    originalLanguage?: string;
+    targetLanguage?: string;
 }
 
-const ChatMessage: React.FC<ChatMessageProps> = ({ userObject, message, translatedText, onAvatarClick, streamerId }) => {
+const ChatMessage: React.FC<ChatMessageProps> = ({
+    userObject,
+    message,
+    translatedText: propTranslatedText,
+    onAvatarClick,
+    streamerId,
+    onTranslate,
+    isTranslated = false,
+    originalLanguage,
+    targetLanguage = 'pt'
+}) => {
     const { name: user, level, avatarUrl, activeFrameId, ownedFrames, rank, fanClub } = userObject;
-    const [isTranslated, setIsTranslated] = useState(false);
+    const [isTranslating, setIsTranslating] = useState(false);
+    const [localTranslatedText, setLocalTranslatedText] = useState(propTranslatedText || '');
+    const [showOriginal, setShowOriginal] = useState(false);
+    const [isLocallyTranslated, setIsLocallyTranslated] = useState(false);
 
     const activeOwnedFrame = ownedFrames?.find(f => f.frameId === activeFrameId);
     const remainingDays = getRemainingDays(activeOwnedFrame?.expirationDate);
@@ -27,8 +43,9 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ userObject, message, translat
     const ActiveFrameComponent = activeFrame ? activeFrame.component : null;
     const frameGlowClass = getFrameGlowClass(activeFrameId);
 
-    const canBeTranslated = translatedText && translatedText !== message;
-    const textToShow = isTranslated ? translatedText : message;
+    const finalTranslatedText = propTranslatedText || localTranslatedText;
+    const canBeTranslated = (finalTranslatedText && finalTranslatedText !== message) || onTranslate;
+    const textToShow = ((isTranslated || isLocallyTranslated) && finalTranslatedText && !showOriginal) ? finalTranslatedText : message;
 
     const isFan = fanClub && fanClub.streamerId === streamerId;
 
@@ -63,7 +80,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ userObject, message, translat
                         </div>
                     )}
                 </button>
-                 <div className="min-w-0 flex items-baseline flex-wrap gap-x-1.5 leading-snug">
+                <div className="min-w-0 flex items-baseline flex-wrap gap-x-1.5 leading-snug">
                     {isFan && fanClub ? (
                         <FanBadgeIcon
                             level={fanClub.level}
@@ -79,18 +96,60 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ userObject, message, translat
                         <span className="rank-badge ml-1.5">{rank}</span>
                     )}
                     {!isFan && (
-                        <span className="text-amber-300 font-semibold ml-1.5">{user}</span>
+                        <div className="bg-black/40 backdrop-blur-sm rounded-lg p-2 mt-1 inline-block shadow-lg shadow-black/50 relative group">
+                            <p className="text-white break-words">
+                                {renderMessageWithMentions(textToShow)}
+                                {isTranslating && (
+                                    <span className="ml-2 text-xs text-gray-400">Traduzindo...</span>
+                                )}
+                            </p>
+                            {onTranslate && typeof message === 'string' && (
+                                <div className="absolute right-0 -top-3 flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <button
+                                        onClick={async () => {
+                                            if (!finalTranslatedText && onTranslate) {
+                                                try {
+                                                    setIsTranslating(true);
+                                                    const result = await onTranslate(message as string);
+                                                    setLocalTranslatedText(result);
+                                                    setIsLocallyTranslated(true);
+                                                } catch (error) {
+                                                    console.error('Translation error:', error);
+                                                } finally {
+                                                    setIsTranslating(false);
+                                                }
+                                            } else {
+                                                setIsLocallyTranslated(!isLocallyTranslated);
+                                            }
+                                        }}
+                                        disabled={isTranslating}
+                                        className="w-5 h-5 rounded-full bg-purple-600/80 flex items-center justify-center hover:bg-purple-500/80 transition-colors"
+                                        title="Traduzir mensagem"
+                                    >
+                                        <TranslateIcon className="w-3 h-3 text-white" />
+                                    </button>
+                                    {finalTranslatedText && (
+                                        <button
+                                            onClick={() => setShowOriginal(!showOriginal)}
+                                            className="text-xs px-2 py-0.5 rounded-full bg-gray-700/80 text-white hover:bg-gray-600/80 transition-colors"
+                                            title={showOriginal ? 'Mostrar tradução' : 'Mostrar original'}
+                                        >
+                                            {showOriginal ? 'TRAD' : 'ORIG'}
+                                        </button>
+                                    )}
+                                </div>
+                            )}
+                        </div>
                     )}
-                    
-                    <div className="ml-1.5 text-white break-words">
-                       {renderMessageWithMentions(textToShow)}
-                    </div>
-
                     {canBeTranslated && (
                         <button
-                            onClick={() => setIsTranslated(p => !p)}
+                            onClick={() => {
+                                if (onTranslate) {
+                                    setIsLocallyTranslated(p => !p);
+                                }
+                            }}
                             className="bg-black/30 rounded-full w-5 h-5 p-0.5 hover:bg-black/50 transition-colors inline-flex items-center justify-center align-middle ml-1.5"
-                            title={isTranslated ? "Mostrar original" : "Traduzir"}
+                            title={isLocallyTranslated ? "Mostrar original" : "Traduzir"}
                         >
                             <TranslateIcon className="w-full h-full text-white/80" />
                         </button>

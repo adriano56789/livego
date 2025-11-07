@@ -71,6 +71,7 @@ const AppContent: React.FC = () => {
   const [isCreatePostOpen, setIsCreatePostOpen] = useState<boolean>(false);
   const [permissionStep, setPermissionStep] = useState<'idle' | 'camera' | 'microphone'>('idle');
   const [permissionAction, setPermissionAction] = useState<'goLive' | 'createPost' | null>(null);
+  const [permissionError, setPermissionError] = useState<string | null>(null);
   const [isLocationPermissionModalOpen, setIsLocationPermissionModalOpen] = useState(false);
   const [locationPermissionStatus, setLocationPermissionStatus] = useState<'prompt' | 'granted' | 'denied'>('prompt');
   const [showLocationBanner, setShowLocationBanner] = useState(false);
@@ -632,19 +633,21 @@ const handleDenyLocation = async () => {
   const checkCameraPermission = async (action: 'goLive' | 'createPost') => {
       if (!currentUser) return;
       setPermissionAction(action);
+      setPermissionError(null); // Limpa erros ao iniciar nova verificação
       try {
           const { status } = await api.getCameraPermission(currentUser.id);
           if (status === 'denied') {
-              addToast(ToastType.Error, "Permissão de câmera negada. Habilite nas configurações do navegador.");
-              setPermissionAction(null);
+              setPermissionError('Permissão de câmera negada. Habilite nas configurações do navegador.');
+              setPermissionStep('camera'); // Mostra o modal com a mensagem de erro
           } else if (status === 'granted') {
               await checkMicrophonePermission();
           } else {
               setPermissionStep('camera');
           }
       } catch (error) {
-          addToast(ToastType.Error, "Falha ao verificar permissões.");
-          setPermissionAction(null);
+          const errorMessage = error instanceof Error ? error.message : 'Erro ao verificar permissões';
+          setPermissionError(errorMessage);
+          setPermissionStep('camera'); // Mostra o modal mesmo em caso de erro
       }
   };
 
@@ -654,44 +657,52 @@ const handleDenyLocation = async () => {
 
   const handlePermissionAllow = async () => {
     if (!currentUser) return;
-    if (permissionStep === 'camera') {
-        try {
-            await navigator.mediaDevices.getUserMedia({ video: true });
-            await api.updateCameraPermission(currentUser.id, 'granted');
-            await checkMicrophonePermission(); 
-        } catch (err) {
-            await api.updateCameraPermission(currentUser.id, 'denied');
-            addToast(ToastType.Error, t('toasts.permissionsNeeded'));
-            setPermissionStep('idle');
-            setPermissionAction(null);
-        }
-    } else if (permissionStep === 'microphone') {
-        try {
-            await navigator.mediaDevices.getUserMedia({ audio: true });
-            await api.updateMicrophonePermission(currentUser.id, 'granted');
-            if (permissionAction === 'goLive') setIsGoLiveSetupOpen(true);
-            if (permissionAction === 'createPost') setIsCreatePostOpen(true);
-            setPermissionAction(null);
-            setPermissionStep('idle');
-        } catch (err) {
-            await api.updateMicrophonePermission(currentUser.id, 'denied');
-            addToast(ToastType.Error, t('toasts.permissionsNeeded'));
-            setPermissionStep('idle');
-            setPermissionAction(null);
-        }
+    setPermissionError(null); // Limpa erros anteriores
+
+    try {
+      if (permissionStep === 'camera') {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        stream.getTracks().forEach(track => track.stop()); // Libera a câmera imediatamente
+        await api.updateCameraPermission(currentUser.id, 'granted');
+        await checkMicrophonePermission();
+      } else if (permissionStep === 'microphone') {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        stream.getTracks().forEach(track => track.stop()); // Libera o microfone imediatamente
+        await api.updateMicrophonePermission(currentUser.id, 'granted');
+        if (permissionAction === 'goLive') setIsGoLiveSetupOpen(true);
+        if (permissionAction === 'createPost') setIsCreatePostOpen(true);
+        setPermissionAction(null);
+        setPermissionStep('idle');
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+      setPermissionError(errorMessage);
+      
+      if (permissionStep === 'camera') {
+        await api.updateCameraPermission(currentUser.id, 'denied');
+      } else if (permissionStep === 'microphone') {
+        await api.updateMicrophonePermission(currentUser.id, 'denied');
+      }
+      
+      // Não fecha o modal, mantém aberto para mostrar a mensagem de erro
+      if (permissionAction) {
+        addToast(ToastType.Error, t('toasts.permissionsNeeded'));
+      }
     }
   };
 
   const handlePermissionDeny = async () => {
     if (!currentUser) return;
+    setPermissionError('Permissão negada. Por favor, habilite o acesso nas configurações do navegador.');
+    
     if (permissionStep === 'camera') {
       await api.updateCameraPermission(currentUser.id, 'denied');
     } else if (permissionStep === 'microphone') {
       await api.updateMicrophonePermission(currentUser.id, 'denied');
     }
+    
     addToast(ToastType.Error, t('toasts.permissionsNeeded'));
-    setPermissionStep('idle');
-    setPermissionAction(null);
+    // Não fecha o modal, mantém aberto para mostrar a mensagem de erro
   };
 
   const handleSelectStream = async (streamer: Streamer) => {
@@ -1249,7 +1260,19 @@ const handleDenyLocation = async () => {
           initialMusic={musicForPost}
         />
       )}
-      <CameraPermissionModal isOpen={permissionStep !== 'idle'} permissionType={permissionStep} onAllowAlways={handlePermissionAllow} onAllowOnce={handlePermissionAllow} onDeny={handlePermissionDeny} onClose={() => setPermissionStep('idle')} />
+      <CameraPermissionModal 
+        isOpen={permissionStep !== 'idle'} 
+        permissionType={permissionStep} 
+        onAllowAlways={handlePermissionAllow} 
+        onAllowOnce={handlePermissionAllow} 
+        onDeny={handlePermissionDeny} 
+        onClose={() => {
+          setPermissionStep('idle');
+          setPermissionError(null);
+          setPermissionAction(null);
+        }}
+        error={permissionError}
+      />
       <LocationPermissionModal isOpen={isLocationPermissionModalOpen} onAllow={handleAllowLocation} onAllowOnce={handleAllowLocation} onDeny={handleDenyLocation} />
       {isEndStreamConfirmOpen && <EndStreamConfirmationModal onCancel={() => setIsEndStreamConfirmOpen(false)} onConfirm={handleConfirmEndStream} isPK={isPKBattleActive} />}
       {isEndStreamSummaryOpen && streamSummaryData && <EndStreamSummaryScreen data={streamSummaryData} onClose={() => { setIsEndStreamSummaryOpen(false); setStreamSummaryData(null); }} />}

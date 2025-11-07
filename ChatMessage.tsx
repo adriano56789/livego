@@ -1,5 +1,5 @@
-import React from 'react';
-import { PlusIcon, SettingsIcon, IdBadgeIcon } from './components/icons';
+import React, { useState } from 'react';
+import { PlusIcon, SettingsIcon, IdBadgeIcon, TranslateIcon } from './components/icons';
 import { avatarFrames, getRemainingDays, getFrameGlowClass } from './services/database';
 import { User } from './types';
 
@@ -11,9 +11,51 @@ interface ChatMessageProps {
     isFollowed?: boolean;
     onModerationClick?: () => void;
     isModerator?: boolean;
+    onTranslate?: (text: string) => Promise<string>;
+    isTranslated?: boolean;
+    originalLanguage?: string;
+    targetLanguage?: string;
 }
 
-const ChatMessage: React.FC<ChatMessageProps> = ({ userObject, message, onAvatarClick, onFollow, isFollowed, onModerationClick, isModerator }) => {
+const ChatMessage: React.FC<ChatMessageProps> = ({
+    userObject,
+    message,
+    onAvatarClick,
+    onFollow,
+    isFollowed,
+    onModerationClick,
+    isModerator,
+    onTranslate,
+    isTranslated = false,
+    originalLanguage,
+    targetLanguage = 'pt'
+}) => {
+    const [isTranslating, setIsTranslating] = useState(false);
+    const [translatedText, setTranslatedText] = useState<string | null>(null);
+    const [showOriginal, setShowOriginal] = useState(false);
+
+    const handleTranslate = async () => {
+        if (typeof message !== 'string' || !onTranslate) return;
+        
+        try {
+            setIsTranslating(true);
+            const result = await onTranslate(message);
+            setTranslatedText(result);
+        } catch (error) {
+            console.error('Translation error:', error);
+        } finally {
+            setIsTranslating(false);
+        }
+    };
+
+    const displayText = () => {
+        if (!translatedText || showOriginal) return message;
+        return translatedText;
+    };
+
+    const toggleOriginal = () => {
+        setShowOriginal(!showOriginal);
+    };
     const { name: user, level, avatarUrl, activeFrameId, ownedFrames } = userObject;
 
     const activeOwnedFrame = ownedFrames?.find(f => f.frameId === activeFrameId);
@@ -62,8 +104,34 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ userObject, message, onAvatar
                     </button>
                 )}
             </div>
-            <div className="bg-black/40 backdrop-blur-sm rounded-lg p-2 mt-1 inline-block shadow-lg shadow-black/50">
-                <p className="text-white break-words">{message}</p>
+            <div className="bg-black/40 backdrop-blur-sm rounded-lg p-2 mt-1 inline-block shadow-lg shadow-black/50 relative group">
+                <p className="text-white break-words">
+                    {displayText()}
+                    {isTranslating && (
+                        <span className="ml-2 text-xs text-gray-400">Traduzindo...</span>
+                    )}
+                </p>
+                {onTranslate && typeof message === 'string' && (
+                    <div className="absolute right-0 -top-3 flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                            onClick={handleTranslate}
+                            disabled={isTranslating || (translatedText && !showOriginal)}
+                            className="w-5 h-5 rounded-full bg-purple-600/80 flex items-center justify-center hover:bg-purple-500/80 transition-colors"
+                            title={isTranslated ? 'Traduzir mensagem' : undefined}
+                        >
+                            <TranslateIcon className="w-3 h-3 text-white" />
+                        </button>
+                        {translatedText && (
+                            <button
+                                onClick={toggleOriginal}
+                                className="text-xs px-2 py-0.5 rounded-full bg-gray-700/80 text-white hover:bg-gray-600/80 transition-colors"
+                                title={showOriginal ? 'Mostrar tradução' : 'Mostrar original'}
+                            >
+                                {showOriginal ? 'TRAD' : 'ORIG'}
+                            </button>
+                        )}
+                    </div>
+                )}
             </div>
         </div>
     </div>

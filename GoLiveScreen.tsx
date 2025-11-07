@@ -96,14 +96,41 @@ const GoLiveScreen: React.FC<GoLiveScreenProps> = ({ isOpen, onClose, onStartStr
                 onClose();
             }
 
-            // Setup camera
-            navigator.mediaDevices.getUserMedia({ video: true })
+            // Setup camera com configuração Full HD (1920x1080)
+            navigator.mediaDevices.getUserMedia({
+                video: {
+                    width: { ideal: 1920 },
+                    height: { ideal: 1080 },
+                    frameRate: { ideal: 30, min: 24 },
+                    facingMode: 'user'
+                },
+                audio: true
+            })
             .then(stream => {
                 if (videoRef.current) {
                     videoRef.current.srcObject = stream;
+                    // Verifica a resolução real obtida
+                    const videoTrack = stream.getVideoTracks()[0];
+                    const settings = videoTrack.getSettings();
+                    console.log('Resolução da câmera:', settings.width + 'x' + settings.height);
                 }
             })
-            .catch(err => console.error("Error accessing camera:", err));
+            .catch(err => {
+                console.error("Erro ao acessar a câmera:", err);
+                addToast(ToastType.Error, "Não foi possível acessar a câmera com qualidade Full HD.");
+                // Tenta com configuração mais baixa em caso de falha
+                navigator.mediaDevices.getUserMedia({ video: true })
+                    .then(stream => {
+                        if (videoRef.current) {
+                            videoRef.current.srcObject = stream;
+                        }
+                    })
+                    .catch(fallbackErr => {
+                        console.error("Erro ao acessar a câmera (fallback):", fallbackErr);
+                        addToast(ToastType.Error, "Não foi possível acessar a câmera.");
+                        onClose();
+                    });
+            });
         } else {
             // Cleanup when component closes
             if (videoRef.current && videoRef.current.srcObject) {

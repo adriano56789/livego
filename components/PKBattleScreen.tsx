@@ -672,25 +672,40 @@ const PKBattleScreen: React.FC<PKBattleScreenProps> = ({
             {/* Video Container */}
             <div className="h-[65%] w-full relative">
                 <div className="absolute inset-0 grid grid-cols-2">
+                    {/* Lado esquerdo - Streamer */}
                     <div 
-                        className="h-full w-full bg-gray-900 border-r-2 border-yellow-400 relative cursor-pointer"
+                        className="h-full w-full bg-gray-900 border-r-2 border-yellow-400 relative"
                         onClick={(e) => {
-                            if (e.target === e.currentTarget) {
-                                handleHeartClick(e);
-                            }
+                            // Se for um clique simples, abre o perfil
+                            onViewProfile(streamerUser);
+                            // Adiciona coração também
+                            handleHeartClick(e);
                         }}
                     >
-                        <img src={streamerUser.coverUrl} alt={streamerUser.name} className="w-full h-full object-cover" />
+                        <img 
+                            src={streamerUser.coverUrl} 
+                            alt={streamerUser.name} 
+                            className="w-full h-full object-cover"
+                        />
+                        <div className="absolute inset-0 hover:bg-black/20 transition-colors"></div>
                     </div>
+                    
+                    {/* Lado direito - Oponente */}
                     <div 
-                        className="h-full w-full bg-gray-800 relative cursor-pointer"
+                        className="h-full w-full bg-gray-800 relative"
                         onClick={(e) => {
-                            e.stopPropagation();
+                            // Se for um clique simples, abre o perfil
                             onViewProfile(opponent);
+                            // Adiciona coração também
+                            handleHeartClick(e);
                         }}
                     >
-                        <img src={opponent.coverUrl} alt={opponent.name} className="w-full h-full object-cover" />
-                        <div className="absolute inset-0 bg-black/20 hover:bg-transparent transition-colors"></div>
+                        <img 
+                            src={opponent.coverUrl} 
+                            alt={opponent.name} 
+                            className="w-full h-full object-cover"
+                        />
+                        <div className="absolute inset-0 hover:bg-black/20 transition-colors"></div>
                     </div>
                 </div>
 

@@ -192,7 +192,7 @@ const UserProfileScreen: React.FC<UserProfileScreenProps> = ({ user, isCurrentUs
 
     const hasDetails = detailItems.length > 0;
 
-    const activeOwnedFrame = user.ownedFrames.find(f => f.frameId === user.activeFrameId);
+    const activeOwnedFrame = user.ownedFrames?.find(f => f.frameId === user.activeFrameId);
     const remainingDays = getRemainingDays(activeOwnedFrame?.expirationDate);
     const activeFrame = (user.activeFrameId && activeOwnedFrame && remainingDays && remainingDays > 0)
         ? avatarFrames.find(f => f.id === user.activeFrameId)
@@ -205,7 +205,7 @@ const UserProfileScreen: React.FC<UserProfileScreenProps> = ({ user, isCurrentUs
         <div className="absolute inset-0 bg-black z-50 flex flex-col text-white">
             <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar pb-24">
                 <header className="relative h-48">
-                    <img src={user.coverUrl} onError={handleImageError} alt="Cover" className="w-full h-full object-cover bg-gradient-to-br from-gray-900 via-purple-900/20 to-gray-900" />
+                    <img src={user.coverUrl} onError={handleImageError} alt="Cover" className="w-full h-full object-cover bg-[#2c2c2e]" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent"></div>
                     <div className="absolute top-4 left-4 right-4 flex justify-between items-center z-10">
                         <button onClick={onBack} className="w-8 h-8 bg-black/30 rounded-full flex items-center justify-center">
@@ -224,7 +224,7 @@ const UserProfileScreen: React.FC<UserProfileScreenProps> = ({ user, isCurrentUs
                     </div>
                      <div className="absolute -bottom-12 left-1/2 -translate-x-1/2">
                         <div className="relative w-24 h-24">
-                            <img src={user.avatarUrl} onError={handleImageError} alt={user.name} className="w-full h-full rounded-full object-cover p-1 bg-gradient-to-br from-gray-900 via-purple-900/20 to-gray-900" />
+                            <img src={user.avatarUrl} onError={handleImageError} alt={user.name} className="w-full h-full rounded-full object-cover p-1 bg-[#2c2c2e]" />
                             {ActiveFrameComponent && (
                                 <div className={`absolute -top-2 -left-2 w-28 h-28 pointer-events-none ${frameGlowClass}`}>
                                     <ActiveFrameComponent />
@@ -316,39 +316,52 @@ const UserProfileScreen: React.FC<UserProfileScreenProps> = ({ user, isCurrentUs
                         ) : obras.length > 0 ? (
                             <div className="grid grid-cols-2 gap-2 mt-4">
                                 {obras.map((obra, index) => (
-                                    <button 
+                                    <div 
                                         key={obra.id}
                                         onClick={() => onOpenPhotoViewer(obras, index)}
-                                        className="relative group aspect-[3/4] rounded-lg overflow-hidden bg-gradient-to-br from-gray-900 via-purple-900/20 to-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-transform hover:scale-105"
+                                        className="relative group aspect-[3/4] rounded-lg overflow-hidden bg-[#2c2c2e] focus:outline-none focus:ring-2 focus:ring-purple-500 transition-transform hover:scale-105 cursor-pointer"
+                                        role="button"
+                                        tabIndex={0}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter' || e.key === ' ') {
+                                                e.preventDefault();
+                                                onOpenPhotoViewer(obras, index);
+                                            }
+                                        }}
                                     >
-                                        <img src={obra.type === 'video' ? obra.thumbnailUrl || obra.photoUrl : obra.photoUrl} onError={handleImageError} alt={`Obra ${index + 1}`} className="w-full h-full object-cover" />
-                                        {obra.type === 'video' && (
-                                            <div className="absolute inset-0 flex items-center justify-center bg-black/30">
-                                                <PlayIcon className="w-10 h-10 text-white/80" />
-                                            </div>
-                                        )}
-                                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                handleToggleLike(obra.id, 'obras');
-                                            }}
-                                            className="absolute bottom-2 left-2 flex items-center space-x-1 text-white text-sm font-bold drop-shadow-md bg-black/30 rounded-full px-2 py-1 hover:bg-black/50 transition-colors"
-                                        >
-                                            <HeartIcon 
-                                                className={`w-4 h-4 transition-colors ${obra.isLiked ? 'text-red-500' : 'text-white'}`} 
-                                                fill={obra.isLiked ? 'currentColor' : 'none'} 
-                                                stroke="currentColor" 
-                                                strokeWidth={2}
+                                        <div className="absolute inset-0 w-full h-full">
+                                            <img 
+                                                src={obra.photoUrl} 
+                                                onError={handleImageError} 
+                                                alt={`Obra ${index + 1}`} 
+                                                className="w-full h-full object-cover" 
                                             />
-                                            <span>{formatNumber(obra.likes)}</span>
-                                        </button>
-                                    </button>
+                                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleToggleLike(obra.id, 'obras');
+                                                }}
+                                                className="absolute bottom-2 left-2 flex items-center space-x-1 text-white text-sm font-bold drop-shadow-md bg-black/30 rounded-full px-2 py-1 hover:bg-black/50 transition-colors z-10"
+                                            >
+                                                <HeartIcon 
+                                                    className={`w-4 h-4 transition-colors ${obra.isLiked ? 'text-red-500' : 'text-white'}`} 
+                                                    fill={obra.isLiked ? 'currentColor' : 'none'} 
+                                                    stroke="currentColor" 
+                                                    strokeWidth={2}
+                                                />
+                                                <span>{formatNumber(obra.likes)}</span>
+                                            </button>
+                                        </div>
+                                    </div>
                                 ))}
                             </div>
                         ) : (
-                            <div className="flex items-center justify-center h-48 text-gray-500">
-                                <p>{t('profile.noWorks')}</p>
+                            <div 
+                                className="flex items-center justify-center h-48 text-gray-500 cursor-pointer"
+                                onClick={() => isCurrentUser && onEdit()}
+                            >
+                                <p>{isCurrentUser ? t('profile.clickToAddWorks') : t('profile.noWorks')}</p>
                             </div>
                         )
                     )}
@@ -358,34 +371,44 @@ const UserProfileScreen: React.FC<UserProfileScreenProps> = ({ user, isCurrentUs
                         ) : likedPhotos.length > 0 ? (
                             <div className="grid grid-cols-2 gap-2 mt-4">
                                 {likedPhotos.map((photo, index) => (
-                                    <button 
+                                    <div 
                                         key={photo.id}
                                         onClick={() => onOpenPhotoViewer(likedPhotos, index)}
-                                        className="relative group aspect-[3/4] rounded-lg overflow-hidden bg-gradient-to-br from-gray-900 via-purple-900/20 to-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-transform hover:scale-105"
+                                        className="relative group aspect-[3/4] rounded-lg overflow-hidden bg-[#2c2c2e] focus:outline-none focus:ring-2 focus:ring-purple-500 transition-transform hover:scale-105 cursor-pointer"
+                                        role="button"
+                                        tabIndex={0}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter' || e.key === ' ') {
+                                                e.preventDefault();
+                                                onOpenPhotoViewer(likedPhotos, index);
+                                            }
+                                        }}
                                     >
-                                        <img src={photo.type === 'video' ? photo.thumbnailUrl || photo.photoUrl : photo.photoUrl} onError={handleImageError} alt={`Liked photo ${index + 1}`} className="w-full h-full object-cover" />
-                                        {photo.type === 'video' && (
-                                            <div className="absolute inset-0 flex items-center justify-center bg-black/30">
-                                                <PlayIcon className="w-10 h-10 text-white/80" />
-                                            </div>
-                                        )}
-                                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                handleToggleLike(photo.id, 'curtidas');
-                                            }}
-                                            className="absolute bottom-2 left-2 flex items-center space-x-1 text-white text-sm font-bold drop-shadow-md bg-black/30 rounded-full px-2 py-1 hover:bg-black/50 transition-colors"
-                                        >
-                                            <HeartIcon 
-                                                className={`w-4 h-4 transition-colors ${photo.isLiked ? 'text-red-500' : 'text-white'}`} 
-                                                fill={photo.isLiked ? 'currentColor' : 'none'} 
-                                                stroke="currentColor" 
-                                                strokeWidth={2}
+                                        <div className="absolute inset-0 w-full h-full">
+                                            <img 
+                                                src={photo.photoUrl} 
+                                                onError={handleImageError} 
+                                                alt={`Liked photo ${index + 1}`} 
+                                                className="w-full h-full object-cover" 
                                             />
-                                            <span>{formatNumber(photo.likes)}</span>
-                                        </button>
-                                    </button>
+                                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleToggleLike(photo.id, 'curtidas');
+                                                }}
+                                                className="absolute bottom-2 left-2 flex items-center space-x-1 text-white text-sm font-bold drop-shadow-md bg-black/30 rounded-full px-2 py-1 hover:bg-black/50 transition-colors z-10"
+                                            >
+                                                <HeartIcon 
+                                                    className={`w-4 h-4 transition-colors ${photo.isLiked ? 'text-red-500' : 'text-white'}`} 
+                                                    fill={photo.isLiked ? 'currentColor' : 'none'} 
+                                                    stroke="currentColor" 
+                                                    strokeWidth={2}
+                                                />
+                                                <span>{formatNumber(photo.likes)}</span>
+                                            </button>
+                                        </div>
+                                    </div>
                                 ))}
                             </div>
                         ) : (
@@ -396,20 +419,38 @@ const UserProfileScreen: React.FC<UserProfileScreenProps> = ({ user, isCurrentUs
                     )}
                      {activeTab === 'Detalhes' && (
                         hasDetails ? (
-                            <div className="bg-[#1c1c1e] rounded-lg p-4 mt-4 text-sm">
-                                <h2 className="text-lg font-bold mb-4 text-white">{t('profile.profileInfo')}</h2>
+                            <div 
+                                className="bg-[#1c1c1e] rounded-lg p-4 mt-4 text-sm cursor-pointer hover:bg-[#2a2a2e] transition-colors"
+                                onClick={() => isCurrentUser && onEdit()}
+                            >
+                                <div className="flex justify-between items-center mb-4">
+                                    <h2 className="text-lg font-bold text-white">{t('profile.profileInfo')}</h2>
+                                    {isCurrentUser && <PencilIcon className="w-4 h-4 text-gray-400" />}
+                                </div>
                                 <div className="space-y-4">
                                     {detailItems.map((item) => (
-                                        <div key={item.label} className="flex items-start">
+                                        <div key={item.label} className="flex items-start group">
                                             <span className="text-gray-400 w-28 flex-shrink-0">{item.label}</span>
-                                            <span className="text-white break-words">{item.value}</span>
+                                            <span className="text-white break-words group-hover:text-purple-300 transition-colors">{item.value}</span>
                                         </div>
                                     ))}
                                 </div>
                             </div>
                         ) : (
-                            <div className="flex items-center justify-center h-48 text-gray-500">
-                                <p>{t('profile.noDetails')}</p>
+                            <div 
+                                className="flex flex-col items-center justify-center h-48 text-gray-500 cursor-pointer hover:text-white transition-colors"
+                                onClick={() => isCurrentUser && onEdit()}
+                            >
+                                <p className="text-center">
+                                    {isCurrentUser 
+                                        ? t('profile.clickToAddDetails') 
+                                        : t('profile.noDetails')}
+                                </p>
+                                {isCurrentUser && (
+                                    <div className="mt-2 p-2 bg-[#2c2c2e] rounded-full">
+                                        <PencilIcon className="w-5 h-5" />
+                                    </div>
+                                )}
                             </div>
                         )
                     )}

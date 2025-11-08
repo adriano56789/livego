@@ -149,7 +149,8 @@ const PKBattleScreen: React.FC<PKBattleScreenProps> = ({
     const [opponentSupporters, setOpponentSupporters] = useState<(User & { contribution: number })[]>([]);
         
     const isBroadcaster = streamer.hostId === currentUser.id;
-    const isFanClubMember = useMemo(() => !!currentUser.fanClub && currentUser.fanClub.streamerId === streamer.hostId, [currentUser.fanClub, streamer.hostId]);
+    const isFan = useMemo(() => !!currentUser.fanClub && currentUser.fanClub.streamerId === streamer.hostId, [currentUser.fanClub, streamer.hostId]);
+    const isFanClubMember = isFan;
 
     const swipeStart = useRef<{ x: number, y: number } | null>(null);
     const minSwipeDistance = 50;
@@ -157,6 +158,46 @@ const PKBattleScreen: React.FC<PKBattleScreenProps> = ({
     const handlePointerDown = (clientX: number, clientY: number) => {
         if (isChatInputFocused) return;
         swipeStart.current = { x: clientX, y: clientY };
+    };
+
+    const handleHeartClick = (e: React.MouseEvent) => {
+        if (isChatInputFocused) return;
+        
+        const rect = e.currentTarget.getBoundingClientRect();
+        const clickX = e.clientX - rect.left;
+        const side = clickX < rect.width / 2 ? 'mine' : 'opponent';
+        
+        // Se for um clique duplo, abre o perfil do streamer/oponente
+        if (e.detail === 2) {
+            if (side === 'mine') {
+                onViewProfile(streamerUser);
+            } else {
+                onViewProfile(opponent);
+            }
+            return;
+        }
+        
+        // Se for um clique simples, adiciona coração
+        const newHeart: Heart = { 
+            id: Date.now() + Math.random(), 
+            x: e.clientX, 
+            y: e.clientY, 
+            side 
+        };
+        
+        setHearts(prev => [...prev, newHeart]);
+
+        if (side === 'mine') {
+            setMyHearts(prev => prev + 1);
+        } else {
+            setOpponentHearts(prev => prev + 1);
+        }
+        
+        api.sendPKHeart(streamer.id, side === 'mine' ? 'A' : 'B');
+
+        setTimeout(() => {
+            setHearts(prev => prev.filter(h => h.id !== newHeart.id));
+        }, 2000);
     };
 
     const handlePointerUp = (clientX: number, clientY: number) => {
@@ -236,13 +277,34 @@ const PKBattleScreen: React.FC<PKBattleScreenProps> = ({
     const isStreamerFollowed = useMemo(() => followingUsers.some(u => u.id === streamer.hostId), [followingUsers, streamer.hostId]);
 
     const streamerUser = useMemo(() => ({
-        id: streamer.hostId, identification: streamer.hostId, name: streamer.name, avatarUrl: streamer.avatar,
-        coverUrl: `https://picsum.photos/seed/${streamer.hostId}/800/1600`, country: streamer.country || 'br',
-        age: 23, gender: 'female' as 'female', level: 1, location: streamer.location, distance: 'desconhecida',
-        fans: 0, following: 0, receptores: 0, enviados: 0, topFansAvatars: [], isLive: true,
-        diamonds: 0, earnings: 0, 
-        earnings_withdrawn: 0, bio: 'Amante de streams!', obras: [], curtidas: [], 
-        xp: 0, ownedFrames: [], activeFrameId: null, frameExpiration: null
+        id: streamer.hostId,
+        identification: streamer.hostId,
+        name: streamer.name,
+        avatarUrl: streamer.avatar,
+        coverUrl: `https://picsum.photos/seed/${streamer.hostId}/800/1600`,
+        country: streamer.country || 'br',
+        age: 25,
+        gender: 'female' as const,
+        level: 1,
+        location: streamer.location || 'Brasil',
+        distance: 'desconhecida',
+        fans: 0,
+        following: 0,
+        receptores: 0,
+        enviados: 0,
+        topFansAvatars: [],
+        isLive: true,
+        diamonds: 0,
+        earnings: 0,
+        earnings_withdrawn: 0,
+        bio: streamer.bio || 'Streamer na plataforma',
+        obras: [],
+        curtidas: [],
+        xp: 0,
+        ownedFrames: [],
+        activeFrameId: null,
+        frameExpiration: null,
+        fanClub: undefined
     } as User), [streamer]);
 
     const streamerDisplayUser = isBroadcaster ? currentUser : streamerUser;
@@ -358,32 +420,6 @@ const PKBattleScreen: React.FC<PKBattleScreenProps> = ({
     };
 
     useEffect(() => {
-        setMyScore(liveSession?.coins || 0);
-        const opponentInitialScore = Math.floor((liveSession?.coins || 0) * (Math.random() * 0.4 + 0.8));
-        setOpponentScore(opponentInitialScore);
-    }, [liveSession?.coins]);
-    
-    const handleHeartClick = (e: React.MouseEvent) => {
-      if (isChatInputFocused) return;
-      const rect = e.currentTarget.getBoundingClientRect();
-      const clickX = e.clientX - rect.left;
-      const side = clickX < rect.width / 2 ? 'mine' : 'opponent';
-      
-      const newHeart: Heart = { id: Date.now() + Math.random(), x: e.clientX, y: e.clientY, side };
-      setHearts(prev => [...prev, newHeart]);
-
-      if (side === 'mine') setMyHearts(prev => prev + 1);
-      else setOpponentHearts(prev => prev + 1);
-      
-      api.sendPKHeart(streamer.id, side === 'mine' ? 'A' : 'B');
-
-      setTimeout(() => {
-        setHearts(prev => prev.filter(h => h.id !== newHeart.id));
-      }, 2000);
-    };
-
-    useEffect(() => {
-        const isFan = currentUser.fanClub && currentUser.fanClub.streamerId === streamer.hostId;
         const entryType = isFan ? 'fan_entry' : 'entry';
         const currentUserEntryMessage: ChatMessageType = {
             id: Date.now(),
@@ -634,10 +670,28 @@ const PKBattleScreen: React.FC<PKBattleScreenProps> = ({
             onTouchEnd={(e) => handlePointerUp(e.changedTouches[0].clientX, e.changedTouches[0].clientY)}
         >
             {/* Video Container */}
-            <div className="h-[65%] w-full relative" onClick={handleHeartClick}>
+            <div className="h-[65%] w-full relative">
                 <div className="absolute inset-0 grid grid-cols-2">
-                    <div className="h-full w-full bg-gray-900 border-r-2 border-yellow-400"><img src={streamerUser.coverUrl} alt={streamerUser.name} className="w-full h-full object-cover" /></div>
-                    <div className="h-full w-full bg-gray-800"><img src={opponent.coverUrl} alt={opponent.name} className="w-full h-full object-cover" /></div>
+                    <div 
+                        className="h-full w-full bg-gray-900 border-r-2 border-yellow-400 relative cursor-pointer"
+                        onClick={(e) => {
+                            if (e.target === e.currentTarget) {
+                                handleHeartClick(e);
+                            }
+                        }}
+                    >
+                        <img src={streamerUser.coverUrl} alt={streamerUser.name} className="w-full h-full object-cover" />
+                    </div>
+                    <div 
+                        className="h-full w-full bg-gray-800 relative cursor-pointer"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onViewProfile(opponent);
+                        }}
+                    >
+                        <img src={opponent.coverUrl} alt={opponent.name} className="w-full h-full object-cover" />
+                        <div className="absolute inset-0 bg-black/20 hover:bg-transparent transition-colors"></div>
+                    </div>
                 </div>
 
                  <FullScreenGiftAnimation 

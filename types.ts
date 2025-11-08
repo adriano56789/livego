@@ -192,11 +192,24 @@ export interface ChatMessage {
 }
 
 export interface Message {
-  id: number;
+  id: string | number;
   avatarUrl: string;
   username: string;
   badgeLevel: number;
   text: string;
+  status?: 'sent' | 'delivered' | 'read' | 'sending' | 'failed';
+  chatId?: string;
+  from?: string;
+  to?: string;
+  imageUrl?: string;
+  timestamp: string;
+  translatedText?: string;
+  type?: 'system-friend-notification';
+  fanClub?: {
+    streamerId: string;
+    streamerName: string;
+    level: number;
+  };
 }
 
 export type RankedUser = User & { contribution: number; gender: 'male' | 'female' | 'not_specified'; age: number; };

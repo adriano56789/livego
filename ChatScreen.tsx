@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { User, Message, FeedPhoto } from './types';
-import { BackIcon, ThreeDotsIcon, SendIcon, GalleryIcon, CheckIcon, DoubleCheckIcon, UserIcon, CloseIcon, LiveIndicatorIcon, ClockIcon, WarningTriangleIcon, TranslateIcon } from './icons';
+import { BackIcon, ThreeDotsIcon, SendIcon, GalleryIcon, CheckIcon, DoubleCheckIcon, UserIcon, CloseIcon, LiveIndicatorIcon, ClockIcon, WarningTriangleIcon, TranslateIcon } from './components/icons';
 import BlockReportModal from './components/BlockReportModal';
 import { useTranslation } from './i18n';
 import { api } from './services/api';
@@ -97,12 +97,26 @@ const ChatMessageBubble: React.FC<{ message: Message; isMe: boolean; user: User;
                     </button>
                 )}
                 {message.text && (
-                     <div className="flow-root">
-                        <div className="float-right ml-2 -mb-1 flex items-center space-x-1 relative top-1">
-                            <span className="text-xs text-gray-300/70 whitespace-nowrap">{formatTimestamp(message.timestamp)}</span>
-                            {isMe && <MessageStatus status={message.status} />}
+                    <div className="flex items-start gap-2">
+                        {/* Ícone fixo */}
+                        <div className="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                            P
                         </div>
-                        <p className="text-white break-words text-left">{isTranslated ? message.translatedText : message.text}</p>
+                        
+                        {/* Conteúdo da mensagem */}
+                        <div className="flex-1 min-w-0">
+                            <div className="flex justify-between items-start">
+                                <p className="text-white break-words">
+                                    {isTranslated ? message.translatedText : message.text}
+                                </p>
+                                <div className="flex items-center gap-2 ml-2">
+                                    <span className="text-xs text-white/70">
+                                        {formatTimestamp(message.timestamp)}
+                                    </span>
+                                    {isMe && <MessageStatus status={message.status} />}
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 )}
                 {!message.text && message.imageUrl && (
@@ -254,30 +268,42 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ user, onBack, isModal, currentU
     };
 
     const handleSendMessage = async () => {
-        const hasText = newMessage.trim() !== '';
+        const textToSend = newMessage.trim();
+        const hasText = textToSend !== '';
         const hasImage = !!selectedImage;
         const sendingMessage = messages.some(m => m.status === 'sending');
 
-        if ((!hasText && !hasImage) || sendingMessage) return;
+        if ((!hasText && !hasImage) || sendingMessage) {
+            return;
+        }
         
-        const textToSend = newMessage;
         const imageToSend = selectedImage;
-
         const tempId = `temp_${Date.now()}`;
+        
+        // Cria a mensagem otimista
         const optimisticMessage: Message = {
             id: tempId,
+            avatarUrl: currentUser.avatarUrl,
+            username: currentUser.name,
+            badgeLevel: currentUser.level,
+            text: textToSend,
             chatId: chatKey,
             from: currentUser.id,
             to: user.id,
-            text: textToSend,
             imageUrl: imageToSend || undefined,
             timestamp: new Date().toISOString(),
             status: 'sending',
+            translatedText: undefined,
+            type: undefined,
+            fanClub: undefined
         };
 
-        setMessages(prev => [...prev, optimisticMessage]);
+        // Limpa os campos antes de fazer qualquer outra coisa
         setNewMessage('');
         setSelectedImage(null);
+        
+        // Adiciona a mensagem à lista
+        setMessages(prev => [...prev, optimisticMessage]);
 
         const isMobile = window.innerWidth <= 768;
         if (isMobile) {
@@ -419,7 +445,20 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ user, onBack, isModal, currentU
                                 placeholder={t('chat.sayHi')}
                                 value={newMessage}
                                 onChange={(e) => setNewMessage(e.target.value)}
-                                onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                                onKeyPress={(e) => {
+                                    if (e.key === 'Enter' && !e.shiftKey) {
+                                        e.preventDefault();
+                                        handleSendMessage();
+                                    }
+                                }}
+                                onPaste={(e) => {
+                                    // Permite colar texto normalmente
+                                    const pastedText = e.clipboardData.getData('text/plain');
+                                    if (pastedText) {
+                                        e.preventDefault();
+                                        setNewMessage(pastedText);
+                                    }
+                                }}
                                 className="w-full h-full bg-transparent text-white placeholder-gray-500 px-4 focus:outline-none"
                             />
                         </div>

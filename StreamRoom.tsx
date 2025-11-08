@@ -1,31 +1,28 @@
-
-
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import OnlineUsersModal from './live/OnlineUsersModal';
-import ChatMessage from './live/ChatMessage';
-import CoHostModal from './CoHostModal';
-import EntryChatMessage from './live/EntryChatMessage';
-import ChatScreen from './ChatScreen';
-import ToolsModal from './ToolsModal';
-import { GiftIcon, MessageIcon, SendIcon, MoreIcon, CloseIcon, PlusIcon, SoundWaveIcon, ViewerIcon, GoldCoinWithGIcon, HeartIcon, TrophyIcon, BellIcon, TranslateIcon, CalendarIcon, FanClubHeaderIcon } from './icons';
-import { Streamer, User, Gift, ToastType, RankedUser, LiveSessionState } from '../types';
-import ContributionRankingModal from './ContributionRankingModal';
-import BeautyEffectsPanel from './live/BeautyEffectsPanel';
-import ResolutionPanel from './live/ResolutionPanel';
-import GiftModal from './live/GiftModal';
-import GiftAnimationOverlay, { GiftPayload } from './live/GiftAnimationOverlay';
-import { useTranslation } from '../i18n';
-import { api } from '../services/api';
-import UserActionModal from './UserActionModal';
-import { webSocketManager } from '../services/websocket';
-import FriendRequestNotification from './live/FriendRequestNotification';
-import { RankedAvatar } from './live/RankedAvatar';
-import FullScreenGiftAnimation from './live/FullScreenGiftAnimation';
-import { avatarFrames, getRemainingDays, getFrameGlowClass } from '../services/database';
-import FanClubModal from './live/FanClubModal';
-import JoinFanClubModal from './live/JoinFanClubModal';
-import FanClubEntryMessage from './live/FanClubEntryMessage';
-import UserMentionSuggestions from './live/UserMentionSuggestions';
+import OnlineUsersModal from './components/live/OnlineUsersModal';
+import ChatMessage from './components/live/ChatMessage';
+import CoHostModal from './components/CoHostModal';
+import EntryChatMessage from './components/live/EntryChatMessage';
+import ToolsModal from './components/ToolsModal';
+import { GiftIcon, MessageIcon, SendIcon, MoreIcon, CloseIcon, PlusIcon, SoundWaveIcon, ViewerIcon, GoldCoinWithGIcon, HeartIcon, TrophyIcon, BellIcon, TranslateIcon, CalendarIcon, FanClubHeaderIcon } from './components/icons';
+import { Streamer, User, Gift, ToastType, RankedUser, LiveSessionState } from './types';
+import ContributionRankingModal from './components/ContributionRankingModal';
+import BeautyEffectsPanel from './components/live/BeautyEffectsPanel';
+import ResolutionPanel from './components/live/ResolutionPanel';
+import GiftModal from './components/live/GiftModal';
+import GiftAnimationOverlay, { GiftPayload } from './components/live/GiftAnimationOverlay';
+import { useTranslation } from './i18n';
+import { api } from './services/api';
+import UserActionModal from './components/UserActionModal';
+import { webSocketManager } from './services/websocket';
+import FriendRequestNotification from './components/live/FriendRequestNotification';
+import { RankedAvatar } from './components/live/RankedAvatar';
+import FullScreenGiftAnimation from './components/live/FullScreenGiftAnimation';
+import { avatarFrames, getRemainingDays, getFrameGlowClass } from './services/database';
+import FanClubModal from './components/live/FanClubModal';
+import JoinFanClubModal from './components/live/JoinFanClubModal';
+import FanClubEntryMessage from './components/live/FanClubEntryMessage';
+import UserMentionSuggestions from './components/live/UserMentionSuggestions';
 
 interface ChatMessageType {
     id: number;

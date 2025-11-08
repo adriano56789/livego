@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { PlusIcon, SettingsIcon, IdBadgeIcon, TranslateIcon } from './components/icons';
+import { PlusIcon, SettingsIcon, IdBadgeIcon, TranslateIcon, PIcon } from './components/icons';
 import { avatarFrames, getRemainingDays, getFrameGlowClass } from './services/database';
 import { User } from './types';
 
@@ -104,32 +104,46 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
                     </button>
                 )}
             </div>
-            <div className="bg-black/40 backdrop-blur-sm rounded-lg p-2 mt-1 inline-block shadow-lg shadow-black/50 relative group">
-                <p className="text-white break-words">
-                    {displayText()}
-                    {isTranslating && (
-                        <span className="ml-2 text-xs text-gray-400">Traduzindo...</span>
-                    )}
-                </p>
-                {onTranslate && typeof message === 'string' && (
-                    <div className="absolute right-0 -top-3 flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="bg-black/60 backdrop-blur-sm rounded-lg p-3 mt-1 inline-block shadow-lg shadow-black/50 relative group border border-white/10">
+                <div className="relative">
+                    <div className="relative pr-6">
+                        <p className="text-white text-sm leading-relaxed break-words">
+                            {displayText()}
+                            {isTranslating && (
+                                <span className="ml-2 text-xs text-gray-400">Traduzindo...</span>
+                            )}
+                        </p>
                         <button
-                            onClick={handleTranslate}
-                            disabled={isTranslating || (translatedText && !showOriginal)}
-                            className="w-5 h-5 rounded-full bg-purple-600/80 flex items-center justify-center hover:bg-purple-500/80 transition-colors"
-                            title={isTranslated ? 'Traduzir mensagem' : undefined}
+                            onClick={onTranslate && typeof message === 'string' ? handleTranslate : undefined}
+                            disabled={isTranslating || !onTranslate || typeof message !== 'string'}
+                            className="absolute -right-2 -top-2 w-6 h-6 rounded-full flex items-center justify-center text-white font-bold text-sm bg-purple-600 hover:bg-purple-700 transition-all duration-200 shadow-lg z-10"
+                            style={{
+                                opacity: isTranslating ? 1 : 0.9,
+                                transform: isTranslating ? 'scale(1.1)' : 'scale(1)',
+                                display: onTranslate && typeof message === 'string' ? 'flex' : 'none'
+                            }}
+                            title="Traduzir mensagem"
                         >
-                            <TranslateIcon className="w-3 h-3 text-white" />
+                            {isTranslating ? (
+                                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                            ) : (
+                                <span className="relative">P</span>
+                            )}
                         </button>
-                        {translatedText && (
+                    </div>
+                </div>
+                {translatedText && (
+                    <div className="mt-2 pt-2 border-t border-white/10">
+                        <div className="flex items-center justify-between">
+                            <p className="text-green-300 text-sm italic">{showOriginal ? message : translatedText}</p>
                             <button
                                 onClick={toggleOriginal}
-                                className="text-xs px-2 py-0.5 rounded-full bg-gray-700/80 text-white hover:bg-gray-600/80 transition-colors"
+                                className="text-xs px-2 py-0.5 rounded-full bg-purple-600/50 text-white hover:bg-purple-500/50 transition-colors"
                                 title={showOriginal ? 'Mostrar tradução' : 'Mostrar original'}
                             >
-                                {showOriginal ? 'TRAD' : 'ORIG'}
+                                {showOriginal ? 'Ver Tradução' : 'Ver Original'}
                             </button>
-                        )}
+                        </div>
                     </div>
                 )}
             </div>

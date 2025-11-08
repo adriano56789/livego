@@ -8,6 +8,7 @@ import { api } from '../services/api';
 import { LoadingSpinner } from './Loading';
 import { webSocketManager } from '../services/websocket';
 import { createChatKey, avatarFrames, getRemainingDays, getFrameGlowClass } from '../services/database';
+import ImageViewer from './ImageViewer';
 
 interface ChatScreenProps {
     user: User;
@@ -140,6 +141,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ user, onBack, isModal, currentU
     const { t, language } = useTranslation();
     const chatKey = useMemo(() => createChatKey(currentUser.id, user.id), [currentUser.id, user.id]);
     const [isActionsModalOpen, setIsActionsModalOpen] = useState(false);
+    const [viewingImage, setViewingImage] = useState<string | null>(null);
 
     const formatLastSeen = (timestamp?: string) => {
         if (!timestamp) return 'Offline';
@@ -273,6 +275,9 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ user, onBack, isModal, currentU
             imageUrl: imageToSend || undefined,
             timestamp: new Date().toISOString(),
             status: 'sending',
+            avatarUrl: '',
+            username: '',
+            badgeLevel: 0
         };
 
         setMessages(prev => [...prev, optimisticMessage]);
@@ -306,22 +311,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ user, onBack, isModal, currentU
     };
     
     const handleViewImage = (clickedUrl: string) => {
-        const imageMessages = messages.filter(m => m.imageUrl);
-        const photoFeed: FeedPhoto[] = imageMessages.map(m => ({
-            id: m.id,
-            photoUrl: m.imageUrl!,
-            type: 'image',
-            user: m.from === currentUser.id ? currentUser : user,
-            likes: 0, 
-            isLiked: false, 
-            commentCount: 0,
-        }));
-
-        const initialIndex = photoFeed.findIndex(p => p.photoUrl === clickedUrl);
-
-        if (initialIndex !== -1) {
-            onOpenPhotoViewer(photoFeed, initialIndex);
-        }
+        setViewingImage(clickedUrl);
     };
 
     const containerClasses = isModal
@@ -436,14 +426,17 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ user, onBack, isModal, currentU
                     </div>
                 </footer>
             </div>
+            
+            {viewingImage && (
+                <ImageViewer 
+                    imageUrl={viewingImage} 
+                    onClose={() => setViewingImage(null)} 
+                />
+            )}
+            
             <BlockReportModal
                 isOpen={isActionsModalOpen}
                 onClose={() => setIsActionsModalOpen(false)}
-                onUnfriend={user.isFollowed ? () => {
-                    onFollowUser(user);
-                    setIsActionsModalOpen(false);
-                    onNavigateToFriends();
-                } : undefined}
                 onBlock={() => {
                     onBlockUser(user);
                     setIsActionsModalOpen(false);

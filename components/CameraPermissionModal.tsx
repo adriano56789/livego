@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { CameraIcon, MicrophoneIcon, RefreshIcon } from './icons';
+import React from 'react';
+import { CameraIcon, MicrophoneIcon } from './icons';
 
 interface CameraPermissionModalProps {
   isOpen: boolean;
@@ -8,45 +8,17 @@ interface CameraPermissionModalProps {
   onAllowOnce: () => void;
   onDeny: () => void;
   onClose: () => void;
-  error?: string | null;
 }
 
-const CameraPermissionModal: React.FC<CameraPermissionModalProps> = ({ 
-  isOpen, 
-  permissionType, 
-  onAllowAlways, 
-  onAllowOnce, 
-  onDeny, 
-  onClose,
-  error 
-}) => {
-  const [showDeniedMessage, setShowDeniedMessage] = useState(false);
-
-  useEffect(() => {
-    if (error && error.includes('NotAllowedError')) {
-      setShowDeniedMessage(true);
-    }
-  }, [error]);
-
-  const handleDeny = () => {
-    setShowDeniedMessage(true);
-    onDeny();
-  };
-
-  const handleRetry = () => {
-    setShowDeniedMessage(false);
-    onAllowOnce();
-  };
+const CameraPermissionModal: React.FC<CameraPermissionModalProps> = ({ isOpen, permissionType, onAllowAlways, onAllowOnce, onDeny, onClose }) => {
   const contentMap = {
     camera: {
-      icon: <CameraIcon className="w-10 h-10 text-gray-300" />,
+      icon: <CameraIcon className="w-8 h-8 text-gray-300" />,
       title: 'Permitir que o app LiveGo tire fotos e grave vídeos?',
-      deniedMessage: 'Permissão de câmera negada. Vá nas configurações do navegador e habilite a câmera para este site.'
     },
     microphone: {
-      icon: <MicrophoneIcon className="w-10 h-10 text-gray-300" />,
+      icon: <MicrophoneIcon className="w-8 h-8 text-gray-300" />,
       title: 'Permitir que o app LiveGo grave áudio?',
-      deniedMessage: 'Permissão de microfone negada. Vá nas configurações do navegador e habilite o microfone para este site.'
     },
   };
 
@@ -58,7 +30,7 @@ const CameraPermissionModal: React.FC<CameraPermissionModalProps> = ({
   
   return (
     <div
-      className={`fixed inset-0 z-50 flex items-end justify-center transition-opacity duration-300 bg-black/50 ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+      className={`absolute inset-0 z-50 flex items-end justify-center transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
       onClick={onClose}
       aria-modal="true"
       role="dialog"
@@ -70,54 +42,27 @@ const CameraPermissionModal: React.FC<CameraPermissionModalProps> = ({
         <div className="flex justify-center mb-4">
           {currentContent.icon}
         </div>
-        
-        {showDeniedMessage ? (
-          <>
-            <h2 className="text-xl font-semibold mb-2 text-red-400">Permissão Negada</h2>
-            <p className="text-gray-300 mb-6 text-sm px-4">
-              {currentContent.deniedMessage}
-            </p>
-            <div className="space-y-3">
-              <button
-                onClick={handleRetry}
-                className="w-full bg-[#007aff] text-white font-semibold rounded-xl py-3 px-4 text-base flex items-center justify-center gap-2"
-              >
-                <RefreshIcon className="w-5 h-5" />
-                Tentar novamente
-              </button>
-              <button
-                onClick={onClose}
-                className="w-full bg-[#3c3c3e] text-white font-semibold rounded-xl py-3 px-4 text-base"
-              >
-                Fechar
-              </button>
-            </div>
-          </>
-        ) : (
-          <>
-            <h2 className="text-xl font-semibold mb-6">{currentContent.title}</h2>
-            <div className="space-y-3">
-              <button
-                onClick={onAllowAlways}
-                className="w-full bg-[#007aff] text-white font-semibold rounded-xl py-3 px-4 text-base"
-              >
-                Durante o uso do app
-              </button>
-              <button
-                onClick={onAllowOnce}
-                className="w-full bg-[#3c3c3e] text-white font-semibold rounded-xl py-3 px-4 text-base"
-              >
-                Apenas esta vez
-              </button>
-              <button
-                onClick={handleDeny}
-                className="w-full bg-[#3c3c3e] text-white font-semibold rounded-xl py-3 px-4 text-base"
-              >
-                Não permitir
-              </button>
-            </div>
-          </>
-        )}
+        <h2 className="text-lg font-semibold mb-6">{currentContent.title}</h2>
+        <div className="flex flex-col space-y-3">
+          <button
+            onClick={onAllowAlways}
+            className="w-full bg-[#007aff] text-white font-semibold rounded-xl py-3 px-4 text-base hover:bg-blue-600 transition-colors"
+          >
+            Durante o uso do app
+          </button>
+          <button
+            onClick={onAllowOnce}
+            className="w-full bg-[#3c3c3e] text-white font-semibold rounded-xl py-3 px-4 text-base hover:bg-gray-700 transition-colors"
+          >
+            Apenas esta vez
+          </button>
+          <button
+            onClick={onDeny}
+            className="w-full bg-[#3c3c3e] text-white font-semibold rounded-xl py-3 px-4 text-base hover:bg-gray-700 transition-colors"
+          >
+            Não permitir
+          </button>
+        </div>
       </div>
     </div>
   );

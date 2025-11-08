@@ -1,21 +1,3 @@
-
-
-export { GoogleIcon } from './GoogleIcon';
-export { FacebookIcon } from './FacebookIcon';
-export { SearchIcon } from './SearchIcon';
-export { GlobeIcon } from './GlobeIcon';
-export { HomeIcon } from './HomeIcon';
-export { VideoIcon } from './VideoIcon';
-export { MessageIcon } from './MessageIcon';
-export { UserIcon } from './UserIcon';
-export { PlayIcon } from './PlayIcon';
-export { ClockIcon } from './ClockIcon';
-export { CloseIcon } from './CloseIcon';
-export { BackIcon } from './BackIcon';
-export { ExpandIcon } from './ExpandIcon';
-export { BookOpenIcon } from './BookOpenIcon';
-export { SparklesIcon } from './SparklesIcon';
-export { PKIcon } from './PKIcon';
 export { ChevronRightIcon } from './ChevronRightIcon';
 export { AvatarProtectIcon } from './AvatarProtectIcon';
 export { BlockIcon } from './BlockIcon';

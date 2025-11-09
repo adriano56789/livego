@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { YellowDiamondIcon } from './icons';
+import { CustomDiamondIcon } from './icons';
 
 // Custom hook to animate number counting up
 const useCountUp = (end: number, duration = 1000) => {
@@ -71,7 +71,7 @@ const GanhosDisplay: React.FC<GanhosDisplayProps> = ({ earnings }) => {
             <div className="relative z-10">
                 <p className="text-sm font-semibold text-gray-400 mb-2">Disponível para saque</p>
                 <div className="flex items-center space-x-3">
-                    <YellowDiamondIcon className="w-10 h-10 text-yellow-400 drop-shadow-lg" />
+                    <CustomDiamondIcon className="w-10 h-10 drop-shadow-lg" />
                     <span className="text-5xl font-bold text-white tracking-tighter">
                         {formattedEarnings.toLocaleString('pt-BR')}
                     </span>

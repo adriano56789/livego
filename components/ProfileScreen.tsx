@@ -5,7 +5,6 @@ import {
     FemaleIcon,
     CopyIcon,
     WalletIcon,
-    DiamondIcon,
     GoldCoinIcon,
     MarketIcon,
     RankIcon,
@@ -17,6 +16,7 @@ import {
     SettingsIcon,
     ChevronRightIcon,
     VIPIcon,
+    CustomDiamondIcon,
     VIPBadgeIcon,
     ShieldIcon,
     LiveIndicatorIcon,
@@ -208,7 +208,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({
               </button>
               <div className="flex items-center space-x-4">
                   <button onClick={() => onOpenWallet('Diamante')} className="flex items-center space-x-1 hover:opacity-80 transition-opacity">
-                      <DiamondIcon className="h-4 w-4 text-yellow-500" />
+                      <CustomDiamondIcon className="h-4 w-4" />
                       <span className="text-sm">{currentUser.diamonds?.toLocaleString('pt-BR')}</span>
                   </button>
                   <button onClick={() => onOpenWallet('Ganhos')} className="flex items-center space-x-1 hover:opacity-80 transition-opacity">

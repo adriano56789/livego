@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { BackIcon, MenuIcon } from './icons';
-import { YellowDiamondIcon } from './icons/YellowDiamondIcon';
+import { CustomDiamondIcon } from './icons/CustomDiamondIcon';
 import GanhosTab from './GanhosTab';
 import PurchaseHistoryScreen from './PurchaseHistoryScreen';
 import ConfigureWithdrawalMethodScreen from './ConfigureWithdrawalMethodScreen';
@@ -38,7 +38,7 @@ const DiamanteTab: React.FC<{ onPurchase: (pkg: { diamonds: number; price: numbe
           {diamondPackages.map((pkg) => (
             <div key={pkg.diamonds} onClick={() => onPurchase(pkg)} className="bg-[#2C2C2E] rounded-lg p-4 flex flex-col items-center justify-center space-y-3 cursor-pointer hover:bg-gray-700 transition-colors">
               <div className="flex items-center space-x-2">
-                <YellowDiamondIcon className="w-5 h-5 text-yellow-400" />
+                <CustomDiamondIcon className="w-6 h-6 drop-shadow-lg" />
                 <span className="text-white font-bold text-lg">
                   {pkg.diamonds.toLocaleString('pt-BR')}
                 </span>

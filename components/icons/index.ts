@@ -48,6 +48,7 @@ export { WarningTriangleIcon } from './WarningTriangleIcon';
 export { GoldCoinWithGIcon } from './GoldCoinWithGIcon';
 export { HeartIcon } from './HeartIcon';
 export { ViewerIcon } from './ViewerIcon';
+export { CustomDiamondIcon } from './CustomDiamondIcon';
 export { IdBadgeIcon } from './IdBadgeIcon';
 export { FilterIcon } from './FilterIcon';
 export { BellOffIcon } from './BellOffIcon';

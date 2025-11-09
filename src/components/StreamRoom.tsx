@@ -91,6 +91,7 @@ const FollowChatMessage: React.FC<{ follower: string; followed: string }> = ({ f
 const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, onLeaveStreamView, onStartPKBattle, onViewProfile, currentUser, onOpenWallet, onFollowUser, onOpenPrivateChat, onOpenPrivateInviteModal, setActiveScreen, onStartChatWithStreamer, onOpenPKTimerSettings, onOpenFans, onOpenFriendRequests, gifts, receivedGifts, updateUser, liveSession, updateLiveSession, logLiveEvent, onStreamUpdate, refreshStreamRoomData, addToast, followingUsers, streamers, onSelectStream, onOpenVIPCenter, onOpenFanClubMembers }) => {
     const { t, language } = useTranslation();
     const [isUiVisible, setIsUiVisible] = useState(true);
+    const [lastTap, setLastTap] = useState(0);
     const [isToolsOpen, setIsToolsOpen] = useState(false);
     const [isBeautyPanelOpen, setBeautyPanelOpen] = useState(false);
     const [isCoHostModalOpen, setIsCoHostModalOpen] = useState(false);
@@ -646,17 +647,39 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
         ).slice(0, 5);
     }, [mentionQuery, onlineUsers, currentUser.id, showMentionSuggestions]);
 
+    // Função para lidar com toque na tela
+    const handleScreenTap = (e: React.MouseEvent | React.TouchEvent) => {
+        // Se o clique for em um elemento interativo, não faz nada
+        const target = e.target as HTMLElement;
+        if (target.closest('.interactive-element') || target.closest('.chat-container')) {
+            return;
+        }
+        
+        // Verifica se é um duplo toque rápido
+        const now = Date.now();
+        const DOUBLE_TAP_DELAY = 300; // 300ms
+        
+        if (now - lastTap < DOUBLE_TAP_DELAY) {
+            // Toggle UI visibility
+            setIsUiVisible(prev => !prev);
+        }
+        
+        setLastTap(now);
+    };
+
     return (
-        <div className="absolute inset-0 bg-gray-900 text-white font-sans z-10"
+        <div 
+            className="absolute inset-0 bg-gray-900 text-white font-sans z-10"
+            onClick={handleScreenTap}
+            onTouchStart={handleScreenTap}
             onMouseDown={(e) => handlePointerDown(e.clientX, e.clientY)}
             onMouseUp={(e) => handlePointerUp(e.clientX, e.clientY)}
             onTouchStart={(e) => handlePointerDown(e.targetTouches[0].clientX, e.targetTouches[0].clientY)}
-            onTouchEnd={(e) => handlePointerUp(e.changedTouches[0].clientX, e.changedTouches[0].clientY)}
         >
             <img src={streamerUser.coverUrl} key={streamerUser.coverUrl} className="absolute inset-0 w-full h-full object-cover" alt="Stream background" />
             <div className={`absolute inset-0 bg-gradient-to-b from-transparent to-black/70 pointer-events-none transition-opacity duration-300 ${isUiVisible ? 'opacity-100' : 'opacity-0'}`}></div>
 
-            <div className="absolute top-24 left-3 z-30 pointer-events-none flex flex-col-reverse items-start">
+            <div className="interactive-element absolute right-4 top-1/2 transform -translate-y-1/2 flex flex-col space-y-2">
                 {bannerGifts.map((payload) => (
                     <GiftAnimationOverlay 
                         key={payload.id}
@@ -671,7 +694,9 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
                 onEnd={handleFullscreenGiftAnimationEnd}
             />
 
-            <header className={`p-3 bg-transparent absolute top-0 left-0 right-0 z-20 transition-opacity duration-300 ${isUiVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+            <div 
+                className={`interactive-element p-3 bg-transparent absolute top-0 left-0 right-0 z-20 transition-opacity duration-300 ${isUiVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} onClick={(e) => e.stopPropagation()}
+            >
                 <div className="flex justify-between items-start">
                     {/* Left side */}
                     <div className="flex items-start space-x-2">
@@ -758,10 +783,10 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
                         </div>
                     </div>
                 </div>
-            </header>
+            </div>
 
             <div 
-                className={`absolute bottom-0 left-0 right-0 w-full transition-opacity duration-300 ${isUiVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+                className={`interactive-element absolute bottom-0 left-0 right-0 w-full transition-opacity duration-300 ${isUiVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
                 onClick={e => e.stopPropagation()}
                 onTouchStart={e => e.stopPropagation()}
             >
@@ -814,7 +839,7 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
                         </div>
                     )}
                     <div className="flex items-center space-x-2">
-                        <div className="flex-grow bg-black/40 rounded-full flex items-center pr-1.5">
+                        <div className="flex-grow relative" style={{ cursor: 'pointer' }} onClick={(e) => e.stopPropagation()}>
                             <input 
                                 ref={chatInputRef}
                                 type="text" 

@@ -8,28 +8,40 @@ const __dirname = path.dirname(__filename);
 
 export default defineConfig({
   plugins: [react()],
+  
   server: {
     port: 3000,
     host: '0.0.0.0',
-    strictPort: false,
     cors: true,
     hmr: {
       protocol: 'ws',
       host: 'localhost',
-      port: 24679,  // Changed from 24678 to 24679
+      port: 24679,
       overlay: true
-    }
+    },
   },
+
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './'),
+      '@': path.resolve(__dirname, './src'),
+      '@components': path.resolve(__dirname, './components'),
       '@icons': path.resolve(__dirname, './components/icons')
     }
   },
-  define: {
-    'process.env': {
-      API_KEY: JSON.stringify(process.env.GEMINI_API_KEY || ''),
-      GEMINI_API_KEY: JSON.stringify(process.env.GEMINI_API_KEY || '')
+
+  build: {
+    minify: 'terser',
+    sourcemap: false,
+    chunkSizeWarningLimit: 1600,
+    terserOptions: {
+      compress: {
+        drop_console: true,
+        drop_debugger: true,
+      }
     }
+  },
+  
+  optimizeDeps: {
+    include: ['react', 'react-dom']
   }
 });

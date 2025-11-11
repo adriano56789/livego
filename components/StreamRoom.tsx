@@ -1,6 +1,5 @@
-
-
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { animationManager } from '../utils/AnimationManager';
 import OnlineUsersModal from './live/OnlineUsersModal';
 import ChatMessage from './live/ChatMessage';
 import CoHostModal from './CoHostModal';
@@ -114,13 +113,55 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
     
     const [bannerGifts, setBannerGifts] = useState<(GiftPayload & { id: number })[]>([]);
     const nextGiftId = useRef(0);
-    const [fullscreenGiftQueue, setFullscreenGiftQueue] = useState<GiftPayload[]>([]);
+    const [activeGiftAnimations, setActiveGiftAnimations] = useState<GiftPayload[]>([]);
+    const animationRefs = useRef<{[key: number]: {canStart: boolean; checkInterval?: NodeJS.Timeout}}>({});
     const [currentFullscreenGift, setCurrentFullscreenGift] = useState<GiftPayload | null>(null);
     const [isFanClubModalOpen, setIsFanClubModalOpen] = useState(false);
     const [isJoinFanClubModalOpen, setIsJoinFanClubModalOpen] = useState(false);
     const [isChatInputFocused, setIsChatInputFocused] = useState(false);
     const [mentionQuery, setMentionQuery] = useState('');
     const [showMentionSuggestions, setShowMentionSuggestions] = useState(false);
+
+    const handleNewGift = useCallback((giftData: GiftPayload) => {
+        const giftId = Date.now();
+        const giftWithId = { ...giftData, id: giftId };
+        
+        // Prioridade baseada no valor do presente
+        const priority = giftData.gift.price || 1;
+        // Duração baseada no tipo de presente (em ms)
+        const duration = giftData.gift.name === 'Diamante VIP' ? 5000 : 3000;
+        
+        // Solicita permissão ao gerenciador de animações
+        const { id, canStart } = animationManager.requestAnimation(priority, duration);
+        
+        // Armazena a referência da animação
+        const ref = { canStart, checkInterval: null as NodeJS.Timeout | null };
+        animationRefs.current[id] = ref;
+        
+        if (canStart) {
+            setActiveGiftAnimations(prev => [...prev, giftWithId]);
+        } else {
+            // Se não puder começar agora, agenda para tentar novamente em breve
+            const checkInterval = setInterval(() => {
+                if (ref.canStart) {
+                    clearInterval(checkInterval);
+                    setActiveGiftAnimations(prev => [...prev, giftWithId]);
+                    delete animationRefs.current[id];
+                }
+            }, 100);
+            
+            // Armazena a referência do intervalo
+            if (ref) ref.checkInterval = checkInterval;
+            
+            // Retorna função de limpeza
+            return () => {
+                if (ref.checkInterval) {
+                    clearInterval(ref.checkInterval);
+                }
+                delete animationRefs.current[id];
+            };
+        }
+    }, []);
 
     const isBroadcaster = streamer.hostId === currentUser.id;
 
@@ -249,9 +290,14 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
         setMessages(prev => [...prev, giftMessage]);
     };
     
-    const handleBannerAnimationEnd = (id: number) => {
-        setBannerGifts(prev => prev.filter(g => g.id !== id));
-    };
+    const handleGiftAnimationEnd = useCallback((id: number) => {
+        setActiveGiftAnimations(prev => {
+            const updated = prev.filter(gift => gift.id !== id);
+            // Notifica o gerenciador que a animação terminou
+            animationManager.endAnimation(id);
+            return updated;
+        });
+    }, []);
 
     const handleFullscreenGiftAnimationEnd = () => {
         if (currentFullscreenGift) {
@@ -260,14 +306,6 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
         }
         setCurrentFullscreenGift(null);
     };
-
-    useEffect(() => {
-        if (!currentFullscreenGift && fullscreenGiftQueue.length > 0) {
-            const nextGift = fullscreenGiftQueue[0];
-            setCurrentFullscreenGift(nextGift);
-            setFullscreenGiftQueue(prev => prev.slice(1));
-        }
-    }, [currentFullscreenGift, fullscreenGiftQueue]);
 
     useEffect(() => {
         const handleNewMessage = async (message: any) => {
@@ -287,20 +325,6 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
             }
         };
         webSocketManager.on('newStreamMessage', handleNewMessage);
-
-        const handleNewGift = (payload: GiftPayload) => {
-            if (payload.roomId !== streamer.id || payload.fromUser.id === currentUser.id) {
-                return; // Ignore gifts for other rooms or self-sent gifts
-            }
-
-            if (liveSession) {
-                updateLiveSession({ coins: (liveSession.coins || 0) + (payload.gift.price || 0) * payload.quantity });
-            }
-            
-            refreshStreamRoomData(streamer.hostId);
-            postGiftChatMessage(payload);
-            setFullscreenGiftQueue(prev => [...prev, payload]);
-        };
         webSocketManager.on('newStreamGift', handleNewGift);
 
         const handleFollowUpdate = (payload: { follower: User, followed: User, isUnfollow: boolean }) => {
@@ -504,7 +528,7 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
         };
         
         postGiftChatMessage(giftPayload);
-        setFullscreenGiftQueue(prev => [...prev, giftPayload]);
+        setActiveGiftAnimations(prev => [...prev, giftPayload]);
     
         // Now, call the API in the background
         try {
@@ -648,6 +672,13 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
         ).slice(0, 5);
     }, [mentionQuery, onlineUsers, currentUser.id, showMentionSuggestions]);
 
+    const MemoizedGiftAnimation = useMemo(
+        () => React.memo(GiftAnimationOverlay, (prevProps, nextProps) => {
+            return prevProps.giftPayload.id === nextProps.giftPayload.id;
+        }),
+        []
+    );
+
     return (
         <div className="absolute inset-0 bg-gray-900 text-white font-sans z-10"
             onMouseDown={(e) => handlePointerDown(e.clientX, e.clientY)}
@@ -659,19 +690,22 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
             <div className={`absolute inset-0 bg-gradient-to-b from-transparent to-black/70 pointer-events-none transition-opacity duration-300 ${isUiVisible ? 'opacity-100' : 'opacity-0'}`}></div>
 
             <div className="absolute top-24 left-3 z-30 pointer-events-none flex flex-col-reverse items-start">
-                {bannerGifts.map((payload) => (
-                    <GiftAnimationOverlay 
-                        key={payload.id}
-                        giftPayload={payload}
-                        onAnimationEnd={handleBannerAnimationEnd}
-                    />
+                {activeGiftAnimations.map((gift, index) => (
+                    <div key={`gift-${gift.id}-${index}`} className="mb-2">
+                        <MemoizedGiftAnimation
+                            giftPayload={gift}
+                            onAnimationEnd={handleGiftAnimationEnd}
+                        />
+                    </div>
                 ))}
             </div>
             
-            <FullScreenGiftAnimation
-                payload={currentFullscreenGift}
-                onEnd={handleFullscreenGiftAnimationEnd}
-            />
+            {currentFullscreenGift && (
+                <FullScreenGiftAnimation
+                    payload={currentFullscreenGift}
+                    onEnd={handleFullscreenGiftAnimationEnd}
+                />
+            )}
 
             <header className={`p-3 bg-transparent absolute top-0 left-0 right-0 z-20 transition-opacity duration-300 ${isUiVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
                 <div className="flex justify-between items-start">

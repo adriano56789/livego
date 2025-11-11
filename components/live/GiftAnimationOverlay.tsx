@@ -1,5 +1,13 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, memo, useCallback } from 'react';
 import { Gift, User } from '../../types';
+
+// Estilos inline otimizados
+const animationStyle: React.CSSProperties = {
+  transform: 'translateZ(0)',
+  backfaceVisibility: 'hidden',
+  perspective: '1000px',
+  willChange: 'transform, opacity'
+};
 
 export interface GiftPayload {
     fromUser: User;
@@ -17,20 +25,24 @@ interface GiftAnimationOverlayProps {
 
 const GiftAnimationOverlay: React.FC<GiftAnimationOverlayProps> = ({ giftPayload, onAnimationEnd }) => {
 
-    useEffect(() => {
-        // The CSS animation `gift-animation-base` now lasts 5s.
-        const timer = setTimeout(() => {
-            onAnimationEnd(giftPayload.id);
-        }, 5000);
-
-        return () => clearTimeout(timer);
-
+    // Usando useCallback para evitar recriação da função a cada renderização
+    const handleAnimationEnd = useCallback(() => {
+        onAnimationEnd(giftPayload.id);
     }, [giftPayload.id, onAnimationEnd]);
+
+    useEffect(() => {
+        // Reduzindo o tempo de animação para 3 segundos
+        const timer = setTimeout(handleAnimationEnd, 3000);
+        return () => clearTimeout(timer);
+    }, [handleAnimationEnd]);
     
     const { fromUser, toUser, gift, quantity } = giftPayload;
 
     return (
-        <div className="gift-animation-base p-2 bg-black/50 rounded-full inline-flex items-center space-x-3 shadow-lg backdrop-blur-md mt-2">
+        <div 
+            className="gift-animation-base p-2 bg-black/50 rounded-full inline-flex items-center space-x-3 shadow-lg backdrop-blur-md mt-2"
+            style={animationStyle}
+        >
             <img src={fromUser.avatarUrl} alt={fromUser.name} className="w-10 h-10 rounded-full border-2 border-purple-400 bg-gradient-to-br from-gray-900 via-purple-900/20 to-gray-900" />
             <div className="flex flex-col text-left">
                 <p className="text-white font-bold text-sm">{fromUser.name}</p>
@@ -44,4 +56,9 @@ const GiftAnimationOverlay: React.FC<GiftAnimationOverlayProps> = ({ giftPayload
     );
 };
 
-export default GiftAnimationOverlay;
+// Função de comparação para o memo
+const areEqual = (prevProps: GiftAnimationOverlayProps, nextProps: GiftAnimationOverlayProps) => {
+    return prevProps.giftPayload.id === nextProps.giftPayload.id;
+};
+
+export default memo(GiftAnimationOverlay, areEqual);

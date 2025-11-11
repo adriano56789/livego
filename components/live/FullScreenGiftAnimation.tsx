@@ -1,101 +1,106 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useMemo, memo, useCallback } from 'react';
 import { GiftPayload } from './GiftAnimationOverlay';
 import { Gift } from '../../types';
 
+// Mapeamento otimizado para animações
+const ANIMATION_MAP: Record<string, string> = {
+  'Foguete': 'gift-anim-foguete',
+  'Jato Privado': 'gift-anim-jato-privado',
+  'Anel': 'gift-anim-anel',
+  'Leão': 'gift-anim-leao',
+  'Carro': 'gift-anim-carro',
+  'Carro Esportivo': 'gift-anim-carro',
+  'Fênix': 'gift-anim-fenix',
+  'Supercarro': 'gift-anim-supercarro',
+  'Dragão': 'gift-anim-dragao',
+  'Castelo': 'gift-anim-castelo',
+  'Universo': 'gift-anim-universo',
+  'Helicóptero': 'gift-anim-helicoptero',
+  'Planeta': 'gift-anim-planeta',
+  'Iate': 'gift-anim-iate',
+  'Galáxia': 'gift-anim-galaxia',
+  'Coroa Real': 'gift-anim-coroa-real',
+  'Diamante VIP': 'gift-anim-diamante-vip',
+  'Ilha Particular': 'gift-anim-ilha-particular',
+  'Cavalo Alado': 'gift-anim-cavalo-alado',
+  'Tigre Dourado': 'gift-anim-tigre-dourado',
+  'Nave Espacial': 'gift-anim-nave-espacial',
+  'Coração': 'gift-anim-coracao',
+  'Café': 'gift-anim-cafe'
+};
+
+// Mapeamento otimizado para sons
+const SOUND_MAP: Record<string, string> = {
+  'Coração': 'https://cdn.pixabay.com/audio/2022/02/07/audio_a857ac3263.mp3',
+  'Café': 'https://cdn.pixabay.com/audio/2022/03/15/audio_2b4b521f7c.mp3',
+  'Flor': 'https://cdn.pixabay.com/audio/2021/08/04/audio_bb6323c130.mp3',
+  'Rosa': 'https://cdn.pixabay.com/audio/2021/08/04/audio_bb6323c130.mp3',
+  'Anel': 'https://cdn.pixabay.com/audio/2022/03/22/audio_1f289d02b8.mp3',
+  'Diamante VIP': 'https://cdn.pixabay.com/audio/2022/03/22/audio_1f289d02b8.mp3',
+  'Foguete': 'https://cdn.pixabay.com/audio/2022/08/03/audio_a54b33c375.mp3',
+  'Jato Privado': 'https://cdn.pixabay.com/audio/2022/05/26/audio_f542521192.mp3',
+  'Carro Esportivo': 'https://cdn.pixabay.com/audio/2022/04/23/audio_e8b1b22295.mp3',
+  'Carro': 'https://cdn.pixabay.com/audio/2022/03/15/audio_731154563a.mp3',
+  'Supercarro': 'https://cdn.pixabay.com/audio/2022/04/23/audio_e8b1b22295.mp3',
+  'Helicóptero': 'https://cdn.pixabay.com/audio/2022/07/21/audio_1d21b0c96c.mp3',
+  'Iate': 'https://cdn.pixabay.com/audio/2022/08/17/audio_393f64309a.mp3',
+  'Nave Espacial': 'https://cdn.pixabay.com/audio/2022/11/22/audio_1e3b28b6d4.mp3',
+  'Leão': 'https://cdn.pixabay.com/audio/2022/03/14/audio_34b0791444.mp3',
+  'Fênix': 'https://cdn.pixabay.com/audio/2022/03/10/audio_c3b2d1316b.mp3',
+  'Dragão': 'https://cdn.pixabay.com/audio/2022/03/10/audio_c3b2d1316b.mp3',
+  'Cavalo Alado': 'https://cdn.pixabay.com/audio/2022/03/10/audio_c295709568.mp3',
+  'Tigre Dourado': 'https://cdn.pixabay.com/audio/2022/03/14/audio_34b0791444.mp3',
+  'Castelo': 'https://cdn.pixabay.com/audio/2022/03/10/audio_c3b2d1316b.mp3',
+  'Ilha Particular': 'https://cdn.pixabay.com/audio/2022/08/17/audio_393f64309a.mp3',
+  'Coroa Real': 'https://cdn.pixabay.com/audio/2022/03/10/audio_c3b2d1316b.mp3',
+  'Universo': 'https://cdn.pixabay.com/audio/2022/01/25/audio_845236720e.mp3',
+  'Galáxia': 'https://cdn.pixabay.com/audio/2022/01/25/audio_845236720e.mp3',
+  'Planeta': 'https://cdn.pixabay.com/audio/2022/01/25/audio_845236720e.mp3',
+};
+
+// Função otimizada para obter a classe de animação
 const getAnimationClass = (gift: Gift): string => {
-    const nameMap: Record<string, string> = {
-        'Foguete': 'gift-anim-foguete',
-        'Jato Privado': 'gift-anim-jato-privado',
-        'Anel': 'gift-anim-anel',
-        'Leão': 'gift-anim-leao',
-        'Carro': 'gift-anim-carro',
-        'Carro Esportivo': 'gift-anim-carro',
-        'Fênix': 'gift-anim-fenix',
-        'Supercarro': 'gift-anim-supercarro',
-        'Dragão': 'gift-anim-dragao',
-        'Castelo': 'gift-anim-castelo',
-        'Universo': 'gift-anim-universo',
-        'Helicóptero': 'gift-anim-helicoptero',
-        'Planeta': 'gift-anim-planeta',
-        'Iate': 'gift-anim-iate',
-        'Galáxia': 'gift-anim-galaxia',
-        'Coroa Real': 'gift-anim-coroa-real',
-        'Diamante VIP': 'gift-anim-diamante-vip',
-        'Ilha Particular': 'gift-anim-ilha-particular',
-        'Cavalo Alado': 'gift-anim-cavalo-alado',
-        'Tigre Dourado': 'gift-anim-tigre-dourado',
-        'Nave Espacial': 'gift-anim-nave-espacial',
-        'Coração': 'gift-anim-coracao',
-        'Café': 'gift-anim-cafe'
-    };
-    if (nameMap[gift.name]) {
-        return nameMap[gift.name];
-    }
-    // For all other "minor" gifts, use a generic fullscreen animation
-    return 'gift-anim-fullscreen-generic';
+  return ANIMATION_MAP[gift.name] || 'gift-anim-fullscreen-generic';
 };
 
+// Função otimizada para obter URL do som
 const getSoundUrl = (giftName: string): string => {
-    const soundMap: Record<string, string> = {
-        // Simple, magical sounds
-        'Coração': 'https://cdn.pixabay.com/audio/2022/02/07/audio_a857ac3263.mp3',
-        'Café': 'https://cdn.pixabay.com/audio/2022/03/15/audio_2b4b521f7c.mp3',
-        'Flor': 'https://cdn.pixabay.com/audio/2021/08/04/audio_bb6323c130.mp3',
-        'Rosa': 'https://cdn.pixabay.com/audio/2021/08/04/audio_bb6323c130.mp3',
-        'Anel': 'https://cdn.pixabay.com/audio/2022/03/22/audio_1f289d02b8.mp3',
-        'Diamante VIP': 'https://cdn.pixabay.com/audio/2022/03/22/audio_1f289d02b8.mp3',
-
-        // Transportation
-        'Foguete': 'https://cdn.pixabay.com/audio/2022/08/03/audio_a54b33c375.mp3',
-        'Jato Privado': 'https://cdn.pixabay.com/audio/2022/05/26/audio_f542521192.mp3',
-        'Carro Esportivo': 'https://cdn.pixabay.com/audio/2022/04/23/audio_e8b1b22295.mp3',
-        'Carro': 'https://cdn.pixabay.com/audio/2022/03/15/audio_731154563a.mp3',
-        'Supercarro': 'https://cdn.pixabay.com/audio/2022/04/23/audio_e8b1b22295.mp3',
-        'Helicóptero': 'https://cdn.pixabay.com/audio/2022/07/21/audio_1d21b0c96c.mp3',
-        'Iate': 'https://cdn.pixabay.com/audio/2022/08/17/audio_393f64309a.mp3',
-        'Nave Espacial': 'https://cdn.pixabay.com/audio/2022/11/22/audio_1e3b28b6d4.mp3',
-        
-        // Animals
-        'Leão': 'https://cdn.pixabay.com/audio/2022/03/14/audio_34b0791444.mp3',
-        'Fênix': 'https://cdn.pixabay.com/audio/2022/03/10/audio_c3b2d1316b.mp3',
-        'Dragão': 'https://cdn.pixabay.com/audio/2022/03/10/audio_c3b2d1316b.mp3',
-        'Cavalo Alado': 'https://cdn.pixabay.com/audio/2022/03/10/audio_c295709568.mp3',
-        'Tigre Dourado': 'https://cdn.pixabay.com/audio/2022/03/14/audio_34b0791444.mp3',
-
-        // Grand / Epic
-        'Castelo': 'https://cdn.pixabay.com/audio/2022/03/10/audio_c3b2d1316b.mp3',
-        'Ilha Particular': 'https://cdn.pixabay.com/audio/2022/08/17/audio_393f64309a.mp3',
-        'Coroa Real': 'https://cdn.pixabay.com/audio/2022/03/10/audio_c3b2d1316b.mp3',
-        
-        // Sci-Fi / Cosmic
-        'Universo': 'https://cdn.pixabay.com/audio/2022/01/25/audio_845236720e.mp3',
-        'Galáxia': 'https://cdn.pixabay.com/audio/2022/01/25/audio_845236720e.mp3',
-        'Planeta': 'https://cdn.pixabay.com/audio/2022/01/25/audio_845236720e.mp3',
-    };
-    // Default sound for gifts without a specific one
-    return soundMap[giftName] || "https://cdn.pixabay.com/audio/2022/10/28/audio_83a2162234.mp3";
+  return SOUND_MAP[giftName] || "https://cdn.pixabay.com/audio/2022/10/28/audio_83a2162234.mp3";
 };
 
+interface FullScreenGiftAnimationProps {
+  payload: GiftPayload;
+  onEnd: () => void;
+}
 
-const FullScreenGiftAnimation: React.FC<{ payload: GiftPayload | null; onEnd: () => void; }> = ({ payload, onEnd }) => {
-    const videoRef = useRef<HTMLVideoElement>(null);
-    const animationTimeoutRef = useRef<number | null>(null);
+const FullScreenGiftAnimation: React.FC<FullScreenGiftAnimationProps> = ({ payload, onEnd }) => {
+  // Verificação de segurança para payload nulo
+  if (!payload || !payload.gift) {
+    console.warn('FullScreenGiftAnimation: payload ou gift é nulo');
+    return null;
+  }
 
-    useEffect(() => {
-        const cleanup = () => {
-            if (animationTimeoutRef.current) {
-                clearTimeout(animationTimeoutRef.current);
-                animationTimeoutRef.current = null;
-            }
-        };
-        cleanup();
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const animationTimeoutRef = useRef<number | null>(null);
 
-        if (!payload || !payload.gift || !payload.gift.name) {
-            if (payload) { // If payload exists but gift is invalid, end immediately
-                onEnd();
-            }
-            return;
-        }
+  useEffect(() => {
+    // Função de limpeza
+    const cleanup = () => {
+      if (animationTimeoutRef.current) {
+        clearTimeout(animationTimeoutRef.current);
+        animationTimeoutRef.current = null;
+      }
+    };
+
+    // Limpa qualquer timeout existente
+    cleanup();
+
+    if (!payload || !payload.gift || !payload.gift.name) {
+      if (payload) { // Se o payload existir mas o gift for inválido, encerra imediatamente
+        onEnd();
+      }
+      return;
+    }
 
         const { gift } = payload;
         
@@ -157,14 +162,23 @@ const FullScreenGiftAnimation: React.FC<{ payload: GiftPayload | null; onEnd: ()
             onEnd();
         }, duration);
 
-        return cleanup;
+        // Retorna a função de limpeza para ser executada na desmontagem
+        return () => {
+          cleanup();
+          if (audio) {
+            audio.pause();
+            audio.currentTime = 0;
+          }
+        };
     }, [payload, onEnd]);
 
-    const handleVideoEnd = () => {
+    const handleVideoEnd = useCallback(() => {
         onEnd();
-    };
+    }, [onEnd]);
 
-    if (!payload || !payload.gift || !payload.gift.name) {
+    // Verificação de segurança para payload nulo
+    if (!payload || !payload.gift) {
+        console.warn('FullScreenGiftAnimation: payload ou gift é nulo');
         return null;
     }
     
@@ -197,4 +211,14 @@ const FullScreenGiftAnimation: React.FC<{ payload: GiftPayload | null; onEnd: ()
     );
 };
 
-export default FullScreenGiftAnimation;
+// Função de comparação personalizada para o memo
+const areEqual = (prevProps: { payload: GiftPayload | null }, nextProps: { payload: GiftPayload | null }) => {
+    // Se ambos forem nulos, são iguais
+    if (prevProps.payload === null && nextProps.payload === null) return true;
+    // Se apenas um for nulo, são diferentes
+    if (prevProps.payload === null || nextProps.payload === null) return false;
+    // Se ambos existirem, compara os IDs
+    return prevProps.payload.id === nextProps.payload.id;
+};
+
+export default React.memo(FullScreenGiftAnimation, areEqual);

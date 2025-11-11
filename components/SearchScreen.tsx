@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { User } from '../types';
 import { BackIcon, SearchIcon, PlusIcon } from './icons';
 import { useTranslation } from '../i18n';
@@ -10,7 +10,13 @@ interface SearchScreenProps {
   onFollowUser: (user: User) => void;
 }
 
-const UserItem: React.FC<{ user: User; onViewProfile: (user: User) => void; onFollow: (user: User) => void; }> = ({ user, onViewProfile, onFollow }) => {
+interface UserItemProps {
+  user: User;
+  onViewProfile: (user: User) => void;
+  onFollow: (user: User) => void;
+}
+
+const UserItem = React.memo(function UserItem({ user, onViewProfile, onFollow }: UserItemProps) {
     const { t } = useTranslation();
 
     const handleFollow = (e: React.MouseEvent) => {
@@ -40,28 +46,42 @@ const UserItem: React.FC<{ user: User; onViewProfile: (user: User) => void; onFo
             </button>
         </div>
     );
-};
-
+});
 
 const SearchScreen: React.FC<SearchScreenProps> = ({ onClose, onViewProfile, allUsers, onFollowUser }) => {
     const { t } = useTranslation();
     const [query, setQuery] = useState('');
+    const [searchTerm, setSearchTerm] = useState('');
     const [results, setResults] = useState<User[]>([]);
 
-    const handleSearch = (searchQuery: string) => {
-        setQuery(searchQuery);
-        if (searchQuery.trim() === '') {
-            setResults([]);
-            return;
-        }
+    // Memoize filtered results
+    const filteredResults = useMemo(() => {
+        if (!searchTerm.trim()) return [];
         
-        const lowerCaseQuery = searchQuery.toLowerCase();
-        const filtered = allUsers.filter(user => 
+        const lowerCaseQuery = searchTerm.toLowerCase();
+        return allUsers.filter(user => 
             user.name.toLowerCase().includes(lowerCaseQuery) || 
             user.identification.toLowerCase().includes(lowerCaseQuery)
         );
-        setResults(filtered);
-    };
+    }, [searchTerm, allUsers]);
+
+    // Debounce search
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setSearchTerm(query);
+        }, 300);
+
+        return () => clearTimeout(timer);
+    }, [query]);
+
+    // Update results when filteredResults changes
+    useEffect(() => {
+        setResults(filteredResults);
+    }, [filteredResults]);
+
+    const handleSearch = useCallback((searchQuery: string) => {
+        setQuery(searchQuery);
+    }, []);
 
     return (
         <div className="absolute inset-0 bg-[#111] z-50 flex flex-col text-white">
@@ -82,9 +102,14 @@ const SearchScreen: React.FC<SearchScreenProps> = ({ onClose, onViewProfile, all
                 </div>
             </header>
             <main className="flex-grow overflow-y-auto no-scrollbar">
-                {query && results.length > 0 && (
-                    results.map(user => <UserItem key={user.id} user={user} onViewProfile={onViewProfile} onFollow={onFollowUser} />)
-                )}
+                {query && results.length > 0 && results.map(user => (
+                    <UserItem 
+                        key={user.id} 
+                        user={user} 
+                        onViewProfile={onViewProfile} 
+                        onFollow={onFollowUser} 
+                    />
+                ))}
                 {query && results.length === 0 && (
                     <div className="flex flex-col items-center justify-center h-full text-center text-gray-500 p-8">
                         <p>{t('search.noResults')}</p>
@@ -102,4 +127,4 @@ const SearchScreen: React.FC<SearchScreenProps> = ({ onClose, onViewProfile, all
     );
 };
 
-export default SearchScreen;
+export default SearchScreen; 

@@ -1,17 +1,15 @@
-
-
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import OnlineUsersModal from './live/OnlineUsersModal';
 import ChatMessage from './live/ChatMessage';
 import CoHostModal from './CoHostModal';
 import EntryChatMessage from './live/EntryChatMessage';
 import ToolsModal from './ToolsModal';
-import ResolutionPanel from './live/ResolutionPanel';
-import BeautyEffectsPanel from './live/BeautyEffectsPanel';
-import { GiftIcon, MessageIcon, SendIcon, MoreIcon, CloseIcon, PlusIcon, ViewerIcon, StarIcon, HeartIcon, GoldCoinWithGIcon, BellIcon, TranslateIcon, FanClubHeaderIcon } from './icons';
+import { GiftIcon, MessageIcon, SendIcon, MoreIcon, CloseIcon, PlusIcon, ViewerIcon, StarIcon, HeartIcon, GoldCoinWithGIcon, BellIcon, TranslateIcon, CalendarIcon, FanClubHeaderIcon } from './icons';
 import { Streamer, User, Gift, RankedUser, LiveSessionState, ToastType } from '../types';
 import ContributionRankingModal from './ContributionRankingModal';
-import GiftModal from './live/GiftModal';
+import BeautyEffectsPanel from './live/BeautyEffectsPanel';
+import ResolutionPanel from './live/ResolutionPanel';
+import { GiftModal } from './live/GiftModal';
 import GiftAnimationOverlay, { GiftPayload } from './live/GiftAnimationOverlay';
 import { useTranslation } from '../i18n';
 import { api } from '../services/api';
@@ -27,7 +25,6 @@ import JoinFanClubModal from './live/JoinFanClubModal';
 import FanClubEntryMessage from './live/FanClubEntryMessage';
 import UserMentionSuggestions from './live/UserMentionSuggestions';
 import SupportersBar from './live/SupportersBar';
-
 interface ChatMessageType {
     id: number;
     type: 'chat' | 'entry' | 'friend_request' | 'follow' | 'fan_entry';
@@ -80,6 +77,8 @@ interface PKBattleScreenProps {
     onSelectStream: (streamer: Streamer) => void;
     onOpenVIPCenter: () => void;
     onOpenFanClubMembers: (streamer: User) => void;
+    allUsers: User[];
+    onOpenEditStreamInfo: (e: React.MouseEvent) => void;
 }
 
 interface Heart {
@@ -100,13 +99,14 @@ const FollowChatMessage: React.FC<{ follower: string; followed: string }> = ({ f
     );
 };
 
-export default function PKBattleScreen({ 
+export const PKBattleScreen: React.FC<PKBattleScreenProps> = ({ 
     streamer, opponent, onEndPKBattle, onRequestEndStream, onLeaveStreamView, onViewProfile, currentUser,
     onOpenWallet, onFollowUser, onOpenPrivateChat, onOpenPrivateInviteModal, onStartChatWithStreamer,
     onOpenPKTimerSettings, onOpenFans, onOpenFriendRequests, gifts, receivedGifts, liveSession,
     updateLiveSession, logLiveEvent, updateUser, onStreamUpdate, refreshStreamRoomData, addToast,
-    followingUsers, pkBattleDuration, onOpenVIPCenter, streamers, onSelectStream, onOpenFanClubMembers
-}: PKBattleScreenProps) {
+    followingUsers, pkBattleDuration, onOpenVIPCenter, streamers, onSelectStream, onOpenFanClubMembers, allUsers,
+    onOpenEditStreamInfo
+}) => {
     const { t, language } = useTranslation();
     
     const [isUiVisible, setIsUiVisible] = useState(true);
@@ -123,11 +123,11 @@ export default function PKBattleScreen({
     const [hearts, setHearts] = useState<Heart[]>([]);
 
     const [isToolsOpen, setIsToolsOpen] = useState(false);
-    const [isBeautyPanelOpen, setBeautyPanelOpen] = useState(false);
+    const [isBeautyPanelOpen, setIsBeautyPanelOpen] = useState(false);
     const [isCoHostModalOpen, setIsCoHostModalOpen] = useState(false);
     const [isOnlineUsersOpen, setOnlineUsersOpen] = useState(false);
     const [isRankingOpen, setIsRankingOpen] = useState(false);
-    const [isResolutionPanelOpen, setResolutionPanelOpen] = useState(false);
+    const [isResolutionPanelOpen, setIsResolutionPanelOpen] = useState(false);
     const [isGiftModalOpen, setGiftModalOpen] = useState(false);
     const [userActionModalState, setUserActionModalState] = useState<{ isOpen: boolean; user: User | null }>({ isOpen: false, user: null });
     const [isModerationMode, setIsModerationMode] = useState(false);
@@ -149,6 +149,20 @@ export default function PKBattleScreen({
         
     const isBroadcaster = streamer.hostId === currentUser.id;
     const isFanClubMember = useMemo(() => !!currentUser.fanClub && currentUser.fanClub.streamerId === streamer.hostId, [currentUser.fanClub, streamer.hostId]);
+
+    const [opponentIsFollowed, setOpponentIsFollowed] = useState(() => 
+        followingUsers.some(u => u.id === opponent.id)
+    );
+
+    useEffect(() => {
+        setOpponentIsFollowed(followingUsers.some(u => u.id === opponent.id));
+    }, [followingUsers, opponent.id]);
+
+    const handleFollowOpponent = (e: React.MouseEvent) => {
+        e.stopPropagation(); // Prevent opening profile
+        onFollowUser(opponent, streamer.id);
+        setOpponentIsFollowed(true); // Optimistic update
+    };
 
     const swipeStart = useRef<{ x: number, y: number } | null>(null);
     const minSwipeDistance = 50;
@@ -193,7 +207,7 @@ export default function PKBattleScreen({
 
     const constructUserFromMessage = (user: ChatMessageType): User => ({ 
         id: `user-${user.id}`, identification: `user-${user.id}`, name: user.user!, avatarUrl: user.avatar!, 
-        coverUrl: `https://picsum.photos/seed/${user.id}/800/1600`, country: 'br', 
+        coverUrl: `https://picsum.photos/seed/${user.id}/1080/1920`, country: 'br', 
         gender: user.gender || 'not_specified', level: user.level || 1, xp: 0, age: user.age || 18, 
         location: 'Brasil', distance: 'desconhecida', fans: 0, following: 0, receptores: 0, enviados: 0,
         topFansAvatars: [], isLive: false, diamonds: 0, earnings: 0, 
@@ -236,7 +250,7 @@ export default function PKBattleScreen({
 
     const streamerUser = useMemo(() => ({
         id: streamer.hostId, identification: streamer.hostId, name: streamer.name, avatarUrl: streamer.avatar,
-        coverUrl: `https://picsum.photos/seed/${streamer.hostId}/800/1600`, country: streamer.country || 'br',
+        coverUrl: `https://picsum.photos/seed/${streamer.hostId}/1080/1920`, country: streamer.country || 'br',
         age: 23, gender: 'female' as 'female', level: 1, location: streamer.location, distance: 'desconhecida',
         fans: 0, following: 0, receptores: 0, enviados: 0, topFansAvatars: [], isLive: true,
         diamonds: 0, earnings: 0, 
@@ -342,12 +356,7 @@ export default function PKBattleScreen({
             type: 'chat',
             user: fromUser.name,
             level: fromUser.level,
-            message: (
-                <span className="inline-flex items-center">
-                    {t(messageKey, messageOptions)}
-                    {gift.component ? React.cloneElement(gift.component as React.ReactElement<any>, { className: "w-5 h-5 inline-block ml-1.5" }) : <span className="ml-1.5">{gift.icon}</span>}
-                </span>
-            ),
+            message: t(messageKey, messageOptions), // Simplified to string
             avatar: fromUser.avatarUrl,
             activeFrameId: fromUser.activeFrameId,
             frameExpiration: fromUser.frameExpiration,
@@ -366,15 +375,19 @@ export default function PKBattleScreen({
       if (isChatInputFocused) return;
       const rect = e.currentTarget.getBoundingClientRect();
       const clickX = e.clientX - rect.left;
-      const side = clickX < rect.width / 2 ? 'mine' : 'opponent';
+      
+      // Heart clicks on the opponent's side will now open their profile.
+      // So, only generate hearts on our side.
+      if (clickX > rect.width / 2) return;
+
+      const side = 'mine';
       
       const newHeart: Heart = { id: Date.now() + Math.random(), x: e.clientX, y: e.clientY, side };
       setHearts(prev => [...prev, newHeart]);
 
       if (side === 'mine') setMyHearts(prev => prev + 1);
-      else setOpponentHearts(prev => prev + 1);
       
-      api.sendPKHeart(streamer.id, side === 'mine' ? 'A' : 'B');
+      api.sendPKHeart(streamer.id, 'A');
 
       setTimeout(() => {
         setHearts(prev => prev.filter(h => h.id !== newHeart.id));
@@ -434,7 +447,7 @@ export default function PKBattleScreen({
                         console.error("Failed to translate message:", error);
                         setMessages(prev => [...prev, message]); // Add original on failure
                     }
-                } else {
+                } else if (message.user !== currentUser.name) {
                      setMessages(prev => [...prev, message]);
                 }
             }
@@ -635,8 +648,23 @@ export default function PKBattleScreen({
             {/* Video Container */}
             <div className="h-[65%] w-full relative" onClick={handleHeartClick}>
                 <div className="absolute inset-0 grid grid-cols-2">
-                    <div className="h-full w-full bg-gray-900 border-r-2 border-yellow-400"><img src={streamerUser.coverUrl} alt={streamerUser.name} className="w-full h-full object-cover" /></div>
-                    <div className="h-full w-full bg-gray-800"><img src={opponent.coverUrl} alt={opponent.name} className="w-full h-full object-cover" /></div>
+                    <div className="h-full w-full bg-gray-900 border-r-2 border-yellow-400">
+                        <img src={streamerUser.coverUrl} alt={streamerUser.name} className="w-full h-full object-cover" />
+                    </div>
+                    <div className="h-full w-full bg-gray-800 relative cursor-pointer" onClick={(e) => { e.stopPropagation(); onViewProfile(opponent); }}>
+                        <img src={opponent.coverUrl} alt={opponent.name} className="w-full h-full object-cover" />
+                        {!opponentIsFollowed && (
+                            <div className={`absolute top-0 right-0 p-4 transition-opacity duration-300 ${isUiVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+                                <button 
+                                    onClick={handleFollowOpponent} 
+                                    className="w-10 h-10 bg-pink-500/80 rounded-full flex items-center justify-center text-white z-10 backdrop-blur-sm shadow-lg"
+                                    aria-label={`Seguir ${opponent.name}`}
+                                >
+                                    <PlusIcon className="w-6 h-6" />
+                                </button>
+                            </div>
+                        )}
+                    </div>
                 </div>
 
                  <FullScreenGiftAnimation 
@@ -770,9 +798,9 @@ export default function PKBattleScreen({
                                 return <ChatMessage 
                                     key={msg.id} 
                                     userObject={chatUser}
-                                    message={msg.message}
+                                    message={msg.message || ''}
                                     translatedText={msg.translatedText}
-                                    onAvatarClick={() => handleViewChatUserProfile(msg)} 
+                                    onAvatarClick={() => handleViewChatUserProfile(msg)}
                                     streamerId={streamer.hostId}
                                 />;
                             }
@@ -834,10 +862,10 @@ export default function PKBattleScreen({
                 onOpenCoHostModal={(e) => { e.stopPropagation(); setIsToolsOpen(false); setIsCoHostModalOpen(true); }}
                 isPKBattleActive={true} 
                 onEndPKBattle={(e) => { e.stopPropagation(); onEndPKBattle(); }}
-                onOpenBeautyPanel={(e) => { e.stopPropagation(); setIsToolsOpen(false); setBeautyPanelOpen(true); }} 
-                onOpenPrivateChat={(e) => { e.stopPropagation(); onOpenPrivateChat(); }} 
+                onOpenBeautyPanel={(e) => { e.stopPropagation(); setIsToolsOpen(false); setIsBeautyPanelOpen(true); }} 
+                onOpenPrivateChat={onOpenPrivateChat} 
                 onOpenPrivateInviteModal={(e) => { e.stopPropagation(); onOpenPrivateInviteModal(); }}
-                onOpenClarityPanel={(e) => { e.stopPropagation(); setIsToolsOpen(false); setResolutionPanelOpen(true); }}
+                onOpenClarityPanel={(e) => { e.stopPropagation(); setIsToolsOpen(false); setIsResolutionPanelOpen(true); }}
                 isModerationActive={isModerationMode}
                 onToggleModeration={(e) => { e.stopPropagation(); setIsModerationMode(prev => !prev); }}
                 isPrivateStream={streamer.isPrivate}
@@ -849,11 +877,23 @@ export default function PKBattleScreen({
                 onToggleAutoFollow={handleToggleAutoFollow}
                 isAutoPrivateInviteEnabled={isAutoPrivateInviteEnabled}
                 onToggleAutoPrivateInvite={handleToggleAutoPrivateInvite}
+                onOpenEditStreamInfo={onOpenEditStreamInfo}
             />
-            <GiftModal isOpen={isGiftModalOpen} onClose={() => setGiftModalOpen(false)} userDiamonds={currentUser.diamonds || 0} onSendGift={handleSendGift} onRecharge={() => onOpenWallet('Diamante')} gifts={gifts} receivedGifts={receivedGifts} isBroadcaster={isBroadcaster} onOpenVIPCenter={onOpenVIPCenter} isVIP={currentUser.isVIP || false} />
-            {isBeautyPanelOpen && <BeautyEffectsPanel onClose={() => setBeautyPanelOpen(false)} currentUser={currentUser} addToast={addToast} />}
-            {isCoHostModalOpen && <CoHostModal isOpen={isCoHostModalOpen} onClose={() => setIsCoHostModalOpen(false)} onInvite={()=>{}} onOpenTimerSettings={onOpenPKTimerSettings} currentUser={currentUser} addToast={addToast} streamId={streamer.id} />}
-            <ResolutionPanel isOpen={isResolutionPanelOpen} onClose={() => setResolutionPanelOpen(false)} onSelectResolution={()=>{}} currentResolution={"480p"} />
+            <GiftModal 
+                isOpen={isGiftModalOpen} 
+                onClose={() => setGiftModalOpen(false)} 
+                userDiamonds={currentUser.diamonds || 0} 
+                onSendGift={handleSendGift} 
+                onRecharge={() => onOpenWallet('Diamante')} 
+                gifts={gifts} 
+                receivedGifts={receivedGifts} 
+                isBroadcaster={isBroadcaster} 
+                onOpenVIPCenter={onOpenVIPCenter} 
+                isVIP={currentUser.isVIP || false} 
+            />
+            {isBeautyPanelOpen && <BeautyEffectsPanel onClose={() => setIsBeautyPanelOpen(false)} currentUser={currentUser} addToast={addToast} />}
+            {isCoHostModalOpen && <CoHostModal isOpen={isCoHostModalOpen} onClose={() => setIsCoHostModalOpen(false)} onInvite={()=>{}} onOpenTimerSettings={onOpenPKTimerSettings} currentUser={currentUser} addToast={addToast} streamId={streamer.id} allUsers={allUsers} />}
+            <ResolutionPanel isOpen={isResolutionPanelOpen} onClose={() => setIsResolutionPanelOpen(false)} onSelectResolution={()=>{}} currentResolution={"480p"} />
 
             <UserActionModal 
                 isOpen={userActionModalState.isOpen} 
@@ -895,4 +935,6 @@ export default function PKBattleScreen({
             />
         </div>
     );
-}
+};
+
+export default PKBattleScreen;

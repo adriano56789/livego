@@ -16,7 +16,7 @@ export default defineConfig({
     hmr: {
       protocol: 'ws',
       host: 'localhost',
-      port: 24678,
+      port: 24679,  // Changed from 24678 to 24679
       overlay: true
     }
   },

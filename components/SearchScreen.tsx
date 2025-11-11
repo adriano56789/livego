@@ -65,9 +65,9 @@ const SearchScreen: React.FC<SearchScreenProps> = ({ onClose, onViewProfile, all
 
     return (
         <div className="absolute inset-0 bg-[#111] z-50 flex flex-col text-white">
-            <header className="flex p-2 border-b border-gray-800 flex-shrink-0 space-x-3">
-                <button onClick={onClose} className="flex items-center justify-center p-1 -ml-1">
-                    <BackIcon className="w-5 h-5" />
+            <header className="flex items-center p-4 border-b border-gray-800 flex-shrink-0 space-x-2">
+                <button onClick={onClose} className="flex items-center justify-center">
+                    <BackIcon className="w-6 h-6" />
                 </button>
                 <div className="relative flex-grow">
                     <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />

@@ -1266,7 +1266,7 @@ export const mockApiRouter = (method: string, path: string, body?: any): ApiResp
             // Ensure ID is a string when used as a Map key
             const messageId = String(newMessage.id);
             db.messages.set(messageId, { ...newMessage, id: messageId });
-            
+7            
             webSocketServerInstance.broadcastNewMessageToChat(chatKey, newMessage, tempId);
             saveDb();
             

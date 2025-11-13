@@ -1224,7 +1224,10 @@ export const mockApiRouter = (method: string, path: string, body?: any): ApiResp
                     text: 'Vocês agora são amigos!',
                     timestamp: new Date().toISOString(),
                     status: 'read',
-                    type: 'system-friend-notification'
+                    type: 'system-friend-notification',
+                    avatarUrl: '', // Default empty for system messages
+                    username: 'Sistema',
+                    badgeLevel: 0
                 };
                 if (!chatMessages.some(m => m.id === systemMessage.id)) {
                     chatMessages.unshift(systemMessage);
@@ -1255,9 +1258,14 @@ export const mockApiRouter = (method: string, path: string, body?: any): ApiResp
                 imageUrl,
                 timestamp: new Date().toISOString(),
                 status: webSocketServerInstance['connections'].has(toUserId) ? 'delivered' : 'sent',
+                avatarUrl: fromUser.avatarUrl || '',
+                username: fromUser.name || 'Usuário',
+                badgeLevel: fromUser.level || 1
             };
             
-            db.messages.set(newMessage.id, newMessage);
+            // Ensure ID is a string when used as a Map key
+            const messageId = String(newMessage.id);
+            db.messages.set(messageId, { ...newMessage, id: messageId });
             
             webSocketServerInstance.broadcastNewMessageToChat(chatKey, newMessage, tempId);
             saveDb();

@@ -1,4 +1,3 @@
-
 import { mockApiRouter } from './server';
 import { User, Gift, Streamer, Message, RankedUser, Country, Conversation, NotificationSettings, BeautySettings, PurchaseRecord, Visitor, EligibleUser, FeedPhoto, LiveSessionState, LevelInfo, GoogleAccount, StreamHistoryEntry, Comment, MusicTrack } from '../types';
 import { delay, CURRENT_USER_ID } from './database';

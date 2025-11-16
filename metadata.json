@@ -1,8 +1,3 @@
-{
-  "name": "LiveGo Stream Viewer",
-  "description": "A modern, dark-themed UI for a live streaming application, featuring login, stream browsing, and interactive modals for notifications and region selection, built with React and Tailwind CSS.",
-  "requestFramePermissions": [
-    "camera",
-    "microphone"
-  ]
-}
+version https://git-lfs.github.com/spec/v1
+oid sha256:08ffe251a0c92cab5c490e7c61f5d5aa8820fcff3afb7c6f27545ff81a6cbf79
+size 321

@@ -1,9 +1,3 @@
-﻿{
-  "name": "LiveGo",
-  "short_name": "LiveGo",
-  "start_url": "index.html",
-  "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#000000",
-  "orientation": "portrait"
-}
+version https://git-lfs.github.com/spec/v1
+oid sha256:2978385bfabd81bb29a526d132f4e23f5bf0818749322011ae442a55cba08694
+size 199

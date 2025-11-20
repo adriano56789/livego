@@ -1,4 +1,5 @@
 // services/config.ts
+// services/config.ts
 
 /**
  * This file contains the configuration for connecting to the MongoDB database.
@@ -7,6 +8,6 @@
  */
 export const dbConfig = {
   mongodb: {
-    url: 'mongodb://localhost:27017/livego',
+    url: import.meta.env.VITE_MONGODB_URL || 'mongodb://localhost:27017/livego',
   }
 };

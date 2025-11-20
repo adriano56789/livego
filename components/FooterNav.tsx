@@ -16,13 +16,13 @@ const FooterNav: React.FC<FooterNavProps> = ({ currentUser, onOpenGoLive, active
   const activeOwnedFrame = currentUser.ownedFrames?.find(f => f.frameId === currentUser.activeFrameId);
   const remainingDays = getRemainingDays(activeOwnedFrame?.expirationDate);
   const activeFrame = (currentUser.activeFrameId && activeOwnedFrame && remainingDays && remainingDays > 0)
-      ? avatarFrames.find(f => f.id === currentUser.activeFrameId)
-      : null;
+    ? avatarFrames.find(f => f.id === currentUser.activeFrameId)
+    : null;
   const ActiveFrameComponent = activeFrame ? activeFrame.component : null;
   const frameGlowClass = getFrameGlowClass(currentUser.activeFrameId);
 
   return (
-    <footer className="absolute bottom-0 left-0 right-0 z-10 flex-shrink-0 bg-[#1C1C1E] border-t border-gray-700/50">
+    <footer className="absolute bottom-0 left-0 right-0 z-10 flex-shrink-0 bg-[#1C1C1E] border-t border-gray-700/50" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
       <div className="flex items-center justify-around h-16 text-gray-400">
         <button onClick={() => onNavigate('main')} className={`flex flex-col items-center w-1/5 pt-1 ${activeTab === 'main' ? 'text-white' : 'hover:text-white'}`}>
           <HomeIcon className="w-6 h-6" />
@@ -32,7 +32,7 @@ const FooterNav: React.FC<FooterNavProps> = ({ currentUser, onOpenGoLive, active
           <VideoIcon className="w-6 h-6" />
           <span className="text-sm mt-1">{t('footer.video')}</span>
         </button>
-        <button 
+        <button
           onClick={onOpenGoLive}
           className="w-16 h-16 -mt-6 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center shadow-lg shadow-purple-500/30">
           <PlayIcon className="w-8 h-8 text-white" />
@@ -44,11 +44,11 @@ const FooterNav: React.FC<FooterNavProps> = ({ currentUser, onOpenGoLive, active
         </button>
         <button onClick={() => onNavigate('profile')} className={`flex flex-col items-center w-1/5 pt-1 ${activeTab === 'profile' ? 'text-white' : 'hover:text-white'}`}>
           <div className="relative w-6 h-6">
-             <img src={currentUser.avatarUrl} alt="User" className="w-full h-full rounded-full object-cover" />
+            <img src={currentUser.avatarUrl} alt="User" className="w-full h-full rounded-full object-cover" />
             {ActiveFrameComponent && (
-                <div className={`absolute -top-1 -left-1 w-8 h-8 pointer-events-none ${frameGlowClass}`}>
-                    <ActiveFrameComponent />
-                </div>
+              <div className={`absolute -top-1 -left-1 w-8 h-8 pointer-events-none ${frameGlowClass}`}>
+                <ActiveFrameComponent />
+              </div>
             )}
             {currentUser.isLive ? (
               <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-[#1C1C1E]"></div>

@@ -1,0 +1,7 @@
+{
+  "appId": "com.example.livego",
+  "appName": "LiveGo",
+  "webDir": "dist",
+  "bundledWebRuntime": false,
+  "backgroundColor": "#000000"
+}

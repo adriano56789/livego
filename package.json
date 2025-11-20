@@ -10,9 +10,14 @@
     "analyze": "vite build --mode production",
     "pwa-dev": "vite -c vite.pwa.config.ts",
     "pwa-build": "vite build -c vite.pwa.config.ts",
-    "pwa-preview": "vite preview -c vite.pwa.config.ts"
+    "pwa-preview": "vite preview -c vite.pwa.config.ts",
+    "build:pwa": "vite build -c vite.pwa.config.ts"
   },
   "dependencies": {
+    "@capacitor/android": "^7.4.4",
+    "@capacitor/cli": "^7.4.4",
+    "@capacitor/core": "^7.4.4",
+    "@capacitor/ios": "^7.4.4",
     "@google/generative-ai": "^0.24.1",
     "@types/lodash.debounce": "^4.0.9",
     "i18next": "^25.6.1",
@@ -26,8 +31,8 @@
   "devDependencies": {
     "@tailwindcss/postcss7-compat": "^2.2.17",
     "@types/node": "^22.19.0",
+    "@vitejs/plugin-basic-ssl": "^2.0.0",
     "@vitejs/plugin-react": "^5.0.0",
-    "@vitejs/plugin-basic-ssl": "^1.0.2",
     "autoprefixer": "^9.8.8",
     "postcss": "^7.0.39",
     "rollup-plugin-visualizer": "^6.0.5",

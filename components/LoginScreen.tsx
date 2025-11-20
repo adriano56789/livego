@@ -124,7 +124,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
     <div className="fixed inset-0 w-screen h-screen bg-cover bg-center" style={{ backgroundImage: "url('https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?q=80&w=2070&auto=format&fit=crop')" }}>
       <div className="absolute inset-0 bg-black/70"></div>
       
-      <div className="relative h-full w-full flex flex-col items-center p-8 sm:p-12 overflow-y-auto no-scrollbar">
+      <div className="relative h-full w-full flex flex-col items-center p-8 sm:p-12 overflow-y-auto no-scrollbar" style={{ paddingTop: 'calc(2rem + var(--sat))', paddingBottom: 'calc(2rem + var(--sab))' }}>
         <div className="w-full max-w-sm mx-auto flex flex-col justify-center flex-grow">
           
           <div className="text-center mb-10">

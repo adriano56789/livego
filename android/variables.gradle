@@ -1,16 +1,33 @@
 ext {
-    minSdkVersion = 23
-    compileSdkVersion = 35
-    targetSdkVersion = 35
-    androidxActivityVersion = '1.9.2'
-    androidxAppCompatVersion = '1.7.0'
+    // Configurações de SDK
+    minSdkVersion = 21  // Android 5.0 - Cobre 99% dos dispositivos ativos
+    compileSdkVersion = 35  // Android 15
+    targetSdkVersion = 35   // Android 15
+    
+    // Versões das bibliotecas do AndroidX
+    androidxActivityVersion = '1.9.2'  // Última versão estável
+    androidxAppCompatVersion = '1.7.0'  // Compatível com Android 5.0+
     androidxCoordinatorLayoutVersion = '1.2.0'
-    androidxCoreVersion = '1.15.0'
-    androidxFragmentVersion = '1.8.4'
-    coreSplashScreenVersion = '1.0.1'
-    androidxWebkitVersion = '1.12.1'
+    androidxCoreVersion = '1.15.0'  // Suporte a Android 5.0+
+    androidxFragmentVersion = '1.8.4'  // Última versão estável
+    coreSplashScreenVersion = '1.0.1'  // Splash screen moderna
+    androidxWebkitVersion = '1.12.1'  // Para WebView moderno
+    
+    // Testes
     junitVersion = '4.13.2'
-    androidxJunitVersion = '1.2.1'
-    androidxEspressoCoreVersion = '3.6.1'
-    cordovaAndroidVersion = '10.1.1'
+    androidxJunitVersion = '1.2.1'  // AndroidX Test - JUnit
+    androidxEspressoCoreVersion = '3.6.1'  // AndroidX Test - Espresso
+    
+    // Outras dependências
+    cordovaAndroidVersion = '10.1.1'  // Última versão estável do Cordova Android
+    
+    // Configurações específicas para Android 12+ (API 31+)
+    android12StoragemanagerVersion = '1.0.0'  // Para gerenciamento de armazenamento no Android 12+
+    android12SplashScreenVersion = '1.0.1'  // Splash screen compatível com Android 12+
+    
+    // Configurações de segurança
+    securityCryptoVersion = '1.1.0-alpha06'  // Para criptografia segura
+    
+    // Configurações de mídia
+    exoplayerVersion = '2.19.1'  // Para reprodução de vídeo
 }

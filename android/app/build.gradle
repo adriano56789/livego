@@ -36,14 +36,44 @@ repositories {
 
 dependencies {
     implementation fileTree(include: ['*.jar'], dir: 'libs')
+    
+    // Bibliotecas principais do AndroidX
     implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
     implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
     implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
+    implementation "androidx.core:core-ktx:$androidxCoreVersion"
+    implementation "androidx.activity:activity-ktx:$androidxActivityVersion"
+    implementation "androidx.fragment:fragment-ktx:$androidxFragmentVersion"
+    
+    // WebView moderno
+    implementation "androidx.webkit:webkit:$androidxWebkitVersion"
+    
+    // Suporte a recursos do Android 12+
+    implementation "androidx.startup:startup-runtime:1.2.1"
+    implementation "androidx.window:window:1.2.0"
+    
+    // Segurança
+    implementation "androidx.security:security-crypto:$securityCryptoVersion"
+    
+    // Mídia e reprodução de vídeo
+    implementation "com.google.android.exoplayer:exoplayer-core:$exoplayerVersion"
+    implementation "com.google.android.exoplayer:exoplayer-ui:$exoplayerVersion"
+    
+    // Capacitor
     implementation project(':capacitor-android')
+    implementation project(':capacitor-cordova-android-plugins')
+    
+    // Testes
     testImplementation "junit:junit:$junitVersion"
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
-    implementation project(':capacitor-cordova-android-plugins')
+    
+    // Suporte a recursos específicos do Android 12+
+    implementation 'com.google.android.material:material:1.12.0'
+    implementation 'androidx.constraintlayout:constraintlayout:2.2.0-alpha14'
+    
+    // Para melhor compatibilidade com versões antigas
+    implementation 'com.google.guava:guava:32.1.3-android'
 }
 
 apply from: 'capacitor.build.gradle'

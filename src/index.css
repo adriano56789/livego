@@ -24,6 +24,61 @@ body {
   height: 100%;
   position: fixed;
   /* Lock body in place */
+  
+  /* Corrigindo avisos de appearance */
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+}
+
+/* Estilo para elementos de formulário */
+button,
+input,
+select,
+textarea,
+[role="button"],
+[type="button"],
+[type="reset"],
+[type="submit"] {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background: none;
+  border: none;
+  border-radius: 0;
+  margin: 0;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  line-height: normal;
+  cursor: pointer;
+}
+
+/* Estilo específico para campos de busca */
+[type="search"] {
+  outline-offset: -2px;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background-color: transparent;
+  border: 1px solid #333;
+  border-radius: 4px;
+  padding: 8px 12px;
+  color: white;
+}
+
+/* Estilo para remover setas em inputs do tipo number */
+[type="number"]::-webkit-inner-spin-button,
+[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  margin: 0;
+}
+
+[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
 }
 
 html {

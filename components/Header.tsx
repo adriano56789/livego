@@ -10,7 +10,7 @@ interface HeaderProps {
 
 const Header: React.FC<HeaderProps> = ({ onOpenReminderModal, onOpenRegionModal, onOpenSearch }) => {
   return (
-    <header className="flex items-center p-4 flex-shrink-0">
+    <header className="flex items-center p-4 flex-shrink-0" style={{ paddingTop: 'max(1rem, env(safe-area-inset-top))' }}>
       <h1 className="text-2xl font-bold flex-1">LiveGo</h1>
       <div className="flex items-center space-x-3">
         <button 

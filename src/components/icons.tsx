@@ -1,5 +1,5 @@
 import React from 'react';
-import { FaQuestion, FaGift, FaUserFriends, FaSearch, FaPlus, FaBell, FaLock, FaTrophy, FaHeart, FaCalendarAlt, FaChevronRight, FaMapMarkerAlt, FaUser, FaCheck, FaTimes, FaGlobe, FaClock, FaExclamationTriangle, FaLanguage } from 'react-icons/fa';
+import { FaQuestion, FaGift, FaUserFriends, FaSearch, FaPlus, FaBell, FaLock, FaTrophy, FaHeart, FaCalendarAlt, FaChevronRight, FaMapMarkerAlt, FaUser, FaCheck, FaTimes, FaGlobe, FaClock, FaExclamationTriangle, FaLanguage, FaComment, FaPaperPlane, FaEllipsisH } from 'react-icons/fa';
 import { RiVipCrownFill } from 'react-icons/ri';
 
 // Re-export all icons for easy access
@@ -23,7 +23,10 @@ export {
   FaClock as ClockIcon,
   FaExclamationTriangle as WarningTriangleIcon,
   FaLanguage as TranslateIcon,
-  RiVipCrownFill as CrownIcon
+  RiVipCrownFill as CrownIcon,
+  FaComment as MessageIcon,
+  FaPaperPlane as SendIcon,
+  FaEllipsisH as MoreIcon
 };
 
 // Custom icon components

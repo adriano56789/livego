@@ -14,4 +14,29 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background-color: #000000;
+  color: white;
+  overflow: hidden;
+  /* Prevent scrolling on body */
+  overscroll-behavior: none;
+  /* Prevent bounce effect */
+  width: 100%;
+  height: 100%;
+  position: fixed;
+  /* Lock body in place */
+}
+
+html {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+#root {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }

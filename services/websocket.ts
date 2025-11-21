@@ -58,7 +58,7 @@ class SimulatedWebSocketServer {
         });
     }
 
-    private sendToUser(userId: string, data: {type: string, payload: any}) {
+    private sendToUser(userId: string, data: { type: string, payload: any }) {
         const userSocket = this.connections.get(userId);
         if (userSocket) {
             userSocket.onMessage(data);
@@ -71,7 +71,7 @@ class SimulatedWebSocketServer {
         if (!userId1 || !userId2) return;
 
         const payload = tempId ? { ...message, tempId } : message;
-        
+
         this.sendToUser(userId1, { type: 'newMessage', payload });
         this.sendToUser(userId2, { type: 'newMessage', payload });
     }
@@ -80,13 +80,13 @@ class SimulatedWebSocketServer {
         console.log(`[WS Server] Notifying ${followedId} of new follower ${follower.name}`);
         this.sendToUser(followedId, { type: 'newFollower', payload: { follower } });
     }
-    
+
     public broadcastFollowUpdate(roomId: string, follower: User, followed: User, isUnfollow: boolean) {
         const room = database.db.streamRooms.get(roomId);
         if (!room) return;
-    
+
         const payload = { follower, followed, isUnfollow };
-    
+
         room.forEach(userIdInRoom => {
             this.sendToUser(userIdInRoom, {
                 type: 'followUpdate',
@@ -127,16 +127,16 @@ class SimulatedWebSocketServer {
         const streamerId = streamer.hostId;
         const fansSet = database.db.fans.get(streamerId);
         if (!fansSet) return;
-    
+
         console.log(`[WS Server] Notifying fans that ${streamer.name} is live.`);
-        
+
         const payload = {
             streamerId: streamerId,
             streamerName: streamer.name,
             streamerAvatar: streamer.avatar,
             isPrivate: isPrivate
         };
-    
+
         fansSet.forEach(fanId => {
             if (this.connections.has(fanId)) {
                 this.sendToUser(fanId, {
@@ -172,7 +172,7 @@ class SimulatedWebSocketServer {
             });
         });
     }
-    
+
     public broadcastAutoInviteStateUpdate(roomId: string, isEnabled: boolean) {
         const room = database.db.streamRooms.get(roomId);
         if (!room) return;
@@ -189,7 +189,7 @@ class SimulatedWebSocketServer {
     public broadcastPKHeartUpdate(roomId: string, heartsA: number, heartsB: number) {
         const room = database.db.streamRooms.get(roomId);
         if (!room) return;
-    
+
         console.log(`[WS Server] Broadcasting PK heart update to room ${roomId}: A=${heartsA}, B=${heartsB}`);
         const payload = { roomId, heartsA, heartsB };
         room.forEach(userIdInRoom => {
@@ -263,31 +263,31 @@ class SimulatedWebSocketServer {
                 break;
         }
     }
-    
+
     public broadcastRoomUpdate(roomId: string) {
         const roomConnections = database.db.streamRooms.get(roomId);
         if (!roomConnections) return;
-    
+
         const allUserIds = Array.from(roomConnections);
-        
+
         const session = database.db.liveSessions.get(roomId);
 
         const enrichedUsers = allUserIds.map(userId => {
             const user = database.db.users.get(userId);
             if (!user) return null;
-    
+
             const contribution = session?.giftSenders?.get(userId)?.sessionContribution || 0;
-    
+
             return {
                 ...user,
-                value: contribution 
+                value: contribution
             };
         }).filter((u): u is User & { value: number } => u !== null);
-    
+
         enrichedUsers.sort((a, b) => b.value - a.value);
-        
+
         const payload = { roomId, users: enrichedUsers, count: roomConnections.size };
-    
+
         roomConnections.forEach(userIdInRoom => {
             this.sendToUser(userIdInRoom, {
                 type: 'onlineUsersUpdate',
@@ -340,7 +340,7 @@ class SimulatedWebSocketServer {
             console.warn(`[WS Server] Host cannot be kicked.`);
             return;
         }
-        
+
         if (isModerator && (database.db.moderators.get(roomId)?.has(kickedId))) {
             console.warn(`[WS Server] Moderator cannot kick another moderator.`);
             return;
@@ -350,9 +350,9 @@ class SimulatedWebSocketServer {
             database.db.kickedUsers.set(roomId, new Set());
         }
         database.db.kickedUsers.get(roomId)!.add(kickedId);
-        
+
         this.sendToUser(kickedId, { type: 'kicked', payload: { roomId } });
-        
+
         this.handleLeaveRoom(kickedId, roomId);
 
         database.saveDb();
@@ -377,10 +377,10 @@ class SimulatedWebSocketServer {
     private handleSendStreamMessage(fromUserId: string, roomId: string, text: string) {
         const fromUser = database.db.users.get(fromUserId);
         if (!fromUser) return;
-    
+
         const room = database.db.streamRooms.get(roomId);
         if (!room) return;
-    
+
         const stream = database.db.streamers.find((s: Streamer) => s.id === roomId);
         const isHost = stream?.hostId === fromUserId;
         const isModerator = database.db.moderators.get(roomId)?.has(fromUserId) || false;
@@ -396,7 +396,7 @@ class SimulatedWebSocketServer {
             age: fromUser.age,
             isModerator: isHost || isModerator,
         };
-    
+
         room.forEach(userIdInRoom => {
             const userSocket = this.connections.get(userIdInRoom);
             userSocket?.onMessage({
@@ -415,13 +415,13 @@ class SimulatedWebSocketServer {
             console.error(`[WS Server] Could not find fromUser ${fromUserId} or toUser for room ${roomId}`);
             return;
         }
-    
+
         const room = database.db.streamRooms.get(roomId);
         if (!room) {
             console.error(`[WS Server] User ${fromUserId} could not send gift. Room ${roomId} not found.`);
             return;
         }
-    
+
         const giftPayload = {
             fromUser,
             toUser: {
@@ -432,9 +432,9 @@ class SimulatedWebSocketServer {
             quantity,
             roomId
         };
-    
+
         console.log(`[WS Server] Broadcasting gift in room ${roomId}:`, giftPayload);
-    
+
         room.forEach(userIdInRoom => {
             const userSocket = this.connections.get(userIdInRoom);
             userSocket?.onMessage({
@@ -446,6 +446,8 @@ class SimulatedWebSocketServer {
 
     private handleSendMessage(from: string, to: string, text: string, tempId?: string) {
         const chatKey = database.createChatKey(from, to);
+        const fromUser = database.db.users.get(from);
+
         const message: Message = {
             id: crypto.randomUUID(),
             chatId: chatKey,
@@ -454,8 +456,11 @@ class SimulatedWebSocketServer {
             text,
             timestamp: new Date().toISOString(),
             status: this.connections.has(to) ? 'delivered' : 'sent',
+            avatarUrl: fromUser?.avatarUrl || '',
+            username: fromUser?.name || '',
+            badgeLevel: fromUser?.level || 0
         };
-        database.db.messages.set(message.id, message);
+        database.db.messages.set(String(message.id), message);
 
         // Send to recipient if online
         const recipientSocket = this.connections.get(to);
@@ -496,7 +501,7 @@ class WebSocketManager extends EventEmitter {
         if (this.isConnected) return;
         this.userId = userId;
         this.isConnected = true;
-        
+
         webSocketServerInstance.connect(userId, {
             onMessage: (data) => {
                 this.emit(data.type, data.payload);

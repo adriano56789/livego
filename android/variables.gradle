@@ -1,33 +1,33 @@
 ext {
     // Configurações de SDK
-    minSdkVersion = 21  // Android 5.0 - Cobre 99% dos dispositivos ativos
-    compileSdkVersion = 35  // Android 15
-    targetSdkVersion = 35   // Android 15
+    minSdkVersion = 23      // Android 6.0 - Versão mínima para melhor segurança
+    compileSdkVersion = 34  // Android 14
+    targetSdkVersion = 34   // Android 14 (mais estável que a 35 no momento)
     
     // Versões das bibliotecas do AndroidX
-    androidxActivityVersion = '1.9.2'  // Última versão estável
-    androidxAppCompatVersion = '1.7.0'  // Compatível com Android 5.0+
+    androidxActivityVersion = '1.8.2'    // Estável para Android 6.0+
+    androidxAppCompatVersion = '1.6.1'   // Compatível com Android 6.0+
     androidxCoordinatorLayoutVersion = '1.2.0'
-    androidxCoreVersion = '1.15.0'  // Suporte a Android 5.0+
-    androidxFragmentVersion = '1.8.4'  // Última versão estável
-    coreSplashScreenVersion = '1.0.1'  // Splash screen moderna
-    androidxWebkitVersion = '1.12.1'  // Para WebView moderno
+    androidxCoreVersion = '1.12.0'       // Versão estável
+    androidxFragmentVersion = '1.6.2'    // Versão estável
+    coreSplashScreenVersion = '1.0.1'    // Splash screen moderna
+    androidxWebkitVersion = '1.8.0'      // WebView moderno e estável
     
     // Testes
     junitVersion = '4.13.2'
-    androidxJunitVersion = '1.2.1'  // AndroidX Test - JUnit
-    androidxEspressoCoreVersion = '3.6.1'  // AndroidX Test - Espresso
+    androidxJunitVersion = '1.1.5'       // Versão estável para testes
+    androidxEspressoCoreVersion = '3.5.1' // Versão estável para testes de interface
     
     // Outras dependências
-    cordovaAndroidVersion = '10.1.1'  // Última versão estável do Cordova Android
+    cordovaAndroidVersion = '10.1.1'     // Última versão estável do Cordova Android
     
     // Configurações específicas para Android 12+ (API 31+)
-    android12StoragemanagerVersion = '1.0.0'  // Para gerenciamento de armazenamento no Android 12+
-    android12SplashScreenVersion = '1.0.1'  // Splash screen compatível com Android 12+
+    android12StoragemanagerVersion = '1.0.0'
+    android12SplashScreenVersion = '1.0.1'
     
     // Configurações de segurança
-    securityCryptoVersion = '1.1.0-alpha06'  // Para criptografia segura
+    securityCryptoVersion = '1.1.0-alpha06'
     
     // Configurações de mídia
-    exoplayerVersion = '2.19.1'  // Para reprodução de vídeo
+    exoplayerVersion = '2.19.1'
 }

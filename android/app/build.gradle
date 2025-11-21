@@ -1,88 +1,223 @@
 apply plugin: 'com.android.application'
+apply plugin: 'kotlin-android'
+apply plugin: 'kotlin-parcelize'
+apply plugin: 'kotlin-kapt'
 
 android {
     namespace "com.example.livego"
     compileSdk rootProject.ext.compileSdkVersion
+    
     defaultConfig {
         applicationId "com.example.livego"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
-        versionName "1.0"
+        versionName "1.0.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        
+        // Configuração para suporte a múltiplas arquiteturas
+        ndk {
+            abiFilters 'armeabi-v7a', 'arm64-v8a', 'x86', 'x86_64'
+        }
+        
+        // Configurações de build
+        multiDexEnabled true
+        vectorDrawables.useSupportLibrary = true
+        
+        // Configurações de recursos
+        resConfigs 'pt-rBR', 'en', 'es' // Idiomas suportados
+        
+        // Configurações de aapt
         aaptOptions {
-             // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
-             // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
             ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
+            cruncherEnabled = false
         }
+        
+        // Configurações de renderscript
+        renderscriptTargetApi 21
+        renderscriptSupportModeEnabled true
     }
-    buildTypes {
+    
+    // Configurações de assinatura
+    signingConfigs {
         release {
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            storeFile file("keystore.jks") // Atualize com o caminho correto
+            storePassword System.getenv('KEYSTORE_PASSWORD')
+            keyAlias System.getenv('KEY_ALIAS')
+            keyPassword System.getenv('KEY_PASSWORD')
         }
     }
+    
+    // Configurações de build
+    buildTypes {
+        debug {
+            debuggable true
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+        
+        release {
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.release
+            
+            // Configurações de otimização
+            ndk {
+                debugSymbolLevel 'FULL'
+            }
+        }
+    }
+    
+    // Configurações de compilação
     compileOptions {
+        coreLibraryDesugaringEnabled true
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
     }
+    
+    // Configurações do Kotlin
+    kotlinOptions {
+        jvmTarget = '17'
+        freeCompilerArgs += [
+            "-Xjvm-default=all",
+            "-opt-in=kotlin.RequiresOptIn"
+        ]
+    }
+    
+    // Configurações de empacotamento
+    packagingOptions {
+        resources {
+            excludes += [
+                'META-INF/DEPENDENCIES',
+                'META-INF/LICENSE',
+                'META-INF/LICENSE.txt',
+                'META-INF/license.txt',
+                'META-INF/NOTICE',
+                'META-INF/NOTICE.txt',
+                'META-INF/notice.txt',
+                'META-INF/ASL2.0',
+                'META-INF/*.kotlin_module',
+                'META-INF/AL2.0',
+                'META-INF/LGPL2.1'
+            ]
+            pickFirsts += [
+                'lib/armeabi-v7a/libc++_shared.so',
+                'lib/arm64-v8a/libc++_shared.so',
+                'lib/x86/libc++_shared.so',
+                'lib/x86_64/libc++_shared.so'
+            ]
+        }
+    }
+    
+    // Configurações de lint
+    lintOptions {
+        checkReleaseBuilds false
+        abortOnError false
+        ignoreWarnings true
+        disable 'MissingTranslation', 'ExtraTranslation'
+    }
+    
+    // Configurações de build features
+    buildFeatures {
+        viewBinding true
+        buildConfig true
+    }
+    
+    // Configurações de teste
+    testOptions {
+        unitTests.returnDefaultValues = true
+        unitTests.includeAndroidResources = true
+    }
 }
 
+// Configurações de repositórios
 repositories {
-    flatDir{
+    google()
+    mavenCentral()
+    maven { url 'https://maven.google.com' }
+    maven { url 'https://jitpack.io' }
+    
+    // Para dependências locais
+    flatDir {
         dirs '../capacitor-cordova-android-plugins/src/main/libs', 'libs'
     }
 }
 
+// Configurações de dependências
 dependencies {
-    implementation fileTree(include: ['*.jar'], dir: 'libs')
-    
-    // Bibliotecas principais do AndroidX
+    // Dependências principais do AndroidX
     implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
-    implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
-    implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
     implementation "androidx.core:core-ktx:$androidxCoreVersion"
     implementation "androidx.activity:activity-ktx:$androidxActivityVersion"
     implementation "androidx.fragment:fragment-ktx:$androidxFragmentVersion"
+    implementation "androidx.lifecycle:lifecycle-runtime-ktx:2.6.2"
+    implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:2.6.2"
+    implementation "androidx.lifecycle:lifecycle-livedata-ktx:2.6.2"
+    
+    // Suporte a recursos do Android 12+
+    implementation "androidx.startup:startup-runtime:1.2.0"
+    implementation 'androidx.window:window:1.1.0'
+    implementation 'androidx.emoji2:emoji2:1.4.0'
+    implementation 'androidx.profileinstaller:profileinstaller:1.3.1'
     
     // WebView moderno
     implementation "androidx.webkit:webkit:$androidxWebkitVersion"
     
-    // Suporte a recursos do Android 12+
-    implementation "androidx.startup:startup-runtime:1.2.1"
-    implementation "androidx.window:window:1.2.0"
+    // Material Design
+    implementation 'com.google.android.material:material:1.11.0'
+    implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
     
     // Segurança
-    implementation "androidx.security:security-crypto:$securityCryptoVersion"
-    
-    // Mídia e reprodução de vídeo
-    implementation "com.google.android.exoplayer:exoplayer-core:$exoplayerVersion"
-    implementation "com.google.android.exoplayer:exoplayer-ui:$exoplayerVersion"
+    implementation "androidx.security:security-crypto:1.1.0-alpha06"
     
     // Capacitor
     implementation project(':capacitor-android')
     implementation project(':capacitor-cordova-android-plugins')
+    
+    // Desugar JDK para suporte a APIs modernas em versões antigas
+    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.0.4'
     
     // Testes
     testImplementation "junit:junit:$junitVersion"
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
     
-    // Suporte a recursos específicos do Android 12+
-    implementation 'com.google.android.material:material:1.12.0'
-    implementation 'androidx.constraintlayout:constraintlayout:2.2.0-alpha14'
-    
-    // Para melhor compatibilidade com versões antigas
+    // Utilitários
     implementation 'com.google.guava:guava:32.1.3-android'
+    implementation 'com.jakewharton.timber:timber:5.0.1'
 }
 
-apply from: 'capacitor.build.gradle'
-
+// Aplicar plugins condicionais
 try {
     def servicesJSON = file('google-services.json')
-    if (servicesJSON.text) {
+    if (servicesJSON.exists()) {
         apply plugin: 'com.google.gms.google-services'
+        apply plugin: 'com.google.firebase.crashlytics'
     }
-} catch(Exception e) {
-    logger.info("google-services.json not found, google-services plugin not applied. Push Notifications won't work")
+} catch (Exception ignored) {
+    logger.info("google-services.json não encontrado, plugins do Google não serão aplicados")
+}
+
+// Aplicar configurações do Capacitor
+apply from: 'capacitor.build.gradle'
+
+// Configuração para o AndroidX
+configurations.all {
+    resolutionStrategy {
+        // Forçar versões específicas para evitar conflitos
+        force "androidx.core:core-ktx:$androidxCoreVersion"
+        force "androidx.appcompat:appcompat:$androidxAppCompatVersion"
+        force 'androidx.annotation:annotation:1.7.1'
+        
+        // Desativar o uso de flatDir para evitar problemas
+        preferProjectModules()
+    }
+}
+
+// Tarefa para limpar antes de construir
+tasks.whenTaskAdded { task ->
+    if (task.name == 'assembleRelease') {
+        task.dependsOn 'clean'
+    }
 }

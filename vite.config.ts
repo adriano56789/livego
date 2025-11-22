@@ -8,6 +8,9 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 export default defineConfig({
+  // Base public path when served in development or production
+  base: './',
+  
   plugins: [
     react(),
     VitePWA({
@@ -16,27 +19,46 @@ export default defineConfig({
       manifest: {
         name: 'LiveGo PWA',
         short_name: 'LiveGo',
-        start_url: '/pwa.html',
-        scope: '/',
+        start_url: './',
+        scope: './',
         display: 'standalone',
         background_color: '#111827',
         theme_color: '#111827',
         description: 'Versão PWA para testes de instalação e funcionamento.',
         icons: [
           {
-            src: '/images/diamond-yellow.png',
+            src: './images/diamond-yellow.png',
             sizes: '192x192',
             type: 'image/png',
             purpose: 'any'
           },
           {
-            src: '/images/diamond-yellow.png',
+            src: './images/diamond-yellow.png',
             sizes: '512x512',
             type: 'image/png',
             purpose: 'any'
           }
         ],
         orientation: 'portrait'
+      },
+      workbox: {
+        globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+        runtimeCaching: [
+          {
+            urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'google-fonts-cache',
+              expiration: {
+                maxEntries: 10,
+                maxAgeSeconds: 60 * 60 * 24 * 365 // <== 365 days
+              },
+              cacheableResponse: {
+                statuses: [0, 200]
+              }
+            }
+          }
+        ]
       }
     })
   ],
@@ -50,7 +72,7 @@ export default defineConfig({
       host: 'localhost',
       port: 24679,
       overlay: true
-    },
+    }
   },
 
   resolve: {
@@ -61,16 +83,24 @@ export default defineConfig({
     }
   },
 
+  // Build configuration
   build: {
-    minify: 'terser',
+    outDir: 'dist',
+    emptyOutDir: true,
     sourcemap: false,
     chunkSizeWarningLimit: 1600,
+    minify: 'terser',
     terserOptions: {
       compress: {
         drop_console: true,
         drop_debugger: true,
       }
-    }
+    },
+    rollupOptions: {
+      input: {
+        main: path.resolve(__dirname, 'index.html'),
+      },
+    },
   },
 
   optimizeDeps: {

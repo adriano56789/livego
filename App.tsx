@@ -142,25 +142,25 @@ const AppContent: React.FC = () => {
 
     const { t, language, setLanguage } = useTranslation();
 
-    const addToast = useCallback((type: ToastType, message: string) => {
-        const id = Date.now();
-        setToasts(prev => [...prev, { id, type, message }]);
+    const addToast = useCallback((toast: ToastData) => {
+        setToasts(prev => [...prev, toast]);
         setTimeout(() => {
-            setToasts(prev => prev.filter(t => t.id !== id));
+            setToasts(prev => prev.filter(t => t.id !== toast.id));
         }, 3000);
     }, []);
 
-    const updateUserEverywhere = useCallback((updatedUser: User) => {
-        const updater = (users: User[]) => users.map(u => u.id === updatedUser.id ? updatedUser : u);
+    const updateUserEverywhere = useCallback((updatedUser: User | User[]) => {
+        const user = Array.isArray(updatedUser) ? updatedUser[0] : updatedUser;
+        const updater = (users: User[]) => users.map(u => u.id === user.id ? user : u);
 
-        if (currentUser?.id === updatedUser.id) {
-            setCurrentUser(updatedUser);
+        if (currentUser?.id === user.id) {
+            setCurrentUser(user);
         }
-        if (viewingProfile?.id === updatedUser.id) {
-            setViewingProfile(updatedUser);
+        if (viewingProfile?.id === user.id) {
+            setViewingProfile(user);
         }
-        if (pkOpponent?.id === updatedUser.id) {
-            setPkOpponent(updatedUser);
+        if (pkOpponent?.id === user.id) {
+            setPkOpponent(user);
         }
 
         setAllUsers(updater);
@@ -169,13 +169,13 @@ const AppContent: React.FC = () => {
         setFriends(updater);
         setListScreenUsers(updater);
 
-        setConversations(prev => prev.map(c => c.friend.id === updatedUser.id ? { ...c, friend: updatedUser } : c));
+        setConversations(prev => prev.map(c => c.friend.id === user.id ? { ...c, friend: user } : c));
 
-        const streamUpdater = (s: Streamer) => s.hostId === updatedUser.id ? { ...s, name: updatedUser.name, avatar: updatedUser.avatarUrl } : s;
+        const streamUpdater = (s: Streamer) => s.hostId === user.id ? { ...s, name: user.name, avatar: user.avatarUrl } : s;
         setStreamers(prev => prev.map(streamUpdater));
         setReminderStreamers(prev => prev.map(streamUpdater));
 
-        if (activeStream?.hostId === updatedUser.id) {
+        if (activeStream?.hostId === user.id) {
             setActiveStream(prev => prev ? streamUpdater(prev) : null);
         }
     }, [currentUser, viewingProfile, pkOpponent, activeStream]);
@@ -907,16 +907,6 @@ const AppContent: React.FC = () => {
                 const increment = updatedFollowed.isFollowed ? 1 : -1;
                 updateLiveSession({ followers: Math.max(0, (liveSession.followers || 0) + increment) });
             }
-
-            if (!streamId) {
-                const toastMessage = updatedFollowed.isFollowed
-                    ? t('toasts.followedUser', { name: userToFollow.name })
-                    : `Você deixou de seguir ${userToFollow.name}.`;
-                addToast(ToastType.Success, toastMessage);
-            }
-
-        } else {
-            addToast(ToastType.Error, "Ação de seguir/deixar de seguir falhou.");
         }
     };
 
@@ -1018,7 +1008,11 @@ const AppContent: React.FC = () => {
             const { success, config } = await api.updatePKConfig(duration);
             if (success && config) {
                 setPkBattleDuration(config.duration);
-                addToast(ToastType.Success, t('toasts.pkDurationSet', { duration }));
+               addToast({ 
+                   id: Date.now().toString(), 
+                   type: ToastType.Success, 
+                   message: `Duração do PK definida para ${duration} segundos`
+               });
             } else {
                 throw new Error("Falha ao salvar configuração.");
             }
@@ -1034,10 +1028,10 @@ const AppContent: React.FC = () => {
             const { success, user } = await api.purchaseEffect(currentUser.id, gift);
             if (success && user) {
                 updateUserEverywhere(user);
-                addToast(ToastType.Success, t('vip.store.purchaseSuccess', { name: gift.name }));
+                addToast(ToastType.Success, `Presente ${gift.name} comprado com sucesso!`);
             }
         } else {
-            addToast(ToastType.Error, t('vip.store.notEnoughDiamonds'));
+            addToast(ToastType.Error, 'Diamantes insuficientes para comprar este presente!');
         }
     }
 

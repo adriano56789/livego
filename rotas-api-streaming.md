@@ -104,12 +104,7 @@ POST   /api/rooms/{roomId}/end
 
 ### Participant Management
 ```
-GET    /api/rooms/{roomId}/participants
-GET    /api/rooms/{roomId}/participants/{participantId}
-DELETE /api/rooms/{roomId}/participants/{participantId}
-POST   /api/rooms/{roomId}/participants/{participantId}/mute
-POST   /api/rooms/{roomId}/participants/{participantId}/unmute
-```
+
 
 ### Track Management
 ```

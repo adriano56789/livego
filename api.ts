@@ -4,11 +4,11 @@ import { delay, CURRENT_USER_ID } from './services/database';
 
 const callApi = async <T>(method: string, path: string, body?: any): Promise<T> => {
     await delay(Math.random() * 150 + 50); // Simulate network latency
-    const { status, data, error } = mockApiRouter(method, path, body);
-    if (status >= 400) {
-        throw new Error(error || `API Error: ${status}`);
+    const response = await mockApiRouter(method, path, body);
+    if (response.status >= 400) {
+        throw new Error(response.error || `API Error: ${response.status}`);
     }
-    return data as T;
+    return response.data as T;
 };
 
 // This is the client-side API object that components will import and use.

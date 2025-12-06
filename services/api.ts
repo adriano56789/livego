@@ -1,6 +1,7 @@
 import { mockApiRouter } from './server';
 import { User, Gift, Streamer, Message, RankedUser, Country, Conversation, NotificationSettings, BeautySettings, PurchaseRecord, Visitor, EligibleUser, FeedPhoto, LiveSessionState, LevelInfo, GoogleAccount, StreamHistoryEntry, Comment, MusicTrack, Wallet } from '../types';
 import { delay, CURRENT_USER_ID } from './database';
+import { livekitService } from './livekit';
 
 const callApi = async <T>(method: string, path: string, body?: any): Promise<T> => {
     await delay(Math.random() * 150 + 50); // Simulate network latency
@@ -176,8 +177,59 @@ export const api = {
     getData: (entity: string, filters?: any) => callApi<any[]>('GET', `/api/data/${entity}`, filters),
     updateData: (entity: string, id: string, data: any) => callApi<{ success: boolean }>('PUT', `/api/data/${entity}/${id}`, data),
     deleteData: (entity: string, id: string) => callApi<{ success: boolean }>('DELETE', `/api/data/${entity}/${id}`),
-};
-export function sendGift(userId: string, roomId: string, id: string, quantity: number) {
-    return callApi<{ success: boolean; error?: string; updatedSender: User; updatedReceiver: User; }>('POST', `/api/streams/${roomId}/gift`, { fromUserId: userId, giftName: id, amount: quantity });
-}
 
+    // --- Room Participants ---
+    getRoomParticipants(roomId: string) {
+        return callApi<Array<{
+            id: string;
+            identity: string;
+            name: string;
+            isMuted: boolean;
+            isSpeaking: boolean;
+            joinedAt: string;
+            trackCount: number;
+        }>>('GET', `/api/rooms/${roomId}/participants`);
+    },
+
+    getRoomParticipant(roomId: string, participantId: string) {
+        return callApi<{
+            id: string;
+            identity: string;
+            name: string;
+            isMuted: boolean;
+            isSpeaking: boolean;
+            joinedAt: string;
+            tracks: Array<{
+                sid: string;
+                kind: 'audio' | 'video' | 'data';
+                isMuted: boolean;
+                isEnabled: boolean;
+            }>;
+        }>('GET', `/api/rooms/${roomId}/participants/${participantId}`);
+    },
+
+    removeParticipant(roomId: string, participantId: string) {
+        return callApi<{ success: boolean }>(
+            'DELETE',
+            `/api/rooms/${roomId}/participants/${participantId}`
+        );
+    },
+
+    muteParticipant(roomId: string, participantId: string) {
+        return callApi<{ success: boolean }>(
+            'POST',
+            `/api/rooms/${roomId}/participants/${participantId}/mute`
+        );
+    },
+
+    unmuteParticipant(roomId: string, participantId: string) {
+        return callApi<{ success: boolean }>(
+            'POST',
+            `/api/rooms/${roomId}/participants/${participantId}/unmute`
+        );
+    },
+};
+
+export function sendGift(userId: string, roomId: string, id: string, quantity: number) {
+    return callApi<{ success: boolean }>('POST', '/api/gifts/send', { userId, roomId, giftId: id, quantity });
+}

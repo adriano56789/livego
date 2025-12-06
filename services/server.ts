@@ -162,6 +162,319 @@ export const mockApiRouter = async (method: string, path: string, body?: any): P
   const id = pathParts[2];
   const subEntity = pathParts[3];
 
+  // Rota para listar participantes de uma sala
+  if (path.match(/^\/api\/rooms\/[^\/]+\/participants$/) && method === 'GET') {
+    try {
+      const roomId = pathParts[2];
+      
+      // Verifica se a sala existe
+      const roomParticipants = db.streamRooms.get(roomId);
+      if (!roomParticipants) {
+        return formatResponse(404, null, 'Sala não encontrada');
+      }
+
+      // Obtém os dados detalhados de cada participante
+      const participants = Array.from(roomParticipants).map(userId => {
+        const user = db.users.get(userId);
+        if (!user) return null;
+        
+        // Verifica se o usuário está mutado na sala
+        const isMuted = user.roomSettings?.[roomId]?.muted || false;
+        
+        return {
+          id: user.id,
+          identity: user.id,
+          name: user.name || `Usuário ${user.id.substring(0, 6)}`,
+          avatarUrl: user.avatarUrl,
+          isMuted,
+          isSpeaking: false, // Detecção de fala pode ser implementada posteriormente
+          joinedAt: new Date().toISOString(),
+          level: user.level || 1,
+          isModerator: db.moderators.has(roomId) ? db.moderators.get(roomId)?.has(userId) : false,
+          isStreamer: user.id === roomId,
+          isVIP: user.isVIP,
+          diamonds: user.diamonds || 0,
+        };
+      }).filter(Boolean); // Remove valores nulos
+
+      return formatResponse(200, participants);
+    } catch (error) {
+      console.error('Erro ao listar participantes da sala:', error);
+      return formatResponse(500, null, 'Erro interno ao processar a requisição');
+    }
+  }
+
+  // Rota para obter um participante específico de uma sala
+  if (path.match(/^\/api\/rooms\/[^\/]+\/participants\/[^\/]+$/) && method === 'GET') {
+    try {
+      const roomId = pathParts[2];
+      const participantId = pathParts[4];
+      
+      // Verifica se a sala existe
+      const roomParticipants = db.streamRooms.get(roomId);
+      if (!roomParticipants) {
+        return formatResponse(404, null, 'Sala não encontrada');
+      }
+      
+      // Verifica se o participante está na sala
+      if (!roomParticipants.has(participantId)) {
+        return formatResponse(404, null, 'Participante não encontrado na sala');
+      }
+      
+      // Obtém os dados detalhados do participante
+      const user = db.users.get(participantId);
+      if (!user) {
+        return formatResponse(404, null, 'Usuário não encontrado');
+      }
+      
+      // Verifica se o usuário está mutado na sala
+      const isMuted = user.roomSettings?.[roomId]?.muted || false;
+      
+      const participantData = {
+        id: user.id,
+        identity: user.id,
+        name: user.name || `Usuário ${user.id.substring(0, 6)}`,
+        avatarUrl: user.avatarUrl,
+        isMuted,
+        isSpeaking: false, // Detecção de fala pode ser implementada posteriormente
+        joinedAt: new Date().toISOString(),
+        level: user.level || 1,
+        isModerator: db.moderators.has(roomId) ? db.moderators.get(roomId)?.has(user.id) : false,
+        isStreamer: user.id === roomId,
+        isVIP: user.isVIP,
+        diamonds: user.diamonds || 0,
+        tracks: []
+      };
+      
+      return formatResponse(200, participantData);
+    } catch (error) {
+      console.error('Erro ao obter participante da sala:', error);
+      return formatResponse(500, null, 'Erro interno ao processar a requisição');
+    }
+  }
+  
+  // Rota para remover um participante de uma sala
+  if (path.match(/^\/api\/rooms\/[^\/]+\/participants\/[^\/]+$/) && method === 'DELETE') {
+    try {
+      const roomId = pathParts[2];
+      const participantId = pathParts[4];
+      
+      // Verifica se a sala existe
+      const roomParticipants = db.streamRooms.get(roomId);
+      if (!roomParticipants) {
+        return formatResponse(404, null, 'Sala não encontrada');
+      }
+      
+      // Verifica se o participante está na sala
+      if (!roomParticipants.has(participantId)) {
+        return formatResponse(404, null, 'Participante não encontrado na sala');
+      }
+      
+      // Remove o participante da sala
+      roomParticipants.delete(participantId);
+      
+      // Atualiza o banco de dados
+      db.streamRooms.set(roomId, roomParticipants);
+      saveDb();
+      
+      return formatResponse(200, { success: true });
+    } catch (error) {
+      console.error('Erro ao remover participante da sala:', error);
+      return formatResponse(500, null, 'Erro interno ao processar a requisição');
+    }
+  }
+  
+  // Rota para mutar um participante
+  if (path.match(/^\/api\/rooms\/[^\/]+\/participants\/[^\/]+\/mute$/) && method === 'POST') {
+    try {
+      const roomId = pathParts[2];
+      const participantId = pathParts[4];
+      
+      // Verifica se a sala existe
+      const roomParticipants = db.streamRooms.get(roomId);
+      if (!roomParticipants) {
+        return formatResponse(404, null, 'Sala não encontrada');
+      }
+      
+      // Verifica se o participante está na sala
+      if (!roomParticipants.has(participantId)) {
+        return formatResponse(404, null, 'Participante não encontrado na sala');
+      }
+      
+      // Obtém o usuário
+      const user = db.users.get(participantId);
+      if (!user) {
+        return formatResponse(404, null, 'Usuário não encontrado');
+      }
+      
+      // Inicializa roomSettings se não existir
+      if (!user.roomSettings) {
+        user.roomSettings = {};
+      }
+      
+      // Inicializa as configurações da sala com muted definido
+      user.roomSettings[roomId] = {
+        ...(user.roomSettings[roomId] || {}),
+        muted: true
+      };
+      
+      // Atualiza o banco de dados
+      db.users.set(participantId, user);
+      saveDb();
+      
+      return formatResponse(200, { 
+        success: true, 
+        muted: true,
+        message: 'Participante mutado com sucesso'
+      });
+    } catch (error) {
+      console.error('Erro ao mutar participante:', error);
+      return formatResponse(500, null, 'Erro interno ao processar a requisição');
+    }
+  }
+  
+  // Rota para desmutar um participante
+  if (path.match(/^\/api\/rooms\/[^\/]+\/participants\/[^\/]+\/unmute$/) && method === 'POST') {
+    try {
+      const roomId = pathParts[2];
+      const participantId = pathParts[4];
+      
+      // Verifica se a sala existe
+      const roomParticipants = db.streamRooms.get(roomId);
+      if (!roomParticipants) {
+        return formatResponse(404, null, 'Sala não encontrada');
+      }
+      
+      // Verifica se o participante está na sala
+      if (!roomParticipants.has(participantId)) {
+        return formatResponse(404, null, 'Participante não encontrado na sala');
+      }
+      
+      // Obtém o usuário
+      const user = db.users.get(participantId);
+      if (!user) {
+        return formatResponse(404, null, 'Usuário não encontrado');
+      }
+      
+      // Inicializa roomSettings se não existir
+      if (!user.roomSettings) {
+        user.roomSettings = {};
+      }
+      
+      // Inicializa as configurações da sala com muted definido como falso
+      user.roomSettings[roomId] = {
+        ...(user.roomSettings[roomId] || {}),
+        muted: false
+      };
+      
+      // Atualiza o banco de dados
+      db.users.set(participantId, user);
+      saveDb();
+      
+      return formatResponse(200, { 
+        success: true, 
+        muted: false,
+        message: 'Participante desmutado com sucesso'
+      });
+    } catch (error) {
+      console.error('Erro ao desmutar participante:', error);
+      return formatResponse(500, null, 'Erro interno ao processar a requisição');
+    }
+  }
+
+  // Rota para silenciar/desmutar um participante
+  if (path.match(/^\/api\/rooms\/[^\/]+\/participants\/[^\/]+\/mute$/) && method === 'POST') {
+    try {
+      const roomId = pathParts[2];
+      const participantId = pathParts[4];
+      const { muted } = body;
+      
+      // Verifica se a sala existe
+      const roomParticipants = db.streamRooms.get(roomId);
+      if (!roomParticipants) {
+        return formatResponse(404, null, 'Sala não encontrada');
+      }
+      
+      // Verifica se o participante está na sala
+      if (!roomParticipants.has(participantId)) {
+        return formatResponse(404, null, 'Participante não encontrado na sala');
+      }
+      
+      // Obtém o usuário
+      const user = db.users.get(participantId);
+      if (!user) {
+        return formatResponse(404, null, 'Usuário não encontrado');
+      }
+      
+      // Atualiza o status de mudo do participante
+      if (!user.roomSettings) {
+        user.roomSettings = {};
+      }
+      if (!user.roomSettings[roomId]) {
+        user.roomSettings[roomId] = { muted: false };
+      }
+      user.roomSettings[roomId].muted = Boolean(muted);
+      
+      // Atualiza o banco de dados
+      db.users.set(participantId, user);
+      saveDb();
+      
+      // Notifica os outros participantes sobre a mudança de status de mudo
+      webSocketServerInstance.broadcastToRoom(roomId, {
+        type: 'participant_muted',
+        participantId,
+        roomId,
+        muted: user.roomSettings[roomId].muted
+      });
+      
+      return formatResponse(200, { 
+        success: true, 
+        muted: user.roomSettings[roomId].muted 
+      });
+    } catch (error) {
+      console.error('Erro ao atualizar status de mudo do participante:', error);
+      return formatResponse(500, null, 'Erro interno ao processar a requisição');
+    }
+  }
+
+  // Rota para remover um participante de uma sala
+  if (path.match(/^\/api\/rooms\/[^\/]+\/participants\/[^\/]+$/) && method === 'DELETE') {
+    try {
+      const roomId = pathParts[2];
+      const participantId = pathParts[4];
+      
+      // Verifica se a sala existe
+      const roomParticipants = db.streamRooms.get(roomId);
+      if (!roomParticipants) {
+        return formatResponse(404, null, 'Sala não encontrada');
+      }
+      
+      // Verifica se o participante está na sala
+      if (!roomParticipants.has(participantId)) {
+        return formatResponse(404, null, 'Participante não encontrado na sala');
+      }
+      
+      // Remove o participante da sala
+      roomParticipants.delete(participantId);
+      
+      // Atualiza o banco de dados
+      db.streamRooms.set(roomId, roomParticipants);
+      saveDb();
+      
+      // Notifica os outros participantes sobre a remoção
+      webSocketServerInstance.broadcastToRoom(roomId, {
+        type: 'participant_removed',
+        participantId,
+        roomId
+      });
+      
+      return formatResponse(200, { success: true });
+    } catch (error) {
+      console.error('Erro ao remover participante da sala:', error);
+      return formatResponse(500, null, 'Erro interno ao processar a requisição');
+    }
+  }
+
   // Rota de tradução
   if (path === '/api/translate' && method === 'POST') {
     try {

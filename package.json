@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:api": "tsx watch api-server.ts",
+    "dev:all": "concurrently \"npm run dev\" \"npm run dev:api\"",
     "build": "vite build",
     "preview": "vite preview",
     "analyze": "vite build --mode production",
@@ -12,13 +14,15 @@
     "android:dev": "npx cap sync android && npx cap open android",
     "android:run": "npm run build && npx cap sync android && npx cap run android",
     "android:build": "npm run build && npx cap sync android && cd android && ./gradlew assembleDebug",
-    "android:live": "concurrently \"npm run dev\" \"npm run android:dev\""
+    "android:live": "concurrently \"npm run dev\" \"npm run android:dev\"",
+    "api": "tsx api-server.ts"
   },
   "dependencies": {
     "@capacitor/android": "^6.2.1",
     "@capacitor/cli": "^6.2.1",
     "@capacitor/core": "^6.2.1",
     "@google/generative-ai": "^0.24.1",
+    "@livekit/protocol": "^1.43.4",
     "@types/lodash.debounce": "^4.0.9",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
@@ -27,6 +31,8 @@
     "helmet": "^7.0.0",
     "i18next": "^25.7.1",
     "jsonwebtoken": "^9.0.0",
+    "livekit-client": "^2.16.0",
+    "livekit-server-sdk": "^2.14.2",
     "lodash.debounce": "^4.0.8",
     "lucide-react": "^0.554.0",
     "mongoose": "^8.0.0",
@@ -40,7 +46,9 @@
     "redis": "^4.6.0",
     "sharp": "^0.34.5",
     "styled-components": "^6.1.19",
-    "winston": "^3.8.0"
+    "tsx": "^4.7.1",
+    "winston": "^3.8.0",
+    "ws": "^8.17.0"
   },
   "devDependencies": {
     "@capacitor/assets": "^3.0.5",
@@ -52,6 +60,7 @@
     "@types/multer": "^1.4.0",
     "@types/node": "^22.19.0",
     "@types/nodemailer": "^6.4.0",
+    "@types/ws": "^8.18.1",
     "@vitejs/plugin-basic-ssl": "^2.1.0",
     "@vitejs/plugin-react": "^5.1.1",
     "autoprefixer": "^10.4.22",

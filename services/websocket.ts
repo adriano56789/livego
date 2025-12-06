@@ -108,6 +108,37 @@ class SimulatedWebSocketServer {
      * @param event Nome do evento
      * @param data Dados a serem enviados
      */
+    /**
+     * Envia uma mensagem para todos os participantes de uma sala específica
+     * @param roomId ID da sala
+     * @param data Dados a serem enviados
+     */
+    public broadcastToRoom(roomId: string, data: any) {
+        console.log(`[WS Server] Broadcasting to room ${roomId}:`, data);
+        const room = database.db.streamRooms.get(roomId);
+        if (!room) {
+            console.error(`[WS Server] Room ${roomId} not found`);
+            return;
+        }
+
+        room.forEach(userId => {
+            if (this.connections.has(userId)) {
+                try {
+                    const client = this.connections.get(userId);
+                    if (client && client.onMessage) {
+                        client.onMessage({
+                            type: data.type,
+                            ...data
+                        });
+                        console.log(`[WS Server] Message sent to user ${userId} in room ${roomId}`);
+                    }
+                } catch (error) {
+                    console.error(`[WS Server] Error sending message to user ${userId}:`, error);
+                }
+            }
+        });
+    }
+
     public broadcast(event: string, data: any) {
         console.log(`[WS Server] Broadcasting '${event}' to all clients`);
         this.connections.forEach((client, userId) => {

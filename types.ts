@@ -160,6 +160,11 @@ export interface User {
   adminEarnings?: number;
   adminWithdrawalMethod?: { email: string; };
   frameExpiration?: string | null;
+  roomSettings?: {
+    [roomId: string]: {
+      muted: boolean;
+    };
+  };
   transactions?: Array<{
     type: string;
     amount: number;

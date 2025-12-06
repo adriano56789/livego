@@ -11,7 +11,18 @@ export default defineConfig({
   server: {
     port: 5173,
     host: '0.0.0.0',
-    open: true // Abre o navegador automaticamente
+    open: true, // Abre o navegador automaticamente
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3000', // URL do seu servidor de API
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, '')
+      },
+      '/ws': {
+        target: 'ws://localhost:3000', // WebSocket para desenvolvimento
+        ws: true
+      }
+    }
   },
   resolve: {
     alias: {

@@ -11,6 +11,7 @@ export interface Streamer {
   message: string;
   tags: string[];
   isHot?: boolean;
+  isLive?: boolean;
   icon?: string;
   country?: string;
   viewers?: number;

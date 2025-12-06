@@ -1,6 +1,34 @@
 
 import { db, CURRENT_USER_ID, createChatKey, saveDb, levelProgression, avatarFrames } from './database';
-import { User, Streamer, Message, ChatMessage, RankedUser, Gift, Conversation, PurchaseRecord, EligibleUser, FeedPhoto, Obra, GoogleAccount, LiveSessionState, StreamHistoryEntry, Visitor, NotificationSettings, BeautySettings, LevelInfo, Comment, MusicTrack, Wallet } from '../types';
+import { User, Message, ChatMessage, RankedUser, Gift, Conversation, PurchaseRecord, EligibleUser, FeedPhoto, Obra, GoogleAccount, LiveSessionState, StreamHistoryEntry, Visitor, NotificationSettings, BeautySettings, LevelInfo, Comment, MusicTrack, Wallet } from '../types';
+
+// Extensão local da interface Streamer para incluir a propriedade isLive
+interface Streamer {
+  id: string;
+  hostId: string;
+  name: string;
+  avatar: string;
+  location: string;
+  time: string;
+  message: string;
+  tags: string[];
+  isHot?: boolean;
+  isLive?: boolean;
+  icon?: string;
+  country?: string;
+  viewers?: number;
+  isPrivate?: boolean;
+  quality?: string;
+  followers?: number;
+  isFollowing?: boolean;
+  level?: number;
+  diamonds?: number;
+  vipLevel?: number;
+  isVip?: boolean;
+  isVerified?: boolean;
+  isBlocked?: boolean;
+  [key: string]: any; // Para permitir outras propriedades dinâmicas
+}
 import { webSocketServerInstance } from './websocket';
 
 /**
@@ -1838,30 +1866,111 @@ export const mockApiRouter = async (method: string, path: string, body?: any): P
         }
         
         if (id === 'start' && method === 'POST') {
-            // POST /api/pk/start
-            const { streamId, opponentId } = body;
-            const stream = db.streamers.find(s => s.id === streamId);
-            const opponent = db.streamers.find(s => s.hostId === opponentId);
-            
-            if (!stream || !opponent) {
-                return { status: 404, error: 'Stream or opponent not found' };
+            try {
+                const { streamId, opponentId } = body;
+                
+                // Log para depuração
+                console.log('=== INICIANDO BATALHA PK ===');
+                console.log('Stream ID:', streamId);
+                console.log('Oponente ID:', opponentId);
+                console.log('Streamers online:', db.streamers.map(s => ({ id: s.id, hostId: s.hostId, name: s.name })));
+                
+                // Encontra a stream atual
+                const stream = db.streamers.find(s => s.id === streamId);
+                if (!stream) {
+                    console.log('Erro: Stream não encontrada');
+                    return { status: 404, error: 'Stream não encontrada' };
+                }
+                
+                // Tenta encontrar o oponente de duas formas diferentes
+                let opponent: Streamer | undefined = db.streamers.find(s => s.id === opponentId);
+                if (!opponent) {
+                    opponent = db.streamers.find(s => s.hostId === opponentId);
+                }
+
+                // Se não encontrar o oponente, cria um oponente simulado
+                if (!opponent) {
+                    console.log('Nenhum oponente online encontrado, criando oponente simulado...');
+                    opponent = {
+                        id: 'bot-' + Date.now(),
+                        hostId: 'bot-' + Date.now(),
+                        name: 'Bot ' + Math.floor(Math.random() * 1000),
+                        location: 'Simulated',
+                        time: new Date().toISOString(),
+                        message: 'Bot player',
+                        tags: ['bot'],
+                        isLive: true,
+                        avatar: 'https://randomuser.me/api/portraits/lego/' + (Math.floor(Math.random() * 10) + 1) + '.jpg',
+                        followers: Math.floor(Math.random() * 1000),
+                        isFollowing: false,
+                        level: Math.floor(Math.random() * 50) + 1,
+                        diamonds: 0,
+                        vipLevel: 0,
+                        isVip: false,
+                        isVerified: false,
+                        isBlocked: false,
+                        isMuted: false,
+                        isAdmin: false,
+                        isModerator: false,
+                        isStreamer: true,
+                        isSubscribed: false,
+                        isFollowingMe: false,
+                        isFollower: false,
+                        isFriend: false,
+                        isBlockedMe: false,
+                        isMutedMe: false,
+                        isFollowingHim: false,
+                        isFollowerHim: false,
+                        isFriendHim: false,
+                        isBlockedHim: false,
+                        isMutedHim: false,
+                        isLiveHim: true,
+                        isSubscribedHim: false,
+                        isFollowingEachOther: false,
+                        isFriendEachOther: false,
+                        isBlockedEachOther: false,
+                        isMutedEachOther: false,
+                        isLiveEachOther: true,
+                        isSubscribedEachOther: false
+                    };
+                    
+                    // Adiciona o bot à lista de streamers temporariamente
+                    db.streamers.push(opponent);
+                    console.log('Oponente simulado criado:', opponent.name, '(ID:', opponent.id, ')');
+                }
+                
+                console.log('Oponente encontrado:', opponent.name, '(ID:', opponent.id, 'HostID:', opponent.hostId, ')');
+                
+                const battleState: PKBattleState = {
+                    opponentId: opponent.id,
+                    heartsA: 0,
+                    heartsB: 0,
+                    scoreA: 0,
+                    scoreB: 0
+                };
+                
+                db.pkBattles.set(streamId, battleState);
+                saveDb();
+                
+                // Broadcast PK battle start
+                webSocketServerInstance.broadcast('pkBattleStarted', { 
+                    streamId, 
+                    opponentId: opponent.id,
+                    opponentName: opponent.name
+                });
+                
+                console.log('Batalha PK iniciada com sucesso!');
+                return { 
+                    status: 200, 
+                    data: { 
+                        success: true,
+                        opponentName: opponent.name
+                    } 
+                };
+            } catch (error) {
+                console.error('Erro ao iniciar batalha PK:', error);
+                return { status: 500, error: 'Erro interno ao iniciar a batalha' };
             }
-            
-            const battleState: PKBattleState = {
-                opponentId: opponentId,
-                heartsA: 0,
-                heartsB: 0,
-                scoreA: 0,
-                scoreB: 0
-            };
-            
-            db.pkBattles.set(streamId, battleState);
-            saveDb();
-            
-            // Broadcast PK battle start
-            webSocketServerInstance.broadcast('pkBattleStarted', { streamId, opponentId });
-            
-            return { status: 200, data: { success: true } };
         }
         
         if (id === 'end' && method === 'POST') {

@@ -1,0 +1,81 @@
+{
+  "appId": "com.example.livego",
+  "appName": "LiveGo",
+  "webDir": "dist",
+  "bundledWebRuntime": false,
+  "server": {
+    "androidScheme": "https",
+    "cleartext": true,
+    "allowNavigation": [
+      "*"
+    ],
+    "allowMixedContent": true,
+    "hostname": "localhost"
+  },
+  "android": {
+    "allowMixedContent": true,
+    "captureInput": true,
+    "webContentsDebuggingEnabled": true,
+    "backgroundColor": "#FFFFFF",
+    "icon": "resources/icon.png",
+    "splash": {
+      "image": "resources/splash.png",
+      "backgroundColor": "#FFFFFF",
+      "androidScaleType": "CENTER_CROP",
+      "androidSplashResourceName": "splash",
+      "androidSplashFullScreen": true,
+      "androidSplashImmersive": true
+    },
+    "buildOptions": {
+      "keystorePath": "",
+      "keystoreAlias": "",
+      "keystorePassword": "",
+      "keyPassword": ""
+    },
+    "allowNavigation": [
+      "*"
+    ],
+    "permissions": [
+      "CAMERA",
+      "RECORD_AUDIO",
+      "MODIFY_AUDIO_SETTINGS",
+      "INTERNET",
+      "ACCESS_NETWORK_STATE",
+      "ACCESS_WIFI_STATE",
+      "WAKE_LOCK",
+      "FOREGROUND_SERVICE",
+      "READ_MEDIA_IMAGES",
+      "READ_MEDIA_VIDEO",
+      "READ_MEDIA_AUDIO",
+      "POST_NOTIFICATIONS",
+      "VIBRATE"
+    ],
+    "webViewOptions": {
+      "enableSafeBrowsing": false,
+      "enableDomStorage": true,
+      "databaseEnabled": true,
+      "allowContentAccess": true,
+      "allowFileAccess": true,
+      "allowFileAccessFromFileURLs": true,
+      "allowUniversalAccessFromFileURLs": true,
+      "mediaPlaybackRequiresUserGesture": false
+    }
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 1000,
+      "launchAutoHide": true,
+      "backgroundColor": "#FFFFFF",
+      "androidSplashResourceName": "splash",
+      "androidScaleType": "CENTER_CROP",
+      "showSpinner": false,
+      "splashFullScreen": true,
+      "splashImmersive": true
+    },
+    "StatusBar": {
+      "style": "DARK",
+      "overlaysWebView": true,
+      "backgroundColor": "#00000000"
+    }
+  }
+}

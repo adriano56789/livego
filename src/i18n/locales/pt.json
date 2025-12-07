@@ -1,0 +1,42 @@
+{
+  "common": {
+    "loading": "Carregando...",
+    "error": "Ocorreu um erro",
+    "success": "Sucesso",
+    "cancel": "Cancelar",
+    "save": "Salvar",
+    "delete": "Excluir",
+    "edit": "Editar",
+    "back": "Voltar",
+    "next": "Próximo",
+    "previous": "Anterior",
+    "submit": "Enviar",
+    "search": "Buscar",
+    "noResults": "Nenhum resultado encontrado",
+    "welcome": "Bem-vindo(a)",
+    "logout": "Sair"
+  },
+  "auth": {
+    "login": "Entrar",
+    "register": "Registrar",
+    "email": "E-mail",
+    "password": "Senha",
+    "forgotPassword": "Esqueci minha senha",
+    "dontHaveAccount": "Não tem uma conta?",
+    "alreadyHaveAccount": "Já tem uma conta?",
+    "loginWithGoogle": "Entrar com Google"
+  },
+  "validation": {
+    "required": "Este campo é obrigatório",
+    "invalidEmail": "E-mail inválido",
+    "minLength": "Deve ter no mínimo {{count}} caracteres",
+    "passwordsDontMatch": "As senhas não conferem"
+  },
+  "error": {
+    "title": "Ocorreu um erro",
+    "tryAgain": "Tentar novamente",
+    "networkError": "Erro de conexão. Verifique sua internet e tente novamente.",
+    "serverError": "Erro no servidor. Tente novamente mais tarde.",
+    "notFound": "Página não encontrada"
+  }
+}

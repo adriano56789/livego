@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="/favicon.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#000000" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <title>LiveGo PWA</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      html, body, #root { height: 100%; margin: 0; padding: 0; }
+      body { overscroll-behavior-y: contain; }
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      .line-clamp-2 { overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; display: -webkit-box; -webkit-box-orient: vertical; overflow: hidden; }
+      @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+      .animate-spin-slow { animation: spin 3s linear infinite; }
+      @keyframes room-effect-animation { 0% { opacity: 0; transform: scale(0.5) translateY(50px);} 20% { opacity: 1; transform: scale(1.1) translateY(0);} 80% { opacity: 1; transform: scale(1) translateY(0);} 100% { opacity: 0; transform: scale(0.8) translateY(-50px);} }
+      .room-effect { animation: room-effect-animation 3s ease-in-out forwards; }
+      @keyframes float-up { 0% { opacity: 1; transform: translateY(0) scale(0.5);} 100% { opacity: 0; transform: translateY(-150px) scale(1.5) rotate(15deg);} }
+      .heart-anim { position: absolute; animation: float-up 2s ease-out forwards; pointer-events: none; }
+      @keyframes live-ladder-animation { 0% { transform: scaleY(0.1);} 30% { transform: scaleY(1.0);} 60% { transform: scaleY(0.1);} 80% { transform: scaleY(0.5);} 100% { transform: scaleY(0.1);} }
+      .live-indicator-bar1, .live-indicator-bar2, .live-indicator-bar3, .live-indicator-bar4 { transform-origin: bottom; animation: live-ladder-animation 1.4s linear infinite; }
+      .live-indicator-bar2 { animation-delay: 0.2s; } .live-indicator-bar3 { animation-delay: 0.4s; } .live-indicator-bar4 { animation-delay: 0.6s; }
+      @keyframes rotate-gradient { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+      @keyframes pulse-ring { 0%, 100% { transform: scale(1);} 50% { transform: scale(1.05);} }
+      .live-ring-animated { padding: 3px; background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888, #cc2366, #dc2743, #e6683c, #f09433); background-size: 300% 300%; border-radius: 9999px; animation: rotate-gradient 4s ease infinite, pulse-ring 2s ease-in-out infinite; position: relative; display: inline-block; }
+      @keyframes pulse-badge { 0%, 100% { transform: translateX(-50%) scale(1); box-shadow: 0 1px 3px rgba(0,0,0,0.4);} 50% { transform: translateX(-50%) scale(1.08); box-shadow: 0 2px 8px rgba(220, 39, 67, 0.7);} }
+      .live-badge { background: linear-gradient(45deg, #cc2366 0%, #dc2743 100%); color: white; font-size: 10px; font-weight: bold; padding: 2px 6px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.5px; position: absolute; bottom: -8px; left: 50%; transform: translateX(-50%); z-index: 10; animation: pulse-badge 1.5s ease-in-out infinite; box-shadow: 0 1px 3px rgba(0,0,0,0.4); }
+      @keyframes avatar-frame-glow { 0%, 100% { filter: drop-shadow(0 0 3px rgba(255,255,255,0.4)) drop-shadow(0 0 8px rgba(168,85,247,0.3)); } 50% { filter: drop-shadow(0 0 6px rgba(255,255,255,0.7)) drop-shadow(0 0 15px rgba(168,85,247,0.5)); } }
+      .avatar-frame-glow-effect { animation: avatar-frame-glow 2.5s ease-in-out infinite; }
+      @keyframes panel-glow { 0%, 100% { box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);} 50% { box-shadow: 0 6px 25px rgba(250, 204, 21, 0.4), 0 0 40px rgba(250, 204, 21, 0.2) inset;} }
+      .panel-glow-effect { animation: panel-glow 0.8s ease-in-out; }
+      @keyframes twinkle-anim { 0% { background-position: 0 0; } 100% { background-position: -1000px 500px; } }
+      .twinkle-bg { position: absolute; inset: 0; width: 100%; height: 100%; background: transparent url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMCIgaGVpZ2h0PSIxMCI+PHJlY3Qgd2lkdGg9IjEwIiBoZWlnaHQ9IjEwIiBmaWxsPSJ0cmFuc3BhcmVudCIvPjxjaXJjbGUgY3g9IjUiIGN5PSI1IiByPSIxIiBmaWxsPSJyZ2JhKDI1NSwyNTUsMjU5LDAuMDUpIi8+PC9zdmc+') repeat; animation: twinkle-anim 40s linear infinite; z-index: 0; }
+      @keyframes button-glow { 0%, 100% { box-shadow: 0 0 5px rgba(168, 85, 247, 0.4), 0 0 10px rgba(168,85,247,0.3), 0 0 15px rgba(168,85,247,0.2);} 50% { box-shadow: 0 0 10px rgba(168,85,247,0.6), 0 0 20px rgba(168,85,247,0.4), 0 0 30px rgba(168,85,247,0.3);} }
+      .button-glow { animation: button-glow 2.5s ease-in-out infinite; }
+      .button-glow:disabled { animation: none; }
+      .chat-bubble { position: relative; display: inline-flex; align-items: flex-start; gap: 4px; padding: 8px; border-radius: 12px; max-width: 75%; box-shadow: 0 2px 5px rgba(0,0,0,0.5); border: 1px solid #facc15; background-color: rgba(20,20,20,0.5); backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); text-align: left; margin-left: 12px; }
+      .level-badge { display: inline-flex; align-items: center; background: linear-gradient(to bottom, #4ade80, #16a34a); color: white; padding: 2px 6px; border-radius: 10px; font-size: 11px; font-weight: bold; white-space: nowrap; box-shadow: 0 1px 2px rgba(0,0,0,0.2); }
+      .rank-badge { display: inline-flex; align-items: center; justify-content: center; background: linear-gradient(to bottom, #fbbf24, #f59e0b); color: #78350f; width: 16px; height: 16px; border-radius: 50%; font-size: 11px; font-weight: bold; white-space: nowrap; box-shadow: 0 1px 2px rgba(0,0,0,0.2); line-height: 1; }
+    </style>
+    <script type="importmap">
+{
+  "imports": {
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "styled-components": "https://aistudiocdn.com/styled-components@^6.1.19"
+  }
+}
+</script>
+    <link rel="stylesheet" href="/index.css">
+  </head>
+  <body>
+    <noscript>Você precisa habilitar JavaScript para executar este app.</noscript>
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+    <script type="module" src="/src/pwa-register.ts"></script>
+  </body>
+</html>

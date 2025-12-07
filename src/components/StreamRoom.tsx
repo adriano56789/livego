@@ -228,15 +228,9 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
         };
         setMessages([currentUserEntryMessage]);
 
-        // Initial fetch to set baseline for other joiners
-        api.getOnlineUsers(streamer.id).then(users => {
-            if (users) {
-                setOnlineUsers(users);
-                updateLiveSession({ viewers: users.length });
-                previousOnlineUsersRef.current = users;
-            }
-        });
-    }, [streamer.id, streamer.hostId, currentUser, updateLiveSession]);
+        // NÃO chama API automaticamente - apenas quando usuário clicar em algo
+        // Os dados virão via WebSocket (onlineUsersUpdate)
+    }, [streamer.id, streamer.hostId, currentUser]);
 
     const postGiftChatMessage = (payload: GiftPayload) => {
         const { fromUser, gift, toUser, quantity } = payload;
@@ -310,18 +304,23 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
         webSocketManager.on('newStreamMessage', handleNewMessage);
 
         const handleNewGift = (payload: GiftPayload) => {
-            if (payload.roomId !== streamer.id || payload.fromUser.id === currentUser.id) {
-                return; // Ignore gifts for other rooms or self-sent gifts
+            if (payload.roomId !== streamer.id) {
+                return; // Ignore gifts for other rooms
             }
 
-            if (liveSession) {
-                updateLiveSession({ coins: (liveSession.coins || 0) + (payload.gift.price || 0) * payload.quantity });
-            }
+            // WebSocket apenas atualiza UI - NÃO chama APIs automaticamente
+            // APIs só serão chamadas quando o usuário clicar em algo (ex: abrir aba de presentes)
 
-            // WebSocket já recebeu a notificação do backend, apenas atualiza UI
-            // Não precisa chamar refreshStreamRoomData - o backend já persistiu e notificou via WebSocket
-            postGiftChatMessage(payload);
-            setFullscreenGiftQueue(prev => [...prev, payload]);
+            // Se for presente de outro usuário, mostra animação e mensagem no chat
+            if (payload.fromUser.id !== currentUser.id) {
+                if (liveSession) {
+                    updateLiveSession({ coins: (liveSession.coins || 0) + (payload.gift.price || 0) * payload.quantity });
+                }
+
+                postGiftChatMessage(payload);
+                setFullscreenGiftQueue(prev => [...prev, payload]);
+            }
+            // Se for do próprio usuário, já foi mostrado otimisticamente
         };
         webSocketManager.on('newStreamGift', handleNewGift);
 

@@ -101,27 +101,15 @@ const OnlineUsersModal: React.FC<OnlineUsersModalProps> = ({ onClose, streamId }
     useEffect(() => {
         isMounted.current = true;
         
-        const loadInitialUsers = async () => {
-            try {
-                const data = await api.getOnlineUsers(streamId);
-                if (isMounted.current) {
-                    updateUsers(data || []);
-                }
-            } catch (error) {
-                console.error('Erro ao carregar usuários online:', error);
-            } finally {
-                if (isMounted.current) {
-                    setIsLoading(false);
-                }
-            }
-        };
-        
-        loadInitialUsers();
+        // NÃO chama API automaticamente quando modal abre
+        // API só será chamada quando usuário clicar no botão de refresh
+        // Os dados virão via WebSocket (onlineUsersUpdate)
+        setIsLoading(false);
         
         return () => {
             isMounted.current = false;
         };
-    }, [streamId, updateUsers]);
+    }, [streamId]);
 
     useEffect(() => {
         const handleUpdate = (data: { roomId: string; users: (User & { value: number })[] }) => {

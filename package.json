@@ -8,6 +8,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "analyze": "vite build --mode production",
+    "server": "ts-node services/api-server-main.ts",
+    "dev:server": "nodemon --watch 'services/**/*.ts' --exec ts-node services/api-server-main.ts",
     "android": "npm run build && npx cap sync android && npx cap open android",
     "android:dev": "npx cap sync android && npx cap open android",
     "android:run": "npm run build && npx cap sync android && npx cap run android",

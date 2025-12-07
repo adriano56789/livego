@@ -3,6 +3,7 @@ import { db, CURRENT_USER_ID, createChatKey, saveDb, levelProgression, avatarFra
 import { User, Streamer, Message, ChatMessage, RankedUser, Gift, Conversation, PurchaseRecord, EligibleUser, FeedPhoto, Obra, GoogleAccount, LiveSessionState, StreamHistoryEntry, Visitor, NotificationSettings, BeautySettings, LevelInfo, Comment, MusicTrack, Wallet } from '../types';
 import { webSocketServerInstance } from './websocket';
 
+
 // Conjunto para rastrear os IDs de presentes já processados
 const processedGiftIds = new Set<string>();
 

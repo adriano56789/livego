@@ -287,33 +287,6 @@ const AppContent: React.FC = () => {
   
   useEffect(() => {
     if (currentUser) {
-      const showError = (err: Error, entity: string) => {
-          console.error(`Failed to load ${entity}:`, err);
-          addToast(ToastType.Error, `Falha ao carregar ${entity}.`);
-      };
-
-      api.getCountries().then(data => setCountries(data || [])).catch(err => showError(err as Error, 'países'));
-      api.getAllUsers().then(data => setAllUsers(data || [])).catch(err => showError(err as Error, 'usuários'));
-      api.getGifts().then(data => setAllGifts(data || [])).catch(err => showError(err as Error, 'presentes'));
-      api.getStreamHistory().then(data => setStreamHistory(data || [])).catch(err => console.error("Failed to fetch stream history:", err));
-      api.getPurchaseHistory(currentUser.id, currentUser.id).then(data => setPurchaseHistory(data || [])).catch(err => console.error("Failed to fetch purchase history:", err));
-
-      api.getFollowingUsers(currentUser.id).then(data => setFollowingUsers(data || [])).catch(err => showError(err as Error, 'seguidores'));
-      api.getFansUsers(currentUser.id).then(data => setFans(data || [])).catch(err => showError(err as Error, 'fãs'));
-      api.getReminders().then(data => setReminderStreamers(data || [])).catch(err => showError(err as Error, 'lembretes'));
-      api.getNotificationSettings(currentUser.id).then(setNotificationSettings).catch(err => showError(err as Error, 'configurações de notificação'));
-      api.getPKConfig().then(config => {
-        if (config) {
-            setPkBattleDuration(config.duration);
-        }
-      }).catch(err => showError(err as Error, 'configuração de PK'));
-    }
-  }, [currentUser, addToast]);
-  
-  useEffect(() => {
-    const handleStreamerLive = (payload: { streamerId: string, streamerName: string, streamerAvatar: string }) => {
-        if (notificationSettings?.streamerLive) {
-            addToast(ToastType.Info, `${payload.streamerName} está ao vivo!`);
         }
         const userToUpdate = allUsers.find(u => u.id === payload.streamerId);
         if (userToUpdate && !userToUpdate.isLive) {

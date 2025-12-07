@@ -403,11 +403,9 @@ export const PKBattleScreen: React.FC<PKBattleScreenProps> = ({
             fullUser: currentUser,
         };
         setMessages([currentUserEntryMessage]);
-    
-        api.getOnlineUsers(streamer.id).then(users => {
-            setOnlineUsers(users || []);
-            previousOnlineUsersRef.current = users || [];
-        });
+
+        // NÃO chama API automaticamente - apenas quando usuário clicar em algo
+        // Os dados virão via WebSocket (onlineUsersUpdate)
     }, [streamer.id, streamer.hostId, currentUser]);
 
     useEffect(() => {
@@ -461,6 +459,9 @@ export const PKBattleScreen: React.FC<PKBattleScreenProps> = ({
 
         const handleNewGift = (payload: GiftPayload) => {
             if (payload.roomId !== streamer.id) return;
+
+            // WebSocket apenas atualiza UI - NÃO chama APIs automaticamente
+            // APIs só serão chamadas quando o usuário clicar em algo (ex: abrir aba de presentes)
 
             postGiftChatMessage(payload); // Everyone sees the chat message
 

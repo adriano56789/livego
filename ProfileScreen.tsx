@@ -1,6 +1,6 @@
 import React from 'react';
 import { User } from './src/types';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from './i18n';
 import { 
     WalletIcon,
     LiveIndicatorIcon

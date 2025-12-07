@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '../i18n';
 import { Gift, User, Streamer, ToastType, RankedUser, LiveSessionState } from '../types';
 import { api } from '../services/api';
 import { animationManager } from '../utils/AnimationManager';
@@ -90,8 +90,7 @@ const FollowChatMessage: React.FC<{ follower: string; followed: string }> = ({ f
 
 // FIX: Added 'onOpenFanClubMembers' to props destructuring.
 const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, onLeaveStreamView, onStartPKBattle, onViewProfile, currentUser, onOpenWallet, onFollowUser, onOpenPrivateChat, onOpenPrivateInviteModal, setActiveScreen, onStartChatWithStreamer, onOpenPKTimerSettings, onOpenFans, onOpenFriendRequests, gifts, receivedGifts, updateUser, liveSession, updateLiveSession, logLiveEvent, onStreamUpdate, refreshStreamRoomData, addToast, followingUsers, streamers, onSelectStream, onOpenVIPCenter, onOpenFanClubMembers }) => {
-    const { t, i18n } = useTranslation();
-    const language = i18n.language;
+    const { t, language } = useTranslation();
     const [isUiVisible, setIsUiVisible] = useState(true);
     const [isToolsOpen, setIsToolsOpen] = useState(false);
     const [isBeautyPanelOpen, setBeautyPanelOpen] = useState(false);
@@ -125,22 +124,28 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
     const [showMentionSuggestions, setShowMentionSuggestions] = useState(false);
 
     const handleNewGift = useCallback((giftData: GiftPayload) => {
-        if (giftData.roomId !== streamer.id || giftData.fromUser.id === currentUser.id) {
-            return; // Ignore gifts for other rooms or self-sent gifts (already handled optimistically)
+        if (giftData.roomId !== streamer.id) {
+            return; // Ignore gifts for other rooms
         }
 
-        // WebSocket já recebeu a notificação do backend, apenas atualiza UI
-        // Não precisa chamar refreshStreamRoomData - o backend já persistiu e notificou via WebSocket
-        postGiftChatMessage(giftData);
+        // WebSocket apenas atualiza UI - NÃO chama APIs automaticamente
+        // APIs só serão chamadas quando o usuário clicar em algo (ex: abrir aba de presentes)
 
-        const giftId = Date.now();
-        const giftWithId = { ...giftData, id: giftId } as GiftPayload & { id: number };
-        const id = `gift-${giftId}`;
-        const ref = { canStart: true };
-        animationRefs.current[id] = ref;
-        setActiveGiftAnimations(prev => [giftWithId]);
-        return () => { delete animationRefs.current[id]; };
-    }, [streamer.id]);
+        // Se for presente de outro usuário, mostra animação e mensagem no chat
+        if (giftData.fromUser.id !== currentUser.id) {
+            postGiftChatMessage(giftData);
+
+            const giftId = Date.now();
+            const giftWithId = { ...giftData, id: giftId } as GiftPayload & { id: number };
+            const id = `gift-${giftId}`;
+            const ref = { canStart: true };
+            animationRefs.current[id] = ref;
+            setActiveGiftAnimations(prev => [giftWithId]);
+            
+            return () => { delete animationRefs.current[id]; };
+        }
+        // Se for do próprio usuário, já foi mostrado otimisticamente
+    }, [streamer.id, currentUser.id]);
 
     const isBroadcaster = streamer.hostId === currentUser.id;
 
@@ -245,14 +250,9 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
         };
         setMessages([currentUserEntryMessage]);
 
-        // Initial fetch to set baseline for other joiners
-        api.getOnlineUsers(streamer.id).then(users => {
-            if (users) {
-                setOnlineUsers(users);
-                updateLiveSession({ viewers: users.length });
-            }
-        });
-    }, [currentUser, streamer.hostId, streamer.id, updateLiveSession]);
+        // NÃO chama API automaticamente - apenas quando usuário clicar em algo
+        // Os dados virão via WebSocket (onlineUsersUpdate)
+    }, [currentUser, streamer.hostId, streamer.id]);
 
     const handleFullscreenGiftAnimationEnd = () => {
         if (currentFullscreenGift) {
@@ -262,22 +262,13 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
         setCurrentFullscreenGift(null);
     };
 
-    const handleNewMessage = useCallback(async (message: any) => {
+    const handleNewMessage = useCallback((message: any) => {
         if (message.roomId === streamer.id) {
-            if (message.user !== currentUser.name && message.type === 'chat' && typeof message.message === 'string') {
-                try {
-                    const translationResponse = await api.translate(message.message, language);
-                    const messageWithTranslation = { ...message, translatedText: translationResponse.translatedText };
-                    setMessages(prev => [...prev, messageWithTranslation]);
-                } catch (error) {
-                    console.error("Failed to translate message:", error);
-                    setMessages(prev => [...prev, message]); // Add original on failure
-                }
-            } else {
-                setMessages(prev => [...prev, message]);
-            }
+            // WebSocket apenas atualiza UI - NÃO chama APIs automaticamente
+            // A tradução só será feita se o usuário clicar em algo (ex: botão de traduzir)
+            setMessages(prev => [...prev, message]);
         }
-    }, [streamer.id, currentUser.name, language]);
+    }, [streamer.id]);
 
     useEffect(() => {
         const handleNewMessageEffect = () => {
@@ -554,8 +545,8 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
                     updateLiveSession({ coins: (liveSession.coins || 0) + coinsAdded });
                 }
 
-                // Não precisa chamar refreshStreamRoomData - o backend já persistiu e vai disparar WebSocket
-                // O WebSocket vai atualizar os dados quando necessário
+                // NÃO chama API automaticamente após enviar presente
+                // O histórico será atualizado apenas quando o usuário clicar em algo (ex: abrir aba de presentes)
 
                 const wasNotFan = !currentUser.fanClub || currentUser.fanClub.streamerId !== streamer.hostId;
                 const isNowFan = updatedSender.fanClub && updatedSender.fanClub.streamerId === streamer.hostId;

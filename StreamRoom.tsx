@@ -172,34 +172,62 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
         swipeStart.current = { x: clientX, y: clientY };
     };
 
-    const handlePointerUp = (clientX: number, clientY: number) => {
-        if (isChatInputFocused || !swipeStart.current) {
-            swipeStart.current = null;
-            return;
-        }
+    const currentStreamerIndex = useMemo(() => {
+        return streamers.findIndex(s => s.id === streamer.id);
+    }, [streamers, streamer.id]);
 
-        const deltaX = clientX - swipeStart.current.x;
-        const deltaY = clientY - swipeStart.current.y;
+    const streamersMap = useMemo(() => {
+        return new Map(streamers.map((s, index) => [s.id, { streamer: s, index }]));
+    }, [streamers]);
 
-        if (Math.abs(deltaY) > Math.abs(deltaX) && Math.abs(deltaY) > minSwipeDistance) {
-            // Vertical swipe for navigation
-            const currentIndex = streamers.findIndex(s => s.id === streamer.id);
-            if (currentIndex === -1 || streamers.length <= 1) return;
+    const handlePointerUp = useMemo(() => {
+        let lastCallTime = 0;
+        const DEBOUNCE_DELAY = 100; // 100ms debounce delay
 
-            if (deltaY < 0) { // Swipe Up
-                const nextIndex = (currentIndex + 1) % streamers.length;
-                onSelectStream(streamers[nextIndex]);
-            } else { // Swipe Down
-                const prevIndex = (currentIndex - 1 + streamers.length) % streamers.length;
-                onSelectStream(streamers[prevIndex]);
+        return (clientX: number, clientY: number) => {
+            const now = Date.now();
+            if (now - lastCallTime < DEBOUNCE_DELAY) {
+                swipeStart.current = null;
+                return;
             }
-        } else if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > minSwipeDistance) {
-            // Horizontal swipe for UI toggle
-            setIsUiVisible(p => !p);
-        }
+            lastCallTime = now;
 
-        swipeStart.current = null;
-    };
+            if (isChatInputFocused || !swipeStart.current) {
+                swipeStart.current = null;
+                return;
+            }
+
+            const deltaX = Math.abs(clientX - swipeStart.current.x);
+            const deltaY = Math.abs(clientY - swipeStart.current.y);
+
+            if (Math.max(deltaX, deltaY) <= minSwipeDistance) {
+                swipeStart.current = null;
+                return;
+            }
+
+            requestAnimationFrame(() => {
+                if (deltaY > deltaX) {
+                    if (currentStreamerIndex === -1 || streamers.length <= 1) {
+                        swipeStart.current = null;
+                        return;
+                    }
+
+                    const isSwipeUp = clientY < swipeStart.current.y;
+                    if (isSwipeUp) {
+                        const nextIndex = (currentStreamerIndex + 1) % streamers.length;
+                        onSelectStream(streamers[nextIndex]);
+                    } else {
+                        const prevIndex = (currentStreamerIndex - 1 + streamers.length) % streamers.length;
+                        onSelectStream(streamers[prevIndex]);
+                    }
+                } else {
+                    setIsUiVisible(p => !p);
+                }
+                
+                swipeStart.current = null;
+            });
+        };
+    }, [isChatInputFocused, streamers, currentStreamerIndex, onSelectStream]);
     
     useEffect(() => {
         const isFan = currentUser.fanClub && currentUser.fanClub.streamerId === streamer.hostId;

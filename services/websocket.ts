@@ -134,9 +134,16 @@ class SimulatedWebSocketServer {
         if (!userId1 || !userId2) return;
 
         const payload = tempId ? { ...message, tempId } : message;
-
-        this.sendToUser(userId1, { type: 'newMessage', payload });
-        this.sendToUser(userId2, { type: 'newMessage', payload });
+        
+        // Envia apenas para os usuários conectados e evita enviar para o remetente novamente
+        if (this.connections.has(userId1)) {
+            this.sendToUser(userId1, { type: 'newMessage', payload });
+        }
+        if (this.connections.has(userId2)) {
+            this.sendToUser(userId2, { type: 'newMessage', payload });
+        }
+        
+        console.log(`[WS Server] Message ${message.id || tempId} broadcasted to chat ${chatKey}`);
     }
 
     public notifyNewFollower(followedId: string, follower: User) {
@@ -497,27 +504,71 @@ class SimulatedWebSocketServer {
         const chatKey = database.createChatKey(from, to);
         const fromUser = database.db.users.get(from);
 
+        // Verifica se já existe uma mensagem com este tempId para evitar duplicação
+        const existingMessage = Array.from(database.db.messages.values())
+            .find(m => m.tempId === tempId);
+
+        // Se já existe, retorna a mensagem existente
+        if (existingMessage) {
+            // Apenas notifica o remetente novamente (pode ser reconexão)
+            const senderSocket = this.connections.get(from);
+            if (senderSocket) {
+                senderSocket.onMessage({ 
+                    type: 'messageAck', 
+                    payload: { 
+                        tempId,
+                        message: {
+                            ...existingMessage,
+                            tempId
+                        }
+                    } 
+                });
+            }
+            return;
+        }
+
         const message: Message = {
-            id: crypto.randomUUID(),
+            id: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 10)}`,
             chatId: chatKey,
             from,
             to,
             text,
             timestamp: new Date().toISOString(),
             status: this.connections.has(to) ? 'delivered' : 'sent',
+            tempId, // Armazena o tempId para referência futura
             avatarUrl: fromUser?.avatarUrl || '',
             username: fromUser?.name || '',
             badgeLevel: fromUser?.level || 0
         };
+
+        // Salva a mensagem no banco de dados
         database.db.messages.set(String(message.id), message);
 
-        // Send to recipient if online
+        // Envia a mensagem apenas para o destinatário
         const recipientSocket = this.connections.get(to);
-        recipientSocket?.onMessage({ type: 'newMessage', payload: message });
+        if (recipientSocket) {
+            recipientSocket.onMessage({ 
+                type: 'newMessage', 
+                payload: {
+                    ...message,
+                    // Remove o tempId ao enviar para o destinatário
+                    tempId: undefined
+                }
+            });
+        }
 
-        // Acknowledge sender with the final message object
+        // Envia uma confirmação para o remetente
         const senderSocket = this.connections.get(from);
-        senderSocket?.onMessage({ type: 'messageAck', payload: { tempId, message } });
+        if (senderSocket) {
+            senderSocket.onMessage({ 
+                type: 'newMessage',
+                payload: {
+                    ...message,
+                    // Mantém o tempId na confirmação para o remetente
+                    isAck: true
+                }
+            });
+        }
     }
 
     private handleMarkAsRead(readerId: string, messageIds: string[], otherUserId: string) {

@@ -232,6 +232,7 @@ export interface Message {
   timestamp: string;
   translatedText?: string;
   type?: 'system-friend-notification';
+  tempId?: string; // Adicionado para rastrear mensagens temporárias
   fanClub?: {
     streamerId: string;
     streamerName: string;

@@ -1800,16 +1800,28 @@ export const mockApiRouter = async (method: string, path: string, body?: any): P
             const messageId = String(newMessage.id);
             db.messages.set(messageId, { ...newMessage, id: messageId });
             
-// Primeiro notifica sobre a nova mensagem
-            webSocketServerInstance.broadcastNewMessageToChat(chatKey, newMessage);
+// Envia a mensagem apenas para o destinatário
+            const recipientSocket = webSocketServerInstance['connections'].get(toUserId);
+            if (recipientSocket) {
+                recipientSocket.onMessage({
+                    type: 'newMessage',
+                    payload: newMessage
+                });
+            }
             
             // Se houver um tempId, envia um ACK para o remetente
             if (tempId) {
                 const senderSocket = webSocketServerInstance['connections'].get(fromUserId);
-                senderSocket?.onMessage({
-                    type: 'messageAck',
-                    payload: { tempId, message: newMessage }
-                });
+                if (senderSocket) {
+                    senderSocket.onMessage({
+                        type: 'newMessage',
+                        payload: {
+                            ...newMessage,
+                            isAck: true,
+                            tempId
+                        }
+                    });
+                }
             }
             saveDb();
             

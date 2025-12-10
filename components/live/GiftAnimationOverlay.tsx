@@ -38,19 +38,13 @@ const GiftAnimationOverlay: React.FC<GiftAnimationOverlayProps> = ({ giftPayload
     const { fromUser, toUser, gift, quantity } = giftPayload;
 
     return (
-        <div 
-            className="gift-animation-base p-2 bg-black/50 rounded-full inline-flex items-center space-x-3 shadow-lg backdrop-blur-md mt-2"
-            style={animationStyle}
-        >
-            <img src={fromUser.avatarUrl} alt={fromUser.name} className="w-10 h-10 rounded-full border-2 border-purple-400 bg-gradient-to-br from-gray-900 via-purple-900/20 to-gray-900" />
-            <div className="flex flex-col text-left">
-                <p className="text-white font-bold text-sm">{fromUser.name}</p>
-                <p className="text-gray-300 text-xs">enviou para {toUser.name}</p>
-            </div>
-            <div className="w-12 h-12 flex items-center justify-center gift-anim-pulse">
-                 {gift.component ? React.cloneElement(gift.component as React.ReactElement<any>, { className: "w-10 h-10" }) : <span className="text-4xl">{gift.icon}</span>}
-            </div>
-            <p className="text-yellow-300 font-bold text-2xl">x{quantity}</p>
+        <div className="gift-animation-base px-3 py-2 bg-black/50 rounded-full inline-flex items-center shadow-lg backdrop-blur-md mt-2 whitespace-nowrap overflow-hidden" style={animationStyle}>
+            <img src={fromUser.avatarUrl} alt="" className="w-8 h-8 rounded-full border-2 border-purple-400 mr-2 flex-shrink-0" />
+            <span className="text-white text-sm font-medium">
+                <span className="font-bold">{fromUser.name}</span> enviou {gift.name} <span className="text-yellow-300">x{quantity}</span> {gift.component ? 
+                    React.cloneElement(gift.component as React.ReactElement<any>, { className: "w-5 h-5 inline-block align-middle" }) : 
+                    <span className="inline-block align-middle">{gift.icon}</span>}
+            </span>
         </div>
     );
 };

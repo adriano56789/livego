@@ -78,13 +78,69 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
             )}
         </button>
         <div className="flex-1 min-w-0">
-            <div className="flex items-center space-x-1.5">
-                <p className="text-gray-400">{userObject.name} <span className="text-purple-400 font-semibold text-xs ml-1">Lv.{userObject.level}</span></p>
-                {isModerator && (
-                    <div className="bg-yellow-500/20 rounded-full p-0.5 flex items-center justify-center" title="Moderador">
-                        <IdBadgeIcon className="w-3 h-3 text-yellow-400" />
+            <div className="flex items-baseline flex-wrap">
+                <div className="flex items-center space-x-1.5">
+                    <p className="text-gray-400 whitespace-nowrap">
+                        {userObject.name}
+                        <span className="text-purple-400 font-semibold text-xs ml-1">Lv.{userObject.level}</span>
+                    </p>
+                    {isModerator && (
+                        <div className="bg-yellow-500/20 rounded-full p-0.5 flex items-center justify-center mr-1" title="Moderador">
+                            <IdBadgeIcon className="w-3 h-3 text-yellow-400" />
+                        </div>
+                    )}
+                </div>
+                <div className="flex-1 min-w-0 -mt-1">
+                    <div className="inline-flex items-start w-full">
+                        <div className="bg-black/60 backdrop-blur-sm rounded-lg p-0 shadow-lg shadow-black/50 relative group border border-white/10 w-full">
+                            <p className="text-white text-sm break-words p-2 pl-3 pr-6">
+                                {displayText()}
+                                {isTranslating && (
+                                    <span className="ml-2 text-xs text-gray-400">Traduzindo...</span>
+                                )}
+                            </p>
+                            <button
+                                onClick={onTranslate && typeof message === 'string' ? handleTranslate : undefined}
+                                disabled={isTranslating || !onTranslate || typeof message !== 'string'}
+                                className="absolute -right-2 -top-2 w-6 h-6 rounded-full flex items-center justify-center text-white font-bold text-sm bg-purple-600 hover:bg-purple-700 transition-all duration-200 shadow-lg z-10"
+                                style={{
+                                    opacity: isTranslating ? 1 : 0.9,
+                                    transform: isTranslating ? 'scale(1.1)' : 'scale(1)',
+                                    display: onTranslate && typeof message === 'string' ? 'flex' : 'none'
+                                }}
+                                title="Traduzir mensagem"
+                            >
+                                {isTranslating ? (
+                                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                                ) : (
+                                    <span className="relative">P</span>
+                                )}
+                            </button>
+                        </div>
                     </div>
-                )}
+                    {translatedText && (
+                        <div className="mt-1">
+                            <div className="inline-flex items-start w-full">
+                                <div className="bg-black/60 backdrop-blur-sm rounded-lg p-0 shadow-lg shadow-black/50 border border-white/10 w-full">
+                                    <p className="text-green-300 text-sm italic break-words p-2 pl-3 pr-6">
+                                        {showOriginal ? message : translatedText}
+                                    </p>
+                                </div>
+                                <div className="ml-2">
+                                    <button
+                                        onClick={toggleOriginal}
+                                        className="text-xs px-3 py-1 rounded-full bg-purple-600/50 text-white hover:bg-purple-500/50 transition-colors"
+                                        title={showOriginal ? 'Mostrar tradução' : 'Mostrar original'}
+                                    >
+                                        {showOriginal ? 'Ver Tradução' : 'Ver Original'}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </div>
+            <div className="flex items-center mt-1 space-x-1.5">
                 {onModerationClick && (
                     <button 
                         onClick={onModerationClick} 
@@ -102,49 +158,6 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
                     >
                         <PlusIcon className="w-3 h-3" />
                     </button>
-                )}
-            </div>
-            <div className="bg-black/60 backdrop-blur-sm rounded-lg p-3 mt-1 inline-block shadow-lg shadow-black/50 relative group border border-white/10">
-                <div className="relative">
-                    <div className="relative pr-6">
-                        <p className="text-white text-sm leading-relaxed break-words">
-                            {displayText()}
-                            {isTranslating && (
-                                <span className="ml-2 text-xs text-gray-400">Traduzindo...</span>
-                            )}
-                        </p>
-                        <button
-                            onClick={onTranslate && typeof message === 'string' ? handleTranslate : undefined}
-                            disabled={isTranslating || !onTranslate || typeof message !== 'string'}
-                            className="absolute -right-2 -top-2 w-6 h-6 rounded-full flex items-center justify-center text-white font-bold text-sm bg-purple-600 hover:bg-purple-700 transition-all duration-200 shadow-lg z-10"
-                            style={{
-                                opacity: isTranslating ? 1 : 0.9,
-                                transform: isTranslating ? 'scale(1.1)' : 'scale(1)',
-                                display: onTranslate && typeof message === 'string' ? 'flex' : 'none'
-                            }}
-                            title="Traduzir mensagem"
-                        >
-                            {isTranslating ? (
-                                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
-                            ) : (
-                                <span className="relative">P</span>
-                            )}
-                        </button>
-                    </div>
-                </div>
-                {translatedText && (
-                    <div className="mt-2 pt-2 border-t border-white/10">
-                        <div className="flex items-center justify-between">
-                            <p className="text-green-300 text-sm italic">{showOriginal ? message : translatedText}</p>
-                            <button
-                                onClick={toggleOriginal}
-                                className="text-xs px-2 py-0.5 rounded-full bg-purple-600/50 text-white hover:bg-purple-500/50 transition-colors"
-                                title={showOriginal ? 'Mostrar tradução' : 'Mostrar original'}
-                            >
-                                {showOriginal ? 'Ver Tradução' : 'Ver Original'}
-                            </button>
-                        </div>
-                    </div>
                 )}
             </div>
         </div>

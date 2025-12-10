@@ -871,28 +871,73 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
                             <div className="typing-bubble inline-block">{chatInput}</div>
                         </div>
                     )}
-                    <div className="flex items-center space-x-2">
-                        <div className="flex-grow bg-black/40 rounded-full flex items-center pr-1.5">
-                            <input 
-                                ref={chatInputRef}
-                                type="text" 
-                                placeholder={t('streamRoom.sayHi')} 
-                                value={chatInput}
-                                onChange={handleChatInputChange}
-                                onKeyPress={(e) => e.key === 'Enter' && handleSendMessage(e)}
-                                onFocus={() => setIsChatInputFocused(true)}
-                                onBlur={() => setTimeout(() => setIsChatInputFocused(false), 200)}
-                                className="flex-grow bg-transparent px-4 py-2.5 text-white placeholder-gray-400 focus:outline-none" 
-                            />
-                            <button onClick={handleSendMessage} className="bg-gray-500/50 w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 hover:bg-gray-400/50 transition-colors"><SendIcon className="w-5 h-5 text-white" /></button>
+                    <form 
+                        onSubmit={(e) => {
+                            e.preventDefault();
+                            handleSendMessage(e);
+                        }}
+                        className="w-full"
+                    >
+                        <div className="flex items-center space-x-2">
+                            <div className="flex-grow bg-black/40 rounded-full flex items-center pr-1.5">
+                                <input 
+                                    ref={chatInputRef}
+                                    type="text" 
+                                    placeholder={t('streamRoom.sayHi')} 
+                                    value={chatInput}
+                                    onChange={handleChatInputChange}
+                                    onKeyPress={(e) => {
+                                        if (e.key === 'Enter' && !e.shiftKey) {
+                                            e.preventDefault();
+                                            handleSendMessage(e);
+                                        }
+                                    }}
+                                    onFocus={() => setIsChatInputFocused(true)}
+                                    onBlur={() => setTimeout(() => setIsChatInputFocused(false), 200)}
+                                    className="flex-grow bg-transparent px-4 py-2.5 text-white placeholder-gray-400 focus:outline-none" 
+                                />
+                                <button 
+                                    type="submit"
+                                    className="bg-gray-500/50 w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 hover:bg-gray-400/50 transition-colors"
+                                >
+                                    <SendIcon className="w-5 h-5 text-white" />
+                                </button>
+                            </div>
+                            <button 
+                                type="button"
+                                onClick={(e) => { 
+                                    e.stopPropagation(); 
+                                    setGiftModalOpen(true); 
+                                }} 
+                                className="bg-black/40 w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0 hover:bg-white/10 transition-colors"
+                            >
+                                <GiftIcon className="w-6 h-6 text-yellow-400" />
+                            </button>
+                            {isBroadcaster ? (
+                                <button 
+                                    type="button"
+                                    onClick={(e) => { 
+                                        e.stopPropagation(); 
+                                        setIsToolsOpen(true); 
+                                    }} 
+                                    className="bg-black/40 w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0 hover:bg-white/10 transition-colors"
+                                >
+                                    <MoreIcon className="w-6 h-6 text-white" />
+                                </button>
+                            ) : (
+                                <button 
+                                    type="button"
+                                    onClick={(e) => { 
+                                        e.stopPropagation(); 
+                                        onStartChatWithStreamer(streamerUser); 
+                                    }} 
+                                    className="bg-black/40 w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0 hover:bg-white/10 transition-colors"
+                                >
+                                    <MessageIcon className="w-6 h-6 text-white" />
+                                </button>
+                            )}
                         </div>
-                        <button onClick={(e) => { e.stopPropagation(); setGiftModalOpen(true); }} className="bg-black/40 w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0 hover:bg-white/10 transition-colors"><GiftIcon className="w-6 h-6 text-yellow-400" /></button>
-                         {isBroadcaster ? (
-                            <button onClick={(e) => { e.stopPropagation(); setIsToolsOpen(true); }} className="bg-black/40 w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0 hover:bg-white/10 transition-colors"><MoreIcon className="w-6 h-6 text-white" /></button>
-                        ) : (
-                            <button onClick={(e) => { e.stopPropagation(); onStartChatWithStreamer(streamerUser); }} className="bg-black/40 w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0 hover:bg-white/10 transition-colors"><MessageIcon className="w-6 h-6 text-white" /></button>
-                        )}
-                    </div>
+                    </form>
                 </footer>
             </div>
             

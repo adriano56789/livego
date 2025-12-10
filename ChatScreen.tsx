@@ -82,46 +82,53 @@ const ChatMessageBubble: React.FC<{ message: Message; isMe: boolean; user: User;
                     </button>
                 )}
             </div>
-            <div className={`max-w-xs md:max-w-md rounded-2xl shadow-lg shadow-black/50 ${isMe ? 'bg-purple-600 rounded-br-none' : 'bg-gray-700 rounded-bl-none'} ${message.imageUrl && !message.text ? 'p-1' : 'px-3 py-2'}`}>
+            <div className={`max-w-xs md:max-w-md shadow-lg shadow-black/50 ${
+                isMe 
+                    ? 'bg-purple-600 rounded-2xl rounded-br-none' 
+                    : 'bg-gray-700 rounded-2xl rounded-bl-none'
+                    
+            }`}>
                 {message.imageUrl && (
                     <button
                         onClick={() => onImageClick(message.imageUrl!)}
-                        className={`focus:outline-none rounded-lg overflow-hidden transition-transform hover:scale-105 active:scale-95 ${message.text ? 'mb-2' : ''}`}
-                        aria-label="View image full screen"
+                        className={`w-full focus:outline-none rounded-t-lg overflow-hidden ${message.text ? 'mb-0' : ''}`}
+                        aria-label="Ver imagem em tela cheia"
                     >
                         <img 
                             src={message.imageUrl} 
-                            alt="Chat attachment" 
-                            className="w-24 object-cover bg-black/20"
+                            alt="Anexo" 
+                            className="w-full h-auto max-h-64 object-contain bg-black/20"
                         />
                     </button>
                 )}
                 {message.text && (
-                    <div className="flex items-start gap-2">
-                        {/* Ícone fixo */}
-                        <div className="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-                            P
-                        </div>
-                        
-                        {/* Conteúdo da mensagem */}
-                        <div className="flex-1 min-w-0">
-                            <div className="flex justify-between items-start">
-                                <p className="text-white break-words">
-                                    {isTranslated ? message.translatedText : message.text}
-                                </p>
-                                <div className="flex items-center gap-2 ml-2">
-                                    <span className="text-xs text-white/70">
-                                        {formatTimestamp(message.timestamp)}
-                                    </span>
-                                    {isMe && <MessageStatus status={message.status} />}
+                    <div className="w-full p-3">
+                        <div className="flex items-start gap-2 w-full">
+                            <div className="flex-1 min-w-0">
+                                <div className="flex flex-col w-full">
+                                    <p className="text-white break-words w-full">
+                                        {isTranslated ? message.translatedText : message.text}
+                                    </p>
+                                    <div className="flex justify-between items-center mt-1 w-full">
+                                        <span className="text-xs text-white/70">
+                                            {formatTimestamp(message.timestamp)}
+                                        </span>
+                                        {isMe && (
+                                            <div className="ml-2">
+                                                <MessageStatus status={message.status} />
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 )}
                 {!message.text && message.imageUrl && (
-                     <div className="flex justify-end items-center space-x-1 mt-1 px-2 pb-1">
-                        <span className="text-xs text-gray-300/70 whitespace-nowrap">{formatTimestamp(message.timestamp)}</span>
+                    <div className="flex justify-between items-center p-2">
+                        <span className="text-xs text-white/70">
+                            {formatTimestamp(message.timestamp)}
+                        </span>
                         {isMe && <MessageStatus status={message.status} />}
                     </div>
                 )}
@@ -187,35 +194,78 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ user, onBack, isModal, currentU
         fetchInitialData();
     }, [fetchInitialData]);
 
-    useEffect(() => {
-        const handleNewMessage = async (message: Message & { tempId?: string }) => {
-            if (message.chatId === chatKey) {
-                let messageToUpdate = { ...message };
+    // Usar useRef para rastrear mensagens em andamento
+    const pendingMessages = useRef<Set<string>>(new Set());
 
-                // Translate if it's an incoming message with text
-                if (message.from !== currentUser.id && message.text) {
-                     try {
-                        const translationResponse = await api.translate(message.text, language);
-                        messageToUpdate.translatedText = translationResponse.translatedText;
-                    } catch (error) {
-                        console.error("Failed to translate message:", error);
-                    }
+    useEffect(() => {
+        const handleNewMessage = async (message: Message & { tempId?: string, isAck?: boolean }) => {
+            if (message.chatId !== chatKey) return;
+
+            console.log('Nova mensagem recebida:', { 
+                id: message.id, 
+                tempId: message.tempId, 
+                isAck: message.isAck,
+                from: message.from,
+                text: message.text?.substring(0, 30) + (message.text && message.text.length > 30 ? '...' : '')
+            });
+
+            setMessages(prev => {
+                // Se for um ACK de uma mensagem nossa (resposta do servidor)
+                if (message.isAck && message.tempId) {
+                    console.log('Recebido ACK para mensagem temporária:', message.tempId);
+                    pendingMessages.current.delete(message.tempId);
+                    
+                    // Atualiza a mensagem temporária com o ID real do servidor
+                    return prev.map(m => 
+                        m.tempId === message.tempId 
+                            ? { 
+                                ...message, 
+                                id: message.id, // Usa o ID real do servidor
+                                tempId: undefined, // Remove o tempId
+                                status: 'delivered', // Atualiza o status
+                                timestamp: m.timestamp // Mantém o timestamp original
+                            }
+                            : m
+                    );
                 }
 
-                setMessages(prev => {
-                    const tempId = message.tempId;
-                    if (tempId && prev.some(m => m.id === tempId)) {
-                        return prev.map(m => (m.id === tempId ? { ...messageToUpdate, tempId: undefined } : m));
-                    }
-                    else if (!prev.some(m => m.id === message.id)) {
-                        return [...prev, messageToUpdate];
-                    }
+                // Se for uma mensagem de outro usuário ou uma confirmação de mensagem enviada
+                const messageExists = prev.some(m => 
+                    m.id === message.id || // Mesmo ID
+                    (message.tempId && m.tempId === message.tempId) || // Mesmo tempId
+                    (m.tempId && m.tempId === message.id) // ID da mensagem corresponde a um tempId existente
+                );
+
+                if (messageExists) {
+                    console.log('Mensagem duplicada ignorada:', message.id || message.tempId);
                     return prev;
-                });
+                }
+
+                console.log('Adicionando nova mensagem:', message.id || message.tempId);
+                return [...prev, message];
+            });
+
+            // Se for uma mensagem recebida (não nossa) com texto, tenta traduzir
+            if (message.from !== currentUser.id && message.text) {
+                try {
+                    const translationResponse = await api.translate(message.text, language);
+                    setMessages(prev => 
+                        prev.map(m => 
+                            m.id === message.id 
+                                ? { ...m, translatedText: translationResponse.translatedText }
+                                : m
+                        )
+                    );
+                } catch (error) {
+                    console.error("Falha ao traduzir mensagem:", error);
+                }
             }
         };
 
+        // Registrar os listeners
         webSocketManager.on('newMessage', handleNewMessage);
+        // Removemos o listener de 'messageAck' pois agora usamos 'newMessage' com isAck
+        
         return () => {
             webSocketManager.off('newMessage', handleNewMessage);
         };
@@ -277,22 +327,35 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ user, onBack, isModal, currentU
             return;
         }
         
-        const imageToSend = selectedImage;
         const tempId = `temp_${Date.now()}`;
+        const imageToSend = selectedImage;
+        
+        // Verifica se já existe uma mensagem idêntica sendo enviada
+        const messageExists = messages.some(m => 
+            m.tempId === tempId || 
+            (m.text === textToSend && m.status === 'sending')
+        );
+
+        if (messageExists) {
+            console.log('Mensagem duplicada detectada, ignorando envio');
+            return;
+        }
         
         // Cria a mensagem otimista
         const optimisticMessage: Message = {
-            id: tempId,
-            avatarUrl: currentUser.avatarUrl,
-            username: currentUser.name,
-            badgeLevel: currentUser.level,
-            text: textToSend,
+            id: tempId, // Usa o tempId como ID temporário
             chatId: chatKey,
             from: currentUser.id,
             to: user.id,
+            text: textToSend,
             imageUrl: imageToSend || undefined,
             timestamp: new Date().toISOString(),
             status: 'sending',
+            tempId, // Adiciona o tempId para rastreamento
+            // Campos adicionais necessários
+            avatarUrl: currentUser.avatarUrl,
+            username: currentUser.name,
+            badgeLevel: currentUser.level,
             translatedText: undefined,
             type: undefined,
             fanClub: undefined
@@ -319,15 +382,21 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ user, onBack, isModal, currentU
                 if (uploadResponse?.url) {
                     finalImageUrl = uploadResponse.url;
                 } else {
-                    throw new Error("Image upload failed");
+                    throw new Error("Falha no upload da imagem");
                 }
             }
             
+            // Envia a mensagem com o tempId
             await api.sendChatMessage(currentUser.id, user.id, textToSend, finalImageUrl, tempId);
 
         } catch (error) {
-            console.error("Failed to send message:", error);
-            setMessages(prev => prev.map(m => m.id === tempId ? { ...m, status: 'failed' } : m));
+            console.error("Falha ao enviar mensagem:", error);
+            // Atualiza o status para falha
+            setMessages(prev => 
+                prev.map(m => 
+                    m.tempId === tempId ? { ...m, status: 'failed' } : m
+                )
+            );
         }
     };
     

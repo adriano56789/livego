@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Conversation, User } from '../types';
 import { useTranslation } from '../i18n';
 import { FriendRequestListIcon, MaleIcon, FemaleIcon, RankIcon } from './icons';
+import { api } from '../services/api';
+import { CURRENT_USER_ID } from '../services/database';
 
 interface MessagesScreenProps {
   onStartChat: (friend: User) => void;
@@ -89,8 +91,19 @@ interface FriendItemProps {
 
 // Componente para a aba de mensagens
 const MessageFriendItem: React.FC<FriendItemProps> = ({ friend, onStartChat, onViewProfile }) => {
+    const handleStartChat = async (friend: User) => {
+        try {
+            // Atualiza o lastSeen ao iniciar uma conversa
+            await api.updateUserStatus(CURRENT_USER_ID, true);
+            onStartChat(friend);
+        } catch (error) {
+            console.error('Erro ao atualizar lastSeen:', error);
+            onStartChat(friend); // Chama de qualquer forma, mesmo com erro
+        }
+    };
+
     return (
-        <div className="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-800/50" onClick={() => onStartChat(friend)}>
+        <div className="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-800/50" onClick={() => handleStartChat(friend)}>
             <div className="flex items-center space-x-4 flex-1">
                 <button onClick={(e) => { e.stopPropagation(); onViewProfile(friend); }} className="relative flex-shrink-0 focus:outline-none rounded-full">
                     <img src={friend.avatarUrl} alt={friend.name} className="w-14 h-14 rounded-full object-cover bg-gradient-to-br from-gray-900 via-purple-900/20 to-gray-900" />
@@ -159,6 +172,19 @@ const FriendTabItem: React.FC<FriendItemProps> = ({ friend, onStartChat, onViewP
 const MessagesScreen: React.FC<MessagesScreenProps> = ({ onStartChat, onViewProfile, conversations, friends, initialTab, onOpenFriendRequests, fans, followingUsers }) => {
     const [activeTab, setActiveTab] = useState(initialTab || 'messages');
     const { t } = useTranslation();
+
+    // Atualiza o lastSeen quando a tela é aberta
+    useEffect(() => {
+        const updateLastSeen = async () => {
+            try {
+                await api.updateUserStatus(CURRENT_USER_ID, true);
+            } catch (error) {
+                console.error('Erro ao atualizar lastSeen:', error);
+            }
+        };
+
+        updateLastSeen();
+    }, []);
 
     useEffect(() => {
         if (initialTab) {

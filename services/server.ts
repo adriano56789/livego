@@ -535,11 +535,15 @@ export const mockApiRouter = async (method: string, path: string, body?: any): P
 
                     const otherUser = db.users.get(otherUserId);
                     if (otherUser) {
+                        const now = new Date().toISOString();
                         userConversations.set(otherUserId, {
                             id: createChatKey(userId, otherUserId),
                             friend: otherUser,
                             lastMessage: msg.text || (msg.imageUrl ? '[imagem]' : ''),
-                            timestamp: new Date(msg.timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+                            timestamp: new Date(msg.timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+                            lastMessageAt: now,
+                            updatedAt: now,
+                            unreadCount: 0
                         });
                     }
                 });

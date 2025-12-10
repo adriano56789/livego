@@ -198,6 +198,9 @@ export interface Conversation {
   friend: User;
   lastMessage: string;
   timestamp: string;
+  lastMessageAt: string;
+  updatedAt: string;
+  unreadCount: number;
 }
 
 export interface ChatMessage {

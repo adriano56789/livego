@@ -87,24 +87,68 @@ interface FriendItemProps {
     onViewProfile: (user: User) => void;
 }
 
-const FriendItem: React.FC<FriendItemProps> = ({ friend, onStartChat, onViewProfile }) => {
-    const { t } = useTranslation();
+// Componente para a aba de mensagens
+const MessageFriendItem: React.FC<FriendItemProps> = ({ friend, onStartChat, onViewProfile }) => {
     return (
         <div className="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-800/50" onClick={() => onStartChat(friend)}>
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-4 flex-1">
                 <button onClick={(e) => { e.stopPropagation(); onViewProfile(friend); }} className="relative flex-shrink-0 focus:outline-none rounded-full">
                     <img src={friend.avatarUrl} alt={friend.name} className="w-14 h-14 rounded-full object-cover bg-gradient-to-br from-gray-900 via-purple-900/20 to-gray-900" />
                     {friend.isOnline && (
                         <div className="absolute bottom-0 right-0 w-4 h-4 bg-green-400 rounded-full border-2 border-[#111111]"></div>
                     )}
                 </button>
-                <div>
-                    <h3 className="font-semibold text-white">{friend.name}</h3>
-                    <p className="text-sm text-gray-400">{t('profile.id')}: {friend.identification}</p>
+                <div className="flex-1 min-w-0">
+                    <div className="flex items-center space-x-2">
+                        <h3 className="font-semibold text-white truncate">{friend.name}</h3>
+                        {friend.gender === 'male' ? (
+                            <MaleIcon className="w-4 h-4 text-blue-400 flex-shrink-0" />
+                        ) : friend.gender === 'female' ? (
+                            <FemaleIcon className="w-4 h-4 text-pink-400 flex-shrink-0" />
+                        ) : null}
+                    </div>
+                    <div className="text-sm text-gray-400">
+                        {friend.isOnline ? 'Online' : 'Offline'}
+                    </div>
+                </div>
+            </div>
+            {friend.lastSeen && (
+                <span className="text-xs text-gray-500 whitespace-nowrap ml-2">
+                    {new Date(friend.lastSeen).toLocaleDateString('pt-BR')}
+                </span>
+            )}
+        </div>
+    );
+};
+
+// Componente para a aba de amigos
+const FriendTabItem: React.FC<FriendItemProps> = ({ friend, onStartChat, onViewProfile }) => {
+    const { t } = useTranslation();
+    return (
+        <div className="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-800/50" onClick={() => onStartChat(friend)}>
+            <div className="flex items-center space-x-4 flex-1">
+                <button onClick={(e) => { e.stopPropagation(); onViewProfile(friend); }} className="relative flex-shrink-0 focus:outline-none rounded-full">
+                    <img src={friend.avatarUrl} alt={friend.name} className="w-14 h-14 rounded-full object-cover bg-gradient-to-br from-gray-900 via-purple-900/20 to-gray-900" />
+                    {friend.isOnline && (
+                        <div className="absolute bottom-0 right-0 w-4 h-4 bg-green-400 rounded-full border-2 border-[#111111]"></div>
+                    )}
+                </button>
+                <div className="flex-1 min-w-0">
+                    <div className="flex items-center space-x-2">
+                        <h3 className="font-semibold text-white truncate">{friend.name}</h3>
+                        {friend.gender === 'male' ? (
+                            <MaleIcon className="w-4 h-4 text-blue-400 flex-shrink-0" />
+                        ) : friend.gender === 'female' ? (
+                            <FemaleIcon className="w-4 h-4 text-pink-400 flex-shrink-0" />
+                        ) : null}
+                    </div>
+                    <div className="text-sm text-gray-400">
+                        {friend.isOnline ? 'Online' : 'Offline'}
+                    </div>
                 </div>
             </div>
             {friend.isFollowed && (
-                 <button className="bg-gray-700 text-gray-300 text-sm font-semibold px-4 py-1.5 rounded-full">
+                <button className="bg-gray-700 text-gray-300 text-sm font-semibold px-4 py-1.5 rounded-full ml-2">
                     {t('common.followed')}
                 </button>
             )}
@@ -165,7 +209,7 @@ const MessagesScreen: React.FC<MessagesScreenProps> = ({ onStartChat, onViewProf
                                     Comece uma nova conversa
                                 </div>
                                 {friends.map(friend => (
-                                    <FriendItem key={friend.id} friend={friend} onStartChat={onStartChat} onViewProfile={onViewProfile} />
+                                    <MessageFriendItem key={friend.id} friend={friend} onStartChat={onStartChat} onViewProfile={onViewProfile} />
                                 ))}
                             </>
                         )}
@@ -173,7 +217,7 @@ const MessagesScreen: React.FC<MessagesScreenProps> = ({ onStartChat, onViewProf
                 ) : (
                     <div>
                          {friends.map(friend => (
-                            <FriendItem key={friend.id} friend={friend} onStartChat={onStartChat} onViewProfile={onViewProfile} />
+                            <FriendTabItem key={friend.id} friend={friend} onStartChat={onStartChat} onViewProfile={onViewProfile} />
                         ))}
                     </div>
                 )}

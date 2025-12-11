@@ -293,7 +293,14 @@ const GiftModal: React.FC<GiftModalProps> = ({ isOpen, onClose, userDiamonds, on
                                 <button 
                                     key={q} 
                                     onClick={() => setQuantity(q)}
-                                    className={`text-sm py-1 rounded-md transition-colors ${quantity === q ? 'bg-purple-500 text-white' : 'bg-[#2C2C2E] text-gray-300 hover:bg-gray-700/50'}`}
+                                    disabled={!selectedGift}
+                                    className={`text-sm py-1 rounded-md transition-colors ${
+                                        !selectedGift 
+                                            ? 'bg-[#2C2C2E] text-gray-600 cursor-not-allowed' 
+                                            : quantity === q 
+                                                ? 'bg-purple-500 text-white' 
+                                                : 'bg-[#2C2C2E] text-gray-300 hover:bg-gray-700/50'
+                                    }`}
                                 >
                                     {q}
                                 </button>

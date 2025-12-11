@@ -251,6 +251,8 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
 
         const giftMessage: ChatMessageType = {
             fanClub: fromUser.fanClub,
+            id: 0,
+            type: 'chat'
         };
         setMessages(prev => [...prev, giftMessage]);
     };
@@ -735,7 +737,7 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
                                         )}
                                     </div>
                                     <span className="inline-flex items-center whitespace-nowrap">
-                                        🎁 <span className="font-semibold">{streamerDisplayUser.name}</span> enviou {giftIcon} para <span className="font-semibold">{streamer.name}</span> — <span className="whitespace-nowrap">{totalValue} moedas</span>
+                                        🎁 <span className="font-semibold">{streamerDisplayUser.name}</span> enviou <GiftIcon className="w-4 h-4 inline" /> para <span className="font-semibold">{streamer.name}</span> — <span className="whitespace-nowrap">{liveSession?.coins?.toLocaleString() || '0'} moedas</span>
                                     </span>
                                 </button>
                                 {isBroadcaster || isFollowed ? (

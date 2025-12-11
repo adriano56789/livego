@@ -829,11 +829,12 @@ const AppContent: React.FC = () => {
     const handleStartPKBattle = async (opponent: User) => {
         if (!activeStream) return;
         try {
-            await api.startPKBattle(activeStream.id, opponent.id);
+            await api.startPKBattle(activeStream.id, opponent.hostId);
             setPkOpponent(opponent);
             setIsPKBattleActive(true);
         } catch (error) {
-            addToast(ToastType.Error, "Falha ao iniciar a batalha PK.");
+            console.error("Erro ao iniciar batalha PK:", error);
+            addToast(ToastType.Error, "Falha ao iniciar a batalha PK. Verifique se o oponente está online.");
         }
     };
 

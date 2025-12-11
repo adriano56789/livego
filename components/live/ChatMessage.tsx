@@ -190,11 +190,13 @@ const ChatMessage: React.FC<ChatMessageProps> = memo(({
         <div className="relative self-start text-xs mt-1">
             <div className="chat-bubble">
                 {avatarComponent}
-                <div className="min-w-0 flex items-baseline flex-wrap gap-x-1.5 leading-snug">
-                    {fanBadge}
-                    {rankBadge}
+                <div className="flex-1 min-w-0">
+                    <div className="flex items-center flex-wrap gap-x-1.5 mb-1">
+                        {fanBadge}
+                        {rankBadge}
+                    </div>
                     {!isFan && (
-                        <div className="bg-black/40 backdrop-blur-sm rounded-lg p-2 mt-1 inline-block shadow-lg shadow-black/50 relative group">
+                        <div className="bg-black/40 backdrop-blur-sm rounded-lg p-2 inline-block shadow-lg shadow-black/50 relative group">
                             {messageContent}
                             {floatingTranslateButton}
                         </div>

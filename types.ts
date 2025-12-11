@@ -94,6 +94,7 @@ export interface Obra {
 }
 
 export interface User {
+  hostId?: string; // Made optional with ?
   id: string;
   identification: string;
   name: string;

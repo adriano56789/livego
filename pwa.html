@@ -37,8 +37,43 @@
       @keyframes button-glow { 0%, 100% { box-shadow: 0 0 5px rgba(168, 85, 247, 0.4), 0 0 10px rgba(168,85,247,0.3), 0 0 15px rgba(168,85,247,0.2);} 50% { box-shadow: 0 0 10px rgba(168,85,247,0.6), 0 0 20px rgba(168,85,247,0.4), 0 0 30px rgba(168,85,247,0.3);} }
       .button-glow { animation: button-glow 2.5s ease-in-out infinite; }
       .button-glow:disabled { animation: none; }
-      .chat-bubble { position: relative; display: inline-flex; align-items: flex-start; gap: 4px; padding: 8px; border-radius: 12px; max-width: 75%; box-shadow: 0 2px 5px rgba(0,0,0,0.5); border: 1px solid #facc15; background-color: rgba(20,20,20,0.5); backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); text-align: left; margin-left: 12px; }
-      .level-badge { display: inline-flex; align-items: center; background: linear-gradient(to bottom, #4ade80, #16a34a); color: white; padding: 2px 6px; border-radius: 10px; font-size: 11px; font-weight: bold; white-space: nowrap; box-shadow: 0 1px 2px rgba(0,0,0,0.2); }
+      .chat-bubble { 
+        position: relative; 
+        display: flex; 
+        align-items: flex-start; 
+        gap: 8px; 
+        padding: 8px 12px; 
+        border-radius: 12px; 
+        max-width: 75%; 
+        box-shadow: 0 2px 5px rgba(0,0,0,0.5); 
+        border: 1px solid #facc15; 
+        background-color: rgba(20,20,20,0.5); 
+        backdrop-filter: blur(5px); 
+        -webkit-backdrop-filter: blur(5px); 
+        text-align: left; 
+        margin-left: 12px; 
+      }
+      
+      .chat-bubble .level-badge { 
+        display: inline-flex; 
+        align-items: center; 
+        background: linear-gradient(to bottom, #4ade80, #16a34a); 
+        color: white; 
+        padding: 2px 8px; 
+        border-radius: 10px; 
+        font-size: 11px; 
+        font-weight: bold; 
+        white-space: nowrap; 
+        box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+        margin-right: 4px;
+        flex-shrink: 0;
+        line-height: 1.2;
+      }
+      
+      .chat-bubble .rank-badge {
+        margin-right: 4px;
+        flex-shrink: 0;
+      }
       .rank-badge { display: inline-flex; align-items: center; justify-content: center; background: linear-gradient(to bottom, #fbbf24, #f59e0b); color: #78350f; width: 16px; height: 16px; border-radius: 50%; font-size: 11px; font-weight: bold; white-space: nowrap; box-shadow: 0 1px 2px rgba(0,0,0,0.2); line-height: 1; }
     </style>
     <script type="importmap">

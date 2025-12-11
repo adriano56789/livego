@@ -93,7 +93,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
                 <div className="flex-1 min-w-0 -mt-1">
                     <div className="inline-flex items-start w-full">
                         <div className="bg-black/60 backdrop-blur-sm rounded-lg p-0 shadow-lg shadow-black/50 relative group border border-white/10 w-full">
-                            <p className="text-white text-sm break-words p-2 pl-3 pr-6">
+                            <p className="text-white text-sm whitespace-nowrap overflow-hidden text-ellipsis p-2 pl-3 pr-6">
                                 {displayText()}
                                 {isTranslating && (
                                     <span className="ml-2 text-xs text-gray-400">Traduzindo...</span>

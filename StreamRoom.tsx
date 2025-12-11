@@ -250,19 +250,6 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
         const messageOptions = { quantity, giftName: gift.name, receiverName: toUser.name };
 
         const giftMessage: ChatMessageType = {
-            id: Date.now() + Math.random(),
-            type: 'chat',
-            user: fromUser.name,
-            level: fromUser.level,
-            message: (
-                <span className="inline-flex items-center">
-                    {t(messageKey, messageOptions)}
-                    {gift.component ? React.cloneElement(gift.component as React.ReactElement<any>, { className: "w-5 h-5 inline-block ml-1.5" }) : <span className="ml-1.5">{gift.icon}</span>}
-                </span>
-            ),
-            avatar: fromUser.avatarUrl,
-            activeFrameId: fromUser.activeFrameId,
-            frameExpiration: fromUser.frameExpiration,
             fanClub: fromUser.fanClub,
         };
         setMessages(prev => [...prev, giftMessage]);
@@ -747,16 +734,9 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
                                             </div>
                                         )}
                                     </div>
-                                    <div className="pr-1">
-                                        <p className="text-white font-bold text-sm">{streamerDisplayUser.name}</p>
-                                        <div className="flex items-center space-x-1 text-gray-300 text-xs">
-                                            <ViewerIcon className="w-4 h-4" />
-                                            <span>{liveSession?.viewers.toLocaleString() || '0'}</span>
-                                            {isJuFeFanClub && (
-                                                <HeartIcon className="w-3 h-3 text-white ml-1.5" fill="currentColor" />
-                                            )}
-                                        </div>
-                                    </div>
+                                    <span className="inline-flex items-center whitespace-nowrap">
+                                        🎁 <span className="font-semibold">{streamerDisplayUser.name}</span> enviou {giftIcon} para <span className="font-semibold">{streamer.name}</span> — <span className="whitespace-nowrap">{totalValue} moedas</span>
+                                    </span>
                                 </button>
                                 {isBroadcaster || isFollowed ? (
                                     <button onClick={(e) => { e.stopPropagation(); setIsFanClubModalOpen(true); }} className="shrink-0">

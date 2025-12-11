@@ -479,8 +479,8 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
             user: fromUser.name,
             level: fromUser.level,
             message: (
-                <span className="inline-flex items-center">
-                    🎁 <span className="font-semibold">{fromUser.name}</span> enviou {giftIcon} para <span className="font-semibold">{toUser.name}</span> — {totalValue} moedas.
+                <span className="inline-flex items-center whitespace-nowrap">
+                    🎁 <span className="font-semibold">{fromUser.name}</span> enviou {giftIcon} para <span className="font-semibold">{toUser.name}</span> — <span className="whitespace-nowrap">{totalValue} moedas</span>
                 </span>
             ),
             avatar: fromUser.avatarUrl,
@@ -496,8 +496,8 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
             user: 'Sistema',
             level: 0,
             message: (
-                <span className="inline-flex items-center text-green-400">
-                    ✓ Você enviou {quantity > 1 ? `${quantity}x` : 'um'} {giftIcon} para <span className="font-semibold">{toUser.name}</span> — {totalValue} moedas.
+                <span className="inline-flex items-center text-green-400 whitespace-nowrap">
+                    ✓ Você enviou {quantity > 1 ? `${quantity}x` : 'um'} {giftIcon} para <span className="font-semibold">{toUser.name}</span> — <span className="whitespace-nowrap">{totalValue} moedas</span>
                 </span>
             ),
             avatar: '',

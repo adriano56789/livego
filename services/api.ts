@@ -138,6 +138,17 @@ export const api = {
     getAdminWithdrawalHistory: (status: 'all' | 'Concluído' | 'Pendente' | 'Cancelado' = 'all') => 
         callApi<PurchaseRecord[]>('GET', `/api/admin/history?status=${status}`),
 
+    // Obtém o saldo e informações da carteira do administrador
+    getAdminWalletBalance() {
+      return callApi<{
+        saldoDisponivel: number;
+        saqueDisponivel: number;
+        totalTaxas: number;
+        totalSaques: number;
+        transacoes: PurchaseRecord[];
+      }>('GET', '/api/admin/wallet');
+    },
+
     // --- General Data ---
     getRankingForPeriod: (period: 'daily' | 'weekly' | 'monthly') => callApi<RankedUser[]>('GET', `/api/ranking/${period}`),
     getGifts: () => callApi<Gift[]>('GET', '/api/gifts'),

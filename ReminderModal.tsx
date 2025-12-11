@@ -1,9 +1,9 @@
 
 
 import React, { useState } from 'react';
-import { Streamer } from '../types';
-import { BackIcon, ClockIcon, PlayIcon, PlusIcon } from './icons';
-import { useTranslation } from '../i18n';
+import { Streamer } from './types';
+import { BackIcon, ClockIcon, PlayIcon, PlusIcon } from './components/icons';
+import { useTranslation } from './i18n';
 
 interface ReminderModalProps {
   isOpen: boolean;
@@ -37,8 +37,8 @@ const StreamerItem: React.FC<StreamerItemProps> = ({ streamer, isFollowed, onFol
       </div>
       {streamer.tags.length > 0 && (
          <div className="mt-2">
-            {streamer.tags.map(tag => (
-                <span key={tag} className="bg-gray-700 text-gray-300 text-[10px] px-1.5 py-0.5 rounded-full">{tag}</span>
+            {streamer.tags.map((tag, index) => (
+                <span key={`${tag}-${index}`} className="bg-gray-700 text-gray-300 text-[10px] px-1.5 py-0.5 rounded-full">{tag}</span>
             ))}
          </div>
       )}

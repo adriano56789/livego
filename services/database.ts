@@ -731,22 +731,64 @@ const migrateDb = (dbInstance: LiveGoDB) => {
     return dbInstance;
 };
 
-// This function now initializes the data store.
-// In a real backend, this would be replaced by Mongoose models interacting with the live DB.
-// The data from `constructInitialDb` is now treated as a "seed" for a development database,
-// ensuring the app has data to work with on the first run if the database is empty.
+// Inicializa o armazenamento de dados, carregando do localStorage se disponível
+// ou criando um novo banco de dados com dados iniciais
 const initializeDataStore = (): LiveGoDB => {
-    console.log('[DB] Initializing data store. Using initial data as a seed for development environment.');
-    return constructInitialDb();
+    try {
+        if (typeof window !== 'undefined' && window.localStorage) {
+            const savedData = localStorage.getItem('livego_db');
+            if (savedData) {
+                console.log('[DB] Carregando dados salvos do localStorage');
+                const parsedData = JSON.parse(savedData, reviver);
+                
+                // Cria um novo banco de dados com os dados iniciais
+                const db = constructInitialDb();
+                
+                // Atualiza com os dados salvos
+                if (parsedData.users) {
+                    db.users = new Map(parsedData.users);
+                }
+                if (parsedData.purchases) {
+                    db.purchases = parsedData.purchases;
+                }
+                if (parsedData.platform_earnings !== undefined) {
+                    db.platform_earnings = parsedData.platform_earnings;
+                }
+                
+                console.log('[DB] Dados carregados com sucesso do localStorage');
+                return db;
+            }
+        }
+        
+        console.log('[DB] Inicializando novo banco de dados com dados iniciais');
+        return constructInitialDb();
+    } catch (error) {
+        console.error('[DB] Erro ao carregar dados salvos, usando dados iniciais:', error);
+        return constructInitialDb();
+    }
 };
 
 export let db: LiveGoDB = initializeDataStore();
 
-// This function is now a no-op. In a real backend, data persistence is handled
-// by the database driver (e.g., Mongoose) on each create/update/delete operation.
-// Any calls to `saveDb()` will do nothing, simulating that data is saved automatically.
+// Salva o estado atual do banco de dados no localStorage
+// Em um ambiente de produção real, isso seria substituído por chamadas de API para um servidor
 export const saveDb = () => {
-    // console.log('[DB] Data persistence is now handled by the live database connection.');
+    try {
+        if (typeof window !== 'undefined' && window.localStorage) {
+            const dataToSave = {
+                users: Array.from(db.users.entries()),
+                purchases: [...db.purchases],
+                platform_earnings: db.platform_earnings,
+                // Adicione outros dados que precisam ser persistidos
+            };
+            localStorage.setItem('livego_db', JSON.stringify(dataToSave, replacer));
+            console.log('[DB] Dados salvos com sucesso no localStorage');
+        } else {
+            console.warn('[DB] localStorage não disponível. Dados não serão persistidos.');
+        }
+    } catch (error) {
+        console.error('[DB] Erro ao salvar dados:', error);
+    }
 };
 
 // Initialize the database connection when the service starts.

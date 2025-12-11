@@ -807,13 +807,15 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
             >
                 <div ref={chatContainerRef} className="max-h-[33vh] h-full overflow-y-auto no-scrollbar flex flex-col pointer-events-auto px-3">
                     <div className="space-y-2 mt-auto">
-                         {messages.map((msg) => {
+                         {messages.map((msg, index) => {
+                            const uniqueKey = `${msg.id}-${index}-${msg.type}`;
+                            
                             if (msg.type === 'fan_entry' && msg.fullUser) {
-                                return <FanClubEntryMessage key={msg.id} user={msg.fullUser} streamer={streamerUser} />;
+                                return <FanClubEntryMessage key={uniqueKey} user={msg.fullUser} streamer={streamerUser} />;
                             }
                             if (msg.type === 'entry' && msg.fullUser) {
                                 return <EntryChatMessage 
-                                    key={msg.id} 
+                                    key={uniqueKey} 
                                     user={msg.fullUser} 
                                     currentUser={currentUser}
                                     onClick={onViewProfile}
@@ -825,7 +827,7 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
                                 const chatUser = constructUserFromMessage(msg);
                                 
                                 return <ChatMessage 
-                                    key={msg.id} 
+                                    key={uniqueKey}
                                     userObject={chatUser}
                                     message={msg.message}
                                     translatedText={msg.translatedText}
@@ -834,10 +836,10 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
                                 />;
                             }
                             if (msg.type === 'follow' && msg.user && msg.followedUser) {
-                                return <FollowChatMessage key={msg.id} follower={msg.user} followed={msg.followedUser} />;
+                                return <FollowChatMessage key={uniqueKey} follower={msg.user} followed={msg.followedUser} />;
                             }
                             if (msg.type === 'friend_request' && msg.follower) {
-                                return <FriendRequestNotification key={msg.id} followerName={msg.follower.name} onClick={onOpenFriendRequests} />;
+                                return <FriendRequestNotification key={uniqueKey} followerName={msg.follower.name} onClick={onOpenFriendRequests} />;
                             }
                             return null;
                         })}

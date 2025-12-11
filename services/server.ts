@@ -828,8 +828,8 @@ export const mockApiRouter = async (method: string, path: string, body?: any): P
         user.earnings -= amount;
         user.earnings_withdrawn = (user.earnings_withdrawn || 0) + amount;
         
-        // Add fee to platform earnings
-        db.platform_earnings += feeFull;
+        // Add fee to platform earnings (only once)
+        db.platform_earnings = (db.platform_earnings || 0) + feeFull;
 
         // Create withdrawal transaction for the streamer
         const withdrawalTransaction: PurchaseRecord = {
@@ -862,12 +862,45 @@ export const mockApiRouter = async (method: string, path: string, body?: any): P
         db.purchases.unshift(withdrawalTransaction);
         db.purchases.unshift(adminTransaction);
         
-        // Update admin's wallet (hidden from regular users)
-        const adminUser = db.users.get(CURRENT_USER_ID);
-        if (adminUser) {
-            adminUser.adminEarnings = (adminUser.adminEarnings || 0) + feeFull;
-            db.users.set(CURRENT_USER_ID, adminUser);
+        // Atualiza a carteira do admin com a taxa
+        let adminUser = db.users.get(CURRENT_USER_ID);
+        
+        if (!adminUser) {
+            // Cria o usuário admin se não existir
+            adminUser = {
+                id: CURRENT_USER_ID,
+                identification: 'admin',
+                name: 'Admin',
+                avatarUrl: '',
+                level: 99,
+                fans: 0,
+                following: 0,
+                receptores: 0,
+                enviados: 0,
+                diamonds: 0,
+                earnings: 0,
+                earnings_withdrawn: 0,
+                adminEarnings: 0,
+                ownedFrames: [],
+                withdrawal_method: { 
+                    method: 'Admin Wallet', 
+                    details: {} 
+                },
+                isLive: false,
+                isOnline: true
+            };
         }
+        
+        // Atualiza os ganhos do admin
+        adminUser.earnings = (adminUser.earnings || 0) + feeFull;
+        adminUser.adminEarnings = (adminUser.adminEarnings || 0) + feeFull;
+        
+        if (process.env.NODE_ENV !== 'production') {
+            console.log(`[Taxa Admin] Adicionado R$ ${feeFull.toFixed(2)} ao admin`);
+            console.log(`[Saldo Admin] Novo saldo: R$ ${adminUser.earnings.toFixed(2)}`);
+        }
+        
+        db.users.set(CURRENT_USER_ID, adminUser);
         
         db.users.set(userId, user);
         saveDb();
@@ -881,6 +914,7 @@ export const mockApiRouter = async (method: string, path: string, body?: any): P
             webSocketServerInstance.broadcastTransactionUpdate(adminTransaction);
             webSocketServerInstance.broadcastUserUpdate({
                 ...adminUser,
+earnings: adminUser.earnings,
                 platformEarnings: db.platform_earnings,
                 adminEarnings: adminUser.adminEarnings
             });
@@ -976,8 +1010,8 @@ export const mockApiRouter = async (method: string, path: string, body?: any): P
         user.earnings -= amount;
         user.earnings_withdrawn = (user.earnings_withdrawn || 0) + amount;
         
-        // Add fee to platform earnings
-        db.platform_earnings += feeFull;
+        // Add fee to platform earnings (only once)
+        db.platform_earnings = (db.platform_earnings || 0) + feeFull;
 
         // Create withdrawal transaction for the streamer
         const withdrawalTransaction: PurchaseRecord = {
@@ -992,8 +1026,63 @@ export const mockApiRouter = async (method: string, path: string, body?: any): P
           isAdminTransaction: false
         };
 
+        // Create admin fee transaction (hidden from regular users)
+        const adminTransaction: PurchaseRecord = {
+          id: `admin_fee_${Date.now()}`,
+          userId: CURRENT_USER_ID,
+          type: 'admin_fee',
+          description: `Taxa de saque de ${user.name}`,
+          amountBRL: truncateBRL(feeFull),
+          amountCoins: 0,
+          status: 'Concluído',
+          timestamp: new Date().toISOString(),
+          isAdminTransaction: true,
+          relatedTransactionId: withdrawalTransaction.id
+        };
+
         // Add transactions to the database
         db.purchases.unshift(withdrawalTransaction);
+        db.purchases.unshift(adminTransaction);
+        
+        // Atualiza a carteira do admin com a taxa
+        let adminUser = db.users.get(CURRENT_USER_ID);
+        
+        if (!adminUser) {
+            // Cria o usuário admin se não existir
+            adminUser = {
+                id: CURRENT_USER_ID,
+                identification: 'admin',
+                name: 'Admin',
+                avatarUrl: '',
+                level: 99,
+                fans: 0,
+                following: 0,
+                receptores: 0,
+                enviados: 0,
+                diamonds: 0,
+                earnings: 0,
+                earnings_withdrawn: 0,
+                adminEarnings: 0,
+                ownedFrames: [],
+                withdrawal_method: { 
+                    method: 'Admin Wallet', 
+                    details: {} 
+                },
+                isLive: false,
+                isOnline: true
+            };
+        }
+        
+        // Atualiza os ganhos do admin
+        adminUser.earnings = (adminUser.earnings || 0) + feeFull;
+        adminUser.adminEarnings = (adminUser.adminEarnings || 0) + feeFull;
+        
+        if (process.env.NODE_ENV !== 'production') {
+            console.log(`[Taxa Admin] Adicionado R$ ${feeFull.toFixed(2)} ao admin`);
+            console.log(`[Saldo Admin] Novo saldo: R$ ${adminUser.earnings.toFixed(2)}`);
+        }
+        
+        db.users.set(CURRENT_USER_ID, adminUser);
         
         db.users.set(userId, user);
         saveDb();
@@ -1001,6 +1090,17 @@ export const mockApiRouter = async (method: string, path: string, body?: any): P
         // Broadcast updates
         webSocketServerInstance.broadcastUserUpdate(user);
         webSocketServerInstance.broadcastTransactionUpdate(withdrawalTransaction);
+        
+        // Only broadcast admin transaction to admin user
+        if (adminUser) {
+            webSocketServerInstance.broadcastTransactionUpdate(adminTransaction);
+            webSocketServerInstance.broadcastUserUpdate({
+                ...adminUser,
+earnings: adminUser.earnings,
+                platformEarnings: db.platform_earnings,
+                adminEarnings: adminUser.adminEarnings
+            });
+        }
 
         // Return success with detailed information
         return formatResponse(200, { 
@@ -1010,7 +1110,14 @@ export const mockApiRouter = async (method: string, path: string, body?: any): P
             newBalance: user.earnings,
             user: user,
             transaction: withdrawalTransaction,
-            message: `Saque de R$ ${truncateBRL(netBRLFull)} realizado com sucesso para ${user.withdrawal_method.method}.`
+            message: `Saque de R$ ${truncateBRL(netBRLFull)} realizado com sucesso para ${user.withdrawal_method.method}.`,
+            withdrawal_details: {
+                amount_diamonds: amount,
+                gross_value_brl: truncateBRL(grossBRLFull),
+                platform_fee_brl: truncateBRL(feeFull),
+                net_value_brl: truncateBRL(netBRLFull),
+                fee_percentage: 20
+            }
         });
     }
     
@@ -2585,23 +2692,60 @@ export const mockApiRouter = async (method: string, path: string, body?: any): P
         return formatResponse(200, reminderStreamers);
     }
 
-    // --- Histórico de Streams ---
-    if (entity === 'history' && id === 'streams') {
-        if (method === 'GET') {
-            return formatResponse(200, db.streamHistory);
+    // --- Admin History Endpoint ---
+    if (entity === 'admin' && id === 'history' && method === 'GET') {
+        // Verificar se o usuário é administrador
+        if (!isAdmin(CURRENT_USER_ID)) {
+            return formatResponse(403, null, 'Acesso negado. Apenas administradores podem acessar este recurso.');
         }
-        if (method === 'POST') {
-            const entry: StreamHistoryEntry = body;
-            db.streamHistory.unshift(entry);
-            saveDb();
-            return formatResponse(200, { success: true });
-        }
+
+        // Obter o parâmetro de status da query (padrão: 'all')
+        const queryParams = new URLSearchParams(path.split('?')[1] || '');
+        const status = queryParams.get('status') || 'all';
+        
+        // Buscar transações de taxas de saque
+        const adminFeeTransactions = db.purchases
+            .filter(tx => tx.type === 'admin_fee' && tx.userId === CURRENT_USER_ID)
+            .map(tx => {
+                const amountBRL = typeof tx.amountBRL === 'number' ? tx.amountBRL : 0;
+                const streamerName = tx.description ? tx.description.replace('Taxa de saque de ', '').split(' (R$')[0] : 'Usuário desconhecido';
+                
+                return {
+                    id: tx.id || `tx_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                    type: 'withdrawal_fee',
+                    amountBRL: amountBRL,
+                    timestamp: tx.timestamp ? new Date(tx.timestamp).getTime() : Date.now(),
+                    description: tx.description || 'Taxa de saque',
+                    status: 'completed',
+                    streamerName: streamerName,
+                    streamerAvatar: '',
+                    startedAt: tx.timestamp || new Date().toISOString(),
+                    endedAt: tx.timestamp || new Date().toISOString(),
+                    duration: 0,
+                    withdrawnAmount: 0,
+                    currentEarnings: 0,
+                    availableToWithdraw: 0,
+                    isFeeTransaction: true
+                };
+            });
+
+        // Ordenar por data (mais recente primeiro)
+        const sortedHistory = [...adminFeeTransactions]
+            .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+
+        // Filtrar por status se necessário
+        const filteredHistory = status === 'all' 
+            ? sortedHistory 
+            : sortedHistory.filter(item => item.status === status);
+
+        console.log(`[Admin History] Found ${filteredHistory.length} fee transactions`);
+        return formatResponse(200, filteredHistory);
     }
 
-    // --- Compras ---
-    if (entity === 'purchases' && id === 'history' && subEntity && method === 'GET') {
-        const userId = subEntity;
-        const { requestingUserId } = body;
+    // --- User Purchase History ---
+    if (entity === 'purchases' && method === 'GET' && id) {
+        const userId = id;
+        const { requestingUserId } = body || {};
         
         // Verificação de permissão
         if (userId !== CURRENT_USER_ID && !isAdmin(CURRENT_USER_ID)) {

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { CloseIcon, ExpandIcon, BookOpenIcon, SparklesIcon, PKIcon, ChevronRightIcon, LockIcon } from './components/icons';
 import { Streamer, ToastType, User, BeautySettings } from './types';
@@ -7,7 +6,7 @@ import LiveStreamManualModal from './components/live/LiveStreamManualModal';
 import { useTranslation } from './i18n';
 import { api } from './services/api';
 
-interface GoLiveScreenProps { 
+interface GoLiveScreenProps {
   isOpen: boolean;
   onClose: () => void;
   onStartStream: (streamer: Streamer) => void;
@@ -29,29 +28,29 @@ interface CategoryModalProps {
 
 const CategoryModal: React.FC<CategoryModalProps> = ({ onClose, onSelectCategory, selectedCategoryKey, categories }) => {
     return (
-        <div className="absolute inset-x-0 bottom-0 bg-[#1C1C1E] rounded-t-3xl z-50 p-6 pb-10 shadow-2xl border-t border-white/10" onClick={e => e.stopPropagation()}>
-             <div className="flex items-center justify-between mb-6">
-                <h3 className="text-xl font-bold text-white">Selecionar Categoria</h3>
-                <button onClick={onClose} className="text-gray-400 hover:text-white bg-white/10 p-2 rounded-full transition-colors">
+        <div className="absolute inset-x-0 bottom-0 bg-[#222225] rounded-t-2xl z-50 p-4" onClick={e => e.stopPropagation()}>
+             <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-bold text-white">Selecionar Categoria</h3>
+                <button onClick={onClose} className="text-gray-400 hover:text-white">
                     <CloseIcon className="w-5 h-5" />
                 </button>
             </div>
-            <div className="grid grid-cols-3 gap-3">
+            <ul className="space-y-2">
                 {categories.map((cat) => (
-                    <button 
+                    <li 
                         key={cat.key}
                         onClick={() => onSelectCategory(cat.key)}
-                        className={`py-3 px-2 rounded-xl text-sm font-semibold transition-all duration-200 ${selectedCategoryKey === cat.key ? 'bg-purple-600 text-white shadow-lg shadow-purple-600/30' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}>
+                        className={`p-3 rounded-lg text-left w-full cursor-pointer transition-colors ${selectedCategoryKey === cat.key ? 'bg-purple-600 text-white' : 'text-gray-300 hover:bg-gray-800/50'}`}>
                         {cat.label}
-                    </button>
+                    </li>
                 ))}
-            </div>
+            </ul>
         </div>
     );
 };
 
 
-export const GoLiveScreen: React.FC<GoLiveScreenProps> = ({ isOpen, onClose, onStartStream, addToast, currentUser }) => {
+const GoLiveScreen: React.FC<GoLiveScreenProps> = ({ isOpen, onClose, onStartStream, addToast, currentUser }) => {
   const { t } = useTranslation();
   const [isUiVisible, setIsUiVisible] = useState(true);
   const [streamType, setStreamType] = useState('WebRTC');
@@ -96,36 +95,14 @@ export const GoLiveScreen: React.FC<GoLiveScreenProps> = ({ isOpen, onClose, onS
                 onClose();
             }
 
-            // Setup camera with 1080p constraints
-            navigator.mediaDevices.getUserMedia({ 
-                video: { 
-                    width: { ideal: 1920 },
-                    height: { ideal: 1080 },
-                    frameRate: { ideal: 30, min: 24 },
-                    facingMode: 'user' 
-                }, 
-                audio: true 
-            })
+            // Setup camera
+            navigator.mediaDevices.getUserMedia({ video: true })
             .then(stream => {
                 if (videoRef.current) {
                     videoRef.current.srcObject = stream;
-                    // Debug: Check resolution
-                    const track = stream.getVideoTracks()[0];
-                    const settings = track.getSettings();
-                    console.log(`Camera initialized at: ${settings.width}x${settings.height}`);
                 }
             })
-            .catch(err => {
-                console.error("Error accessing camera with 1080p constraints, falling back to default:", err);
-                 // Fallback to default constraints if 1080p fails
-                 navigator.mediaDevices.getUserMedia({ video: true, audio: true })
-                 .then(stream => {
-                    if (videoRef.current) {
-                        videoRef.current.srcObject = stream;
-                    }
-                 })
-                 .catch(fallbackErr => console.error("Error accessing camera (fallback):", fallbackErr));
-            });
+            .catch(err => console.error("Error accessing camera:", err));
         } else {
             // Cleanup when component closes
             if (videoRef.current && videoRef.current.srcObject) {
@@ -139,7 +116,7 @@ export const GoLiveScreen: React.FC<GoLiveScreenProps> = ({ isOpen, onClose, onS
         }
     };
     setupStream();
-  }, [isOpen, addToast, onClose]);
+  }, [isOpen]);
 
   const hideUi = () => {
     setIsUiVisible(false);
@@ -215,7 +192,7 @@ export const GoLiveScreen: React.FC<GoLiveScreenProps> = ({ isOpen, onClose, onS
   const StreamTypeButton: React.FC<{type: string}> = ({ type }) => (
     <button
         onClick={() => setStreamType(type)}
-        className={`flex-1 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 ${streamType === type ? 'bg-white text-black shadow-sm' : 'text-gray-400 hover:text-white'}`}
+        className={`px-4 py-1 rounded-full text-sm transition-colors ${streamType === type ? 'bg-blue-500 text-white' : 'bg-gray-600/50 text-gray-300 hover:bg-gray-500/50'}`}
     >
         {type}
     </button>
@@ -225,177 +202,118 @@ export const GoLiveScreen: React.FC<GoLiveScreenProps> = ({ isOpen, onClose, onS
 
   return (
     <div
-      className={`absolute inset-0 bg-black z-50 transition-opacity duration-500 flex flex-col justify-between font-sans ${
+      className={`absolute inset-0 bg-black z-50 transition-opacity duration-300 flex flex-col justify-between ${
         isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
       }`}
     >
       <video ref={videoRef} autoPlay playsInline className="absolute inset-0 w-full h-full object-cover -z-10"></video>
-      
-      {/* Overlay Gradient for better text visibility */}
-      <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/60 pointer-events-none"></div>
-
       <div className="absolute inset-0" onClick={showUi}></div>
 
-      <header className={`absolute top-0 right-0 p-6 flex items-center space-x-3 z-20`}>
-        <button onClick={hideUi} className={`w-10 h-10 bg-black/30 backdrop-blur-md rounded-full flex items-center justify-center text-white transition-opacity duration-300 hover:bg-black/50 ${isUiVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+      <header className={`absolute top-0 right-0 p-4 flex items-center space-x-2 z-20`}>
+        <button onClick={hideUi} className={`w-8 h-8 bg-black/40 rounded-full flex items-center justify-center text-white transition-opacity duration-300 ${isUiVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
           <ExpandIcon className="w-5 h-5" />
         </button>
-        <button onClick={onClose} className="w-10 h-10 bg-black/30 backdrop-blur-md rounded-full flex items-center justify-center text-white hover:bg-black/50">
-          <CloseIcon className="w-6 h-6" />
+        <button onClick={onClose} className="w-8 h-8 bg-black/40 rounded-full flex items-center justify-center text-white">
+          <CloseIcon className="w-5 h-5" />
         </button>
       </header>
       
       <div 
-        className={`z-10 w-full max-w-md mx-auto transition-all duration-500 ease-in-out transform ${isUiVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0 pointer-events-none'}`}
+        className={`z-10 transition-opacity duration-300 ${isUiVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
         onClick={e => e.stopPropagation()}
       >
-        <div className="p-6 space-y-6">
-            
-            {/* Top Section: Cover, Title, Category */}
-            <div className="flex items-start space-x-4">
-                <button onClick={handleAddCover} className="group relative w-24 h-24 bg-gray-800/60 backdrop-blur-sm rounded-2xl border border-white/10 flex flex-col items-center justify-center text-gray-300 overflow-hidden transition-transform active:scale-95">
-                    {draftStream?.avatar ? (
-                        <img src={draftStream.avatar} alt="Capa da Live" className="absolute inset-0 w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" />
-                    ) : (
-                        <div className="flex flex-col items-center">
-                             <span className="text-3xl font-light mb-1">+</span>
-                             <span className="text-[10px] font-medium uppercase tracking-wide">{t('goLive.addCover')}</span>
-                        </div>
-                    )}
-                    {draftStream?.avatar && (
-                        <div className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity">
-                             <span className="text-white font-medium text-xs">{t('common.edit')}</span>
-                        </div>
-                    )}
+        <div className="p-4 space-y-4">
+            <div className="flex items-start space-x-3">
+                <button onClick={handleAddCover} className="w-16 h-16 bg-gray-800/80 rounded-lg flex flex-col items-center justify-center text-gray-300 text-xs flex-shrink-0 overflow-hidden relative">
+                    {draftStream?.avatar && <img src={draftStream.avatar} alt="Capa da Live" className="absolute inset-0 w-full h-full object-cover" />}
+                    <span className="relative text-2xl font-light">+</span>
+                    <span className="relative">{t('goLive.addCover')}</span>
                 </button>
-                
-                <div className="flex-grow flex flex-col justify-between h-24 py-1">
-                    <div className="space-y-3">
-                        <input 
-                            type="text" 
-                            placeholder={t('goLive.titlePlaceholder')} 
-                            value={streamTitle} 
-                            onChange={e => setStreamTitle(e.target.value)} 
-                            className="w-full bg-transparent text-lg font-bold text-white placeholder-white/50 focus:outline-none" 
-                        />
-                        <div className="h-px w-full bg-gradient-to-r from-white/30 to-transparent"></div>
-                        <input 
-                            type="text" 
-                            placeholder={t('goLive.descriptionPlaceholder')} 
-                            value={streamDescription} 
-                            onChange={e => setStreamDescription(e.target.value)} 
-                            className="w-full bg-transparent text-sm text-gray-200 placeholder-gray-400 focus:outline-none" 
-                        />
-                    </div>
-                    
-                    <div className="flex items-center justify-between mt-auto">
-                         <button 
-                            onClick={() => setIsCategoryModalOpen(true)} 
-                            className="bg-white/10 backdrop-blur-md border border-white/10 text-white text-xs font-medium px-3 py-1.5 rounded-lg flex items-center space-x-1 hover:bg-white/20 transition-colors"
-                        >
-                            <span># {selectedCategoryLabel}</span>
-                            <ChevronRightIcon className="w-3 h-3 opacity-70" />
-                        </button>
-                        <button onClick={handleSaveChanges} className="text-green-400 text-xs font-bold px-2 py-1 hover:text-green-300 transition-colors">
-                            {t('goLive.save')}
-                        </button>
-                    </div>
+                <div className="flex-grow space-y-2">
+                    <input type="text" placeholder={t('goLive.titlePlaceholder')} value={streamTitle} onChange={e => setStreamTitle(e.target.value)} className="w-full bg-transparent border-b border-gray-600 p-1 text-white focus:outline-none focus:border-white" />
+                    <input type="text" placeholder={t('goLive.descriptionPlaceholder')} value={streamDescription} onChange={e => setStreamDescription(e.target.value)} className="w-full bg-transparent border-b border-gray-600 p-1 text-white focus:outline-none focus:border-white" />
                 </div>
+                 <button onClick={handleSaveChanges} className="bg-gray-700/80 text-white px-5 py-2 rounded-full text-sm self-end">{t('goLive.save')}</button>
             </div>
 
-            {/* Settings Panel */}
-            <div className="bg-black/40 backdrop-blur-xl rounded-3xl border border-white/5 overflow-hidden shadow-lg">
-                {/* Stream Type Selector */}
-                <div className="p-2 m-2 bg-black/30 rounded-xl flex space-x-1">
-                    <StreamTypeButton type="WebRTC" />
-                    <StreamTypeButton type="RTMP" />
-                    <StreamTypeButton type="SRT" />
+            <div className="flex items-center space-x-2">
+                <button onClick={() => setIsCategoryModalOpen(true)} className="bg-gray-700/80 text-gray-300 text-sm px-3 py-1 rounded-full">{selectedCategoryLabel}</button>
+            </div>
+
+            <div className="bg-gray-800/80 p-4 rounded-2xl space-y-4 text-white">
+                <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-300">{t('goLive.streamType')}</span>
+                    <div className="flex items-center space-x-2">
+                       <StreamTypeButton type="WebRTC" />
+                       <StreamTypeButton type="RTMP" />
+                       <StreamTypeButton type="SRT" />
+                    </div>
                 </div>
 
-                <div className="px-4 pb-2">
-                    {streamType === 'RTMP' && (
-                        <div className="mb-4 p-3 bg-black/30 rounded-xl border border-white/5 space-y-3">
-                            <div>
-                                <label className="text-[10px] uppercase tracking-wider text-gray-400 font-bold ml-1">Servidor RTMP</label>
-                                <div className="mt-1 flex items-center bg-black/20 rounded-lg px-3 py-2 border border-white/5">
-                                    <input type="text" readOnly value="rtmp://localhost:1935/live" className="w-full bg-transparent text-xs text-gray-300 outline-none" />
-                                </div>
-                            </div>
-                             <div>
-                                <label className="text-[10px] uppercase tracking-wider text-gray-400 font-bold ml-1">Chave</label>
-                                <div className="mt-1 flex items-center bg-black/20 rounded-lg px-3 py-2 border border-white/5">
-                                    <input type="text" readOnly value="stream_6jsrm5x4" className="w-full bg-transparent text-xs text-gray-300 outline-none" />
-                                </div>
-                            </div>
+                {streamType === 'RTMP' && (
+                    <div className="text-xs space-y-2 text-gray-300">
+                        <div>
+                            <label className="font-semibold">Servidor RTMP</label>
+                            <input type="text" readOnly value="rtmp://localhost:1935/live" className="w-full bg-gray-700/50 p-2 rounded-md mt-1" />
                         </div>
-                    )}
-                    {streamType === 'SRT' && (
-                        <div className="mb-4 p-3 bg-black/30 rounded-xl border border-white/5">
-                            <label className="text-[10px] uppercase tracking-wider text-gray-400 font-bold ml-1">Endereço SRT</label>
-                            <div className="mt-1 flex items-center bg-black/20 rounded-lg px-3 py-2 border border-white/5">
-                                <input type="text" readOnly value="srt://localhost:1935/live" className="w-full bg-transparent text-xs text-gray-300 outline-none" />
-                            </div>
+                         <div>
+                            <label className="font-semibold">Chave de Transmissão</label>
+                            <input type="text" readOnly value="stream_6jsrm5x4" className="w-full bg-gray-700/50 p-2 rounded-md mt-1" />
                         </div>
-                    )}
-
-                    {/* Controls List */}
-                    <div className="space-y-1">
-                        <button onClick={() => setIsManualOpen(true)} className="flex items-center justify-between w-full p-3 rounded-xl hover:bg-white/5 transition-colors group">
-                            <div className="flex items-center space-x-3">
-                                <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-400 group-hover:bg-blue-500 group-hover:text-white transition-colors">
-                                    <BookOpenIcon className="w-4 h-4" />
-                                </div>
-                                <span className="text-sm font-medium text-gray-200 group-hover:text-white">{t('goLive.liveManual')}</span>
-                            </div>
-                            <ChevronRightIcon className="w-4 h-4 text-gray-600 group-hover:text-gray-400" />
-                        </button>
-
-                        <button onClick={() => setIsBeautyPanelOpen(true)} className="flex items-center justify-between w-full p-3 rounded-xl hover:bg-white/5 transition-colors group">
-                            <div className="flex items-center space-x-3">
-                                <div className="w-8 h-8 rounded-full bg-pink-500/20 flex items-center justify-center text-pink-400 group-hover:bg-pink-500 group-hover:text-white transition-colors">
-                                    <SparklesIcon className="w-4 h-4" />
-                                </div>
-                                <span className="text-sm font-medium text-gray-200 group-hover:text-white">{t('goLive.beautyEffects')}</span>
-                            </div>
-                            <ChevronRightIcon className="w-4 h-4 text-gray-600 group-hover:text-gray-400" />
-                        </button>
-
-                        <div className="flex items-center justify-between w-full p-3 rounded-xl hover:bg-white/5 transition-colors">
-                            <div className="flex items-center space-x-3">
-                                <div className="w-8 h-8 rounded-full bg-orange-500/20 flex items-center justify-center text-orange-400">
-                                    <PKIcon className="w-4 h-4" />
-                                </div>
-                                <span className="text-sm font-medium text-gray-200">{t('goLive.pkBattle')}</span>
-                            </div>
-                            <label className="relative inline-flex items-center cursor-pointer">
-                                <input type="checkbox" defaultChecked className="sr-only peer" />
-                                <div className="w-10 h-6 bg-gray-700 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500"></div>
-                            </label>
-                        </div>
-
-                        <div className="flex items-center justify-between w-full p-3 rounded-xl hover:bg-white/5 transition-colors">
-                            <div className="flex items-center space-x-3">
-                                <div className="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-400">
-                                    <LockIcon className="w-4 h-4" />
-                                </div>
-                                <span className="text-sm font-medium text-gray-200">Sala Privada</span>
-                            </div>
-                            <label className="relative inline-flex items-center cursor-pointer">
-                                <input type="checkbox" checked={isPrivate} onChange={() => setIsPrivate(!isPrivate)} className="sr-only peer" />
-                                <div className="w-10 h-6 bg-gray-700 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
-                            </label>
-                        </div>
+                        <p>Copie esses dados para o RootEncoder</p>
                     </div>
+                )}
+                 {streamType === 'SRT' && (
+                    <div className="text-xs space-y-2 text-gray-300">
+                        <div>
+                            <label className="font-semibold">Endereço SRT</label>
+                            <input type="text" readOnly value="rtmp://localhost:1935/live" className="w-full bg-gray-700/50 p-2 rounded-md mt-1" />
+                        </div>
+                        <p>Configure o RootEncoder para transmitir para o endereço SRT acima</p>
+                    </div>
+                )}
+
+
+                <button onClick={() => setIsManualOpen(true)} className="flex items-center justify-between py-2 border-t border-b border-gray-700/50 w-full">
+                    <div className="flex items-center space-x-3">
+                        <BookOpenIcon className="w-5 h-5 text-gray-400" />
+                        <span>{t('goLive.liveManual')}</span>
+                    </div>
+                    <ChevronRightIcon className="w-5 h-5 text-gray-500" />
+                </button>
+                <button onClick={() => setIsBeautyPanelOpen(true)} className="flex items-center justify-between py-2 w-full">
+                    <div className="flex items-center space-x-3">
+                        <SparklesIcon className="w-5 h-5 text-gray-400" />
+                        <span>{t('goLive.beautyEffects')}</span>
+                    </div>
+                    <ChevronRightIcon className="w-5 h-5 text-gray-500" />
+                </button>
+                 <div className="flex items-center justify-between pt-2 border-t border-gray-700/50">
+                    <div className="flex items-center space-x-3">
+                        <PKIcon className="w-5 h-5" />
+                        <span>{t('goLive.pkBattle')}</span>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" defaultChecked className="sr-only peer" />
+                        <div className="w-11 h-6 bg-gray-600 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                    </label>
+                </div>
+                <div className="flex items-center justify-between pt-2 border-t border-gray-700/50">
+                    <div className="flex items-center space-x-3">
+                        <LockIcon className="w-5 h-5 text-gray-400" />
+                        <span>Sala Privada</span>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" checked={isPrivate} onChange={() => setIsPrivate(!isPrivate)} className="sr-only peer" />
+                        <div className="w-11 h-6 bg-gray-600 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                    </label>
                 </div>
             </div>
         </div>
       </div>
       
-      <footer className={`p-6 z-20 transition-all duration-500 ${isUiVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0 pointer-events-none'}`}>
-        <button 
-            onClick={handleInitiateStream} 
-            className="w-full bg-gradient-to-r from-[#00E5FF] to-[#00FF94] hover:from-[#00d4eb] hover:to-[#00eb88] text-black font-black py-4 rounded-full text-lg shadow-lg shadow-green-500/20 transition-all active:scale-95"
-        >
+      <footer className="p-4 z-20">
+        <button onClick={handleInitiateStream} className="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-4 rounded-full transition-colors">
           {t('goLive.startStream')}
         </button>
       </footer>

@@ -89,7 +89,7 @@ const PurchaseHistoryScreen: React.FC<PurchaseHistoryScreenProps> = ({ onClose, 
   };
 
   return (
-    <div className="absolute inset-0 bg-[#111111] z-50 flex flex-col text-white">
+    <div className="fixed inset-0 bg-[#111111] z-50 flex flex-col text-white h-screen w-full">
       <header className="flex items-center p-4 border-b border-gray-800 flex-shrink-0">
         <button onClick={onClose} className="absolute">
           <BackIcon className="w-6 h-6" />
@@ -99,24 +99,28 @@ const PurchaseHistoryScreen: React.FC<PurchaseHistoryScreenProps> = ({ onClose, 
         </div>
       </header>
 
-      <main className="flex-grow p-4 flex flex-col">
-        <div className="flex-shrink-0 mb-4 flex items-center justify-center space-x-2 sm:space-x-3">
+      <div className="flex-shrink-0 px-4 pt-2 pb-3">
+        <div className="flex items-center justify-center space-x-2 sm:space-x-3 overflow-x-auto pb-2 scrollbar-hide">
             <TabButton label="Todos" type="all" />
             <TabButton label="Concluído" type="Concluído" />
             <TabButton label="Pendente" type="Pendente" />
             <TabButton label="Cancelado" type="Cancelado" />
         </div>
-        
-        {filteredHistory.length === 0 ? (
-            <div className="flex-grow flex items-center justify-center text-center">
-                <p className="text-gray-500">{t('wallet.noHistory')}</p>
+      </div>
+      
+      <div className="flex-1 overflow-y-auto w-full scrollbar-hide">
+        <div className="min-h-full px-4 pb-4">
+          {filteredHistory.length === 0 ? (
+            <div className="h-full flex items-center justify-center text-center">
+              <p className="text-gray-500">{t('wallet.noHistory')}</p>
             </div>
-        ) : (
-            <div className="flex-grow overflow-y-auto no-scrollbar space-y-3">
-                {filteredHistory.map(item => <HistoryItem key={item.id} item={item} />)}
+          ) : (
+            <div className="space-y-3">
+              {filteredHistory.map(item => <HistoryItem key={item.id} item={item} />)}
             </div>
-        )}
-      </main>
+          )}
+        </div>
+      </div>
     </div>
   );
 };

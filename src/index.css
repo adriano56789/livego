@@ -98,11 +98,32 @@ body,
   height: 100%;
   margin: 0;
   padding: 0;
-  overflow: hidden;
   overscroll-behavior: none;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+  
+  /* Estilo para esconder a barra de rolagem */
+  -ms-overflow-style: none;  /* IE e Edge */
+  scrollbar-width: none;  /* Firefox */
 }
+
+/* Esconde a barra de rolagem no Chrome, Safari e Opera */
+#root::-webkit-scrollbar,
+.scrollbar-hide::-webkit-scrollbar,
+.overflow-y-auto::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+/* Garante que o scroll ainda funcione */
+.overflow-y-auto {
+  -ms-overflow-style: none;  /* IE e Edge */
+  scrollbar-width: none;  /* Firefox */
+  -webkit-overflow-scrolling: touch; /* Rolar suave no iOS */
+}
+
 
 html {
   box-sizing: border-box;

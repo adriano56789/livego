@@ -157,7 +157,7 @@ const GanhosTab: React.FC<GanhosTabProps> = ({ onConfigure, currentUser, updateU
     }
 
     return (
-        <div className="flex flex-col min-h-full px-2 pt-2 pb-6">
+        <div className="flex flex-col h-full w-full px-2 pt-2 pb-6 overflow-y-auto scrollbar-hide">
             {/* Main Card */}
             <div className="relative w-full aspect-[1.9/1] bg-gradient-to-r from-[#104a9b] to-[#051c36] rounded-2xl p-6 flex flex-col justify-between overflow-hidden shadow-lg border border-white/5">
                 {/* Decorative Background Elements */}
@@ -245,7 +245,7 @@ const GanhosTab: React.FC<GanhosTabProps> = ({ onConfigure, currentUser, updateU
             <p className="mt-4 text-center text-xs text-gray-500">O valor será enviado para sua conta cadastrada.</p>
 
             {/* Confirm Button */}
-            <div className="mt-auto pt-6 pb-2">
+            <div className="mt-auto pt-6 pb-2 w-full">
                 <button
                     onClick={handleConfirmWithdraw}
                     disabled={isWithdrawButtonDisabled}

@@ -69,7 +69,7 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onClose, onPurchase, initia
   }
 
   return (
-    <div className="absolute inset-0 bg-[#111111] z-50 flex flex-col text-white">
+    <div className="fixed inset-0 bg-[#111111] z-50 flex flex-col text-white h-screen w-full overflow-hidden">
       <header className="flex items-center justify-between p-4 border-b border-gray-800 flex-shrink-0">
         <button onClick={onClose}>
           <BackIcon className="w-6 h-6" />
@@ -97,7 +97,7 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onClose, onPurchase, initia
         </button>
       </header>
 
-      <main className="flex-grow overflow-y-auto p-4 space-y-4">
+      <main className="flex-1 overflow-y-auto w-full p-4 space-y-4 scrollbar-hide">
         {activeTab === 'Diamante' && <DiamanteTab onPurchase={onPurchase} currentUser={currentUser} />}
         {isBroadcaster && activeTab === 'Ganhos' && (
           <GanhosTab 

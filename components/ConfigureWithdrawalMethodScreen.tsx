@@ -94,7 +94,7 @@ const ConfigureWithdrawalMethodScreen: React.FC<ConfigureWithdrawalMethodScreenP
   };
 
   return (
-    <div className="absolute inset-0 bg-[#111111] z-50 flex flex-col text-white">
+    <div className="fixed inset-0 bg-[#111111] z-50 flex flex-col text-white h-screen w-full overflow-hidden">
       <header className="flex items-center p-4 border-b border-gray-800 flex-shrink-0">
         <button onClick={onClose} className="absolute">
           <BackIcon className="w-6 h-6" />
@@ -104,7 +104,7 @@ const ConfigureWithdrawalMethodScreen: React.FC<ConfigureWithdrawalMethodScreenP
         </div>
       </header>
 
-      <main className="flex-grow p-4 space-y-6">
+      <main className="flex-1 overflow-y-auto p-4 space-y-6">
         <p className="text-gray-300">{t('wallet.configureWithdraw.description')}</p>
 
         <div className="grid grid-cols-2 gap-4">
@@ -141,7 +141,7 @@ const ConfigureWithdrawalMethodScreen: React.FC<ConfigureWithdrawalMethodScreenP
         )}
       </main>
 
-      <footer className="p-4 flex-grow-0 flex-shrink-0">
+      <footer className="p-4 flex-shrink-0 border-t border-gray-800">
         <button
           onClick={handleSave}
           disabled={isSaving}

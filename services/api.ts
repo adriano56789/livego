@@ -126,15 +126,33 @@ export const api = {
     setWithdrawalMethod: (method: string, details: any) => callApi<{ success: boolean, user: User }>('POST', `/api/earnings/method/set/${CURRENT_USER_ID}`, { method, details }),
 
     // --- Wallets ---
-    getWallet: (userId: string) => callApi<Wallet>('GET', `/api/wallets/${userId}`),
-    createWallet: (userId: string, initialBalance?: number) => callApi<{ success: boolean, wallet: Wallet }>('POST', `/api/wallets/${userId}`, { initialBalance }),
-    updateWallet: (userId: string, updates: Partial<Wallet>) => callApi<{ success: boolean, wallet: Wallet }>('PUT', `/api/wallets/${userId}`, updates),
+    getWallet: (userId: string) => callApi<Wallet & { balance: number; lastUpdated?: string }>('GET', `/api/wallets/${userId}`),
+    createWallet: (userId: string, initialBalance: number = 0) => callApi<{ 
+      success: boolean; 
+      wallet: Wallet & { balance: number; lastUpdated: string } 
+    }>('POST', `/api/wallets/${userId}`, { initialBalance }),
+    updateWallet: (userId: string, updates: Partial<Wallet> & { balance?: number }) => callApi<{ 
+      success: boolean; 
+      wallet: Wallet & { balance: number; lastUpdated: string } 
+    }>('PUT', `/api/wallets/${userId}`, updates),
     deleteWallet: (userId: string) => callApi<{ success: boolean }>('DELETE', `/api/wallets/${userId}`),
-    blockUnauthorizedAccess: (walletId: string) => callApi<{ success: boolean, wallet: Wallet }>('POST', `/api/wallets/${walletId}/block-unauthorized-access`),
+    blockUnauthorizedAccess: (walletId: string) => callApi<{ 
+      success: boolean; 
+      wallet: Wallet & { balance: number; lastUpdated: string } 
+    }>('POST', `/api/wallets/${walletId}/block-unauthorized-access`),
 
     // --- Admin Wallet ---
     saveAdminWithdrawalMethod: (email: string) => callApi<{ success: boolean, user: User }>('POST', '/api/admin/withdrawal-method', { email }),
-    requestAdminWithdrawal: () => callApi<{ success: boolean, message: string }>('POST', '/api/admin/withdraw'),
+    requestAdminWithdrawal: () => callApi<{ 
+      success: boolean; 
+      message: string;
+      withdrawalId?: string;
+      amount?: number;
+      fee?: number;
+      netAmount?: number;
+      status?: 'Pendente' | 'Concluído' | 'Cancelado';
+      timestamp?: string;
+    }>('POST', '/api/admin/withdraw'),
     getAdminWithdrawalHistory: (status: 'all' | 'Concluído' | 'Pendente' | 'Cancelado' = 'all') => 
         callApi<PurchaseRecord[]>('GET', `/api/admin/history?status=${status}`),
 
@@ -145,7 +163,10 @@ export const api = {
         saqueDisponivel: number;
         totalTaxas: number;
         totalSaques: number;
-        transacoes: PurchaseRecord[];
+        transacoes: Array<PurchaseRecord & {
+          paymentMethod?: string;
+          paymentDetails?: Record<string, any>;
+        }>;
       }>('GET', '/api/admin/wallet');
     },
 

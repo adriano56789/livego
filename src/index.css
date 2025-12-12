@@ -166,6 +166,63 @@ button, a, img, svg {
   user-select: none;
 }
 
+/* Estilos para itens clicáveis do menu lateral - hover */
+.menu-item:hover,
+.sidebar-item:hover,
+.ant-menu-item:hover,
+.ant-menu-submenu-title:hover,
+.ant-menu-item a:hover,
+.ant-menu-submenu-title a:hover,
+[class*="Menu"]:hover,
+[class*="menu"]:hover,
+[class*="MenuItem"]:hover,
+[class*="menu-item"]:hover,
+[class*="sidebar"]:hover,
+[class*="Sidebar"]:hover,
+[class*="NavItem"]:hover,
+[class*="nav-item"]:hover,
+[class*="list-item"]:hover {
+  cursor: pointer !important;
+}
+
+/* Estilos para itens específicos mencionados - hover */
+[class*="Wallet"]:hover,
+[class*="wallet"]:hover,
+[class*="Carteira"]:hover,
+[class*="carteira"]:hover,
+[class*="VIP"]:hover,
+[class*="vip"]:hover,
+[class*="Patente"]:hover,
+[class*="patente"]:hover,
+[class*="Fans"]:hover,
+[class*="fans"]:hover,
+[class*="Block"]:hover,
+[class*="block"]:hover,
+[class*="Support"]:hover,
+[class*="support"]:hover,
+[class*="Message"]:hover,
+[class*="message"]:hover,
+[class*="FAQ"]:hover,
+[class*="faq"]:hover,
+[class*="Settings"]:hover,
+[class*="settings"]:hover,
+[class*="Admin"]:hover,
+[class*="admin"]:hover {
+  cursor: pointer !important;
+}
+
+/* Seletor genérico para elementos clicáveis - hover */
+[role="button"]:hover,
+[onclick]:hover,
+[onmousedown]:hover,
+[onmouseup]:hover,
+[onmouseover]:hover,
+[onclick]:hover,
+[data-clickable]:hover,
+[data-clickable="true"]:hover {
+  cursor: pointer !important;
+}
+
 /* Suporte para safe-area-inset removido do body global para controle granular */
 /* @supports (padding: max(0px)) {
   body {

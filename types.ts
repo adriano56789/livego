@@ -98,6 +98,7 @@ export interface User {
   id: string;
   identification: string;
   name: string;
+  purchaseHistory?: PurchaseRecord[];
   avatarUrl: string;
   coverUrl?: string;
   photos?: string[];
@@ -289,14 +290,18 @@ export interface BeautySettings {
 export interface PurchaseRecord {
   id: string;
   userId: string;
-  type: 'purchase_diamonds' | 'withdraw_earnings' | 'withdraw_platform_earnings' | 'purchase_frame' | 'vip_subscription' | 'admin_fee';
+  type: 'purchase_diamonds' | 'withdraw_earnings' | 'withdraw_platform_earnings' | 'purchase_frame' | 'vip_subscription' | 'admin_fee' | 'withdrawal';
   description: string;
   amountBRL: number;
   amountCoins: number;
+  fee?: number;
+  netAmount?: number;
   status: 'Concluído' | 'Pendente' | 'Cancelado';
   timestamp: string;
   isAdminTransaction?: boolean;
   relatedTransactionId?: string;
+  paymentMethod?: string;
+  paymentDetails?: Record<string, any>;
 }
 
 export interface FeedPhoto {
@@ -351,10 +356,12 @@ export interface Translation {
 export interface Wallet {
   id: string;
   userId: string;
+  balance: number;
   isBlocked: boolean;
   blockedAt?: string;
   blockedBy?: string;
   blockReason?: string;
   createdAt: string;
   updatedAt: string;
+  lastUpdated?: string;
 }

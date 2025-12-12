@@ -80,12 +80,14 @@ function calculateGrossBRL(diamonds: number): number {
     const smallestPackage = diamondPurchasePackages[0];
     if (!smallestPackage) return 0; // Should not happen
     const rate = smallestPackage.price / smallestPackage.diamonds;
-    return diamonds * rate;
+    const result = diamonds * rate;
+    return Math.round(result * 100) / 100;
   }
 
-  // Use the rate from the determined tier
+  // Use the rate from the determined tier and round to 2 decimal places
   const rate = applicableTier.price / applicableTier.diamonds;
-  return diamonds * rate;
+  const result = diamonds * rate;
+  return Math.round(result * 100) / 100;
 }
 
 /**

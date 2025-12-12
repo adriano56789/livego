@@ -134,7 +134,11 @@ const GanhosTab: React.FC<GanhosTabProps> = ({ onConfigure, currentUser, updateU
         }
     };
 
-    const formatCurrency = (value: number | undefined) => `R$ ${(value || 0).toFixed(2).replace('.', ',')}`;
+    const formatCurrency = (value: number | undefined) => {
+        const numValue = Number(value || 0);
+        // Arredonda para 2 casas decimais e formata como moeda BRL
+        return `R$ ${Math.round(numValue * 100) / 100}`.replace('.', ',');
+    };
 
     const displayData = calculation || {
         gross_value: earningsInfo?.gross_brl || 0,
@@ -201,6 +205,11 @@ const GanhosTab: React.FC<GanhosTabProps> = ({ onConfigure, currentUser, updateU
                         MÁXIMO
                     </button>
                 </div>
+                {withdrawAmount && !isNaN(Number(withdrawAmount)) && (
+                    <div className="text-sm text-gray-400 mt-1">
+                        Valor em R$: {formatCurrency(Number(withdrawAmount) * (calculation?.gross_value || 0) / (Number(withdrawAmount) || 1))}
+                    </div>
+                )}
             </div>
 
             {/* Breakdown */}

@@ -1064,18 +1064,20 @@ const AppContent: React.FC = () => {
     };
 
     const handleOpenMyStream = () => {
-        if (!currentUser) return;
-        if (!currentUser.isLive) {
-            checkCameraPermission('goLive');
+    if (!currentUser) return;
+    if (!currentUser.isLive) {
+        checkCameraPermission('goLive');
+    } else {
+        const myStream = streamers.find(s => s.hostId === currentUser.id);
+        if (myStream) {
+            handleSelectStream(myStream);
         } else {
-            const myStream = streamers.find(s => s.hostId === currentUser.id);
-            if (myStream) {
-                handleSelectStream(myStream);
-            } else {
-                addToast(ToastType.Error, "Não foi possível encontrar sua transmissão. Tente reiniciar.");
-            }
+            // Tenta reconectar à transmissão se não for encontrada na lista
+            addToast(ToastType.Info, "Reconectando à sua transmissão...");
+            checkCameraPermission('goLive');
         }
-    };
+    }
+};
 
     const handleOpenVIPCenter = () => setIsVIPCenterOpen(true);
 

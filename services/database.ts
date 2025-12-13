@@ -703,6 +703,8 @@ const constructInitialDb = () => {
         wallets: new Map<string, Wallet>(),
         clientConnections: new Map<string, any[]>(),
         translationCache: [] as TranslationCache[],
+        posts: [] as any[],
+        topFansInteractions: new Map<string, any[]>(),
     };
 };
 

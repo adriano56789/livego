@@ -207,7 +207,13 @@ export const api = {
     uploadChatPhoto: (userId: string, base64Image: string) => callApi<{ url: string }>('POST', `/api/photos/upload/${userId}`, { image: base64Image }),
     getComments: (photoId: string) => callApi<Comment[]>('GET', `/api/photos/${photoId}/comments`),
     postComment: (photoId: string, text: string) => callApi<{ success: boolean; comment: Comment }>('POST', `/api/photos/${photoId}/comments`, { text, userId: CURRENT_USER_ID }),
-    createFeedPost: (postData: any) => callApi<{ success: boolean; user: User }>('POST', '/api/feed/posts', postData),
+    createFeedPost: (postData: any) => callApi<{ success: boolean; post: any }>('POST', '/api/feed/posts', postData),
+    getAllPosts: () => callApi<any[]>('GET', '/api/feed/posts'),
+    getPost: (postId: string) => callApi<any>('GET', `/api/feed/posts/${postId}`),
+    updatePost: (postId: string, updates: { content?: string; mediaType?: string; mediaUrl?: string }) => callApi<{ success: boolean; post: any }>('PUT', `/api/feed/posts/${postId}`, updates),
+    deletePost: (postId: string) => callApi<{ success: boolean; message: string }>('DELETE', `/api/feed/posts/${postId}`),
+    likePost: (postId: string, userId: string) => callApi<{ success: boolean; likes: number; isLiked: boolean }>('POST', `/api/feed/posts/${postId}/like`, { userId }),
+    addPostComment: (postId: string, userId: string, text: string) => callApi<{ success: boolean; comment: any }>('POST', `/api/feed/posts/${postId}/comments`, { userId, text }),
 
     // --- PK Battle ---
     getPKConfig: () => callApi<{ duration: number }>('GET', '/api/pk/config'),
@@ -272,6 +278,10 @@ export const api = {
 
     // --- Fan Club ---
     getFanClubMembers: (streamerId: string) => callApi<User[]>('GET', `/api/fanclub/${streamerId}/members`),
+
+    // --- Top Fans ---
+    getTopFans: (userId?: string) => callApi<any[]>('GET', '/api/users/top-fans', userId ? { userId } : undefined),
+    updateTopFansInteraction: (userId: string, fanId: string, interactionType?: string, value?: number) => callApi<{ success: boolean; interaction: any }>('POST', '/api/users/top-fans', { userId, fanId, interactionType, value }),
 
     // --- Data Management ---
     saveData: (entity: string, data: any) => callApi<{ success: boolean, id?: string }>('POST', `/api/data/${entity}`, data),

@@ -2897,7 +2897,11 @@ earnings: adminUser.earnings,
     // Rotas do Feed, Visitantes e Fotos do Usuário
     // ==============================================
 
-    // Rota: POST /api/feed/posts (MOCK)
+    // =============================================
+    // Rotas de Posts
+    // =============================================
+
+    // Rota: POST /api/feed/posts - Criar novo post
     if (method === 'POST' && path === '/api/feed/posts') {
         console.log(`🔹 [MOCK API] ${new Date().toISOString()} - POST ${path} recebido`);
         console.log('   Dados recebidos:', JSON.stringify(body, null, 2));
@@ -2905,46 +2909,284 @@ earnings: adminUser.earnings,
             const { userId, content, mediaType, mediaUrl, timestamp } = body;
             
             if (!userId) {
-                return { status: 400, error: 'userId é obrigatório' };
+                return formatResponse(400, null, 'userId é obrigatório');
+            }
+            
+            const user = db.users.get(userId);
+            if (!user) {
+                return formatResponse(404, null, 'Usuário não encontrado');
             }
             
             // Gera um ID único para o post
-            const postId = `post_${Date.now()}`;
+            const postId = `post_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
             
-            // Cria um objeto de resposta mock
-            const mockPost = {
+            // Cria o novo post
+            const newPost = {
                 id: postId,
                 userId,
                 content: content || '',
-                mediaType: mediaType || 'image',
+                mediaType: mediaType || 'text',
                 mediaUrl: mediaUrl || '',
                 timestamp: timestamp || new Date().toISOString(),
                 likes: 0,
-                comments: [],
-                user: {
-                    id: userId,
-                    name: 'Usuário Mock',
-                    avatarUrl: 'https://picsum.photos/200',
-                    isVerified: false
-                }
+                likedBy: [] as string[],
+                comments: [] as any[],
             };
             
-            // Retorna a resposta de sucesso
+            // Adiciona o post ao banco de dados
+            db.posts.push(newPost);
+            saveDb();
+            
+            // Retorna o post com informações do usuário
             const response = {
                 status: 201,
                 data: {
                     success: true,
-                    message: 'Post criado com sucesso (MOCK)',
-                    post: mockPost
+                    post: {
+                        ...newPost,
+                        user: {
+                            id: user.id,
+                            name: user.name,
+                            avatarUrl: user.avatarUrl,
+                            isVerified: user.isVIP || false
+                        }
+                    }
                 }
             };
             
-            console.log(`🔹 [MOCK API] ${new Date().toISOString()} - POST ${path} respondido com sucesso`);
-            console.log('   Resposta:', JSON.stringify(response, null, 2));
+            console.log(`🔹 [MOCK API] POST criado com sucesso: ${postId}`);
             return response;
         } catch (error) {
-            console.error('Erro no mock ao criar post:', error);
-            return formatResponse(500, null, 'Erro no mock ao criar post');
+            console.error('Erro ao criar post:', error);
+            return formatResponse(500, null, 'Erro ao criar post');
+        }
+    }
+
+    // Rota: GET /api/feed/posts - Listar todos os posts
+    if (method === 'GET' && path === '/api/feed/posts') {
+        console.log(`🔹 [MOCK API] ${new Date().toISOString()} - GET ${path} recebido`);
+        try {
+            // Retorna os posts ordenados do mais recente para o mais antigo
+            const postsWithUserInfo = db.posts
+                .map(post => {
+                    const user = db.users.get(post.userId);
+                    return {
+                        ...post,
+                        user: user ? {
+                            id: user.id,
+                            name: user.name,
+                            avatarUrl: user.avatarUrl,
+                            isVerified: user.isVIP || false
+                        } : null
+                    };
+                })
+                .filter(post => post.user !== null)
+                .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+            
+            console.log(`🔹 [MOCK API] Retornando ${postsWithUserInfo.length} posts`);
+            return formatResponse(200, postsWithUserInfo);
+        } catch (error) {
+            console.error('Erro ao listar posts:', error);
+            return formatResponse(500, null, 'Erro ao listar posts');
+        }
+    }
+
+    // Rota: GET /api/feed/posts/:postId - Pegar um post específico
+    if (method === 'GET' && path.match(/^\/api\/feed\/posts\/[^\/]+$/)) {
+        const postId = path.split('/')[4];
+        console.log(`🔹 [MOCK API] ${new Date().toISOString()} - GET ${path} recebido`);
+        try {
+            const post = db.posts.find(p => p.id === postId);
+            
+            if (!post) {
+                return formatResponse(404, null, 'Post não encontrado');
+            }
+            
+            const user = db.users.get(post.userId);
+            const postWithUserInfo = {
+                ...post,
+                user: user ? {
+                    id: user.id,
+                    name: user.name,
+                    avatarUrl: user.avatarUrl,
+                    isVerified: user.isVIP || false
+                } : null
+            };
+            
+            console.log(`🔹 [MOCK API] Post encontrado: ${postId}`);
+            return formatResponse(200, postWithUserInfo);
+        } catch (error) {
+            console.error('Erro ao buscar post:', error);
+            return formatResponse(500, null, 'Erro ao buscar post');
+        }
+    }
+
+    // Rota: PUT /api/feed/posts/:postId - Atualizar post
+    if (method === 'PUT' && path.match(/^\/api\/feed\/posts\/[^\/]+$/)) {
+        const postId = path.split('/')[4];
+        console.log(`🔹 [MOCK API] ${new Date().toISOString()} - PUT ${path} recebido`);
+        try {
+            const postIndex = db.posts.findIndex(p => p.id === postId);
+            
+            if (postIndex === -1) {
+                return formatResponse(404, null, 'Post não encontrado');
+            }
+            
+            const { content, mediaType, mediaUrl } = body;
+            
+            // Atualiza apenas os campos fornecidos
+            if (content !== undefined) db.posts[postIndex].content = content;
+            if (mediaType !== undefined) db.posts[postIndex].mediaType = mediaType;
+            if (mediaUrl !== undefined) db.posts[postIndex].mediaUrl = mediaUrl;
+            
+            saveDb();
+            
+            const user = db.users.get(db.posts[postIndex].userId);
+            const updatedPost = {
+                ...db.posts[postIndex],
+                user: user ? {
+                    id: user.id,
+                    name: user.name,
+                    avatarUrl: user.avatarUrl,
+                    isVerified: user.isVIP || false
+                } : null
+            };
+            
+            console.log(`🔹 [MOCK API] Post atualizado: ${postId}`);
+            return formatResponse(200, { success: true, post: updatedPost });
+        } catch (error) {
+            console.error('Erro ao atualizar post:', error);
+            return formatResponse(500, null, 'Erro ao atualizar post');
+        }
+    }
+
+    // Rota: DELETE /api/feed/posts/:postId - Deletar post
+    if (method === 'DELETE' && path.match(/^\/api\/feed\/posts\/[^\/]+$/)) {
+        const postId = path.split('/')[4];
+        console.log(`🔹 [MOCK API] ${new Date().toISOString()} - DELETE ${path} recebido`);
+        try {
+            const postIndex = db.posts.findIndex(p => p.id === postId);
+            
+            if (postIndex === -1) {
+                return formatResponse(404, null, 'Post não encontrado');
+            }
+            
+            db.posts.splice(postIndex, 1);
+            saveDb();
+            
+            console.log(`🔹 [MOCK API] Post deletado: ${postId}`);
+            return formatResponse(200, { success: true, message: 'Post deletado com sucesso' });
+        } catch (error) {
+            console.error('Erro ao deletar post:', error);
+            return formatResponse(500, null, 'Erro ao deletar post');
+        }
+    }
+
+    // Rota: POST /api/feed/posts/:postId/like - Curtir/descurtir post
+    if (method === 'POST' && path.match(/^\/api\/feed\/posts\/[^\/]+\/like$/)) {
+        const postId = path.split('/')[4];
+        console.log(`🔹 [MOCK API] ${new Date().toISOString()} - POST ${path} recebido`);
+        try {
+            const { userId } = body;
+            
+            if (!userId) {
+                return formatResponse(400, null, 'userId é obrigatório');
+            }
+            
+            const post = db.posts.find(p => p.id === postId);
+            
+            if (!post) {
+                return formatResponse(404, null, 'Post não encontrado');
+            }
+            
+            // Inicializa o array de likes se não existir
+            if (!post.likedBy) {
+                post.likedBy = [];
+            }
+            
+            // Verifica se o usuário já curtiu o post
+            const likedIndex = post.likedBy.indexOf(userId);
+            let isLiked = false;
+            
+            if (likedIndex > -1) {
+                // Remove a curtida
+                post.likedBy.splice(likedIndex, 1);
+                post.likes = Math.max(0, post.likes - 1);
+                isLiked = false;
+            } else {
+                // Adiciona a curtida
+                post.likedBy.push(userId);
+                post.likes += 1;
+                isLiked = true;
+            }
+            
+            saveDb();
+            
+            console.log(`🔹 [MOCK API] Post ${isLiked ? 'curtido' : 'descurtido'}: ${postId}`);
+            return formatResponse(200, { 
+                success: true, 
+                likes: post.likes,
+                isLiked 
+            });
+        } catch (error) {
+            console.error('Erro ao curtir/descurtir post:', error);
+            return formatResponse(500, null, 'Erro ao curtir/descurtir post');
+        }
+    }
+
+    // Rota: POST /api/feed/posts/:postId/comments - Adicionar comentário
+    if (method === 'POST' && path.match(/^\/api\/feed\/posts\/[^\/]+\/comments$/)) {
+        const postId = path.split('/')[4];
+        console.log(`🔹 [MOCK API] ${new Date().toISOString()} - POST ${path} recebido`);
+        try {
+            const { userId, text } = body;
+            
+            if (!userId || !text) {
+                return formatResponse(400, null, 'userId e text são obrigatórios');
+            }
+            
+            const post = db.posts.find(p => p.id === postId);
+            
+            if (!post) {
+                return formatResponse(404, null, 'Post não encontrado');
+            }
+            
+            const user = db.users.get(userId);
+            
+            if (!user) {
+                return formatResponse(404, null, 'Usuário não encontrado');
+            }
+            
+            // Inicializa o array de comentários se não existir
+            if (!post.comments) {
+                post.comments = [];
+            }
+            
+            // Cria o novo comentário
+            const newComment = {
+                id: `comment_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                userId,
+                text,
+                timestamp: new Date().toISOString(),
+                user: {
+                    id: user.id,
+                    name: user.name,
+                    avatarUrl: user.avatarUrl,
+                    isVerified: user.isVIP || false
+                }
+            };
+            
+            post.comments.push(newComment);
+            saveDb();
+            
+            console.log(`🔹 [MOCK API] Comentário adicionado ao post: ${postId}`);
+            return formatResponse(201, { 
+                success: true, 
+                comment: newComment 
+            });
+        } catch (error) {
+            console.error('Erro ao adicionar comentário:', error);
+            return formatResponse(500, null, 'Erro ao adicionar comentário');
         }
     }
 
@@ -3163,6 +3405,144 @@ if (method === 'GET' && path === '/api/feed/photos') {
         } catch (error) {
             console.error('Erro ao buscar fotos do usuário:', error);
             return { status: 500, error: 'Erro ao buscar fotos do usuário' };
+        }
+    }
+
+    // =============================================
+    // Rotas de Top Fãs
+    // =============================================
+
+    // Rota: GET /api/users/top-fans - Listar os top fãs
+    if (method === 'GET' && path === '/api/users/top-fans') {
+        console.log(`🔹 [MOCK API] ${new Date().toISOString()} - GET ${path} recebido`);
+        try {
+            const { userId } = body || {};
+            
+            // Se um userId específico for fornecido, retorna os top fãs desse usuário
+            if (userId) {
+                const userInteractions = db.topFansInteractions.get(userId) || [];
+                
+                // Agrupa as interações por fã e calcula o total
+                const fansMap = new Map<string, { userId: string, totalInteractions: number }>();
+                
+                userInteractions.forEach((interaction: any) => {
+                    const fanId = interaction.fanId;
+                    const current = fansMap.get(fanId) || { userId: fanId, totalInteractions: 0 };
+                    current.totalInteractions += interaction.value || 1;
+                    fansMap.set(fanId, current);
+                });
+                
+                // Converte para array e ordena por total de interações
+                const topFans = Array.from(fansMap.values())
+                    .map(fan => {
+                        const user = db.users.get(fan.userId);
+                        return {
+                            ...fan,
+                            user: user ? {
+                                id: user.id,
+                                name: user.name,
+                                avatarUrl: user.avatarUrl,
+                                isVerified: user.isVIP || false,
+                                level: user.level || 1
+                            } : null
+                        };
+                    })
+                    .filter(fan => fan.user !== null)
+                    .sort((a, b) => b.totalInteractions - a.totalInteractions)
+                    .slice(0, 50); // Retorna os top 50 fãs
+                
+                console.log(`🔹 [MOCK API] Retornando ${topFans.length} top fãs do usuário ${userId}`);
+                return formatResponse(200, topFans);
+            }
+            
+            // Se nenhum userId for fornecido, retorna os top fãs globais
+            const allInteractions: any[] = [];
+            db.topFansInteractions.forEach((interactions) => {
+                allInteractions.push(...interactions);
+            });
+            
+            // Agrupa por fã
+            const globalFansMap = new Map<string, { userId: string, totalInteractions: number }>();
+            
+            allInteractions.forEach((interaction: any) => {
+                const fanId = interaction.fanId;
+                const current = globalFansMap.get(fanId) || { userId: fanId, totalInteractions: 0 };
+                current.totalInteractions += interaction.value || 1;
+                globalFansMap.set(fanId, current);
+            });
+            
+            const globalTopFans = Array.from(globalFansMap.values())
+                .map(fan => {
+                    const user = db.users.get(fan.userId);
+                    return {
+                        ...fan,
+                        user: user ? {
+                            id: user.id,
+                            name: user.name,
+                            avatarUrl: user.avatarUrl,
+                            isVerified: user.isVIP || false,
+                            level: user.level || 1
+                        } : null
+                    };
+                })
+                .filter(fan => fan.user !== null)
+                .sort((a, b) => b.totalInteractions - a.totalInteractions)
+                .slice(0, 50);
+            
+            console.log(`🔹 [MOCK API] Retornando ${globalTopFans.length} top fãs globais`);
+            return formatResponse(200, globalTopFans);
+        } catch (error) {
+            console.error('Erro ao listar top fãs:', error);
+            return formatResponse(500, null, 'Erro ao listar top fãs');
+        }
+    }
+
+    // Rota: POST /api/users/top-fans - Atualizar os dados de interação
+    if (method === 'POST' && path === '/api/users/top-fans') {
+        console.log(`🔹 [MOCK API] ${new Date().toISOString()} - POST ${path} recebido`);
+        try {
+            const { userId, fanId, interactionType, value } = body;
+            
+            if (!userId || !fanId) {
+                return formatResponse(400, null, 'userId e fanId são obrigatórios');
+            }
+            
+            // Verifica se os usuários existem
+            const user = db.users.get(userId);
+            const fan = db.users.get(fanId);
+            
+            if (!user) {
+                return formatResponse(404, null, 'Usuário não encontrado');
+            }
+            
+            if (!fan) {
+                return formatResponse(404, null, 'Fã não encontrado');
+            }
+            
+            // Obtém as interações do usuário ou cria um novo array
+            const userInteractions = db.topFansInteractions.get(userId) || [];
+            
+            // Cria a nova interação
+            const newInteraction = {
+                id: `interaction_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                fanId,
+                interactionType: interactionType || 'generic',
+                value: value || 1,
+                timestamp: new Date().toISOString()
+            };
+            
+            userInteractions.push(newInteraction);
+            db.topFansInteractions.set(userId, userInteractions);
+            saveDb();
+            
+            console.log(`🔹 [MOCK API] Interação registrada: ${fanId} -> ${userId}`);
+            return formatResponse(201, { 
+                success: true, 
+                interaction: newInteraction 
+            });
+        } catch (error) {
+            console.error('Erro ao registrar interação:', error);
+            return formatResponse(500, null, 'Erro ao registrar interação');
         }
     }
 

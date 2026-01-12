@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>LiveGo - Premium</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      /* Oculta barras de rolagem globalmente mas mantém o scroll funcional */
+      * {
+        scrollbar-width: none; /* Firefox */
+        -ms-overflow-style: none; /* IE and Edge */
+      }
+      *::-webkit-scrollbar {
+        display: none; /* Chrome, Safari and Opera */
+      }
+      
+      html, body, #root { height: 100%; width: 100%; overflow: hidden; overscroll-behavior: none; }
+      body { background-color: #000; color: #fff; margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "react": "https://esm.sh/react@^19.2.3",
+    "lucide-react": "https://esm.sh/lucide-react@^0.562.0",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "vite": "https://esm.sh/vite@^7.3.0",
+    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2",
+    "path": "https://esm.sh/path@^0.12.7",
+    "bcryptjs": "https://esm.sh/bcryptjs@^3.0.3",
+    "url": "https://esm.sh/url@^0.11.4",
+    "socket.io": "https://esm.sh/socket.io@^4.8.3",
+    "jsonwebtoken": "https://esm.sh/jsonwebtoken@^9.0.3",
+    "socket.io-client": "https://esm.sh/socket.io-client@^4.8.3",
+    "cors": "https://esm.sh/cors@^2.8.5",
+    "process": "https://esm.sh/process@^0.11.10",
+    "express": "https://esm.sh/express@^5.2.1",
+    "http": "https://esm.sh/http@^0.0.1-security",
+    "dotenv": "https://esm.sh/dotenv@^17.2.3",
+    "mongoose": "https://esm.sh/mongoose@^9.1.1",
+    "@/": "./",
+    "firebase/": "https://esm.sh/firebase@^12.7.0/",
+    "firebase-admin": "https://esm.sh/firebase-admin@^13.6.0",
+    "fs": "https://esm.sh/fs@^0.0.1-security",
+    "https": "https://esm.sh/https@^1.0.0",
+    "express-async-errors": "https://esm.sh/express-async-errors@^3.1.1",
+    "buffer": "https://esm.sh/buffer@^6.0.3"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>

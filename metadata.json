@@ -1,0 +1,9 @@
+{
+  "name": "livego",
+  "description": "A replica of a live streaming interface with a detailed interactive gifting panel.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone",
+    "geolocation"
+  ]
+}

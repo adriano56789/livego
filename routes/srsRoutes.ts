@@ -1,0 +1,27 @@
+import { Router } from 'express';
+import { srsController } from '../controllers/srsController.js';
+
+const router = Router();
+
+router.get('/v1/versions', srsController.getVersions);
+router.get('/v1/summaries', srsController.getSummaries);
+router.get('/v1/features', srsController.getFeatures);
+router.get('/v1/clients', srsController.getClients);
+router.get('/v1/clients/:id', srsController.getClientById);
+router.get('/v1/streams', srsController.getStreams);
+router.get('/v1/streams/:id', srsController.getStreamById);
+router.delete('/v1/streams/:id', srsController.deleteStreamById);
+router.get('/v1/connections', srsController.getConnections);
+router.get('/v1/connections/:id', srsController.getConnectionById);
+router.delete('/v1/connections/:id', srsController.deleteConnectionById);
+router.get('/v1/configs', srsController.getConfigs);
+router.put('/v1/configs', srsController.updateConfigs);
+router.get('/v1/vhosts', srsController.getVhosts);
+router.get('/v1/vhosts/:id', srsController.getVhostById);
+router.get('/v1/requests', srsController.getRequests);
+router.get('/v1/sessions', srsController.getSessions);
+router.get('/v1/metrics', srsController.getMetrics);
+router.post('/v1/rtc/publish', srsController.rtcPublish);
+router.post('/v1/rtc/trickle/:sessionId', srsController.trickleIce);
+
+export default router;

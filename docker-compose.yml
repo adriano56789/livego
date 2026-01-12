@@ -1,0 +1,84 @@
+services:
+  mongodb:
+    image: mongo:6.0
+    container_name: livego_mongodb
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: adriano123
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - livego_network
+    command: ["mongod", "--bind_ip_all"]
+    healthcheck:
+      test: ["CMD", "mongosh", "-u", "admin", "-p", "adriano123", "--eval", "db.runCommand({ ping: 1 })"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: livego_backend
+    restart: unless-stopped
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      HOST: 0.0.0.0
+      MONGODB_URI: mongodb://admin:adriano123@mongodb:27017/api?authSource=admin
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRES_IN: 30d
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      JWT_REFRESH_EXPIRES_IN: 60d
+      CORS_ORIGIN: https://livego.store,https://www.livego.store
+      MERCADO_PAGO_ACCESS_TOKEN: ${MERCADO_PAGO_ACCESS_TOKEN}
+      MERCADO_PAGO_PUBLIC_KEY: ${MERCADO_PAGO_PUBLIC_KEY}
+      MERCADO_PAGO_CLIENT_ID: ${MERCADO_PAGO_CLIENT_ID}
+      MERCADO_PAGO_CLIENT_SECRET: ${MERCADO_PAGO_CLIENT_SECRET}
+      PIX_KEY: ${PIX_KEY}
+      PIX_RECIPIENT_NAME: ${PIX_RECIPIENT_NAME}
+      PIX_CITY: ${PIX_CITY}
+      PIX_IDENTIFIER: ${PIX_IDENTIFIER}
+      NODE_OPTIONS: --max_old_space_size=4096
+      BACKEND_URL: https://api.livego.store
+      FRONTEND_URL: https://livego.store
+    ports:
+      - "3000:3000"
+    networks:
+      - livego_network
+    volumes:
+      - ./backend/uploads:/app/uploads
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: livego_frontend
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    environment:
+      VITE_API_URL: https://api.livego.store
+      NODE_ENV: production
+    ports:
+      - "8080:80"
+    networks:
+      - livego_network
+
+networks:
+  livego_network:
+    driver: bridge
+
+volumes:
+  mongodb_data:

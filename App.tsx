@@ -144,12 +144,25 @@ const AppContent: React.FC = () => {
         storage.setUser(user);
     };
 
-    const handleLogin = (user: User) => {
-        storage.setUser(user);
-        storage.setToken('fake-jwt-token');
-        setCurrentUser(user);
-        setIsAuthenticated(true);
-        webSocketManager.connect(user.id);
+    const handleLogin = async (credentials: { email: string, password: string }) => {
+        try {
+            const { user, token } = await api.auth.login(credentials);
+            if (user && token) {
+                storage.setUser(user);
+                storage.setToken(token);
+                setCurrentUser(user);
+                setIsAuthenticated(true);
+                webSocketManager.connect(user.id);
+                return { success: true };
+            }
+            return { success: false, error: 'Falha no login' };
+        } catch (error: any) {
+            console.error('Erro no login:', error);
+            return { 
+                success: false, 
+                error: error.message || 'Erro ao fazer login. Tente novamente.' 
+            };
+        }
     };
 
     const handleLogout = () => {
@@ -411,11 +424,14 @@ const AppContent: React.FC = () => {
                     onOpenMyLevel={() => setIsLevelOpen(true)}
                     onOpenBlockList={() => setIsBlockListOpen(true)}
                     onOpenFAQ={() => { /* Placeholder */ }}
-                    onOpenSettings={() => setIsSettingsOpen(false)}
+                    onOpenSettings={() => setIsSettingsOpen(true)}
                     onOpenSupportChat={() => { /* Placeholder */ }}
                     onOpenAdminWallet={() => setIsAdminWalletOpen(true)}
                     onOpenApiTracker={() => setIsApiTrackerVisible(true)}
+                    onOpenDatabaseMonitor={() => { /* Placeholder for database monitor */ }}
                     onOpenHealthMonitor={() => setIsHealthMonitorOpen(true)}
+                    onOpenIntegrityTester={() => { /* Placeholder for integrity tester */ }}
+                    onOpenFullApiCheckup={() => { /* Placeholder for full API checkup */ }}
                     onOpenLiveKitMonitor={() => setIsLiveKitMonitorOpen(true)}
                     onOpenStreamingPanel={() => setIsStreamingPanelOpen(true)}
                     visitors={visitors}

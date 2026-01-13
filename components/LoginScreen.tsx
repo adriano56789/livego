@@ -2,8 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { useTranslation } from '@/i18n';
 import { api, storage } from '@/services/api';
 
+interface LoginResponse {
+  success: boolean;
+  error?: string;
+  user?: any;
+  token?: string;
+}
+
 interface LoginScreenProps {
-  onLogin: (user: any) => void;
+  onLogin: (credentials: { email: string, password: string }) => Promise<LoginResponse>;
 }
 
 const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
@@ -37,10 +44,9 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
     setStatusMessage({ text: '', type: '' });
 
     try {
-      const result = await api.auth.login({ email, password });
-      if (result && result.user) {
-        await api.auth.saveLastEmail(email);
-        onLogin(result.user);
+      const result = await onLogin({ email, password });
+      if (result && !result.success) {
+        setStatusMessage({ text: result.error || 'Falha no login', type: 'error' });
       }
     } catch (error: any) {
       setStatusMessage({ text: error.message || 'E-mail ou senha incorretos.', type: 'error' });

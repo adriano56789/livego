@@ -1,8 +1,6 @@
-
-
 import React from 'react';
-import { User } from '@/types';
-import { useTranslation } from '@/i18n';
+import { User } from '../../types';
+import { useTranslation } from '../../i18n';
 import { 
     WalletIcon,
     SettingsIcon,
@@ -27,9 +25,9 @@ import {
     CpuIcon,
     WebRTCIcon,
     BellIcon
-} from '@/components/icons';
-import { LevelBadge } from '@/components/LevelBadge';
-import { api } from '@/services/api';
+} from '../icons';
+import { LevelBadge } from '../LevelBadge';
+import { api } from '../../services/api';
 
 interface ProfileScreenProps {
     currentUser: User;
@@ -47,7 +45,10 @@ interface ProfileScreenProps {
     onOpenSupportChat: () => void;
     onOpenAdminWallet: () => void;
     onOpenApiTracker: () => void;
+    onOpenDatabaseMonitor: () => void;
     onOpenHealthMonitor: () => void;
+    onOpenIntegrityTester: () => void; 
+    onOpenFullApiCheckup: () => void;
     onOpenLiveKitMonitor: () => void;
     onOpenStreamingPanel: () => void;
     visitors: User[];
@@ -69,7 +70,10 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({
     onOpenSupportChat,
     onOpenAdminWallet,
     onOpenApiTracker,
+    onOpenDatabaseMonitor,
     onOpenHealthMonitor,
+    onOpenIntegrityTester,
+    onOpenFullApiCheckup,
     onOpenLiveKitMonitor,
     onOpenStreamingPanel,
     visitors = []
@@ -105,17 +109,17 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({
                 <h1 className="text-xl font-bold text-white mb-2 tracking-wide">{currentUser.name}</h1>
                 
                 <div className="flex items-center gap-2 mb-2">
-                    <div className={`flex items-center rounded-lg px-1.5 py-0.5 gap-1 ${currentUser.gender === 'female' ? 'bg-pink-500' : 'bg-blue-500'}`}>
-                        {currentUser.gender === 'female' ? <VenusIcon width={10} height={10} className="text-white" /> : <MarsIcon width={10} height={10} className="text-white" />}
-                        <span className="text-xs font-bold text-white">{currentUser.age || 18}</span>
+                    <div className={`flex items-center rounded-full px-2 py-[2px] gap-1 min-w-[40px] justify-center ${currentUser.gender === 'female' ? 'bg-pink-500' : 'bg-blue-500'}`}>
+                        {currentUser.gender === 'female' ? <VenusIcon size={10} className="text-white fill-white" /> : <MarsIcon size={10} className="text-white fill-white" />}
+                        <span className="text-[11px] font-black italic">{currentUser.age || 18}</span>
                     </div>
                     <LevelBadge level={currentUser.level} />
                 </div>
-
-                <div className="bg-black/30 rounded-md px-2.5 py-1 flex items-center justify-center gap-2 mb-1">
-                    <span className="text-xs font-medium text-gray-400">ID: {currentUser.identification}</span>
-                    <button onClick={handleCopyId} className="active:scale-90">
-                        <CopyIcon size={12} className="text-gray-500 hover:text-white transition-colors" />
+                
+                <div className="flex items-center gap-2 mb-1 bg-white/5 px-3 py-1 rounded-full border border-white/5">
+                    <span className="text-xs font-black text-gray-300">ID: {currentUser.identification}</span>
+                    <button onClick={handleCopyId} className="hover:text-white transition-colors active:scale-90">
+                        <CopyIcon size={12} className="text-purple-400" />
                     </button>
                 </div>
                 
@@ -170,9 +174,6 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({
                         <div className="h-px bg-white/5 my-2 mx-4"></div>
                         <MenuItem icon={BankIcon} color="text-orange-500" label="Admin Wallet" onClick={onOpenAdminWallet} />
                         <MenuItem icon={SoundWaveIcon} color="text-cyan-400" label="Monitoramento de API" onClick={onOpenApiTracker} />
-                        <MenuItem icon={WebRTCIcon} color="text-blue-400" label="Monitor LiveKit (WebRTC)" onClick={onOpenLiveKitMonitor} />
-                        <MenuItem icon={WebRTCIcon} color="text-green-400" label="Painel de Streaming (SDK)" onClick={onOpenStreamingPanel} />
-                        <MenuItem icon={ZapIcon} color="text-yellow-400" label="Guarda de Conexão" onClick={onOpenHealthMonitor} />
                     </>
                 )}
                 

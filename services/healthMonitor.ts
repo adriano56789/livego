@@ -36,7 +36,11 @@ class HealthMonitorService {
         { name: 'Realtime (Socket)', endpoint: '/ws-handshake', status: 'online' }
     ];
 
-    private readonly BASE_URL = '/api';
+    // Use the correct port where the frontend is running
+    private readonly BASE_URL = 'http://localhost:5174/api';
+    
+    // Add request timeout (in milliseconds)
+    private readonly REQUEST_TIMEOUT = 3000;
 
     constructor() {
         this.startMonitoring();
@@ -48,16 +52,23 @@ class HealthMonitorService {
         const start = Date.now();
         try {
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 4000);
+            const timeoutId = setTimeout(() => controller.abort(), this.REQUEST_TIMEOUT);
 
-            // Este fetch monitora a VPS (Monitor 1)
+            console.log(`[HealthMonitor] Checking status at ${this.BASE_URL}/status`);
             const response = await fetch(`${this.BASE_URL}/status`, { 
                 method: 'GET',
                 signal: controller.signal,
-                cache: 'no-store'
+                cache: 'no-store',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                }
             });
 
             clearTimeout(timeoutId);
+            
+            // Log the response for debugging
+            console.log(`[HealthMonitor] Status: ${response.status} ${response.statusText}`);
 
             if (response.ok) {
                 this.latency = Date.now() - start;

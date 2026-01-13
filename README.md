@@ -20,3 +20,5 @@ View your app in AI Studio: https://ai.studio/apps/drive/1BVDXvWTQ20o5TAb4K9-UIT
    `npm run dev`
 # livego-
 # livego
+cd /var/www/livego
+NODE_ENV=production MONGODB_URI="mongodb://admin:adriano123@localhost:27017/api?authSource=admin" pm2 start npm --name "livego" -- start

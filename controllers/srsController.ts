@@ -1,44 +1,71 @@
+// FIX: Changed import to use the express namespace to avoid type conflicts.
+import express from 'express';
+import config from '../config/settings.js';
 
-import { Request, Response } from 'express';
-import { sendSuccess, sendError } from '../utils/response.js';
+/**
+ * Helper function to proxy requests to the real SRS API.
+ * This replaces the previous mock implementation by forwarding requests to a configurable SRS server URL.
+ */
+const proxyToSrs = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    // Construct the target URL. req.url contains the path and query string after the mount point.
+    // e.g., for a request to /api/v1/clients?start=10, req.url will be /v1/clients?start=10
+    const srsUrl = `${config.srsApiUrl}/api${req.url}`;
 
-const mockSrsData = {
-    versions: { major: 5, minor: 0, revision: 135, version: "5.0.135" },
-    summaries: { ok: true, self: { version: "5.0.135", pid: 1234 }, system: {} },
-    streams: [{ id: 'str_abc123', name: 'livetest', clients: 5 }],
-    clients: [{ id: 'cli_xyz789', stream: 'str_abc123', ip: '192.168.1.10', type: 'Play' }],
-    metrics: {}
+    console.log(`[SRS PROXY] Forwarding ${req.method} request to: ${srsUrl}`);
+
+    try {
+        const srsResponse = await fetch(srsUrl, {
+            method: req.method,
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+            },
+            // Forward body only for methods that typically have one.
+            body: (req.method !== 'GET' && req.method !== 'HEAD' && Object.keys(req.body).length > 0) 
+                  ? JSON.stringify(req.body) 
+                  : undefined,
+        });
+
+        // Try to parse JSON, but handle cases where SRS might send an empty or non-JSON response.
+        const responseText = await srsResponse.text();
+        const responseData = responseText ? JSON.parse(responseText) : {};
+
+        // Forward the status code and the body from the SRS server directly.
+        return res.status(srsResponse.status).json(responseData);
+
+    } catch (error: unknown) {
+        const errorMessage = `Failed to connect to SRS server at ${config.srsApiUrl}. Is it running and accessible?`;
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        console.error(`[SRS PROXY] Network error while contacting SRS server:`, errorMsg);
+        // Use 502 Bad Gateway for proxy errors
+        return res.status(502).json({
+            code: -1,
+            message: errorMessage,
+            error: errorMsg
+        });
+    }
 };
 
+// All SRS controller functions now use the proxy helper, replacing the mock data.
 export const srsController = {
-    getVersions: (req: Request, res: Response) => sendSuccess(res, mockSrsData.versions),
-    getSummaries: (req: Request, res: Response) => sendSuccess(res, mockSrsData.summaries),
-    getFeatures: (req: Request, res: Response) => sendSuccess(res, { srs_features: { webrtc: true } }),
-    getClients: (req: Request, res: Response) => sendSuccess(res, { clients: mockSrsData.clients }),
-    getClientById: (req: Request, res: Response) => sendSuccess(res, { client: mockSrsData.clients[0] }),
-    getStreams: (req: Request, res: Response) => sendSuccess(res, { streams: mockSrsData.streams }),
-    getStreamById: (req: Request, res: Response) => sendSuccess(res, { stream: mockSrsData.streams[0] }),
-    deleteStreamById: (req: Request, res: Response) => sendSuccess(res, { code: 0 }),
-    getConnections: (req: Request, res: Response) => sendSuccess(res, { conns: mockSrsData.clients }),
-    getConnectionById: (req: Request, res: Response) => sendSuccess(res, { conn: mockSrsData.clients[0] }),
-    deleteConnectionById: (req: Request, res: Response) => sendSuccess(res, { code: 0 }),
-    getConfigs: (req: Request, res: Response) => sendSuccess(res, { config: "vhost __defaultVhost__ {}" }),
-    updateConfigs: (req: Request, res: Response) => sendSuccess(res, { code: 0 }),
-    getVhosts: (req: Request, res: Response) => sendSuccess(res, { vhosts: [{ name: '__defaultVhost__', enabled: true }] }),
-    getVhostById: (req: Request, res: Response) => sendSuccess(res, { vhost: { name: '__defaultVhost__', enabled: true } }),
-    getRequests: (req: Request, res: Response) => sendSuccess(res, { requests: [] }),
-    getSessions: (req: Request, res: Response) => sendSuccess(res, { sessions: [] }),
-    getMetrics: (req: Request, res: Response) => sendSuccess(res, mockSrsData.metrics),
-    rtcPublish: (req: Request, res: Response) => {
-        const { sdp, streamUrl } = req.body;
-        if (!sdp || !streamUrl) return sendError(res, 'SDP and streamUrl are required.', 400);
-        const sessionId = `rtc-session-${Date.now()}`;
-        const mockSdpAnswer = `v=0\r\no=- 0 0 IN IP4 127.0.0.1\r\ns=LiveGo\r\nc=IN IP4 127.0.0.1\r\nt=0 0\r\nm=audio 9000 RTP/AVP 111\r\na=rtpmap:111 opus/48000/2\r\n`;
-        sendSuccess(res, { code: 0, sdp: mockSdpAnswer, sessionid: sessionId });
-    },
-    trickleIce: (req: Request, res: Response) => {
-        const { sessionId } = req.params;
-        if (!req.body) return sendError(res, 'Candidate body is required.', 400);
-        return sendSuccess(res, { code: 0 });
-    }
+    getVersions: proxyToSrs,
+    getSummaries: proxyToSrs,
+    getFeatures: proxyToSrs,
+    getClients: proxyToSrs,
+    getClientById: proxyToSrs,
+    getStreams: proxyToSrs,
+    getStreamById: proxyToSrs,
+    deleteStreamById: proxyToSrs,
+    getConnections: proxyToSrs,
+    getConnectionById: proxyToSrs,
+    deleteConnectionById: proxyToSrs,
+    getConfigs: proxyToSrs,
+    updateConfigs: proxyToSrs,
+    getVhosts: proxyToSrs,
+    getVhostById: proxyToSrs,
+    getRequests: proxyToSrs,
+    getSessions: proxyToSrs,
+    getMetrics: proxyToSrs,
+    rtcPublish: proxyToSrs,
+    trickleIce: proxyToSrs,
 };

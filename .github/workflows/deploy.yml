@@ -1,0 +1,55 @@
+name: Deploy to VPS
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Install Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        
+    - name: Install PM2 globally
+      run: npm install -g pm2
+      
+    - name: Setup SSH
+      uses: webfactory/ssh-agent@v0.8.0
+      with:
+        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+        
+    - name: Add SSH Known Hosts
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.SSH_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+        
+    - name: Install Dependencies and Build
+      run: |
+        npm ci
+        npm run build
+        
+    - name: Deploy to VPS
+      run: |
+        # Cria a estrutura de diretórios na VPS
+        ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "mkdir -p /var/www/livego"
+        
+        # Sincroniza os arquivos
+        rsync -avz --delete \
+          --exclude='node_modules' \
+          --exclude='.git' \
+          --exclude='.github' \
+          --exclude='.env' \
+          . ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/var/www/livego/
+          
+        # Instala as dependências e reinicia o serviço
+        ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "cd /var/www/livego && \
+          npm ci --production && \
+          npm run build && \
+          pm2 delete livego-backend 2> /dev/null || true && \
+          npm run vps:start"

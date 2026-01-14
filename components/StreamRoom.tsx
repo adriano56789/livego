@@ -1,31 +1,30 @@
-
-
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import OnlineUsersModal from '@/components/live/OnlineUsersModal';
-import ChatMessage from '@/components/live/ChatMessage';
-import CoHostModal from '@/components/CoHostModal';
-import EntryChatMessage from '@/components/live/EntryChatMessage';
-import ToolsModal from '@/components/ToolsModal';
-import { GiftIcon, MessageIcon, SendIcon, MoreIcon, CloseIcon, PlusIcon, ViewerIcon, GoldCoinWithGIcon, HeartIcon, BellIcon, FanClubHeaderIcon } from '@/components/icons';
-import { Streamer, User, Gift, ToastType, LiveSessionState, GiftSendPayload } from '@/types';
-import ContributionRankingModal from '@/components/ContributionRankingModal';
-import BeautyEffectsPanel from '@/components/live/BeautyEffectsPanel';
-import ResolutionPanel from '@/components/live/ResolutionPanel';
-import GiftModal from '@/components/live/GiftModal';
-import GiftAnimationOverlay from '@/components/live/GiftAnimationOverlay';
-import { useTranslation } from '@/i18n';
-import { api } from '@/services/api';
-import UserActionModal from '@/components/UserActionModal';
-import { webSocketManager } from '@/services/websocket';
-import FriendRequestNotification from '@/components/live/FriendRequestNotification';
-import { RankedAvatar } from '@/components/live/RankedAvatar';
-import FullScreenGiftAnimation from '@/components/live/FullScreenGiftAnimation';
-import { avatarFrames, getRemainingDays, getFrameGlowClass } from '@/services/db_shared';
-import FanClubModal from '@/components/live/FanClubModal';
-import JoinFanClubModal from '@/components/live/JoinFanClubModal';
-import FanClubEntryMessage from '@/components/live/FanClubEntryMessage';
-import UserMentionSuggestions from '@/components/live/UserMentionSuggestions';
-import { GIFTS } from '@/constants';
+import OnlineUsersModal from './live/OnlineUsersModal';
+import ChatMessage from './live/ChatMessage';
+import CoHostModal from './CoHostModal';
+import EntryChatMessage from './live/EntryChatMessage';
+import ToolsModal from './ToolsModal';
+import { GiftIcon, MessageIcon, SendIcon, MoreIcon, CloseIcon, PlusIcon, ViewerIcon, GoldCoinWithGIcon, HeartIcon, BellIcon, FanClubHeaderIcon } from './icons';
+import { Streamer, User, Gift, ToastType, LiveSessionState } from '../types';
+import ContributionRankingModal from './ContributionRankingModal';
+import BeautyEffectsPanel from './live/BeautyEffectsPanel';
+import ResolutionPanel from './live/ResolutionPanel';
+import GiftModal from './live/GiftModal';
+import GiftAnimationOverlay from './live/GiftAnimationOverlay';
+import type { GiftSendPayload } from '@/types';
+import { useTranslation } from '../i18n';
+import { api } from '../services/api';
+import UserActionModal from './UserActionModal';
+import { webSocketManager } from '../services/websocket';
+import FriendRequestNotification from './live/FriendRequestNotification';
+import { RankedAvatar } from './live/RankedAvatar';
+import FullScreenGiftAnimation from './live/FullScreenGiftAnimation';
+import { avatarFrames, getRemainingDays, getFrameGlowClass } from '../services/db_shared';
+import FanClubModal from './live/FanClubModal';
+import JoinFanClubModal from './live/JoinFanClubModal';
+import FanClubEntryMessage from './live/FanClubEntryMessage';
+import UserMentionSuggestions from './live/UserMentionSuggestions';
+import { GIFTS } from '../constants';
 
 interface ChatMessageType {
     id: number;
@@ -44,7 +43,6 @@ interface ChatMessageType {
     activeFrameId?: string | null;
     frameExpiration?: string | null;
     fanClub?: { streamerId: string; streamerName: string; level: number; };
-    roomId?: string; // Adicionado para consistência de payload
 }
 
 interface StreamRoomProps {
@@ -88,38 +86,6 @@ const FollowChatMessage: React.FC<{ follower: string; followed: string }> = ({ f
     );
 };
 
-const QuickGiftIcon: React.FC<{ gift: Gift }> = ({ gift }) => {
-    if (gift.name === 'Coração') {
-        return <HeartIcon className="w-5 h-5 text-pink-500 fill-pink-500 drop-shadow-[0_0_4px_rgba(236,72,153,0.7)]" />;
-    }
-    if (gift.name === 'Café') {
-        return (
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M5 8H17C18.1046 8 19 8.89543 19 10V15C19 16.1046 18.1046 17 17 17H7C5.89543 17 5 16.1046 5 15V8Z" fill="white" fillOpacity="0.9"/>
-                <path d="M8 5V7" stroke="white" strokeOpacity="0.8" strokeWidth="1.5" strokeLinecap="round"/>
-                <path d="M11 4V6" stroke="white" strokeOpacity="0.8" strokeWidth="1.5" strokeLinecap="round"/>
-                <path d="M14 5V7" stroke="white" strokeOpacity="0.8" strokeWidth="1.5" strokeLinecap="round"/>
-            </svg>
-        );
-    }
-    if (gift.name === 'Milho') {
-        return (
-             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M6 9L8 20H16L18 9H6Z" fill="#F472B6"/>
-                <path d="M8 9H7V20H8V9Z" fill="white"/>
-                <path d="M10 9H9V20H10V9Z" fill="white"/>
-                <path d="M12 9H11V20H12V9Z" fill="white"/>
-                <path d="M14 9H13V20H14V9Z" fill="white"/>
-                <path d="M16 9H15V20H16V9Z" fill="white"/>
-                <circle cx="9" cy="8" r="3" fill="#FBBF24"/>
-                <circle cx="15" cy="8" r="3" fill="#FBBF24"/>
-                <circle cx="12" cy="6" r="4" fill="#FBBF24"/>
-            </svg>
-        );
-    }
-    return <span>{gift.icon}</span>
-};
-
 const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, onLeaveStreamView, onStartPKBattle, onViewProfile, currentUser, onOpenWallet, onFollowUser, onOpenPrivateChat, onOpenPrivateInviteModal, setActiveScreen, onStartChatWithStreamer, onOpenPKTimerSettings, onOpenFans, onOpenFriendRequests, updateUser, liveSession, updateLiveSession, logLiveEvent, onStreamUpdate, refreshStreamRoomData, addToast, followingUsers, streamers, onSelectStream, onOpenVIPCenter, onOpenFanClubMembers }) => {
     const { t, language } = useTranslation();
     const [isUiVisible, setIsUiVisible] = useState(true);
@@ -133,7 +99,7 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
     const chatInputRef = useRef<HTMLInputElement>(null);
     const [isRankingOpen, setIsRankingOpen] = useState(false);
     const [isResolutionPanelOpen, setResolutionPanelOpen] = useState(false);
-    const [currentResolution, setCurrentResolution] = useState(streamer.quality || '1080p');
+    const [currentResolution, setCurrentResolution] = useState(streamer.quality || '480p');
     const [isGiftModalOpen, setGiftModalOpen] = useState(false);
     const [userActionModalState, setUserActionModalState] = useState<{ isOpen: boolean; user: User | null }>({ isOpen: false, user: null });
     const [isModerationMode, setIsModerationMode] = useState(false);
@@ -156,14 +122,15 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
     const isBroadcaster = streamer.hostId === currentUser.id;
     const isFollowed = useMemo(() => followingUsers.some(u => u.id === streamer.hostId), [followingUsers, streamer.hostId]);
     const isFanClubMember = useMemo(() => !!currentUser.fanClub && currentUser.fanClub.streamerId === streamer.hostId, [currentUser.fanClub, streamer.hostId]);
+    const isJuFeFanClub = streamer.hostId === '40583726';
 
     const streamerUser: User = useMemo(() => ({
         id: streamer.hostId,
         identification: streamer.hostId,
         name: streamer.name,
-        avatarUrl: streamer.avatar,
+        avatarUrl: streamer.avatar || `https://picsum.photos/seed/${streamer.id}/200`,
         coverUrl: `https://picsum.photos/seed/${streamer.id}/800/1600`,
-        country: 'br',
+        country: streamer.country || 'br',
         age: 23,
         gender: 'female',
         level: 1,
@@ -179,7 +146,7 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
         diamonds: 50000,
         earnings: 125000,
         earnings_withdrawn: 0,
-        bio: 'Amante de streams!',
+        bio: streamer.description || 'Amante de streams!',
         obras: [],
         curtidas: [],
         ownedFrames: [],
@@ -198,25 +165,6 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
     
     const swipeStart = useRef<{ x: number, y: number } | null>(null);
     const minSwipeDistance = 50;
-    
-    const quickGifts = useMemo(() => {
-        const heart = GIFTS.find(g => g.name === 'Coração');
-        const coffee = GIFTS.find(g => g.name === 'Café');
-        const popcorn = GIFTS.find(g => g.name === 'Milho');
-        return [heart, coffee, popcorn].filter((g): g is Gift => !!g);
-    }, []);
-
-    const handleSendQuickGift = (gift: Gift) => {
-        if (isBroadcaster) {
-            addToast(ToastType.Warning, "Você não pode enviar presentes para si mesmo.");
-            return;
-        }
-        handleSendGift(gift, 1, streamer.hostId);
-    };
-
-    const topContributors = useMemo(() => {
-        return [...onlineUsers].sort((a, b) => (b.value || 0) - (a.value || 0)).slice(0, 3);
-    }, [onlineUsers]);
 
     const handlePointerDown = (clientX: number, clientY: number) => {
         if (isChatInputFocused) return;
@@ -260,12 +208,13 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
         };
         setMessages([currentUserEntryMessage]);
 
-        api.users.getOnlineUsers(streamer.id).then(usersData => {
-            const users = Array.isArray(usersData) ? usersData : [];
-            const usersWithValue = users.map(u => ({ ...u, value: (u as any).value || 0 }));
-            setOnlineUsers(usersWithValue);
-            updateLiveSession({ viewers: users.length });
-            previousOnlineUsersRef.current = usersWithValue;
+        api.users.getOnlineUsers(streamer.id).then(users => {
+            if (users) {
+                const usersWithValue = users.map(u => ({ ...u, value: (u as any).value || 0 }));
+                setOnlineUsers(usersWithValue);
+                updateLiveSession({ viewers: users.length });
+                previousOnlineUsersRef.current = usersWithValue;
+            }
         });
 
         api.gifts.getGallery().then(gifts => {
@@ -273,7 +222,7 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
                 setReceivedGifts(gifts);
             }
         });
-    }, [streamer.id, streamer.hostId, updateLiveSession]);
+    }, [streamer.id, streamer.hostId, currentUser, updateLiveSession]);
 
     const postGiftChatMessage = (payload: GiftSendPayload) => {
         const { fromUser, gift, toUser, quantity } = payload;
@@ -397,8 +346,7 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
         const handleOnlineUsersUpdate = (data: { roomId: string; users: (User & { value: number })[] }) => {
             if (data.roomId !== streamer.id) return;
             
-            api.users.getOnlineUsers(streamer.id).then(freshUsersData => {
-                const freshUsers = Array.isArray(freshUsersData) ? freshUsersData : [];
+            api.users.getOnlineUsers(streamer.id).then(freshUsers => {
                 const usersWithValue = freshUsers.map(u => ({ ...u, value: (u as any).value || 0 }));
                 updateUsersList(usersWithValue);
             });
@@ -417,15 +365,13 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
                 usersUpdateTimeout.current = null;
             }
         };
-    }, [streamer.id, streamer.hostId, updateLiveSession, currentUser.id, language, t, onOpenFriendRequests, liveSession, refreshStreamRoomData]);
+    }, [streamer.id, streamer.hostId, updateLiveSession, currentUser, language, t, onOpenFriendRequests, liveSession, refreshStreamRoomData]);
 
     const handleSendMessage = (e: React.MouseEvent | React.KeyboardEvent) => {
         e.stopPropagation();
         if (chatInput.trim() === '' || !currentUser) return;
         
-        const tempId = Date.now();
-        const messagePayload: ChatMessageType = {
-            id: tempId,
+        const messagePayload = {
             roomId: streamer.id,
             type: 'chat' as const,
             user: currentUser.name,
@@ -433,11 +379,9 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
             fullUser: currentUser,
         };
         
-        setMessages(prev => [...prev, messagePayload]);
-        
+        // Agora usa a API, que então emitirá o evento WebSocket
         api.chats.sendMessage(streamer.id, messagePayload).catch(err => {
             addToast(ToastType.Error, "Falha ao enviar mensagem.");
-            setMessages(prev => prev.filter(msg => msg.id !== tempId));
         });
         
         setChatInput('');
@@ -488,7 +432,7 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
             onStreamUpdate({ quality: resolution });
             addToast(ToastType.Success, `Qualidade do vídeo alterada para ${resolution}`);
         } else {
-            addToast(ToastType.Error, `Falha ao alterar la qualidade do vídeo.`);
+            addToast(ToastType.Error, `Falha ao alterar a qualidade do vídeo.`);
         }
         setResolutionPanelOpen(false);
     };
@@ -531,9 +475,7 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
 
     const handleSendGift = async (gift: Gift, quantity: number, targetId?: string): Promise<User | null> => {
         const totalCost = (gift.price || 0) * quantity;
-        
-        // Backpack gifts have no diamond cost check
-        if (!gift.isFromBackpack && currentUser.diamonds < totalCost) {
+        if (currentUser.diamonds < totalCost) {
             handleRecharge();
             return null;
         }
@@ -541,7 +483,7 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
         const finalTargetId = targetId || streamer.hostId;
         const allUsers = [streamerUser, ...onlineUsers];
         const toUser = allUsers.find(u => u.id === finalTargetId) || { id: finalTargetId, name: 'Usuário' };
-    
+
         const giftPayload: GiftSendPayload = {
             fromUser: currentUser,
             toUser: { id: toUser.id, name: toUser.name },
@@ -551,44 +493,33 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
         };
         
         try {
-            let apiResult: { success: boolean, updatedSender: User | undefined };
-    
-            if (gift.isFromBackpack) {
-                // New API call for backpack gifts
-                apiResult = await api.sendBackpackGift(currentUser.id, streamer.id, gift.id, quantity, finalTargetId);
-            } else {
-                // Existing API call for diamond gifts
-                apiResult = await api.sendGift(currentUser.id, streamer.id, gift.name, quantity, finalTargetId);
-            }
-            
-            const { success, updatedSender } = apiResult;
+            const { success, updatedSender } = await api.sendGift(currentUser.id, streamer.id, gift.name, quantity, finalTargetId);
     
             if (success && updatedSender) {
                 updateUser(updatedSender);
                 postGiftChatMessage(giftPayload);
                 setFullscreenGiftQueue(prev => [...prev, giftPayload]);
-    
+
                 if (gift.triggersAutoFollow && !isFollowed && finalTargetId === streamer.hostId) {
                     onFollowUser(streamerUser, streamer.id);
                 }
                 
-                // Don't add coins for backpack gifts
-                if (!gift.isFromBackpack && liveSession && finalTargetId === streamer.hostId) {
+                if (liveSession && finalTargetId === streamer.hostId) {
                     const coinsAdded = (gift.price || 0) * quantity;
                     const currentCoins = Number(liveSession.coins) || 0;
                     updateLiveSession({ coins: currentCoins + coinsAdded });
                 }
                 
                 refreshStreamRoomData(streamer.id);
-    
+
                 const wasNotFan = !currentUser.fanClub || currentUser.fanClub.streamerId !== streamer.hostId;
                 const isNowFan = updatedSender.fanClub && updatedSender.fanClub.streamerId === streamer.hostId;
-    
+
                 if (wasNotFan && isNowFan) {
                     addToast(ToastType.Success, "Bem-vindo ao fã-clube!");
                     setIsFanClubModalOpen(true);
                 }
-    
+
                 return updatedSender;
             } else {
                 throw new Error("API retornou falha.");
@@ -596,7 +527,6 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
         } catch (error) {
             console.error("Falha ao enviar presente:", error);
             addToast(ToastType.Error, (error as Error).message || "Falha ao enviar o presente.");
-            // Refresh user data to sync client with server state after a failed transaction
             api.users.me().then(user => {
                 if (user) updateUser(user);
             });
@@ -609,186 +539,414 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
         onOpenWallet('Diamante');
     };
 
+    const handleCloseUserActions = () => {
+        setUserActionModalState({ isOpen: false, user: null });
+    };
+    const handleKickUser = (user: User) => {
+        api.kickUser(streamer.id, user.id);
+        addToast(ToastType.Info, `Usuário ${user.name} foi expulso.`);
+    };
+    const handleMakeModerator = (user: User) => {
+        api.makeModerator(streamer.id, user.id);
+        addToast(ToastType.Success, `${user.name} agora é um moderador.`);
+    };
+    const handleMentionUser = (user: User) => {
+        setChatInput(prev => `${prev}@${user.name} `);
+    };
+
+    const handleToggleMicrophone = async () => {
+        const newState = !liveSession?.isMicrophoneMuted;
+        try {
+            await api.toggleMicrophone();
+            updateLiveSession({ isMicrophoneMuted: newState });
+        } catch (error) {
+            console.error("Failed to toggle microphone:", error);
+        }
+    };
+
+    const handleToggleSound = async () => {
+        const newState = !liveSession?.isStreamMuted;
+        try {
+            await api.toggleStreamSound();
+            updateLiveSession({ isStreamMuted: newState });
+        } catch (error) {
+            console.error("Failed to toggle sound:", error);
+        }
+    };
+
+    const handleToggleAutoFollow = async () => {
+        const newState = !liveSession?.isAutoFollowEnabled;
+        try {
+            await api.toggleAutoFollow();
+            updateLiveSession({ isAutoFollowEnabled: newState });
+        } catch (error) {
+            console.error("Failed to toggle auto follow:", error);
+        }
+    };
+
+    const handleToggleAutoPrivateInvite = async () => {
+        const newState = !isAutoPrivateInviteEnabled;
+        try {
+            await api.toggleAutoPrivateInvite();
+            setIsAutoPrivateInviteEnabled(newState);
+            if (liveSession) {
+                updateLiveSession({ isAutoPrivateInviteEnabled: newState });
+            }
+        } catch (error) {
+            console.error("Failed to toggle auto private invite:", error);
+        }
+    };
+
+    const topContributors = onlineUsers.filter(u => (u.value || 0) > 0).slice(0, 3);
+    
+    const handleChatInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value;
+        setChatInput(value);
+
+        const lastWord = value.split(' ').pop() || '';
+        if (lastWord.startsWith('@')) {
+            const query = lastWord.substring(1).toLowerCase();
+            setMentionQuery(query);
+            setShowMentionSuggestions(true);
+        } else {
+            setShowMentionSuggestions(false);
+            setMentionQuery('');
+        }
+    };
+
+    const handleMentionSelect = (username: string) => {
+        const words = chatInput.split(' ');
+        words.pop();
+        words.push(`@${username} `);
+        const newChatInput = words.join(' ');
+        
+        setChatInput(newChatInput);
+        setShowMentionSuggestions(false);
+        setMentionQuery('');
+        
+        chatInputRef.current?.focus();
+    };
+
+    const mentionSuggestions = useMemo(() => {
+        if (!showMentionSuggestions || !mentionQuery) return [];
+        return onlineUsers.filter(u => 
+            u.name.toLowerCase().includes(mentionQuery) && u.id !== currentUser.id
+        ).slice(0, 5);
+    }, [mentionQuery, onlineUsers, currentUser.id, showMentionSuggestions]);
+
     return (
-        <div 
-            className="absolute inset-0 bg-black flex flex-col font-sans text-white z-10 overflow-hidden"
-            onTouchStart={e => handlePointerDown(e.touches[0].clientX, e.touches[0].clientY)}
-            onTouchEnd={e => handlePointerUp(e.changedTouches[0].clientX, e.changedTouches[0].clientY)}
-            onMouseDown={e => handlePointerDown(e.clientX, e.clientY)}
-            onMouseUp={e => handlePointerUp(e.clientX, e.clientY)}
+        <div className="absolute inset-0 bg-gray-900 text-white font-sans z-10"
+            onMouseDown={(e) => handlePointerDown(e.clientX, e.clientY)}
+            onMouseUp={(e) => handlePointerUp(e.clientX, e.clientY)}
+            onTouchStart={(e) => handlePointerDown(e.targetTouches[0].clientX, e.targetTouches[0].clientY)}
+            onTouchEnd={(e) => handlePointerUp(e.changedTouches[0].clientX, e.changedTouches[0].clientY)}
         >
-            <div className={`absolute inset-0 bg-cover bg-center transition-all duration-500 ${isUiVisible ? 'blur-[2px] scale-105 opacity-60' : 'blur-none scale-100 opacity-100'}`} style={{ backgroundImage: `url(${streamer.thumbnail})` }} />
+            <img src={streamerUser.coverUrl} key={streamerUser.coverUrl} className="absolute inset-0 w-full h-full object-cover" alt="Stream background" />
+            <div className={`absolute inset-0 bg-gradient-to-b from-transparent to-black/70 pointer-events-none transition-opacity duration-300 ${isUiVisible ? 'opacity-100' : 'opacity-0'}`}></div>
+
+            <div className="absolute top-32 left-3 z-30 pointer-events-none flex flex-col-reverse items-start space-y-reverse space-y-2">
+                {bannerGifts.map((payload) => (
+                    <GiftAnimationOverlay 
+                        key={payload.id}
+                        giftPayload={payload}
+                        onAnimationEnd={handleBannerAnimationEnd}
+                    />
+                ))}
+            </div>
             
-            <div className={`absolute inset-0 transition-opacity duration-500 ${isUiVisible ? 'bg-black/40' : 'bg-transparent'}`} />
+            <FullScreenGiftAnimation
+                payload={currentFullscreenGift}
+                onEnd={handleFullscreenGiftAnimationEnd}
+            />
 
-            <div className={`relative z-10 flex flex-col h-full transition-opacity duration-500 ${isUiVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-                <header className="absolute top-0 left-0 right-0 p-4 pt-12 flex justify-between items-start">
-                    <div className="flex items-center gap-2">
-                        <div className="flex items-start gap-2 bg-black/40 backdrop-blur-md p-1.5 rounded-full" onClick={() => onViewProfile(streamerDisplayUser)}>
-                            <div className="relative">
-                                <img src={streamerDisplayUser.avatarUrl} alt={streamerDisplayUser.name} className={`w-10 h-10 rounded-full object-cover ${frameGlowClass}`} />
-                                {ActiveFrameComponent && <ActiveFrameComponent className="absolute -inset-2 w-14 h-14 pointer-events-none" />}
+            <header className={`p-3 bg-transparent absolute top-0 left-0 right-0 z-20 transition-opacity duration-300 ${isUiVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+                <div className="flex justify-between items-start">
+                    <div className="flex items-start space-x-2">
+                        <div className="flex flex-col space-y-2">
+                             <div className={`w-fit relative overflow-hidden flex items-center ${isJuFeFanClub ? 'bg-pink-600/90 rounded-2xl' : 'bg-black/40 rounded-full'} p-1 pr-2 space-x-2`}>
+                                <button onClick={(e) => { e.stopPropagation(); onViewProfile(streamerDisplayUser); }} className="flex items-center space-x-2 text-left">
+                                    <div className="relative w-10 h-10 flex items-center justify-center">
+                                        <div className="live-ring-animated">
+                                        <img src={streamerDisplayUser.avatarUrl} alt={streamerDisplayUser.name} className="w-8 h-8 rounded-full object-contain bg-black" />
+                                        </div>
+                                        {ActiveFrameComponent && (
+                                            <div className={`absolute inset-0 w-10 h-10 pointer-none ${frameGlowClass}`}>
+                                                <ActiveFrameComponent />
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="pr-1">
+                                        <p className="text-white font-bold text-sm">{streamerDisplayUser.name}</p>
+                                        <div className="flex items-center space-x-1 text-gray-300 text-xs">
+                                            <ViewerIcon className="w-4 h-4" />
+                                            <span>{(liveSession?.viewers ?? 0).toLocaleString()}</span>
+                                            {isJuFeFanClub && (
+                                                <HeartIcon className="w-3 h-3 text-white ml-1.5" fill="currentColor" />
+                                            )}
+                                        </div>
+                                    </div>
+                                </button>
+                                {isBroadcaster || isFollowed ? (
+                                    <button onClick={(e) => { e.stopPropagation(); setIsFanClubModalOpen(true); }} className="shrink-0">
+                                        <FanClubHeaderIcon className="w-9 h-9" />
+                                    </button>
+                                ) : (
+                                    <button onClick={(e) => { e.stopPropagation(); handleFollowStreamer(); }} className="w-8 h-8 bg-pink-500 rounded-full flex items-center justify-center text-white shrink-0">
+                                        <PlusIcon className="w-4 h-4" />
+                                    </button>
+                                )}
                             </div>
-                            <div className="mr-2">
-                                <h1 className="text-sm font-bold truncate max-w-[120px]">{streamerDisplayUser.name}</h1>
-                                <div className="flex items-center space-x-2 text-xs">
-                                    <div className="flex items-center space-x-1">
-                                        <ViewerIcon className="w-3 h-3 text-white" />
-                                        <span>{(liveSession?.viewers || 0).toLocaleString()}</span>
-                                    </div>
-                                    <div className="flex items-center space-x-1">
-                                        <GoldCoinWithGIcon />
-                                        <span className="text-yellow-400 font-bold">{(liveSession?.coins || 0).toLocaleString()}</span>
-                                    </div>
+                            <div className="flex items-center space-x-2 pl-1">
+                                <button onClick={(e) => { e.stopPropagation(); setIsRankingOpen(true); }} className="flex items-center bg-black/40 rounded-full px-2 py-1 space-x-1 text-xs cursor-pointer">
+                                    <GoldCoinWithGIcon className="w-4 h-4" />
+                                    <span className="text-white font-semibold">{(liveSession?.coins ?? 0).toLocaleString()}</span>
+                                </button>
+                                <div className="flex items-center bg-black/40 rounded-full px-2 py-1 space-x-1 text-xs">
+                                    <HeartIcon className="w-4 h-4 text-white" />
+                                    <span className="text-white font-semibold">5.8K</span>
                                 </div>
+                                {isBroadcaster && (
+                                    <button
+                                        onClick={(e) => { e.stopPropagation(); handleTogglePrivacy(); }}
+                                        className="bg-black/40 rounded-full px-3 py-1 text-xs text-white"
+                                    >
+                                        {streamer.isPrivate ? 'Privada' : 'Pública'}
+                                    </button>
+                                )}
                             </div>
                         </div>
-                        {!isBroadcaster && !isFollowed && (
-                            <button onClick={handleFollowStreamer} className="w-8 h-8 bg-pink-500 rounded-full flex items-center justify-center text-white text-xs font-bold active:scale-90 transition-transform">
-                                <PlusIcon className="w-4 h-4" />
+                    </div>
+
+                    <div className="flex flex-col items-end space-y-2">
+                        <div className="flex items-center space-x-2">
+                            {topContributors.map((user, index) => (
+                                <RankedAvatar 
+                                    key={user.id} 
+                                    user={user} 
+                                    rank={index + 1} 
+                                    onClick={onViewProfile}
+                                />
+                            ))}
+                            <button onClick={(e) => { e.stopPropagation(); setOnlineUsersOpen(true); }} className="flex items-center bg-black/40 rounded-full px-2.5 py-1.5 space-x-1 text-sm cursor-pointer">
+                                <BellIcon className="w-5 h-5 text-yellow-400" />
+                                <span className="text-white font-semibold">{onlineUsers.length}</span>
                             </button>
-                        )}
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                        <div className="flex -space-x-2">
-                            {onlineUsers.slice(0, 3).map(u => <img key={u.id} src={u.avatarUrl} className="w-8 h-8 rounded-full border-2 border-black/50" />)}
+                            <button onClick={(e) => { e.stopPropagation(); isBroadcaster ? onRequestEndStream() : onLeaveStreamView(); }} className="w-8 h-8 bg-black/40 rounded-full flex items-center justify-center shrink-0">
+                                <CloseIcon className="w-5 h-5 text-white" />
+                            </button>
                         </div>
-                        <button onClick={() => setOnlineUsersOpen(true)} className="w-8 h-8 bg-black/40 rounded-full text-white text-xs font-bold flex items-center justify-center">
-                            <PlusIcon className="w-4 h-4" />
-                        </button>
-                        <button onClick={isBroadcaster ? onRequestEndStream : onLeaveStreamView} className="w-8 h-8 bg-black/40 rounded-full flex items-center justify-center text-white">
-                            <CloseIcon className="w-5 h-5" />
-                        </button>
+                        <div className="pr-1">
+                            <div className="bg-black/40 rounded-full px-3 py-1 text-xs text-gray-300">
+                                ID: {streamer.hostId}
+                            </div>
+                        </div>
                     </div>
-                </header>
+                </div>
+            </header>
 
-                <div className="absolute top-28 left-4 z-30 pointer-events-none flex flex-col-reverse items-start">
-                    {bannerGifts.map((payload) => (
-                        <GiftAnimationOverlay 
-                            key={payload.id}
-                            giftPayload={payload}
-                            onAnimationEnd={handleBannerAnimationEnd}
-                        />
-                    ))}
+            <div 
+                className={`absolute bottom-0 left-0 right-0 w-full transition-opacity duration-300 ${isUiVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+                onClick={e => e.stopPropagation()}
+                onTouchStart={e => e.stopPropagation()}
+            >
+                <div ref={chatContainerRef} className="max-h-[33vh] h-full overflow-y-auto no-scrollbar flex flex-col pointer-events-auto px-3">
+                    <div className="space-y-2 mt-auto">
+                         {messages.map((msg) => {
+                            if (msg.type === 'fan_entry' && msg.fullUser) {
+                                return <FanClubEntryMessage key={msg.id} user={msg.fullUser} streamer={streamerUser} />;
+                            }
+                            if (msg.type === 'entry' && msg.fullUser) {
+                                return <EntryChatMessage 
+                                    key={msg.id} 
+                                    user={msg.fullUser} 
+                                    currentUser={currentUser}
+                                    onClick={onViewProfile}
+                                    onFollow={onFollowUser}
+                                    isFollowed={followingUsers.some(u => u.id === msg.fullUser!.id)}
+                                    streamer={streamer} />;
+                            }
+                            if (msg.type === 'chat' && msg.fullUser) {
+                                const chatUser = msg.fullUser;
+                                
+                                return <ChatMessage 
+                                    key={msg.id} 
+                                    userObject={chatUser}
+                                    message={msg.message}
+                                    translatedText={msg.translatedText}
+                                    onAvatarClick={() => onViewProfile(chatUser)}
+                                    streamerId={streamer.hostId}
+                                />;
+                            }
+                            if (msg.type === 'follow' && msg.user && msg.followedUser) {
+                                return <FollowChatMessage key={msg.id} follower={msg.user} followed={msg.followedUser} />;
+                            }
+                            if (msg.type === 'friend_request' && msg.follower) {
+                                return <FriendRequestNotification key={msg.id} followerName={msg.follower.name} onClick={onOpenFriendRequests} />;
+                            }
+                            return null;
+                        })}
+                    </div>
                 </div>
 
-                <div className="flex-1 overflow-hidden"></div>
-                
-                <div className="px-4 pb-4">
-                    <div className="flex justify-between items-end mb-2">
-                        <div className="flex -space-x-3">
-                            <RankedAvatar user={topContributors[0] || streamerUser} rank={1} onClick={onViewProfile} />
-                            <RankedAvatar user={topContributors[1] || streamerUser} rank={2} onClick={onViewProfile} />
-                            <RankedAvatar user={topContributors[2] || streamerUser} rank={3} onClick={onViewProfile} />
+                <footer className="relative p-3 pointer-events-auto">
+                    {showMentionSuggestions && mentionSuggestions.length > 0 && (
+                        <UserMentionSuggestions users={mentionSuggestions} onSelect={handleMentionSelect} />
+                    )}
+                    {chatInput.length > 0 && isChatInputFocused && !showMentionSuggestions && (
+                        <div className="absolute bottom-full left-0 px-3 pb-1 w-full pointer-events-none">
+                            <div className="typing-bubble inline-block">{chatInput}</div>
                         </div>
-                        <div className="flex items-center gap-2">
-                            {quickGifts.map(gift => (
-                                <button
-                                    key={gift.id}
-                                    onClick={() => handleSendQuickGift(gift)}
-                                    className="w-9 h-9 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center border border-white/10 active:scale-90 transition-transform"
-                                >
-                                    <QuickGiftIcon gift={gift} />
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-
-                    <div ref={chatContainerRef} className="h-48 overflow-y-auto no-scrollbar flex flex-col-reverse">
-                        <div className="pt-4 flex flex-col gap-2">
-                            {messages.slice().reverse().map((msg, index) => {
-                                if (msg.type === 'entry') return <EntryChatMessage key={msg.id} user={msg.fullUser!} onClick={onViewProfile} currentUser={currentUser} onFollow={onFollowUser} isFollowed={followingUsers.some(u => u.id === msg.fullUser!.id)} streamer={streamer} />;
-                                if (msg.type === 'fan_entry') return <FanClubEntryMessage key={msg.id} user={msg.fullUser} />;
-                                if (msg.type === 'friend_request') return <FriendRequestNotification key={msg.id} followerName={msg.follower?.name} onClick={onOpenFriendRequests} />;
-                                if (msg.type === 'follow') return <FollowChatMessage key={msg.id} follower={msg.user!} followed={msg.followedUser!} />;
-                                return <ChatMessage key={msg.id} userObject={constructUserFromMessage(msg)} message={msg.message!} onAvatarClick={() => onViewProfile(constructUserFromMessage(msg))} streamerId={streamer.id} timestamp={msg.id} />;
-                            })}
-                        </div>
-                    </div>
-
-                    <div className="flex items-center gap-2 mt-2">
-                        <div className="relative flex-1 bg-black/40 rounded-full flex items-center pr-2 border border-white/20 focus-within:border-purple-500/50 transition-colors">
+                    )}
+                    <div className="flex items-center space-x-2">
+                        <div className="flex-grow bg-black/40 rounded-full flex items-center pr-1.5">
                             <input 
                                 ref={chatInputRef}
                                 type="text" 
-                                className="flex-1 bg-transparent px-4 py-2.5 outline-none text-sm placeholder:text-gray-400" 
+                                className="bg-transparent flex-grow px-4 py-2.5 text-sm text-white placeholder-gray-400 outline-none"
                                 placeholder={t('streamRoom.sayHi')}
-                                value={chatInput} 
-                                onChange={e => setChatInput(e.target.value)} 
-                                onKeyPress={e => e.key === 'Enter' && handleSendMessage(e)}
+                                value={chatInput}
+                                onChange={handleChatInputChange}
                                 onFocus={() => setIsChatInputFocused(true)}
-                                onBlur={() => setIsChatInputFocused(false)}
+                                onBlur={() => setTimeout(() => setIsChatInputFocused(false), 200)}
+                                onKeyPress={(e) => e.key === 'Enter' && handleSendMessage(e)}
                             />
-                            {showMentionSuggestions && (
-                                <UserMentionSuggestions users={onlineUsers} onSelect={(name: string) => setChatInput(prev => prev.slice(0, prev.lastIndexOf('@') + 1) + name + ' ')} />
-                            )}
-                            <button onClick={e => handleSendMessage(e)} disabled={!chatInput.trim()} className="w-8 h-8 bg-white/10 rounded-full flex items-center justify-center text-white shrink-0 active:scale-90 transition-transform disabled:bg-gray-800 disabled:text-gray-500">
-                                <SendIcon className="w-4 h-4 ml-0.5" />
+                            <button 
+                                onClick={handleSendMessage}
+                                className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-white active:scale-95 transition-transform"
+                            >
+                                <SendIcon className="w-4 h-4" />
                             </button>
                         </div>
-                        <button onClick={() => setGiftModalOpen(true)} className="w-10 h-10 bg-black/40 rounded-full flex items-center justify-center text-yellow-400 shrink-0 border border-white/20"><GiftIcon className="w-6 h-6" /></button>
-                        <button onClick={() => setIsToolsOpen(true)} className="w-10 h-10 bg-black/40 rounded-full flex items-center justify-center shrink-0 border border-white/20"><MoreIcon className="w-6 h-6" /></button>
+                        <button 
+                            onClick={() => setGiftModalOpen(true)}
+                            className="w-11 h-11 bg-black/40 rounded-full flex items-center justify-center shadow-lg active:scale-95 transition-transform"
+                        >
+                            <GiftIcon className="w-6 h-6 text-yellow-400" />
+                        </button>
+                        <button 
+                            onClick={() => setIsToolsOpen(true)}
+                            className="w-11 h-11 bg-black/40 rounded-full flex items-center justify-center shadow-lg active:scale-95 transition-transform"
+                        >
+                            <MoreIcon className="w-6 h-6 text-white" />
+                        </button>
                     </div>
-                </div>
+                </footer>
             </div>
 
-            {isGiftModalOpen && (
-                 <GiftModal 
-                    isOpen={isGiftModalOpen} 
-                    onClose={() => setGiftModalOpen(false)} 
+            <GiftModal
+                isOpen={isGiftModalOpen}
+                onClose={() => setGiftModalOpen(false)}
+                currentUser={currentUser}
+                onUpdateUser={updateUser}
+                onSendGift={handleSendGift}
+                onRecharge={handleRecharge}
+                onOpenVIPCenter={onOpenVIPCenter}
+                gifts={GIFTS}
+                receivedGifts={receivedGifts}
+                hostUser={streamerDisplayUser}
+                onlineUsers={onlineUsers}
+                streamId={streamer.id}
+                hostId={streamer.hostId}
+                isBroadcaster={isBroadcaster}
+            />
+
+            {isOnlineUsersOpen && (
+                <OnlineUsersModal 
+                    onClose={() => setOnlineUsersOpen(false)} 
+                    streamId={streamer.id} 
+                    users={onlineUsers}
                     currentUser={currentUser}
-                    onUpdateUser={updateUser}
-                    onSendGift={handleSendGift} 
-                    onRecharge={handleRecharge} 
-                    receivedGifts={receivedGifts}
-                    isBroadcaster={isBroadcaster}
-                    onOpenVIPCenter={onOpenVIPCenter}
-                    streamId={streamer.id}
-                    hostId={streamer.hostId}
-                    onlineUsers={onlineUsers}
-                    hostUser={streamerUser}
+                    onFollow={onFollowUser}
                 />
             )}
+
+            {isRankingOpen && (
+                <ContributionRankingModal 
+                    onClose={() => setIsRankingOpen(false)} 
+                    liveRanking={onlineUsers} 
+                />
+            )}
+
             <ToolsModal 
-                isOpen={isToolsOpen} 
-                onClose={() => setIsToolsOpen(false)} 
-                onOpenCoHostModal={handleOpenCoHostModal}
-                isPKBattleActive={false}
-                onStartPK={(e: any) => { e.stopPropagation(); setIsToolsOpen(false); setIsCoHostModalOpen(true); }}
+                isOpen={isToolsOpen}
+                onClose={() => setIsToolsOpen(false)}
                 onOpenBeautyPanel={handleOpenBeautyPanel}
-                onOpenPrivateChat={onOpenPrivateChat}
-                onOpenPrivateInviteModal={() => { setIsToolsOpen(false); onOpenPrivateInviteModal(); }}
-                onOpenClarityPanel={handleOpenClarityPanel}
-                onOpenRanking={() => setIsRankingOpen(true)}
-                isModerationActive={isModerationMode}
-                onToggleModeration={() => setIsModerationMode(!isModerationMode)}
+                onOpenCoHostModal={handleOpenCoHostModal}
                 isMicrophoneMuted={liveSession?.isMicrophoneMuted || false}
-                onToggleMicrophone={() => updateLiveSession({ isMicrophoneMuted: !liveSession?.isMicrophoneMuted })}
+                onToggleMicrophone={handleToggleMicrophone}
                 isSoundMuted={liveSession?.isStreamMuted || false}
-                onToggleSound={() => updateLiveSession({ isStreamMuted: !liveSession?.isStreamMuted })}
+                onToggleSound={handleToggleSound}
+                onOpenClarityPanel={handleOpenClarityPanel}
+                onToggleModeration={() => setIsModerationMode(!isModerationMode)}
+                isModerationActive={isModerationMode}
+                onOpenPrivateInviteModal={onOpenPrivateInviteModal}
+                isPKBattleActive={false}
+                onToggleAutoFollow={handleToggleAutoFollow}
                 isAutoFollowEnabled={liveSession?.isAutoFollowEnabled || false}
-                onToggleAutoFollow={() => updateLiveSession({ isAutoFollowEnabled: !liveSession?.isAutoFollowEnabled })}
+                onToggleAutoPrivateInvite={handleToggleAutoPrivateInvite}
                 isAutoPrivateInviteEnabled={isAutoPrivateInviteEnabled}
-                onToggleAutoPrivateInvite={() => {
-                    const newState = !isAutoPrivateInviteEnabled;
-                    setIsAutoPrivateInviteEnabled(newState);
-                    webSocketManager.emit('toggleAutoInvite', { roomId: streamer.id, isEnabled: newState });
+                onOpenPrivateChat={onOpenPrivateChat}
+            />
+
+            <ResolutionPanel 
+                isOpen={isResolutionPanelOpen}
+                onClose={() => setResolutionPanelOpen(false)}
+                onSelectResolution={handleSelectResolution}
+                currentResolution={currentResolution}
+            />
+
+            {isBeautyPanelOpen && (
+                <BeautyEffectsPanel 
+                    onClose={() => setBeautyPanelOpen(false)} 
+                    addToast={addToast}
+                />
+            )}
+
+            {isCoHostModalOpen && (
+                <CoHostModal 
+                    isOpen={isCoHostModalOpen}
+                    onClose={() => setIsCoHostModalOpen(false)}
+                    onInvite={handleInvite}
+                    onOpenTimerSettings={onOpenPKTimerSettings}
+                    currentUser={currentUser}
+                    addToast={addToast}
+                    streamId={streamer.id}
+                />
+            )}
+
+            {userActionModalState.isOpen && userActionModalState.user && (
+                <UserActionModal 
+                    isOpen={userActionModalState.isOpen}
+                    user={userActionModalState.user}
+                    onClose={handleCloseUserActions}
+                    onViewProfile={onViewProfile}
+                    onKick={handleKickUser}
+                    onMakeModerator={handleMakeModerator}
+                    onMention={handleMentionUser}
+                />
+            )}
+
+            <FanClubModal 
+                isOpen={isFanClubModalOpen}
+                onClose={() => setIsFanClubModalOpen(false)}
+                streamer={streamerUser}
+                isMember={isFanClubMember}
+                currentUser={currentUser}
+                onConfirmJoin={() => setIsJoinFanClubModalOpen(true)}
+                onOpenMembers={onOpenFanClubMembers}
+            />
+
+            <JoinFanClubModal 
+                isOpen={isJoinFanClubModalOpen}
+                onClose={() => setIsJoinFanClubModalOpen(false)}
+                onConfirm={async () => {
+                    const rocket = GIFTS.find(g => g.name === 'Foguete') || GIFTS[0];
+                    const success = await handleSendGift(rocket, 1);
+                    if (success) {
+                        setIsJoinFanClubModalOpen(false);
+                    }
                 }}
             />
-            {isCoHostModalOpen && <CoHostModal isOpen={isCoHostModalOpen} onClose={() => setIsCoHostModalOpen(false)} onInvite={handleInvite} onOpenTimerSettings={onOpenPKTimerSettings} currentUser={currentUser} addToast={addToast} streamId={streamer.id} />}
-            {isOnlineUsersOpen && <OnlineUsersModal onClose={() => setOnlineUsersOpen(false)} streamId={streamer.id} users={onlineUsers} onFollow={onFollowUser} currentUser={currentUser} />}
-            {isRankingOpen && <ContributionRankingModal onClose={() => setIsRankingOpen(false)} liveRanking={onlineUsers} />}
-            {isBeautyPanelOpen && <BeautyEffectsPanel onClose={() => setBeautyPanelOpen(false)} addToast={addToast} />}
-            {isResolutionPanelOpen && <ResolutionPanel isOpen={isResolutionPanelOpen} onClose={() => setResolutionPanelOpen(false)} onSelectResolution={handleSelectResolution} currentResolution={currentResolution} />}
-            <UserActionModal {...userActionModalState} onClose={() => setUserActionModalState({ isOpen: false, user: null })} onViewProfile={onViewProfile} onMention={() => {}} onMakeModerator={() => {}} onKick={() => {}} />
-            <FullScreenGiftAnimation payload={currentFullscreenGift} onEnd={handleFullscreenGiftAnimationEnd} />
-            {isFanClubModalOpen && <FanClubModal isOpen={isFanClubModalOpen} onClose={() => setIsFanClubModalOpen(false)} streamer={streamerDisplayUser} isMember={isFanClubMember} currentUser={currentUser} onConfirmJoin={() => { setIsFanClubModalOpen(false); setIsJoinFanClubModalOpen(true); }} onOpenMembers={onOpenFanClubMembers} />}
-            {isJoinFanClubModalOpen && <JoinFanClubModal isOpen={isJoinFanClubModalOpen} onClose={() => setIsJoinFanClubModalOpen(false)} onConfirm={() => {
-                const joinGift = GIFTS.find(g => g.name === 'Rosa');
-                if (joinGift) handleSendGift(joinGift, 1, streamer.hostId);
-                setIsJoinFanClubModalOpen(false);
-            }} />}
         </div>
     );
 };

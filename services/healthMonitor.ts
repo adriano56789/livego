@@ -37,7 +37,7 @@ class HealthMonitorService {
     ];
 
     // Use the correct port where the frontend is running
-    private readonly BASE_URL = 'http://localhost:5174/api';
+    private readonly BASE_URL = 'http://localhost:3000/api';
     
     // Add request timeout (in milliseconds)
     private readonly REQUEST_TIMEOUT = 3000;

@@ -9,7 +9,7 @@
   "scripts": {
     "dev": "concurrently \"npm:dev:frontend\" \"npm:dev:backend\"",
     "dev:frontend": "vite",
-    "dev:backend": "nodemon --exec node --no-warnings=ExperimentalWarning --loader ts-node/esm server.ts",
+    "dev:backend": "nodemon --exec node --no-warnings=ExperimentalWarning --es-module-specifier-resolution=node --loader ts-node/esm server.ts",
     "build": "npm run server:build && npm run build:frontend",
     "build:frontend": "vite build",
     "preview": "vite preview",
@@ -26,6 +26,7 @@
     "build:api": "vite build --config vite.api.config.ts"
   },
   "dependencies": {
+    "axios": "^1.13.2",
     "bcryptjs": "^2.4.3",
     "clsx": "^2.1.1",
     "cors": "^2.8.5",
@@ -42,6 +43,7 @@
     "tailwind-merge": "^2.5.5"
   },
   "devDependencies": {
+    "@types/axios": "^0.14.4",
     "@types/bcryptjs": "^2.4.6",
     "@types/cors": "^2.8.17",
     "@types/express": "^4.17.21",

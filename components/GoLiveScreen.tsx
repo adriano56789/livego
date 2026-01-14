@@ -60,25 +60,48 @@ const GoLiveScreen: React.FC<GoLiveScreenProps> = ({ onClose, onStartStream, add
     let isActive = true;
 
     const initCamera = async () => {
-        if (step !== 'setup' || isInitializing.current) return;
+        if (step !== 'setup' || isInitializing.current) {
+          console.log('Inicialização da câmera ignorada - step:', step, 'isInitializing:', isInitializing.current);
+          return;
+        }
+        
+        console.log('Iniciando inicialização da câmera...');
         isInitializing.current = true;
 
         try {
+            console.log('Solicitando permissão de mídia...');
             const mediaStream = await navigator.mediaDevices.getUserMedia({ 
-                video: { facingMode: 'user' }, 
+                video: { 
+                    facingMode: 'user',
+                    width: { ideal: 1280 },
+                    height: { ideal: 720 }
+                }, 
                 audio: true 
             });
 
+            console.log('Stream de mídia obtida:', mediaStream);
+            console.log('Tracks de vídeo ativas:', mediaStream.getVideoTracks().length);
+            console.log('Tracks de áudio ativas:', mediaStream.getAudioTracks().length);
+
             if (!isActive) {
-                mediaStream.getTracks().forEach(track => track.stop());
+                console.log('Componente desmontado, liberando stream...');
+                mediaStream.getTracks().forEach(track => {
+                    console.log('Parando track:', track.kind, track.label);
+                    track.stop();
+                });
                 return;
             }
 
             setStream(mediaStream);
+            console.log('Stream definida no estado');
         } catch (err) {
-            console.error("Camera Init Error:", err);
-            addToast(ToastType.Error, "Erro ao acessar a câmera.");
+            console.error("Erro ao acessar a câmera:", err);
+            const errorMessage = err instanceof Error ? err.message : 'Erro desconhecido';
+            addToast(ToastType.Error, `Erro ao acessar a câmera: ${errorMessage}`);
+            // Avança para a próxima etapa mesmo com erro para evitar travar o usuário
+            setStep('setup');
         } finally {
+            console.log('Finalizando inicialização da câmera');
             isInitializing.current = false;
         }
     };
@@ -159,7 +182,7 @@ const GoLiveScreen: React.FC<GoLiveScreenProps> = ({ onClose, onStartStream, add
                     relay: 'Relay (TURN)',
                     prflx: 'Peer Reflexive'
                 };
-                const candidateType = typeMap[event.candidate?.type] || event.candidate?.type;
+                const candidateType = event.candidate?.type ? (typeMap[event.candidate.type] || event.candidate.type) : 'unknown';
                 console.log(`[WebRTC] Coletado candidato do tipo: ${candidateType}. Enviando para o servidor...`, event.candidate);
                 
                 api.srs.trickleIce(sessionid, event.candidate).catch(err => {
@@ -347,18 +370,88 @@ const GoLiveScreen: React.FC<GoLiveScreenProps> = ({ onClose, onStartStream, add
                  </div>
             </div>
 
-            <div className={`px-4 mt-8 transition-all duration-500 ${isCleanMode ? 'opacity-0 translate-y-10 scale-95 pointer-events-none' : 'opacity-100 translate-y-0 scale-100'}`}>
-                <div className="bg-[#1e1e1e]/90 backdrop-blur-xl rounded-2xl p-1 border border-white/10 shadow-2xl">
-                    <div className="flex p-1 bg-[#121212]/50 rounded-xl mb-2">
-                        {['WebRTC', 'RTMP', 'SRT'].map(tab => (
-                            <button key={tab} onClick={() => setActiveTab(tab as any)} className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${activeTab === tab ? 'bg-white text-black' : 'text-gray-400'}`}>{tab}</button>
-                        ))}
+            {/* Painel de Configurações */}
+            <div className={`fixed inset-0 z-30 flex items-center justify-center transition-all duration-300 ${!isCleanMode ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
+                <div className="absolute inset-0 bg-black/50" onClick={() => setIsCleanMode(false)}></div>
+                <div className="relative z-10 w-full max-w-md mx-4 bg-[#1e1e1e] rounded-2xl p-4 shadow-2xl">
+                    <div className="flex justify-between items-center mb-4">
+                        <h3 className="text-white text-lg font-bold">Configurações</h3>
+                        <button onClick={() => setIsCleanMode(false)} className="text-gray-400 hover:text-white">
+                            <CloseIcon className="w-5 h-5" />
+                        </button>
                     </div>
-                    <div className="px-2 pb-2 space-y-1">
-                        <button className="w-full flex items-center justify-between p-3 hover:bg-white/5 rounded-lg"><div className="flex items-center gap-3"><div className="w-6 h-6 rounded-full bg-blue-500/20 flex items-center justify-center"><div className="w-3 h-3 border-2 border-blue-400 rounded-[1px]"></div></div><span className="text-white text-sm font-bold">Manual de Transmissão</span></div><ChevronRightIcon className="w-4 h-4 text-gray-500" /></button>
-                        <button onClick={() => setIsBeautyPanelOpen(true)} className="w-full flex items-center justify-between p-3 hover:bg-white/5 rounded-lg"><div className="flex items-center gap-3"><div className="w-6 h-6 rounded-full bg-pink-500/20 flex items-center justify-center"><MagicIcon className="w-3 h-3 text-pink-400" /></div><span className="text-white text-sm font-bold">Efeitos de Beleza</span></div><ChevronRightIcon className="w-4 h-4 text-gray-500" /></button>
-                        <div className="w-full flex items-center justify-between p-3"><div className="flex items-center gap-3"><div className="w-6 h-6 rounded-full bg-orange-500/20 flex items-center justify-center"><span className="text-[10px] font-black text-orange-400">PK</span></div><span className="text-white text-sm font-bold">Batalha PK</span></div><div onClick={() => setIsPKEnabled(!isPKEnabled)} className={`w-10 h-6 rounded-full p-1 cursor-pointer transition-colors ${isPKEnabled ? 'bg-green-500' : 'bg-gray-600'}`}><div className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform ${isPKEnabled ? 'translate-x-4' : 'translate-x-0'}`}></div></div></div>
-                        <div className="w-full flex items-center justify-between p-3"><div className="flex items-center gap-3"><div className="w-6 h-6 rounded-full bg-purple-500/20 flex items-center justify-center"><div className="w-3 h-3 border border-purple-400 rounded-sm"></div></div><span className="text-white text-sm font-bold">Sala Privada</span></div><div onClick={handleTogglePrivate} className={`w-10 h-6 rounded-full p-1 cursor-pointer transition-colors ${liveSettings.isPrivate ? 'bg-green-500' : 'bg-gray-600'}`}><div className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform ${liveSettings.isPrivate ? 'translate-x-4' : 'translate-x-0'}`}></div></div></div>
+                    <div className="bg-[#1e1e1e]/90 backdrop-blur-xl rounded-2xl p-1 border border-white/10 shadow-2xl">
+                        <div className="flex p-1 bg-[#121212]/50 rounded-xl mb-2">
+                            {['WebRTC', 'RTMP', 'SRT'].map(tab => (
+                                <button 
+                                    key={tab} 
+                                    onClick={() => setActiveTab(tab as any)} 
+                                    className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${activeTab === tab ? 'bg-white text-black' : 'text-gray-400'}`}
+                                >
+                                    {tab}
+                                </button>
+                            ))}
+                        </div>
+                        <div className="px-2 pb-2 space-y-1">
+                            <button className="w-full flex items-center justify-between p-3 hover:bg-white/5 rounded-lg">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-6 h-6 rounded-full bg-blue-500/20 flex items-center justify-center">
+                                        <div className="w-3 h-3 border-2 border-blue-400 rounded-[1px]"></div>
+                                    </div>
+                                    <span className="text-white text-sm font-bold">Manual de Transmissão</span>
+                                </div>
+                                <ChevronRightIcon className="w-4 h-4 text-gray-500" />
+                            </button>
+                            <button 
+                                onClick={() => {
+                                    setIsBeautyPanelOpen(true);
+                                    setIsCleanMode(false);
+                                }} 
+                                className="w-full flex items-center justify-between p-3 hover:bg-white/5 rounded-lg"
+                            >
+                                <div className="flex items-center gap-3">
+                                    <div className="w-6 h-6 rounded-full bg-pink-500/20 flex items-center justify-center">
+                                        <MagicIcon className="w-3 h-3 text-pink-400" />
+                                    </div>
+                                    <span className="text-white text-sm font-bold">Efeitos de Beleza</span>
+                                </div>
+                                <ChevronRightIcon className="w-4 h-4 text-gray-500" />
+                            </button>
+                            <div className="w-full flex items-center justify-between p-3">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-6 h-6 rounded-full bg-orange-500/20 flex items-center justify-center">
+                                        <span className="text-[10px] font-black text-orange-400">PK</span>
+                                    </div>
+                                    <span className="text-white text-sm font-bold">Batalha PK</span>
+                                </div>
+                                <div 
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setIsPKEnabled(!isPKEnabled);
+                                    }} 
+                                    className={`w-10 h-6 rounded-full p-1 cursor-pointer transition-colors ${isPKEnabled ? 'bg-green-500' : 'bg-gray-600'}`}
+                                >
+                                    <div className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform ${isPKEnabled ? 'translate-x-4' : 'translate-x-0'}`}></div>
+                                </div>
+                            </div>
+                            <div className="w-full flex items-center justify-between p-3">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-6 h-6 rounded-full bg-purple-500/20 flex items-center justify-center">
+                                        <div className="w-3 h-3 border border-purple-400 rounded-sm"></div>
+                                    </div>
+                                    <span className="text-white text-sm font-bold">Sala Privada</span>
+                                </div>
+                                <div 
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleTogglePrivate();
+                                    }} 
+                                    className={`w-10 h-6 rounded-full p-1 cursor-pointer transition-colors ${liveSettings.isPrivate ? 'bg-green-500' : 'bg-gray-600'}`}
+                                >
+                                    <div className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform ${liveSettings.isPrivate ? 'translate-x-4' : 'translate-x-0'}`}></div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

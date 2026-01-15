@@ -532,7 +532,14 @@ const AppContent: React.FC = () => {
           )}
           
           <EndStreamConfirmationModal isOpen={isEndConfirmationOpen} onConfirm={handleEndStream} onCancel={() => setIsEndConfirmationOpen(false)} />
-          {isGoLiveOpen && <GoLiveScreen onClose={() => setIsGoLiveOpen(false)} onStartStream={handleStartStream} addToast={addToast} />}
+          {isGoLiveOpen && currentUser && (
+            <GoLiveScreen 
+              currentUser={currentUser} 
+              onClose={() => setIsGoLiveOpen(false)} 
+              onStartStream={handleStartStream} 
+              addToast={addToast} 
+            />
+          )}
           {isReminderOpen && <ReminderModal isOpen={isReminderOpen} onClose={() => setIsReminderOpen(false)} onOpenHistory={() => { setIsReminderOpen(false); setIsHistoryOpen(true); }} onSelectStream={handleSelectStream} />}
 {/* FIX: The 'onSelectStream' prop was missing from the HistoryModal component, causing a type error. Added the required prop to resolve the issue. */}
           {isHistoryOpen && <HistoryModal isOpen={isHistoryOpen} onClose={() => setIsHistoryOpen(false)} onSelectStream={handleSelectStream} />}

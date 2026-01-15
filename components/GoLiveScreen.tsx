@@ -1,5 +1,4 @@
-
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { CameraIcon, MicIcon, CloseIcon, ChevronRightIcon, MagicIcon, SettingsIcon, CopyIcon, ChevronDownIcon } from '@/components/icons';
 import { Streamer, User, ToastType } from '@/types';
 import { useTranslation } from '@/i18n';
@@ -8,12 +7,14 @@ import BeautyEffectsPanel from '@/components/live/BeautyEffectsPanel';
 import { webSocketManager } from '@/services/websocket';
 
 interface GoLiveScreenProps {
+  // FIX: Add currentUser prop to GoLiveScreenProps
+  currentUser: User;
   onClose: () => void;
   onStartStream: (streamData: Partial<Streamer>) => void;
   addToast: (type: ToastType, message: string) => void;
 }
 
-const GoLiveScreen: React.FC<GoLiveScreenProps> = ({ onClose, onStartStream, addToast }) => {
+const GoLiveScreen: React.FC<GoLiveScreenProps> = ({ currentUser, onClose, onStartStream, addToast }) => {
   const { t } = useTranslation();
   
   const [step, setStep] = useState<'permission_request' | 'setup'>('permission_request');
@@ -21,9 +22,9 @@ const GoLiveScreen: React.FC<GoLiveScreenProps> = ({ onClose, onStartStream, add
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const [stream, setStream] = useState<MediaStream | null>(null);
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const isInitializing = useRef(false);
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
+  
 
   const [activeTab, setActiveTab] = useState<'WebRTC' | 'RTMP' | 'SRT'>('WebRTC');
   const [isPKEnabled, setIsPKEnabled] = useState(true);
@@ -35,7 +36,6 @@ const GoLiveScreen: React.FC<GoLiveScreenProps> = ({ onClose, onStartStream, add
   const [isStarting, setIsStarting] = useState(false);
 
   useEffect(() => {
-    api.users.me().then(setCurrentUser);
     const fetchCategories = async () => {
         try {
             const data = await api.streams.getCategories();
@@ -111,7 +111,7 @@ const GoLiveScreen: React.FC<GoLiveScreenProps> = ({ onClose, onStartStream, add
     return () => {
         isActive = false;
     };
-  }, [step]);
+  }, [step, addToast]);
 
   useEffect(() => {
     const video = videoRef.current;

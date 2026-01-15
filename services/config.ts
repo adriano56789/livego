@@ -6,7 +6,7 @@
 // Vite substitui `process.env.NODE_ENV` por 'production' durante o build (`npm run build`)
 // e 'development' ao rodar o servidor de desenvolvimento (`npm run dev`).
 const isProduction = process.env.NODE_ENV === 'production';
-
+ 
 // Domínio público da sua aplicação em produção.
 const PRODUCTION_DOMAIN = 'https://livego.store';
 

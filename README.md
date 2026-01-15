@@ -21,8 +21,17 @@ View your app in AI Studio: https://ai.studio/apps/drive/1BVDXvWTQ20o5TAb4K9-UIT
 # livego-
 # livego
 cd /var/www/livego
-NODE_ENV=production MONGODB_URI="mongodb://admin:adriano123@localhost:27017/api?authSource=admin" pm2 start npm --name "livego" -- start
+   
 
 
-pm2 start /var/www/livego/dist-api/livego-api.es.js --name livego-api --env production
+mongosh "mongodb://appuser:adriano123@72.60.249.175:27017/appdb?authSource=appdb"
+
+
+docker  docker exec -it mongodb mongosh -u appuser -p adriano123 --authenticationDatabase appdb
+
+
+
+pm2 delete livego-api
+pm2 start dist-server/server.js --name livego-api --env production
 pm2 save
+pm2 logs livego-api

@@ -47,26 +47,52 @@ export const authController = {
         try {
             const { email, password } = req.body;
 
-            if (!email || !password) return sendError(res, "E-mail e senha são obrigatórios.", 400);
+            if (!email) return sendError(res, "E-mail é obrigatório.", 400);
+            if (!password) return sendError(res, "Senha é obrigatória.", 400);
 
-            const user = await UserModel.findOne({ email: email.toLowerCase().trim() }).select('+password');
-            if (!user) return sendError(res, "Usuário não encontrado.", 401);
+            // Normaliza o e-mail
+            const normalizedEmail = email.toLowerCase().trim();
+            
+            // Tenta encontrar o usuário incluindo a senha
+            const user = await UserModel.findOne({ email: normalizedEmail }).select('+password').lean();
+            
+            // Se o usuário não existir, retorna erro
+            if (!user) {
+                return sendError(res, "E-mail ou senha inválidos.", 401);
+            }
 
-            const isPasswordValid = await bcrypt.compare(password, String(user.password));
-            if (!isPasswordValid) return sendError(res, "Senha incorreta.", 401);
+            // Verifica a senha
+            const userPassword = user.password as string;
+            if (!userPassword) {
+                return sendError(res, "Erro na autenticação. Tente novamente.", 500);
+            }
+
+            const isPasswordValid = await bcrypt.compare(password, userPassword);
+            if (!isPasswordValid) {
+                return sendError(res, "E-mail ou senha inválidos.", 401);
+            }
+
+            // Atualiza o status para online
+            await UserModel.findByIdAndUpdate(user._id, { isOnline: true });
             
-            await UserModel.updateOne({ _id: user._id }, { isOnline: true });
-            
+            // Gera o token de autenticação
             const token = jwt.sign(
                 { userId: user.id, email: user.email },
                 config.jwtSecret,
                 { expiresIn: '7d' }
             );
             
-            const userObject = user.toJSON();
-            return sendSuccess(res, { user: userObject, token }, "Login realizado com sucesso.");
+            // Remove a senha do objeto de retorno
+            const { password: _, ...userWithoutPassword } = user;
+            
+            return sendSuccess(res, { 
+                user: userWithoutPassword, 
+                token 
+            }, "Login realizado com sucesso.");
+            
         } catch (error: any) {
-            next(error);
+            console.error("Erro no login:", error);
+            return sendError(res, "Erro inesperado ao fazer login.", 500);
         }
     },
 

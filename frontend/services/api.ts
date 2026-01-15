@@ -1,8 +1,7 @@
 
 import { API_CONFIG } from './config';
-import { User, PurchaseRecord, Gift, Streamer, RankedUser, MusicTrack, FeedPhoto } from '@/types';
+import { User, PurchaseRecord, Gift, Streamer, RankedUser, MusicTrack, FeedPhoto } from '../types';
 import { apiTrackerService } from './apiTrackerService';
-import { mockData } from './mockData';
 import { webSocketManager } from './websocket';
 
 
@@ -35,243 +34,7 @@ export const storage = {
 };
 
 const handleMockRequest = async (method: string, endpoint: string, payload?: any): Promise<any> => {
-    console.log(`[MOCK API] ${method} ${endpoint}`, payload);
-    await new Promise(resolve => setTimeout(resolve, 200 + Math.random() * 400));
-    const url = new URL(`http://mock.com${endpoint}`);
-    const params = url.searchParams;
-
-    // --- MOCK (New endpoint as requested) ---
-    if (endpoint.startsWith('/mock/')) {
-        if (endpoint === '/mock/view-history' && method === 'POST') {
-            console.log(`[MOCK] Histórico de visualização salvo para streamerId: ${payload.streamerId}`);
-            // In a real scenario, you'd find the stream and add it to a history array for the current user.
-            return { success: true, message: 'Histórico de visualização mockado com sucesso.' };
-        }
-    }
-
-    // --- AUTH ---
-    if (endpoint.startsWith('/auth/')) {
-        if (endpoint === '/auth/login' && method === 'POST') {
-            return { user: mockData.currentUser, token: 'fake-jwt-token' };
-        }
-        if (endpoint === '/auth/register' && method === 'POST') {
-            return { success: true };
-        }
-        if (endpoint === '/auth/logout' && method === 'POST') {
-            return { success: true };
-        }
-        if (endpoint === '/auth/last-email' && method === 'GET') {
-            return { email: 'adrianomdk5@gmail.com' };
-        }
-        if (endpoint === '/auth/save-last-email' && method === 'POST') {
-            return { success: true };
-        }
-    }
-
-    // --- USERS ---
-    if (endpoint.startsWith('/users/')) {
-        const parts = endpoint.split('/');
-        const userId = parts[2];
-        const action = parts[3];
-
-        if (endpoint === '/users/me/history') {
-            if (method === 'GET') {
-                const history = mockData.streams.slice(3, 7).map(s => ({
-                    id: s.id, // stream id
-                    streamerId: s.hostId,
-                    name: s.name,
-                    avatar: s.avatar,
-                    isLive: Math.random() > 0.5,
-                    lastWatchedAt: new Date(Date.now() - Math.random() * 86400000 * 7).toISOString()
-                }));
-                return history;
-            }
-            if (method === 'POST') {
-                console.log('[MOCK] Histórico de visualização salvo:', payload);
-                return { success: true };
-            }
-            if (method === 'DELETE') {
-                console.log('[MOCK] Histórico de visualização limpo.');
-                return { success: true };
-            }
-        }
-
-        if (userId === 'me') {
-            if (method === 'POST') {
-                 const updatedUser = { ...mockData.currentUser, ...payload };
-                 mockData.currentUser = updatedUser as User;
-                 storage.setUser(updatedUser as User);
-                 return { success: true, user: updatedUser };
-            }
-            if (!action) return mockData.currentUser;
-            if (action === 'withdrawal-history') {
-                 const mockHistory: PurchaseRecord[] = [
-                    { id: 'wh-1', userId: 'me', amountBRL: 150.00, status: 'Concluído', type: 'withdrawal', timestamp: new Date(Date.now() - 86400000).toISOString(), description: 'Saque PIX' },
-                    { id: 'wh-2', userId: 'me', amountBRL: 200.00, status: 'Pendente', type: 'withdrawal', timestamp: new Date().toISOString(), description: 'Saque PIX' },
-                    { id: 'wh-3', userId: 'me', amountBRL: 75.50, status: 'Cancelado', type: 'withdrawal', timestamp: new Date(Date.now() - 172800000).toISOString(), description: 'Saque PIX' },
-                ];
-                const status = params.get('status');
-                if (status && status !== 'Todos') {
-                    return mockHistory.filter(item => item.status === status);
-                }
-                return mockHistory;
-            }
-            if (action === 'blocklist') {
-                 if(method === 'GET') return [mockData.onlineUsers[2]];
-                 if(method === 'POST') return { success: true };
-            }
-             if (action === 'reminders') {
-                 if(method === 'GET') return mockData.streams.slice(0, 3).map(s => ({...s, isLive: Math.random() > 0.5}));
-                 if(method === 'DELETE') return { success: true };
-             }
-        }
-        if (endpoint.startsWith('/users/search')) {
-            const query = params.get('q')?.toLowerCase() || '';
-            return mockData.onlineUsers.filter(u => u.name.toLowerCase().includes(query));
-        }
-        if (endpoint.startsWith('/users/online')) {
-            return mockData.onlineUsers;
-        }
-         // Fallback for /users/:id
-        const allUsers = [...mockData.onlineUsers, ...mockData.ranking, mockData.currentUser];
-        const foundUser = allUsers.find(u => u.id === userId);
-        if(foundUser) return foundUser;
-        return { ...mockData.currentUser, id: userId, name: `User ${userId}` };
-    }
-
-    // --- STREAMS & LIVE ---
-    if (endpoint.startsWith('/streams') || endpoint.startsWith('/live')) {
-        if (endpoint.includes('/invite')) {
-            const { userId: invitedUserId } = payload;
-            const streamId = endpoint.split('/')[2];
-            const streamData = mockData.streams.find(s => s.id === streamId);
-            const allUsers = [...mockData.onlineUsers, mockData.currentUser];
-            const invitedUser = allUsers.find(u => u.id === invitedUserId);
-            
-            if (streamData && invitedUser) {
-                const invitePayload = {
-                    fromUser: mockData.currentUser,
-                    toUser: invitedUser,
-                    streamId: streamId,
-                    streamData: { ...streamData, isPrivate: true }
-                };
-                webSocketManager.emitSimulatedEvent('privateRoomInvite', invitePayload);
-            }
-            return { success: true };
-        }
-        if (endpoint === '/streams/categories') return mockData.streamCategories;
-        if (endpoint.startsWith('/live/')) {
-            const category = url.pathname.split('/')[2];
-            if (category === 'popular') return mockData.streams;
-            return mockData.streams.filter((s: Streamer) => s.category?.toLowerCase() === category || s.tags.map((t: string) => t.toLowerCase()).includes(category));
-        }
-        if(endpoint.endsWith('/gift')) {
-             const { giftName, amount } = payload;
-             const sentGift = mockData.gifts.find((g: Gift) => g.name === giftName);
-             if (!sentGift) throw new Error('Presente não encontrado.');
-             const totalCost = sentGift.price * (amount || 1);
-             if (mockData.currentUser.diamonds < totalCost) throw new Error('Diamantes insuficientes.');
-             const updatedSender = { ...mockData.currentUser, diamonds: mockData.currentUser.diamonds - totalCost };
-             mockData.currentUser = updatedSender as User;
-             storage.setUser(updatedSender as User);
-             return { success: true, updatedSender };
-        }
-        if(endpoint.endsWith('/donors')) return mockData.ranking;
-        if(endpoint === '/streams/beauty-settings') {
-             return {
-                tabs: [{ id: 'basic', label: 'Básico' }, { id: 'filters', label: 'Filtros' }],
-                effects: {
-                    basic: [{ id: 'smooth', label: 'Suavizar', icon: 'FaceSmoothIcon', defaultValue: 50 }, { id: 'whiten', label: 'Clarear', icon: 'SunIcon', defaultValue: 30 }, { id: 'contrast', label: 'Contraste', icon: 'ContrastIcon', defaultValue: 20 }, { id: 'none', label: 'Nenhum', icon: 'BanIcon', defaultValue: 0 }],
-                    filters: [{ id: 'vintage', label: 'Vintage', image: 'https://picsum.photos/seed/vintage/100' }, { id: 'bw', label: 'Preto & Branco', image: 'https://picsum.photos/seed/bw/100' }],
-                },
-                slider: { label: 'Intensidade' },
-                actions: [{ id: 'save', label: 'Salvar' }, { id: 'reset', label: 'Resetar' }]
-            };
-        }
-        // Default success for other stream actions
-        return { success: true };
-    }
-
-    // --- GIFTS & WALLET & EARNINGS ---
-    if (endpoint.startsWith('/gifts') || endpoint.startsWith('/wallet') || endpoint.startsWith('/earnings') || endpoint.startsWith('/mercadopago')) {
-        if (endpoint === '/gifts') return mockData.gifts;
-        if (endpoint === '/gifts/gallery') return mockData.gifts.slice(0,3).map((g: Gift, i: number) => ({...g, count: (i+1) * 2}));
-        if (endpoint === '/wallet/balance') return { diamonds: mockData.currentUser.diamonds, earnings: mockData.currentUser.earnings, userEarnings: { available_diamonds: mockData.currentUser.earnings, gross_brl: (mockData.currentUser.earnings || 0) * 0.05, platform_fee_brl: (mockData.currentUser.earnings || 0) * 0.05 * 0.2, net_brl: (mockData.currentUser.earnings || 0) * 0.05 * 0.8 }};
-        if (endpoint === '/wallet/confirm-purchase') {
-            mockData.currentUser.diamonds += payload.details.diamonds;
-            return [{ success: true, user: mockData.currentUser }];
-        }
-        if (endpoint === '/mercadopago/create_preference') return { preferenceId: `mp-pref-${Date.now()}` };
-        if (endpoint === '/earnings/withdraw/calculate') return { gross_value: payload.amount * 0.05, platform_fee: (payload.amount * 0.05) * 0.2, net_value: (payload.amount * 0.05) * 0.8 };
-        if (endpoint === '/earnings/withdraw/request') {
-             mockData.currentUser.earnings = (mockData.currentUser.earnings || 0) - payload.amount;
-             return { success: true, message: 'Saque solicitado.' };
-        }
-        // Default success for others
-        return { success: true, user: mockData.currentUser };
-    }
-
-    // --- ADMIN ---
-    if (endpoint.startsWith('/admin/')) {
-        if(endpoint === '/admin/withdrawals') return [{ id: 'adm-wh-1', userId: 'admin', amountBRL: 500, status: 'Concluído', type: 'withdrawal', timestamp: new Date().toISOString() }];
-        return { success: true };
-    }
-    
-    // --- CHATS ---
-    if (endpoint.startsWith('/chats/')) {
-        if (endpoint === '/chats/conversations') return mockData.conversations;
-        return { success: true };
-    }
-    
-    // --- RANKING & TASKS ---
-    if (endpoint.startsWith('/ranking/') || endpoint.startsWith('/tasks/')) {
-        if(endpoint.includes('fans')) return mockData.ranking;
-        if(endpoint.includes('friends')) return [{ id: 'qf-1', name: 'Amigo Rápido', status: 'pendente' }];
-        return mockData.ranking;
-    }
-
-    // --- ASSETS ---
-    if (endpoint.startsWith('/assets/')) {
-        if (endpoint === '/assets/frames') return mockData.frames;
-        if (endpoint === '/assets/music') return mockData.music;
-    }
-    
-    // --- SOCIAL / FEED ---
-    if (endpoint.startsWith('/feed/') || endpoint.startsWith('/posts')) {
-        if (endpoint === '/feed/videos') return [{ ...mockData.streams[0], id: 'post-1', type: 'video', mediaUrl: 'https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/360/Big_Buck_Bunny_360_10s_1MB.mp4', likes: 1234, commentCount: 56, description: 'Test video!', musicTitle: 'Test Music', user: { id: mockData.streams[0].hostId, name: mockData.streams[0].name, avatarUrl: mockData.streams[0].avatar } }];
-        if (endpoint.endsWith('/like')) return { success: true };
-        if (endpoint.endsWith('/comment')) return { success: true, comment: { id: `c-${Date.now()}`, user: mockData.currentUser, text: payload.text } };
-        if (endpoint === '/posts') {
-             return { success: true, user: mockData.currentUser, post: { id: `post-${Date.now()}`}};
-        }
-    }
-    
-    // --- DB ---
-    if (endpoint.startsWith('/db/')) {
-        if (endpoint === '/db/required-collections') return ['users', 'gifts', 'streamers', 'transactions', 'conversations', 'messages', 'posts', 'comments', 'likes', 'followers', 'notifications', 'frames', 'music', 'sessions', 'settings', 'reports', 'blocks', 'payouts', 'rankings', 'streamhistories'];
-        if (endpoint === '/db/collections') return ['users', 'gifts', 'streamers', 'transactions', 'streamhistories'];
-        if (endpoint === '/db/setup') return { success: true, message: 'Banco de dados verificado e sincronizado!' };
-    }
-
-    // --- SRS (WebRTC) ---
-    if (endpoint.startsWith('/v1/')) {
-        if (endpoint === '/v1/rtc/publish') {
-            return { code: 0, sdp: `v=0\r\no=- 0 0 IN IP4 127.0.0.1\r\ns=Mock\r\nc=IN IP4 127.0.0.1\r\nt=0 0\r\nm=audio 9000 RTP/AVP 111\r\na=rtpmap:111 opus/48000/2\r\n`, sessionid: `rtc-mock-${Date.now()}` };
-        }
-        return { success: true, code: 0 };
-    }
-    
-    // --- LIVEKIT (WebRTC) ---
-    if (endpoint.startsWith('/livekit/')) {
-        if (endpoint.includes('token')) return { token: `lk-token-mock-${Date.now()}`};
-        return { success: true, message: "Ação LiveKit simulada."};
-    }
-
-    // --- MISC ---
-    if(endpoint === '/translate') return { translatedText: `(Traduzido) ${payload.text}`};
-
-    console.warn(`[MOCK API] Unhandled endpoint: ${method} ${endpoint}`);
-    return {}; // Default empty response for unhandled cases
+    throw new Error('Mock mode is disabled. Please enable USE_MOCK or connect to real backend.');
 };
 
 const fetcher = async (method: 'GET' | 'POST' | 'PATCH' | 'DELETE' | 'PUT', endpoint: string, payload?: any): Promise<any> => {
@@ -324,10 +87,34 @@ const fetcher = async (method: 'GET' | 'POST' | 'PATCH' | 'DELETE' | 'PUT', endp
         return responseData.data !== undefined ? responseData.data : responseData;
     } catch (error: any) {
         clearTimeout(timeoutId);
-        if (error.name !== 'AbortError') {
-            apiTrackerService.updateLog(logId, { status: 'Error', error: error.message });
+        
+        // Tratamento melhorado do AbortError
+        if (error.name === 'AbortError') {
+            // Verificar se foi timeout ou cancelamento manual
+            const isTimeout = error.message.includes('timeout') || error.message.includes('Request timeout');
+            
+            if (isTimeout) {
+                apiTrackerService.updateLog(logId, { 
+                    status: 'Timeout', 
+                    error: 'Request timeout - please check your connection' 
+                });
+                throw new Error('Request timeout - please check your connection');
+            } else {
+                // AbortError normal (Ctrl+C, navegação, etc.)
+                apiTrackerService.updateLog(logId, { 
+                    status: 'Cancelled', 
+                    error: 'Request was cancelled by user' 
+                });
+                throw new Error('Request was cancelled by user');
+            }
+        } else {
+            // Outros erros (rede, servidor, etc.)
+            apiTrackerService.updateLog(logId, { 
+                status: 'Error', 
+                error: error.message || 'Request failed' 
+            });
+            throw error;
         }
-        throw error;
     }
 };
 
@@ -396,7 +183,10 @@ export const api = {
         updateVideoQuality: (id: string, quality: string): Promise<{ success: boolean }> => fetcher('PATCH', `/streams/${id}/quality`, { quality }),
         getGiftDonors: (streamId: string): Promise<User[]> => fetcher('GET', `/streams/${streamId}/donors`),
         search: (query: string): Promise<Streamer[]> => fetcher('GET', `/streams/search?q=${query}`),
-        inviteToPrivateRoom: (streamId: string, userId: string): Promise<{ success: boolean }> => fetcher('POST', `/streams/${streamId}/invite`, { userId }),
+        inviteToPrivateRoom: (streamId: string, userId: string): Promise<{ success: boolean }> => {
+            webSocketManager.emit('privateRoomInvite', { streamId, userId });
+            return fetcher('POST', `/streams/${streamId}/invite`, { userId });
+        },
         getCategories: (): Promise<{ id: string, label: string }[]> => fetcher('GET', '/streams/categories'),
         getBeautySettings: () => fetcher('GET', '/streams/beauty-settings'),
         saveBeautySettings: (settings: any) => fetcher('POST', '/streams/beauty-settings', settings),
@@ -502,6 +292,9 @@ export const api = {
     toggleStreamSound: () => fetcher('POST', '/live/toggle-sound'),
     toggleAutoFollow: () => fetcher('POST', '/live/toggle-autofollow'),
     toggleAutoPrivateInvite: () => fetcher('POST', '/live/toggle-autoinvite'),
-    inviteFriendForCoHost: (streamId: string, friendId: string): Promise<{ success: boolean }> => fetcher('POST', `/streams/${streamId}/cohost/invite`, { friendId }),
+    inviteFriendForCoHost: (streamId: string, friendId: string): Promise<{ success: boolean }> => {
+            webSocketManager.emit('coHostInvite', { streamId, friendId });
+            return fetcher('POST', `/streams/${streamId}/cohost/invite`, { friendId });
+        },
     translate: (text: string): Promise<{ translatedText: string }> => fetcher('POST', '/translate', { text }),
 };

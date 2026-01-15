@@ -505,3 +505,5 @@ export const api = {
     inviteFriendForCoHost: (streamId: string, friendId: string): Promise<{ success: boolean }> => fetcher('POST', `/streams/${streamId}/cohost/invite`, { friendId }),
     translate: (text: string): Promise<{ translatedText: string }> => fetcher('POST', '/translate', { text }),
 };
+
+export default api;

@@ -26,6 +26,7 @@
     "build:api": "vite build --config vite.api.config.ts"
   },
   "dependencies": {
+    "@types/react-router-dom": "^5.3.3",
     "axios": "^1.13.2",
     "bcryptjs": "^2.4.3",
     "clsx": "^2.1.1",
@@ -38,6 +39,7 @@
     "mongoose": "^8.0.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "react-router-dom": "^7.12.0",
     "socket.io": "^4.7.2",
     "socket.io-client": "^4.8.3",
     "tailwind-merge": "^2.5.5"

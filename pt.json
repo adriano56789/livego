@@ -1,0 +1,520 @@
+
+{
+  "common": {
+    "save": "Salvar",
+    "cancel": "Cancelar",
+    "close": "Fechar",
+    "edit": "Editar",
+    "male": "Masculino",
+    "female": "Feminino",
+    "notSpecified": "Não especificado",
+    "follow": "Seguir",
+    "following": "Seguindo",
+    "chat": "Conversar",
+    "unfriend": "Cancelar amizade",
+    "block": "Bloquear",
+    "report": "Relatório",
+    "send": "Enviar",
+    "invite": "Convidar",
+    "copied": "Copiado!",
+    "error": "Erro",
+    "success": "Sucesso",
+    "info": "Informação",
+    "confirm": "Confirmar",
+    "back": "Voltar",
+    "online": "On-line",
+    "followed": "Seguido",
+    "max": "MÁXIMO",
+    "all": "Todos",
+    "followers": "Seguidores",
+    "friends": "Amigos"
+  },
+  "toasts": {
+    "permissionsNeeded": "Permissões necessárias para iniciar a live.",
+    "profileSaved": "Perfil salvo com sucesso!",
+    "followedUser": "Você seguiu {name}!",
+    "pkDurationSet": "Duração da Batalha PK definida para {duration} min.",
+    "vipSuccess": "Parabéns! Agora você é um membro VIP."
+  },
+  "login": {
+    "title": "LiveGo",
+    "subtitle": "Top Streamers, Boas Vibrações!",
+    "signInWithGoogle": "Entrar com o Google",
+    "moreOptions": "Mais opções de login",
+    "terms": "Login/registro significa que você leu e fornece o",
+    "userAgreement": "Contrato do Usuário",
+    "privacyPolicy": "Política de Privacidade"
+  },
+  "main": {
+    "popular": "Popular",
+    "followed": "Seguido",
+    "nearby": "Perto",
+    "pk": "PK",
+    "new": "Novo",
+    "music": "Música",
+    "dance": "Dança",
+    "party": "Festa",
+    "private": "Privada"
+  },
+  "footer": {
+    "live": "Ao vivo",
+    "video": "Vídeo",
+    "message": "Chat",
+    "profile": "Perfil"
+  },
+  "reminder": {
+    "title": "Lembrete",
+    "nearby": "Por perto"
+  },
+  "region": {
+    "select": "Selecione uma região"
+  },
+  "goLive": {
+    "addCover": "Adicionar Capa",
+    "titlePlaceholder": "Adicione um título",
+    "descriptionPlaceholder": "Adicione uma descrição",
+    "save": "Salvar",
+    "publicRoom": "Sala Pública",
+    "streamType": "Tipo de Transmissão",
+    "liveManual": "Manual de Transmissão ao Vivo",
+    "beautyEffects": "Efeitos de Beleza",
+    "pkBattle": "Batalha PK",
+    "startStream": "Iniciar Transmissão",
+    "selectCategory": "Selecionar Categoria",
+    "category": {
+      "popular": "Popular",
+      "followed": "Seguido",
+      "nearby": "Perto",
+      "pk": "PK",
+      "new": "Novo",
+      "music": "Música",
+      "dance": "Dança",
+      "party": "Festa",
+      "private": "Privada"
+    }
+  },
+  "profile": {
+    "title": "Seu Perfil",
+    "id": "Identificação",
+    "fans": "Fãs",
+    "following": "Seguido",
+    "visitors": "Visitantes",
+    "receivers": "Receptores",
+    "senders": "Enviados",
+    "topFans": "Principais fãs",
+    "wallet": "Carteira",
+    "diamonds": "Diamante",
+    "earnings": "Ganhos",
+    "tabs": {
+      "works": "Obras",
+      "likes": "Curtidas",
+      "details": "Detalhes"
+    },
+    "noWorks": "Nenhuma obra ainda.",
+    "noLikes": "Nenhuma curtida ainda.",
+    "likedWorkPrefix": "Curtiu sua obra:",
+    "viewWork": "Ver obra",
+    "noDetails": "Nenhum detalhe fornecido.",
+    "profileInfo": "Informações do Perfil",
+    "details": {
+      "nickname": "Apelido",
+      "gender": "Gênero",
+      "age": "Idade",
+      "bio": "Apresentar-se"
+    },
+    "menu": {
+        "market": "Loja VIP",
+        "myLevel": "Minha Patente",
+        "myFans": "Meus Fãs",
+        "blockList": "Lista de Bloqueio",
+        "avatarProtection": "Proteção de Avatar",
+        "vip": "VIP",
+        "messages": "Mensagens",
+        "faq": "Perguntas Frequentes",
+        "settings": "Configurações",
+        "support": "Suporte Livercore"
+    }
+  },
+  "settings": {
+    "title": "Configurações",
+    "main": {
+      "connectedAccounts": "Contas Conectadas",
+      "notificationSettings": "Configurações de notificação",
+      "giftNotifications": "Notificações de Presente",
+      "privateLiveInvite": "Convite privado ao vivo",
+      "privacySettings": "Configurações de privacidade",
+      "earningsInfo": "Informações de Ganhos",
+      "copyright": "Direitos Autorais",
+      "appVersion": "Versão do aplicativo",
+      "zoomAdjustment": "Ajuste de Zoom",
+      "deleteAccount": "Excluir Conta",
+      "language": "Idioma",
+      "logout": "Sair"
+    },
+    "connected": {
+        "title": "Contas Conectadas",
+        "description": "Esta é uma conta do Google que você usou para entrar no LiveGo. Você pode desconectar para entrar com outra conta.",
+        "disconnect": "Desconectar"
+    },
+    "notifications": {
+        "title": "Configurações de notificação",
+        "receive": "Receber notificações",
+        "newMessages": "Novas mensagens",
+        "streamerLive": "Início ao vivo do streamer seguido",
+        "pushSettings": "Iniciar configurações de push",
+        "followedPosts": "Pessoa em seguida postou um vídeo LiveGo",
+        "interactive": "Notificações interativas",
+        "request": "Pedido"
+    },
+    "push": {
+        "title": "Iniciar configurações de push",
+        "error": "Erro ao carregar usuários: Erro de conexão. Verifique sua internet."
+    },
+    "gifts": {
+        "title": "Configuração de Notificação de Presentes",
+        "description": "Controle quais notificações de presente aparecem na tela durante uma transmissão.",
+        "enabledCount": "{count} presentes configurados",
+        "allEnabled": "Todos os presentes estão disponíveis",
+        "someHidden": "Alguns presentes estão ocultos",
+        "becomeVip": "Torne-se VIP para usar presentes exclusivos!"
+    },
+    "privateLive": {
+        "title": "Convite privado ao vivo",
+        "mainToggleLabel": "Convite privado ao vivo",
+        "mainToggleDesc": "Você recebe um convite privado ao vivo quando o liga.",
+        "followersOnly": "Após a abertura, só aceito usuários que sigo.",
+        "fansOnly": "Após a abertura, apenas meus fãs são aceitos.",
+        "friendsOnly": "Após a abertura, só aceito meus amigos."
+    },
+    "privacy": {
+        "title": "Configuração de privacidade",
+        "whoCanMessage": "Quem pode me enviar uma mensagem?",
+        "showLocation": "Mostrar local",
+        "showLocationDesc": "Desligar irá ocultar sua localização de outros",
+        "showActive": "Mostrar estado ativo",
+        "showActiveDesc": "Desligar a atividade de ocultação de outros",
+        "showNearby": "Mostrar em [Pessoas próximas]",
+        "showNearbyDesc": "Desligar irá tornar impossível para as pessoas próximas procurarem por você",
+        "profileProtection": "Proteção de Perfil",
+        "profileProtectionDesc": "Ative para proteger seu perfil contra cópias",
+        "pip": "Picture-in-Picture Visualizador",
+        "pipDesc": "Ative para usar o visualizador em modo Picture-in-Picture"
+    },
+    "whoCanMessageScreen": {
+        "title": "Quem pode me enviar mensagem",
+        "everyone": "Todos",
+        "followersOnly": "Apenas seguidores",
+        "followersOnlyDesc": "Não receba mais mensagens de estranhos, mas ainda pode receber presentes"
+    },
+    "appVersion": {
+        "title": "Versão do aplicativo",
+        "current": "Sua versão atual é 1.0.0 do livego",
+        "latest": "Última versão",
+        "status": "Status",
+        "upToDate": "Atualizado"
+    },
+    "zoom": {
+        "title": "Ajuste de Zoom",
+        "current": "Nível de zoom atual",
+        "small": "Pequeno",
+        "large": "Grande",
+        "reset": "Redefinir",
+        "description": "O zoom afeta todo o aplicativo, incluindo textos, botões e imagens. Use para melhorar a legibilidade ou visualização."
+    },
+    "deleteAccount": {
+        "title": "Excluir Conta"
+    },
+    "copyright": {
+      "title": "Informações de Direitos Autorais",
+      "section1Title": "Aviso de Direitos Autorais",
+      "section1p1": "© 2024 LiveGo. Todos os direitos reservados. O conteúdo, layout, design, dados, bancos de dados e gráficos neste aplicativo são protegidos por leis de propriedade intelectual e são de propriedade da LiveGo, salvo indicação em contrário.",
+      "section2Title": "Propriedade Intelectual",
+      "section2p1": "Todas as marcas comerciais, marcas de serviço e nomes comerciais são propriedade da LiveGo ou de outros respectivos proprietários que concederam à LiveGo o direito e a licença para usar tais marcas.",
+      "section3Title": "Conteúdo Gerado pelo Usuário",
+      "section3p1": "Você é o único responsável pelo conteúdo que transmite ou exibe ('posta') no serviço LiveGo. Você não deve postar conteúdo que infrinja os direitos de propriedade intelectual de terceiros. Removeremos o conteúdo infrator se formos devidamente notificados.",
+      "section4Title": "Denúncia de Infração",
+      "section4p1": "Se você acredita que seu trabalho protegido por direitos autorais foi copiado de uma forma que constitui violação de direitos autorais e está acessível através do serviço, notifique nosso agente de direitos autorais.",
+      "section4p2": "Por favor, envie todas as notificações de infração para:"
+    },
+    "earnings": {
+      "title": "Informações de Ganhos",
+      "policyTitle": "Nossa Política de 'Ganhos'",
+      "conversionTitle": "Conversão de Ganhos para Dinheiro",
+      "conversionBody": "A conversão dos seus 'Ganhos' acumulados na plataforma para Reais (BRL) é totalmente gratuita. Não há nenhuma taxa oculta neste processo. Seu saldo de Ganhos é convertido usando a taxa de câmbio atual da plataforma.",
+      "feeTitle": "Taxa de Saque",
+      "feeBody": "Quando você solicita um saque, uma taxa de serviço é aplicada para cobrir os custos operacionais e de processamento de pagamento. A divisão é transparente:",
+      "streamerShareTitle": "80% para Você (Streamer)",
+      "streamerShareBody": "A maior parte do valor é sua! Acreditamos em recompensar nossos criadores de conteúdo.",
+      "platformShareTitle": "20% para a Plataforma",
+      "platformShareBody": "Esta taxa nos ajuda a manter a plataforma segura, desenvolver novos recursos e oferecer suporte à comunidade."
+    },
+    "pkTimer": {
+        "title": "Configurações",
+        "time": "Horário"
+    }
+  },
+  "vip": {
+    "centerTitle": "Centro VIP",
+    "currentUser": "Usuário Atual",
+    "status": "Status VIP",
+    "notMember": "Não é Membro VIP",
+    "memberUntil": "Membro até {date}",
+    "subscribedOn": "Assinatura em {date}",
+    "privileges": "Privilégios Exclusivos",
+    "privilege1": "Emblema VIP Exclusivo",
+    "privilege2": "Efeito de Entrada Exclusivo",
+    "privilege3": "Acesso à Loja VIP",
+    "privilege4": "Efeitos Especiais de Sala",
+    "subscribe": "Assinar",
+    "renew": "Renovar",
+    "monthly": "Mensal",
+    "quarterly": "Trimestral",
+    "yearly": "Anual",
+    "effects": "Efeitos",
+    "store": {
+        "buy": "Comprar",
+        "exclusiveTitle": "Loja Exclusiva VIP",
+        "exclusiveBody": "Esta é uma loja exclusiva para membros VIP com efeitos especiais de sala.",
+        "subscribeButton": "Torne-se VIP",
+        "purchaseSuccess": "Você comprou {name}!",
+        "notEnoughDiamonds": "Diamantes insuficientes."
+    }
+  },
+  "streamRoom": {
+    "sayHi": "Diga oi...",
+    "joined": "entrou",
+    "followed": "seguiu"
+  },
+  "pkBattle": {
+    "contributionRanking": "Ranking de Contribuição"
+  },
+  "endStream": {
+    "endBattleTitle": "Sair da Batalha?",
+    "endBattleBody": "Tem certeza que quer sair da batalha de PK?",
+    "endStreamTitle": "Encerrar Transmissão?",
+    "endStreamBody": "Tem certeza que deseja encerrar a transmissão? Esta ação não pode ser desfeita.",
+    "leave": "Sair",
+    "end": "Encerrar",
+    "summaryTitle": "A transmissão terminou.",
+    "viewers": "Número de espectadores",
+    "duration": "Duração ao vivo",
+    "coins": "Moedas",
+    "newFollowers": "Seguidores",
+    "members": "Membro",
+    "newFans": "Fãs",
+    "backToHome": "Voltar para a página inicial"
+  },
+  "editProfile": {
+    "title": "Editar o perfil",
+    "uploadNotice": "Faça upload de fotos reais e nítidas, deixe o destino começar no avatar da beleza",
+    "portrait": "Retrato",
+    "uploadHelper": "{count}/8 Clique para ver e apagar imagens, segure para ordenar",
+    "nickname": "Apelido",
+    "gender": "Gênero",
+    "birthday": "Aniversário",
+    "bio": "Apresentar-se",
+    "residence": "Residência atual",
+    "emotionalStatus": "Estado emocional",
+    "tags": "Tags",
+    "profession": "Profissão",
+    "notSpecified": "Não especificado"
+  },
+  "wallet": {
+    "diamond": "Diamante",
+    "earnings": "Ganhos",
+    "history": "Histórico de Compras",
+    "noHistory": "Nenhum histórico de compras.",
+    "connectionError": "Erro ao carregar carteira: Erro de conexão. Verifique sua internet.",
+    "withdrawValue": "Valor do Saque",
+    "withdrawPlaceholder": "Quantidade de ganhos",
+    "available": "Disponível para saque: -- ganhos",
+    "grossValue": "Valor Bruto (BRL)",
+    "platformFee": "Taxa da Plataforma (20%)",
+    "netValue": "Valor a Receber:",
+    "withdrawMethod": "Método de Saque",
+    "configureMethod": "Configurar Método",
+    "valueSentTo": "O valor será enviado para sua conta cadastrada.",
+    "confirmWithdraw": "Confirmar Saque",
+    "configureWithdraw": {
+        "title": "Configurar Método de Saque",
+        "description": "Selecione como você gostaria de receber seu dinheiro.",
+        "pixKey": "Chave PIX",
+        "pixPlaceholder": "CPF, e-mail ou telefone",
+        "mercadoPagoEmail": "E-Mail",
+        "mercadoPagoPlaceholder": "E-mail da conta Mercado Pago"
+    }
+  },
+  "confirmPurchase": {
+    "title": "Confirmar compra",
+    "selectedPackage": "Pacote Selecionado",
+    "packageValue": "Valor do Pacote",
+    "fees": "Taxas",
+    "total": "Total a Pagar",
+    "transfer": "Transferência",
+    "creditCard": "Cartão de Crédito",
+    "deliveryAddress": "Endereço de Cobrança (Obrigatório)",
+    "cardDetails": "Informações do Cartão",
+    "bankDetails": "Dados Bancários",
+    "pleaseFillAddress": "Por favor, preencha todos os campos do endereço.",
+    "pleaseFillCard": "Por favor, preencha todos os dados do cartão.",
+    "pleaseFillBank": "Por favor, preencha todos os campos para pagamento.",
+    "address": {
+      "street": "Rua",
+      "number": "Nº",
+      "neighborhood": "Bairro",
+      "city": "Cidade",
+      "cep": "CEP"
+    },
+    "card": {
+      "number": "Número do Cartão",
+      "name": "Nome no Cartão",
+      "expiry": "Validade",
+      "cvv": "CVV"
+    },
+    "bank": {
+      "bank": "Banco",
+      "agency": "Agência",
+      "account": "Conta Corrente",
+      "cpfCnpj": "CPF/CNPJ",
+      "holder": "Titular da Conta"
+    },
+    "confirmButton": "Confirmar Compra"
+  },
+  "userLists": {
+    "following": {
+        "title": "Seguido",
+        "noUsers": "Você não está seguindo ninguém."
+    },
+    "fans": {
+        "title": "Fãs",
+        "noUsers": "Você ainda não tem fãs."
+    },
+    "visitors": {
+        "title": "Visitantes",
+        "noUsers": "Ninguém visitou seu perfil recentemente."
+    },
+    "topFans": {
+        "title": "Top Fãs",
+        "error": "Erro ao carregar top fãs: Erro de conexão. Verifique sua internet."
+    },
+    "blockList": {
+        "title": "Lista de Bloqueio",
+        "noUsers": "Nenhum usuário bloqueado",
+        "description": "Você pode bloquear usuários no perfil deles ou em uma live."
+    }
+  },
+  "myLevel": {
+    "title": "Meu Nível",
+    "currentPrivileges": "Privilégios Atuais (Nível {level})",
+    "exclusiveBadge": "Badge de Nível Exclusivo",
+    "specialCommentBorder": "Borda de Comentário Especial",
+    "nextRewards": "Próximas Recompensas (Nível {level})",
+    "exclusiveGift": "Presente Exclusivo de Nível",
+    "roomEntryEffect": "Efeito de Entrada na Sala"
+  },
+  "avatarProtection": {
+    "title": "Proteção de avatar",
+    "save": "Salvar",
+    "heading": "Proteja seu avatar",
+    "description": "Ative a proteção para evitar que outras pessoas usem sua foto de perfil, prevenindo golpes e perfis falsos.",
+    "toggle": "Ativar Proteção de Avatar"
+  },
+  "search": {
+    "placeholder": "Pesquisar por nome ou ID",
+    "noResults": "Nenhum usuário encontrado.",
+    "tryAgain": "Tente uma pesquisa diferente.",
+    "prompt": "Pesquise por streamers e amigos."
+  },
+  "cameraPermission": {
+    "cameraTitle": "Permitir que o app LiveGo tire fotos e grave vídeos?",
+    "micTitle": "Permitir que o app LiveGo grave áudio?",
+    "duringUse": "Durante o uso do app",
+    "onlyThisTime": "Apenas esta vez",
+    "deny": "Não permitir"
+  },
+  "privateChat": {
+    "title": "Mensagens Privadas",
+    "noMessages": "Nenhuma mensagem."
+  },
+  "beautyEffects": {
+    "recommend": "Recomendar",
+    "beauty": "Beleza",
+    "reset": "Redefinir",
+    "filters": {
+      "close": "Fechar",
+      "muse": "Musa",
+      "cute": "Bonito",
+      "vitality": "Vitalidade"
+    },
+    "effects": {
+      "whiten": "Branquear",
+      "smooth": "Alisar a p...",
+      "blush": "Ruborizar",
+      "contrast": "Contraste"
+    }
+  },
+  "liveManual": {
+    "title": "Manual de Transmissão ao Vivo",
+    "section1Title": "1. Preparando sua Transmissão",
+    "section1p1": "<strong>Capa e Título:</strong> Escolha uma imagem de capa clara e um título que chame a atenção. Isso é a primeira coisa que os espectadores verão!",
+    "section1p2": "<strong>Categoria:</strong> Selecione a categoria correta (Música, Dança, Jogos, etc.) para que seu público-alvo encontre sua live mais facilmente.",
+    "section1p3": "<strong>Qualidade:</strong> Verifique sua conexão com a internet. Uma boa iluminação e um áudio claro são essenciais para manter os espectadores engajados.",
+    "section2Title": "2. Durante a Transmissão",
+    "section2p1": "<strong>Interaja com o Chat:</strong> Converse com seus espectadores! Responda perguntas, agradeça pelos presentes e faça com que eles se sintam parte da transmissão.",
+    "section2p2": "<strong>Ferramentas de Co-host e PK:</strong> Convide amigos para participar da sua live ou inicie uma Batalha PK para tornar as coisas mais emocionantes. Use as ferramentas no menu de opções.",
+    "section2p3": "<strong>Efeitos de Beleza:</strong> Utilize os filtros e efeitos de beleza para melhorar a qualidade da sua imagem e se divertir.",
+    "section3Title": "3. Tipo de Transmissão",
+    "section3p1": "<strong>WebRTC (Padrão):</strong> A forma mais simples de começar a transmitir, direto do seu navegador, sem necessidade de softwares adicionais.",
+    "section3p2": "<strong>RTMP/SRT:</strong> Para streamers avançados que usam softwares como OBS Studio. Copie a URL do servidor e a chave de transmissão para o seu programa para ter mais controle sobre a qualidade e layout da sua live.",
+    "section4Title": "4. Dicas Importantes",
+    "section4p1": "<strong>Seja Consistente:</strong> Tente transmitir em horários regulares para que seus fãs saibam quando podem te encontrar.",
+    "section4p2": "<strong>Divulgue:</strong> Avise seus seguidores em outras redes sociais que você vai entrar ao vivo.",
+    "section4p3": "<strong>Regras da Comunidade:</strong> Lembre-se de seguir as diretrizes da plataforma para manter um ambiente seguro e divertido para todos."
+  },
+  "onlineUsers": {
+      "title": "Usuários Online ({count})"
+  },
+  "resolution": {
+      "title": "Qualidade do Vídeo",
+      "description": "Ajustar a qualidade pode afetar o uso de dados e a fluidez da transmissão.",
+      "hd": "720p (HD)",
+      "sd": "480p (Padrão)",
+      "fluent": "360p (Fluente)"
+  },
+  "tools": {
+      "title": "Ferramentas",
+      "cohostPk": "Ferramentas de Co-host e PK",
+      "cohost": "+ Anfitriões",
+      "battle": "Batalha",
+      "endBattle": "Fim da Batalha",
+      "invite": "+Conv",
+      "anchor": "Ferramentas de âncora",
+      "beautify": "Embelezar",
+      "mic": "Microfone",
+      "clarity": "Clareza"
+  },
+  "cohost": {
+      "title": "Co-apresentador com criadores",
+      "searchPlaceholder": "Pesquisar por nome ou ID",
+      "friendsOnly": "Aceitar apenas convites de amigos.",
+      "quickInviteTitle": "Faça novos amigos",
+      "quickInviteSubtitle": "com convites rápidos",
+      "friendsListTitle": "Amigos ({count})"
+  },
+  "contributionRanking": {
+      "title": "Ranking de Contribuição",
+      "daily": "Diária",
+      "weekly": "Semanal",
+      "monthly": "Mensal"
+  },
+  "gifts": {
+      "title": "Presentes",
+      "recharge": "Recarregar >",
+      "canSend": "Pode enviar até {count}",
+      "selectGift": "Selecione um presente",
+      "gallery": "Galeria",
+      "reorder": "Reordenar",
+      "done": "Pronto",
+      "dragToReorder": "Arraste os presentes para reordenar."
+  }
+}

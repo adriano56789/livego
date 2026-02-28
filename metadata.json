@@ -1,0 +1,8 @@
+{
+  "name": "LiveGo Stream Viewer",
+  "description": "A modern, dark-themed UI for a live streaming application, featuring login, stream browsing, and interactive modals for notifications and region selection, built with React and Tailwind CSS.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}

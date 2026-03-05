@@ -287,7 +287,10 @@ export const api = {
     // --- Miscellaneous ---
     getVisitors: (userId: string) => callApi<Visitor[]>('GET', `/api/visitors/list/${userId}`),
     clearVisitors: (userId: string) => callApi<{ success: boolean }>('DELETE', `/api/visitors/clear/${userId}`),
-    getChatMessages: (otherUserId: string) => callApi<Message[]>('GET', `/api/chats/${otherUserId}/messages`),
+    getChatMessages: async (otherUserId: string) => {
+        const response = await callApi<{ success: boolean; messages: Message[]; total: number }>('GET', `/api/messages?userId=${CURRENT_USER_ID}`);
+        return response.messages || [];
+    },
     updateVideoQuality: (streamId: string, quality: string) => callApi<{ success: boolean, stream: Streamer }>('PUT', `/api/streams/${streamId}/quality`, { quality }),
     toggleMicrophone: (streamId: string) => callApi<void>('POST', `/api/streams/${streamId}/toggle-mic`),
     toggleStreamSound: (streamId: string) => callApi<void>('POST', `/api/streams/${streamId}/toggle-sound`),

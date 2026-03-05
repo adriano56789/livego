@@ -21,3 +21,4 @@ export { Comment } from './Comment';
 export { ProfilePhoto } from './ProfilePhoto';
 export { Chat } from './Chat';
 export { ChatMessage } from './ChatMessage';
+export { UserIndex } from './UserIndex';

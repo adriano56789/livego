@@ -209,6 +209,67 @@ router.post('/', async (req, res) => {
     }
 });
 
+// POST /api/chats/send - Enviar mensagem (rota simplificada)
+router.post('/send', async (req, res) => {
+    try {
+        console.log('🔍 Body recebido:', JSON.stringify(req.body, null, 2));
+        
+        const { from, to, text, imageUrl, tempId } = req.body;
+
+        if (!from || !to || !text) {
+            return res.status(400).json({ error: 'from, to e text são obrigatórios' });
+        }
+
+        console.log(`📨 Enviando mensagem de ${from} para ${to}: ${text}`);
+
+        // Criar ID da conversa (ordenado para manter consistência)
+        const conversationId = [from, to].sort().join('_');
+        
+        // Criar nova mensagem
+        const newMessage = await ChatMessage.create({
+            id: tempId || `msg_${conversationId}_${from}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            conversationId: `chat_private_${conversationId}_${Date.now()}`,
+            senderId: from,
+            receiverId: to,
+            content: text,
+            messageType: imageUrl ? 'image' : 'text',
+            isRead: false,
+            sentAt: new Date()
+        });
+
+        // Buscar detalhes do remetente
+        const sender = await User.findOne({ id: from }).select('id name avatarUrl');
+
+        // Enviar via WebSocket em tempo real
+        const io = req.app.get('io');
+        
+        // Notificar receptor
+        io.to(`user_${to}`).emit('new_chat_message', {
+            ...newMessage.toJSON(),
+            sender: sender || { id: from, name: 'Usuário', avatarUrl: '' }
+        });
+
+        // Notificar remetente sobre sucesso
+        io.to(`user_${from}`).emit('message_sent', {
+            tempId,
+            messageId: newMessage.id,
+            success: true
+        });
+
+        res.json({
+            success: true,
+            message: newMessage
+        });
+
+    } catch (error: any) {
+        console.error('❌ Erro ao enviar mensagem:', error);
+        res.status(500).json({ 
+            error: 'Erro ao enviar mensagem',
+            details: error.message 
+        });
+    }
+});
+
 // POST /api/chats/:id/messages - Enviar nova mensagem
 router.post('/:id/messages', async (req, res) => {
     try {

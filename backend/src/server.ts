@@ -20,6 +20,9 @@ import mediaRoutes from './routes/mediaRoutes';
 import chatRoutes from './routes/chatRoutes';
 import profilePhotoRoutes from './routes/profilePhotoRoutes';
 import conversationRoutes from './routes/conversationRoutes';
+import searchRoutes from './routes/searchRoutes';
+import messageRoutes from './routes/messageRoutes';
+import statusRoutes from './routes/statusRoutes';
 
 dotenv.config();
 
@@ -77,6 +80,9 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/chats', chatRoutes); // Rotas de chat
 app.use('/api/users', profilePhotoRoutes); // Rotas de fotos de perfil
 app.use('/api/conversations', conversationRoutes); // Rotas de conversas
+app.use('/api/search', searchRoutes); // Rotas de busca de usuários
+app.use('/api/messages', messageRoutes); // Rotas de mensagens
+app.use('/api/status', statusRoutes); // Rotas de status online/offline
 // Disponibilizar io para as rotas
 app.set('io', io);
 
@@ -303,6 +309,27 @@ io.on('connection', (socket) => {
     socket.on('disconnect', async () => {
         try {
             const userId = socketToUser.get(socket.id);
+            
+            if (userId) {
+                // Marcar usuário como offline no banco
+                const { User } = await import('./models/index');
+                await User.findOneAndUpdate(
+                    { id: userId },
+                    { 
+                        isOnline: false,
+                        lastSeen: new Date().toISOString()
+                    }
+                );
+
+                // Notificar todos sobre mudança de status
+                io.emit('user_status_changed', {
+                    userId,
+                    isOnline: false,
+                    lastSeen: new Date().toISOString()
+                });
+
+                console.log(`🔴 Usuário ${userId} offline (socket: ${socket.id})`);
+            }
             
             // VALIDAÇÃO CRÍTICA: Se não há usuário associado, apenas limpar
             if (!userId) {
@@ -812,6 +839,64 @@ io.on('connection', (socket) => {
             }
         } catch (error) {
             console.error('❌ Erro ao atualizar diamantes:', error);
+        }
+    });
+
+    // --- Chat e Status Events ---
+    socket.on('set_user_online', async (data: { userId: string }) => {
+        try {
+            const { userId } = data;
+            if (!userId) return;
+
+            // Associar socket ao usuário
+            socket.data.userId = userId;
+            socketToUser.set(socket.id, userId);
+            socket.join(`user_${userId}`);
+
+            // Atualizar status no banco
+            const { User } = await import('./models/index');
+            await User.findOneAndUpdate(
+                { id: userId },
+                { 
+                    isOnline: true,
+                    lastSeen: new Date().toISOString()
+                }
+            );
+
+            // Notificar todos sobre mudança de status
+            io.emit('user_status_changed', {
+                userId,
+                isOnline: true,
+                lastSeen: new Date().toISOString()
+            });
+
+            console.log(`🟢 Usuário ${userId} online (socket: ${socket.id})`);
+        } catch (error) {
+            console.error('❌ Erro ao setar usuário online:', error);
+        }
+    });
+
+    socket.on('join_conversation', (data: { conversationId: string }) => {
+        try {
+            const { conversationId } = data;
+            if (!conversationId) return;
+
+            socket.join(`conversation_${conversationId}`);
+            console.log(`💬 Socket ${socket.id} entrou na conversa ${conversationId}`);
+        } catch (error) {
+            console.error('❌ Erro ao entrar na conversa:', error);
+        }
+    });
+
+    socket.on('leave_conversation', (data: { conversationId: string }) => {
+        try {
+            const { conversationId } = data;
+            if (!conversationId) return;
+
+            socket.leave(`conversation_${conversationId}`);
+            console.log(`💬 Socket ${socket.id} saiu da conversa ${conversationId}`);
+        } catch (error) {
+            console.error('❌ Erro ao sair da conversa:', error);
         }
     });
 

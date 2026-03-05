@@ -200,6 +200,7 @@ const AppContent: React.FC = () => {
       try {
         // Carregar streams
         const streams = await api.getLiveStreamers('global');
+        console.log('🔍 [DEBUG] Streams recebidas da API:', streams.length, streams);
         setStreamers(streams);
 
         // Carregar países
@@ -736,6 +737,7 @@ const AppContent: React.FC = () => {
         setIsLoadingStreamers(true);
         try {
             const streams = await api.getLiveStreamers(tab === 'popular' ? 'global' : tab);
+            console.log(`🔍 [DEBUG] Streams da categoria "${tab}":`, streams.length, streams);
             setStreamers(streams);
         } catch (error) {
             console.error('Error loading streams:', error);

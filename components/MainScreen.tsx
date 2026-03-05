@@ -115,11 +115,42 @@ const MainScreen: React.FC<MainScreenProps> = ({ onOpenReminderModal, onOpenRegi
                 <LoadingSpinner />
             </div>
         ) : (
-            <div className="grid grid-cols-2 gap-2">
-                {streamers.map(streamer => (
-                    <StreamerCard key={streamer.id} streamer={streamer} onSelect={onSelectStream} />
-                ))}
-            </div>
+            <>
+                {streamers.filter(streamer => 
+                    streamer && 
+                    streamer.id && 
+                    streamer.name && 
+                    streamer.name.trim() !== '' &&
+                    streamer.avatar && 
+                    streamer.avatar.trim() !== '' &&
+                    streamer.hostId &&
+                    streamer.hostId.trim() !== '' &&
+                    streamer.isLive === true
+                ).length === 0 ? (
+                    <div className="h-full flex items-center justify-center text-gray-500 text-center px-4">
+                        <div>
+                            <p className="text-lg mb-2">Nenhuma live ao vivo encontrada</p>
+                            <p className="text-sm">Quando alguém iniciar uma transmissão, aparecerá aqui</p>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-2 gap-2">
+                        {streamers.filter(streamer => 
+                            streamer && 
+                            streamer.id && 
+                            streamer.name && 
+                            streamer.name.trim() !== '' &&
+                            streamer.avatar && 
+                            streamer.avatar.trim() !== '' &&
+                            streamer.hostId &&
+                            streamer.hostId.trim() !== '' &&
+                            streamer.isLive === true
+                        ).map(streamer => (
+                            <StreamerCard key={streamer.id} streamer={streamer} onSelect={onSelectStream} />
+                        ))}
+                    </div>
+                )}
+            </>
         )}
       </main>
     </div>

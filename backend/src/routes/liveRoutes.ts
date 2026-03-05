@@ -7,22 +7,30 @@ router.get('/live/:category', async (req, res) => {
     try {
         const { category } = req.params;
         
-        // Se for "global" ou "popular", retorna todas as lives ativas
+        // Se for "global" ou "popular", retorna todas as lives ativas E válidas
         if (category === 'global' || category === 'popular') {
-            const streams = await Streamer.find({ isLive: true }).sort({ viewers: -1 });
+            const streams = await Streamer.find({ 
+                isLive: true,
+                name: { $exists: true, $nin: ['', null] },
+                hostId: { $exists: true, $nin: ['', null] },
+                avatar: { $exists: true, $nin: ['', null] }
+            }).sort({ viewers: -1 });
             return res.json(streams);
         }
         
-        // Para categorias específicas, filtra por tag ou categoria
-        const streams = await Streamer.find({ 
+        // Para categorias específicas, filtra por tag ou categoria E valida dados
+        const categoryStreams = await Streamer.find({ 
             isLive: true,
+            name: { $exists: true, $nin: ['', null] },
+            hostId: { $exists: true, $nin: ['', null] },
+            avatar: { $exists: true, $nin: ['', null] },
             $or: [
                 { category: category.toLowerCase() },
                 { tags: { $in: [category.toLowerCase()] } }
             ]
         }).sort({ viewers: -1 });
         
-        res.json(streams);
+        res.json(categoryStreams);
     } catch (error: any) {
         console.error('Error fetching streams:', error);
         res.status(500).json({ error: error.message });
@@ -34,7 +42,12 @@ router.get('/streams', async (req, res) => {
     try {
         const { region, country } = req.query;
         
-        let filter: any = { isLive: true };
+        let filter: any = { 
+            isLive: true,
+            name: { $exists: true, $nin: ['', null] },
+            hostId: { $exists: true, $nin: ['', null] },
+            avatar: { $exists: true, $nin: ['', null] }
+        };
         
         // Filtrar por região/país se especificado
         if (region && region !== 'ICON_GLOBE') {

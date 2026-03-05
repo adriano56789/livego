@@ -1,0 +1,59 @@
+version: 3.8
+
+services:
+  srs-server:
+    build:
+      context: .
+      dockerfile: Dockerfile.srs
+      args:
+        CONFARGS: ""
+        MAKEARGS: "-j4"
+        INSTALLDEPENDS: "YES"
+    container_name: srs-server
+    restart: unless-stopped
+    ports:
+      - "1935:1935/tcp"   # RTMP
+      - "1985:1985/tcp"   # HTTP API
+      - "8080:8080/tcp"   # HTTP Server
+      - "8000:8000/udp"   # WebRTC ICE/STUN
+      - "9000:9000/tcp"   # WebRTC HTTPS
+      - "5060:5060/tcp"   # HTTP API (alternative)
+      - "10080:10080/udp" # WebRTC additional
+    volumes:
+      - ./srs-config:/usr/local/srs/conf
+      - ./srs-logs:/usr/local/srs/objs/logs
+    environment:
+      - SRS_DAEMON=off
+      - SRS_IN_DOCKER=on
+    networks:
+      - livego-network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: livego-backend
+    restart: unless-stopped
+    ports:
+      - "3000:3000/tcp"
+    environment:
+      - NODE_ENV=development
+      - SRS_API_URL=http://srs-server:1985
+      - SRS_RTMP_URL=rtmp://localhost:1935/live
+      - SRS_HTTP_URL=http://localhost:8080
+      - SRS_WEBRTC_URL=http://localhost:9000
+    depends_on:
+      - srs-server
+    networks:
+      - livego-network
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+
+networks:
+  livego-network:
+    driver: bridge
+
+volumes:
+  srs-config:
+  srs-logs:

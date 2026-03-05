@@ -1,0 +1,528 @@
+
+{
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "close": "Close",
+    "edit": "Edit",
+    "male": "Male",
+    "female": "Female",
+    "notSpecified": "Not Specified",
+    "follow": "Follow",
+    "following": "Following",
+    "chat": "Chat",
+    "unfriend": "Unfriend",
+    "block": "Block",
+    "report": "Report",
+    "send": "Send",
+    "invite": "Invite",
+    "copied": "Copied!",
+    "error": "Error",
+    "success": "Success",
+    "info": "Info",
+    "confirm": "Confirm",
+    "back": "Back",
+    "online": "Online",
+    "followed": "Followed",
+    "max": "MAX",
+    "all": "All",
+    "followers": "Followers",
+    "friends": "Friends"
+  },
+  "toasts": {
+    "permissionsNeeded": "Permissions required to start the live stream.",
+    "profileSaved": "Profile saved successfully!",
+    "followedUser": "You followed {name}!",
+    "pkDurationSet": "PK Battle duration set to {duration} min.",
+    "vipSuccess": "Congratulations! You are now a VIP member."
+  },
+  "login": {
+    "title": "LiveGo",
+    "subtitle": "Top Streamers, Good Vibes!",
+    "signInWithGoogle": "Sign in with Google",
+    "moreOptions": "More login options",
+    "terms": "Login/registration means you have read and agree to the",
+    "userAgreement": "User Agreement",
+    "privacyPolicy": "Privacy Policy"
+  },
+  "main": {
+    "popular": "Popular",
+    "followed": "Followed",
+    "nearby": "Nearby",
+    "pk": "PK",
+    "new": "New",
+    "music": "Music",
+    "dance": "Dance",
+    "party": "Party",
+    "private": "Private"
+  },
+  "footer": {
+    "live": "Live",
+    "video": "Video",
+    "message": "Chat",
+    "profile": "Profile"
+  },
+  "reminder": {
+    "title": "Reminder",
+    "nearby": "Nearby"
+  },
+  "region": {
+    "select": "Select a region"
+  },
+  "goLive": {
+    "addCover": "Add Cover",
+    "titlePlaceholder": "Add a title",
+    "descriptionPlaceholder": "Add a description",
+    "save": "Save",
+    "publicRoom": "Public Room",
+    "streamType": "Stream Type",
+    "liveManual": "Live Stream Manual",
+    "beautyEffects": "Beauty Effects",
+    "pkBattle": "PK Battle",
+    "startStream": "Start Stream",
+    "selectCategory": "Select Category",
+    "category": {
+      "popular": "Popular",
+      "followed": "Followed",
+      "nearby": "Nearby",
+      "pk": "PK",
+      "new": "New",
+      "music": "Music",
+      "dance": "Dance",
+      "party": "Party",
+      "private": "Private"
+    }
+  },
+  "profile": {
+    "title": "Your Profile",
+    "id": "ID",
+    "fans": "Fans",
+    "following": "Following",
+    "visitors": "Visitors",
+    "receivers": "Receivers",
+    "senders": "Senders",
+    "topFans": "Top Fans",
+    "wallet": "Wallet",
+    "diamonds": "Diamonds",
+    "earnings": "Earnings",
+    "tabs": {
+      "works": "Works",
+      "likes": "Likes",
+      "details": "Details"
+    },
+    "noWorks": "No works yet.",
+    "noLikes": "No likes yet.",
+    "likedWorkPrefix": "Liked your work:",
+    "viewWork": "View work",
+    "noDetails": "No details provided.",
+    "profileInfo": "Profile Information",
+    "details": {
+      "nickname": "Nickname",
+      "gender": "Gender",
+      "age": "Age",
+      "bio": "Bio"
+    },
+    "menu": {
+        "market": "VIP Store",
+        "myLevel": "My Level",
+        "myFans": "My Fans",
+        "blockList": "Block List",
+        "avatarProtection": "Avatar Protection",
+        "vip": "VIP",
+        "messages": "Messages",
+        "faq": "FAQ",
+        "settings": "Settings",
+        "support": "Livercore Support"
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "main": {
+      "connectedAccounts": "Connected Accounts",
+      "notificationSettings": "Notification settings",
+      "giftNotifications": "Gift Notifications",
+      "privateLiveInvite": "Private live invite",
+      "privacySettings": "Privacy settings",
+      "earningsInfo": "Earnings Information",
+      "copyright": "Copyright",
+      "appVersion": "App version",
+      "zoomAdjustment": "Zoom Adjustment",
+      "deleteAccount": "Delete Account",
+      "language": "Language",
+      "logout": "Log Out"
+    },
+    "connected": {
+        "title": "Connected Accounts",
+        "description": "This is a Google account you used to sign in to LiveGo. You can disconnect to sign in with another account.",
+        "disconnect": "Disconnect"
+    },
+    "notifications": {
+        "title": "Notification settings",
+        "receive": "Receive notifications",
+        "newMessages": "New messages",
+        "streamerLive": "Followed streamer goes live",
+        "pushSettings": "Push settings",
+        "followedPosts": "Followed person posted a LiveGo video",
+        "interactive": "Interactive notifications",
+        "request": "Request"
+    },
+    "push": {
+        "title": "Push settings",
+        "error": "Error loading users: Connection error. Check your internet."
+    },
+    "gifts": {
+        "title": "Gift Notification Settings",
+        "description": "Control which gift notifications appear on screen during a stream.",
+        "enabledCount": "{count} gifts configured",
+        "allEnabled": "All gifts are available",
+        "someHidden": "Some gifts are hidden",
+        "becomeVip": "Become a VIP to use exclusive gifts!"
+    },
+    "privateLive": {
+        "title": "Private live invite",
+        "mainToggleLabel": "Private live invite",
+        "mainToggleDesc": "You receive a private live invite when you turn it on.",
+        "followersOnly": "After opening, I only accept users I follow.",
+        "fansOnly": "After opening, only my fans are accepted.",
+        "friendsOnly": "After opening, I only accept my friends."
+    },
+    "privacy": {
+        "title": "Privacy settings",
+        "whoCanMessage": "Who can message me?",
+        "showLocation": "Show location",
+        "showLocationDesc": "Turning off will hide your location from others",
+        "showActive": "Show active status",
+        "showActiveDesc": "Turning off will hide activity from others",
+        "showNearby": "Show in [People Nearby]",
+        "showNearbyDesc": "Turning off will make it impossible for nearby people to search for you",
+        "profileProtection": "Profile Protection",
+        "profileProtectionDesc": "Enable to protect your profile from being copied",
+        "pip": "Picture-in-Picture Viewer",
+        "pipDesc": "Enable to use the viewer in Picture-in-Picture mode"
+    },
+    "whoCanMessageScreen": {
+        "title": "Who can message me",
+        "everyone": "Everyone",
+        "followersOnly": "Followers only",
+        "followersOnlyDesc": "No longer receive messages from strangers, but can still receive gifts"
+    },
+    "appVersion": {
+        "title": "App version",
+        "current": "Your current version is 1.0.0 of livego",
+        "latest": "Latest version",
+        "status": "Status",
+        "upToDate": "Up-to-date"
+    },
+    "zoom": {
+        "title": "Zoom Adjustment",
+        "current": "Current zoom level",
+        "small": "Small",
+        "large": "Large",
+        "reset": "Reset",
+        "description": "Zoom affects the entire app, including text, buttons, and images. Use it to improve readability or viewing."
+    },
+    "deleteAccount": {
+        "title": "Delete Account"
+    },
+    "copyright": {
+      "title": "Copyright Information",
+      "section1Title": "Copyright Notice",
+      "section1p1": "© 2024 LiveGo. All rights reserved. The content, layout, design, data, databases and graphics on this application are protected by intellectual property laws and are owned by LiveGo, unless otherwise stated.",
+      "section2Title": "Intellectual Property",
+      "section2p1": "All trademarks, service marks, and trade names are proprietary to LiveGo or other respective owners that have granted LiveGo the right and license to use such marks.",
+      "section3Title": "User-Generated Content",
+      "section3p1": "You are solely responsible for the content you broadcast or display ('post') on the LiveGo service. You must not post content that infringes upon the intellectual property rights of others. We will remove infringing content if we are properly notified.",
+      "section4Title": "Reporting Infringement",
+      "section4p1": "If you believe that your copyrighted work has been copied in a way that constitutes copyright infringement and is accessible via the service, please notify our copyright agent.",
+      "section4p2": "Please send all infringement notices to:"
+    },
+    "earnings": {
+        "title": "Earnings Information",
+        "policyTitle": "Our 'Earnings' Policy",
+        "conversionTitle": "Converting Earnings to Cash",
+        "conversionBody": "The conversion of your accumulated 'Earnings' on the platform to Brazilian Reais (BRL) is completely free. There are no hidden fees in this process. Your Earnings balance is converted using the platform's current exchange rate.",
+        "feeTitle": "Withdrawal Fee",
+        "feeBody": "When you request a withdrawal, a service fee is applied to cover operational and payment processing costs. The split is transparent:",
+        "streamerShareTitle": "80% for You (Streamer)",
+        "streamerShareBody": "The majority of the value is yours! We believe in rewarding our content creators.",
+        "platformShareTitle": "20% for the Platform",
+        "platformShareBody": "This fee helps us keep the platform secure, develop new features, and support the community."
+    },
+    "pkTimer": {
+        "title": "Settings",
+        "time": "Time"
+    }
+  },
+  "vip": {
+    "centerTitle": "VIP Center",
+    "currentUser": "Current User",
+    "status": "VIP Status",
+    "notMember": "Not a VIP Member",
+    "memberUntil": "Member until {date}",
+    "subscribedOn": "Subscribed on {date}",
+    "privileges": "Exclusive Privileges",
+    "privilege1": "Exclusive VIP Badge",
+    "privilege2": "Exclusive Room Entry Effect",
+    "privilege3": "VIP Store Access",
+    "privilege4": "Special Room Effects",
+    "subscribe": "Subscribe",
+    "renew": "Renew",
+    "monthly": "Monthly",
+    "quarterly": "Quarterly",
+    "yearly": "Yearly",
+    "effects": "Effects",
+    "store": {
+        "buy": "Buy",
+        "exclusiveTitle": "VIP Exclusive Store",
+        "exclusiveBody": "This is an exclusive store for VIP members with special room effects.",
+        "subscribeButton": "Become a VIP",
+        "purchaseSuccess": "You bought {name}!",
+        "notEnoughDiamonds": "Not enough diamonds."
+    }
+  },
+  "streamRoom": {
+    "sayHi": "Say hi...",
+    "joined": "joined",
+    "followed": "followed",
+    "sentGift": "sent {quantity}x {giftName}",
+    "sentGiftTo": "{sender} sent to {receiver}",
+    "sentGiftMessage": "Sent a {giftName} to {receiverName}"
+  },
+  "pkBattle": {
+    "contributionRanking": "Contribution Ranking"
+  },
+  "endStream": {
+    "endBattleTitle": "Leave Battle?",
+    "endBattleBody": "Are you sure you want to leave the PK battle?",
+    "endStreamTitle": "End Stream?",
+    "endStreamBody": "Are you sure you want to end the stream? This action cannot be undone.",
+    "leave": "Leave",
+    "end": "End",
+    "summaryTitle": "The stream has ended.",
+    "viewers": "Number of viewers",
+    "duration": "Live duration",
+    "coins": "Coins",
+    "newFollowers": "Followers",
+    "members": "Member",
+    "newFans": "Fans",
+    "backToHome": "Back to homepage"
+  },
+  "editProfile": {
+    "title": "Edit profile",
+    "uploadNotice": "Upload clear, real photos, let destiny begin with a beautiful avatar",
+    "portrait": "Portrait",
+    "uploadHelper": "{count}/8 Click to view and delete images, hold to sort",
+    "nickname": "Nickname",
+    "gender": "Gender",
+    "birthday": "Birthday",
+    "bio": "Bio",
+    "residence": "Current residence",
+    "emotionalStatus": "Emotional status",
+    "tags": "Tags",
+    "profession": "Profession",
+    "notSpecified": "Not specified"
+  },
+  "wallet": {
+    "diamond": "Diamond",
+    "earnings": "Earnings",
+    "history": "Purchase History",
+    "noHistory": "No purchase history.",
+    "connectionError": "Error loading wallet: Connection error. Check your internet.",
+    "withdrawValue": "Withdrawal Amount",
+    "withdrawPlaceholder": "Amount of earnings",
+    "available": "Available for withdrawal: -- earnings",
+    "grossValue": "Gross Value (BRL)",
+    "platformFee": "Platform Fee (20%)",
+    "netValue": "Amount to Receive:",
+    "withdrawMethod": "Withdrawal Method",
+    "configureMethod": "Configure Method",
+    "valueSentTo": "The amount will be sent to your registered account.",
+    "confirmWithdraw": "Confirm Withdrawal",
+    "configureWithdraw": {
+        "title": "Configure Withdrawal Method",
+        "description": "Select how you would like to receive your money.",
+        "pixKey": "PIX Key",
+        "pixPlaceholder": "CPF, email or phone",
+        "mercadoPagoEmail": "Email",
+        "mercadoPagoPlaceholder": "Mercado Pago account email"
+    }
+  },
+  "confirmPurchase": {
+    "title": "Confirm purchase",
+    "selectedPackage": "Selected Package",
+    "packageValue": "Package Value",
+    "fees": "Fees",
+    "total": "Total to Pay",
+    "transfer": "Transfer",
+    "creditCard": "Credit Card",
+    "deliveryAddress": "Billing Address (Required)",
+    "cardDetails": "Card Information",
+    "bankDetails": "Bank Details",
+    "pleaseFillAddress": "Please fill in all address fields.",
+    "pleaseFillCard": "Please fill in all card details.",
+    "pleaseFillBank": "Please fill in all payment fields.",
+    "address": {
+      "street": "Street",
+      "number": "No.",
+      "neighborhood": "Neighborhood",
+      "city": "City",
+      "cep": "CEP"
+    },
+    "card": {
+      "number": "Card Number",
+      "name": "Name on Card",
+      "expiry": "Expiry",
+      "cvv": "CVV"
+    },
+    "bank": {
+      "bank": "Bank",
+      "agency": "Agency",
+      "account": "Checking Account",
+      "cpfCnpj": "CPF/CNPJ",
+      "holder": "Account Holder"
+    },
+    "confirmButton": "Confirm Purchase"
+  },
+  "userLists": {
+    "following": {
+        "title": "Following",
+        "noUsers": "You are not following anyone."
+    },
+    "fans": {
+        "title": "Fans",
+        "noUsers": "You don't have any fans yet."
+    },
+    "visitors": {
+        "title": "Visitors",
+        "noUsers": "No one has visited your profile recently."
+    },
+    "topFans": {
+        "title": "Top Fans",
+        "error": "Error loading top fans: Connection error. Check your internet."
+    },
+    "blockList": {
+        "title": "Block List",
+        "noUsers": "No blocked users",
+        "description": "You can block users on their profile or in a live stream."
+    }
+  },
+  "myLevel": {
+    "title": "My Level",
+    "currentPrivileges": "Current Privileges (Level {level})",
+    "exclusiveBadge": "Exclusive Level Badge",
+    "specialCommentBorder": "Special Comment Border",
+    "nextRewards": "Next Rewards (Level {level})",
+    "exclusiveGift": "Exclusive Level Gift",
+    "roomEntryEffect": "Room Entry Effect"
+  },
+  "avatarProtection": {
+    "title": "Avatar Protection",
+    "save": "Save",
+    "heading": "Protect your avatar",
+    "description": "Enable protection to prevent others from using your profile picture, preventing scams and fake profiles.",
+    "toggle": "Enable Avatar Protection"
+  },
+  "search": {
+    "placeholder": "Search by name or ID",
+    "noResults": "No users found.",
+    "tryAgain": "Try a different search.",
+    "prompt": "Search for streamers and friends."
+  },
+  "cameraPermission": {
+    "cameraTitle": "Allow LiveGo to take pictures and record video?",
+    "micTitle": "Allow LiveGo to record audio?",
+    "duringUse": "While using the app",
+    "onlyThisTime": "Only this time",
+    "deny": "Don't allow"
+  },
+  "privateChat": {
+    "title": "Private Messages",
+    "noMessages": "No messages."
+  },
+  "chat": {
+    "sayHi": "Say hi...",
+    "becameFriends": "You are now friends! Tap to view."
+  },
+  "beautyEffects": {
+    "recommend": "Recommend",
+    "beauty": "Beauty",
+    "reset": "Reset",
+    "filters": {
+      "close": "Close",
+      "muse": "Muse",
+      "cute": "Cute",
+      "vitality": "Vitality"
+    },
+    "effects": {
+      "whiten": "Whiten",
+      "smooth": "Smooth",
+      "blush": "Blush",
+      "contrast": "Contrast"
+    }
+  },
+  "liveManual": {
+    "title": "Live Stream Manual",
+    "section1Title": "1. Preparing Your Stream",
+    "section1p1": "<strong>Cover and Title:</strong> Choose a clear cover image and an attention-grabbing title. This is the first thing viewers will see!",
+    "section1p2": "<strong>Category:</strong> Select the correct category (Music, Dance, Games, etc.) so your target audience can find your live stream more easily.",
+    "section1p3": "<strong>Quality:</strong> Check your internet connection. Good lighting and clear audio are essential to keep viewers engaged.",
+    "section2Title": "2. During the Stream",
+    "section2p1": "<strong>Interact with the Chat:</strong> Talk to your viewers! Answer questions, thank them for gifts, and make them feel part of the stream.",
+    "section2p2": "<strong>Co-host and PK Tools:</strong> Invite friends to join your live stream or start a PK Battle to make things more exciting. Use the tools in the options menu.",
+    "section2p3": "<strong>Beauty Effects:</strong> Use filters and beauty effects to improve your image quality and have fun.",
+    "section3Title": "3. Stream Type",
+    "section3p1": "<strong>WebRTC (Default):</strong> The simplest way to start streaming, directly from your browser, with no additional software needed.",
+    "section3p2": "<strong>RTMP/SRT:</strong> For advanced streamers using software like OBS Studio. Copy the server URL and stream key to your program for more control over the quality and layout of your live stream.",
+    "section4Title": "4. Important Tips",
+    "section4p1": "<strong>Be Consistent:</strong> Try to stream at regular times so your fans know when to find you.",
+    "section4p2": "<strong>Promote:</strong> Let your followers on other social networks know you're going live.",
+    "section4p3": "<strong>Community Rules:</strong> Remember to follow the platform's guidelines to maintain a safe and fun environment for everyone."
+  },
+  "onlineUsers": {
+      "title": "Online Users ({count})"
+  },
+  "resolution": {
+      "title": "Video Quality",
+      "description": "Adjusting the quality may affect data usage and stream smoothness.",
+      "hd": "720p (HD)",
+      "sd": "480p (Standard)",
+      "fluent": "360p (Fluent)"
+  },
+  "tools": {
+      "title": "Tools",
+      "cohostPk": "Co-host and PK Tools",
+      "cohost": "+ Hosts",
+      "battle": "Battle",
+      "endBattle": "End Battle",
+      "invite": "+Invite",
+      "anchor": "Anchor Tools",
+      "beautify": "Beautify",
+      "mic": "Microphone",
+      "clarity": "Clarity"
+  },
+  "cohost": {
+      "title": "Co-host with creators",
+      "searchPlaceholder": "Search by name or ID",
+      "friendsOnly": "Accept invites from friends only.",
+      "quickInviteTitle": "Make new friends",
+      "quickInviteSubtitle": "with quick invites",
+      "friendsListTitle": "Friends ({count})",
+      "noFriends": "No friends found."
+  },
+  "contributionRanking": {
+      "title": "Contribution Ranking",
+      "daily": "Daily",
+      "weekly": "Weekly",
+      "monthly": "Monthly"
+  },
+  "gifts": {
+      "title": "Gifts",
+      "recharge": "Recharge >",
+      "canSend": "Can send up to {count}",
+      "selectGift": "Select a gift",
+      "gallery": "Gallery",
+      "reorder": "Reorder",
+      "done": "Done",
+      "dragToReorder": "Drag gifts to reorder."
+  }
+}

@@ -1,0 +1,46 @@
+// Front-end utilities - NO database operations
+// All data should come from API
+
+export const createChatKey = (userId1: string, userId2: string): string => {
+    // Create a consistent chat key for UI purposes only
+    return [userId1, userId2].sort().join('_');
+};
+
+// Avatar frame utilities - data should come from API
+export interface AvatarFrame {
+    id: string;
+    name: string;
+    price: number;
+    duration: number;
+}
+
+export interface OwnedFrame {
+    frameId: string;
+    expirationDate?: string;
+}
+
+// These should come from API calls via api.getAvatarFrames()
+export const avatarFrames: AvatarFrame[] = [];
+
+export const getRemainingDays = (expirationDate?: string): number | null => {
+    if (!expirationDate) return null;
+    
+    const now = new Date();
+    const expiry = new Date(expirationDate);
+    const diffTime = expiry.getTime() - now.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    return diffDays > 0 ? diffDays : 0;
+};
+
+export const getFrameGlowClass = (activeFrameId?: string | null): string => {
+    if (!activeFrameId) return '';
+    
+    const frameGlowMap: Record<string, string> = {
+        'vip': 'glow-vip',
+        'premium': 'glow-premium',
+        'legendary': 'glow-legendary',
+    };
+    
+    return frameGlowMap[activeFrameId] || 'glow-default';
+};

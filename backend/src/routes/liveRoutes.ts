@@ -437,7 +437,7 @@ router.post('/streams/:id/end-session', async (req, res) => {
         const { session } = req.body;
         const streamId = req.params.id;
         
-        console.log(`🔴 Encerrando live ${streamId} e removendo card do banco`);
+        console.log(`🔴 Encerrando live ${streamId} e salvando no histórico`);
         
         // 1. Buscar a stream antes de atualizar
         const stream = await Streamer.findOne({ id: streamId });
@@ -447,20 +447,53 @@ router.post('/streams/:id/end-session', async (req, res) => {
             return res.status(404).json({ success: false, error: 'Stream not found' });
         }
         
-        // 2. Atualizar status da stream para offline no banco
+        // 2. Calcular duração
+        const endTime = Date.now();
+        const durationMs = endTime - (session?.startTime || endTime);
+        const totalSeconds = Math.floor(durationMs / 1000);
+        const hours = Math.floor(totalSeconds / 3600);
+        const minutes = Math.floor((totalSeconds % 3600) / 60);
+        const seconds = totalSeconds % 60;
+        const durationStr = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        
+        // 3. Salvar no histórico
+        const { StreamHistory } = await import('../models');
+        const historyEntry = {
+            id: `hist_${streamId}_${endTime}`,
+            streamId: streamId,
+            hostId: stream.hostId,
+            hostName: stream.name,
+            hostAvatar: stream.avatar,
+            title: stream.name,
+            startTime: session?.startTime || new Date(stream.startTime || endTime).toISOString(),
+            endTime: new Date(endTime).toISOString(),
+            duration: durationStr,
+            peakViewers: session?.peakViewers || stream.viewers || 0,
+            totalCoins: session?.coins || 0,
+            totalFollowers: session?.followers || 0,
+            totalMembers: session?.members || 0,
+            totalFans: session?.fans || 0,
+            category: stream.category,
+            tags: stream.tags || [],
+            country: stream.country
+        };
+        
+        await StreamHistory.create(historyEntry);
+        console.log(`💾 Histórico salvo para stream ${streamId}`);
+        
+        // 4. Atualizar status da stream para offline
         const updatedStream = await Streamer.findOneAndUpdate(
             { id: streamId }, 
             { 
                 isLive: false,
-                endTime: new Date().toISOString(),
+                endTime: new Date(endTime).toISOString(),
                 streamStatus: 'ended',
-                // Mantém os dados históricos mas remove da lista de ativas
                 viewers: 0
             },
             { new: true }
         );
         
-        // 3. Atualizar status do host no banco
+        // 5. Atualizar status do host
         const User = await import('../models').then(m => m.User);
         const updatedUser = await User.findOneAndUpdate(
             { id: stream.hostId }, 
@@ -468,7 +501,7 @@ router.post('/streams/:id/end-session', async (req, res) => {
             { new: true }
         );
         
-        // 4. Remover todos os usuários online desta stream
+        // 6. Remover todos os usuários online desta stream
         await User.updateMany(
             { currentStreamId: streamId },
             { 
@@ -478,17 +511,15 @@ router.post('/streams/:id/end-session', async (req, res) => {
             }
         );
         
-        // 5. Notificar via WebSocket para todos os clientes
+        // 7. Notificar via WebSocket
         const io = req.app.get('io');
         if (io) {
-            // Notificar globalmente que a stream foi removida
             io.emit('stream_ended', {
                 streamId: streamId,
                 hostId: stream.hostId,
                 timestamp: new Date().toISOString()
             });
             
-            // Notificar usuários na stream específica
             io.to(streamId).emit('live_stream_ended', {
                 streamId: streamId,
                 message: 'Esta transmissão foi encerrada',
@@ -498,7 +529,7 @@ router.post('/streams/:id/end-session', async (req, res) => {
             console.log(`📢 Notificação WebSocket enviada: stream ${streamId} encerrada`);
         }
         
-        console.log(`✅ Live ${streamId} encerrada e card removido com sucesso`);
+        console.log(`✅ Live ${streamId} encerrada e histórico salvo com sucesso`);
         
         res.json({ 
             success: true, 
@@ -506,8 +537,9 @@ router.post('/streams/:id/end-session', async (req, res) => {
             stream: {
                 id: streamId,
                 isLive: false,
-                endTime: new Date().toISOString()
-            }
+                endTime: new Date(endTime).toISOString()
+            },
+            history: historyEntry
         });
         
     } catch (error: any) {
@@ -515,6 +547,55 @@ router.post('/streams/:id/end-session', async (req, res) => {
         res.status(500).json({ success: false, error: error.message });
     }
 });
+
+// API específica para remover cards de lives
+router.delete('/cards/:streamId', async (req, res) => {
+    try {
+        const { streamId } = req.params;
+        
+        console.log(`🗑️ Removendo card da live ${streamId}`);
+        
+        // 1. Buscar a stream
+        const stream = await Streamer.findOne({ id: streamId });
+        
+        if (!stream) {
+            console.warn(`⚠️ Stream ${streamId} não encontrada`);
+            return res.status(404).json({ success: false, error: 'Stream not found' });
+        }
+        
+        // 2. Remover o card (marcar como offline)
+        await Streamer.findOneAndUpdate(
+            { id: streamId },
+            { 
+                isLive: false,
+                streamStatus: 'ended',
+                endTime: new Date().toISOString(),
+                viewers: 0
+            }
+        );
+        
+        // 3. Notificar via WebSocket para todos os clientes
+        const io = req.app.get('io');
+        if (io) {
+            io.emit('card_removed', {
+                streamId: streamId,
+                hostId: stream.hostId,
+                timestamp: new Date().toISOString()
+            });
+            
+            console.log(`📢 Notificação WebSocket enviada: card ${streamId} removido`);
+        }
+        
+        console.log(`✅ Card da live ${streamId} removido com sucesso`);
+        
+        res.json({ success: true });
+        
+    } catch (error: any) {
+        console.error('❌ Erro ao remover card:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 router.post('/streams/:id/gift', async (req, res) => {
     try {
         const { fromUserId, giftName, amount } = req.body;

@@ -124,6 +124,11 @@ class SocketService {
         this.on('live_stream_ended', callback);
     }
 
+    // Evento para quando um card é removido
+    onCardRemoved(callback: (data: { streamId: string; hostId: string; timestamp: string }) => void) {
+        this.on('card_removed', callback);
+    }
+
     on(event: string, callback: Function) {
         if (!this.listeners.has(event)) {
             this.listeners.set(event, []);

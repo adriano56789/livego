@@ -1,5 +1,6 @@
 export { User } from './User';
 export { Streamer } from './Streamer';
+export { StreamHistory } from './StreamHistory';
 export { Gift } from './Gift';
 export { Message } from './Message';
 export { Order } from './Order';

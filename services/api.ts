@@ -248,6 +248,7 @@ export const api = {
         return [];
     },
     endLiveSession: (streamId: string, sessionData: LiveSessionState) => callApi<{ success: boolean, user: User }>('POST', `/api/streams/${streamId}/end-session`, { session: sessionData }),
+    removeLiveCard: (streamId: string) => callApi<{ success: boolean }>('DELETE', `/api/cards/${streamId}`),
     sendGift: (fromUserId: string, streamId: string, giftName: string, amount: number) => callApi<{ success: boolean; error?: string; updatedSender: User; updatedReceiver: User; }>('POST', `/api/streams/${streamId}/gift`, { fromUserId, giftName, amount }),
     updateSimStatus: (isOnline: boolean) => callApi<{ success: boolean, user: User }>('POST', '/api/sim/status', { isOnline }),
 

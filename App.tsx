@@ -414,12 +414,32 @@ const AppContent: React.FC = () => {
           addToast(ToastType.Info, data.message);
         }
       });
+      
+      // Escutar quando cards são removidos
+      socketService.onCardRemoved((data: { streamId: string; hostId: string; timestamp: string }) => {
+        console.log(`📡 Recebido evento card_removed: ${data.streamId}`);
+        
+        // Remover o card da lista de streamers
+        setStreamers(prev => prev.filter(streamer => streamer.id !== data.streamId));
+        
+        // Se o usuário está assistindo esta live, redirecionar para tela principal
+        if (activeStream && activeStream.id === data.streamId) {
+          setActiveStream(null);
+          setLiveSession(null);
+          setStreamRoomData(null);
+          setIsPKBattleActive(false);
+          setPkOpponent(null);
+          
+          addToast(ToastType.Info, 'Esta transmissão foi encerrada');
+        }
+      });
     }
 
     return () => {
       socketService.off('user_status_updated');
       socketService.off('stream_ended');
       socketService.off('live_stream_ended');
+      socketService.off('card_removed');
     };
   }, [currentUser, activeStream]);
 
@@ -627,6 +647,20 @@ const AppContent: React.FC = () => {
       } finally {
         setIsLoadingStreamers(false);
       }
+    }
+  };
+  
+  const loadStreams = async () => {
+    setIsLoadingStreamers(true);
+    try {
+      const streams = await api.getLiveStreamers('global');
+      setStreamers(streams);
+      console.log('📺 Streams recarregadas:', streams.length);
+    } catch (error) {
+      console.error('Error loading streams:', error);
+      setStreamers([]);
+    } finally {
+      setIsLoadingStreamers(false);
     }
   };
   
@@ -861,14 +895,25 @@ const AppContent: React.FC = () => {
         setStreamSummaryData(summary);
         setIsEndStreamSummaryOpen(true);
         
-        // 🚀 CHAMADA À API PARA REMOVER O CARD DA LIVE
+        // 🚀 CHAMADA À API ESPECÍFICA PARA REMOVER O CARD DA LIVE
         try {
             console.log(`🔴 Encerrando live ${activeStream.id} via API`);
-            await api.endLiveSession(activeStream.id, liveSession);
-            console.log(`✅ Live ${activeStream.id} encerrada com sucesso via API`);
+            console.log('📤 Enviando dados da sessão:', liveSession);
             
-            // Recarregar a lista de streams para atualizar os cards
+            // 1. Encerrar sessão da live (salvar histórico, etc.)
+            const response = await api.endLiveSession(activeStream.id, liveSession);
+            console.log('✅ Resposta da API endSession:', response);
+            
+            // 2. Remover o card especificamente
+            console.log(`🗑️ Removendo card ${activeStream.id}`);
+            const removeResponse = await api.removeLiveCard(activeStream.id);
+            console.log('✅ Resposta da API removeCard:', removeResponse);
+            console.log(`✅ Live ${activeStream.id} encerrada e card removido`);
+            
+            // 3. Recarregar a lista de streams para atualizar os cards
+            console.log('🔄 Recarregando lista de streams...');
             await loadStreams();
+            console.log('✅ Lista de streams recarregada');
         } catch (error) {
             console.error('❌ Erro ao encerrar live via API:', error);
             addToast(ToastType.Error, 'Erro ao encerrar transmissão');
@@ -1343,7 +1388,4 @@ const App: React.FC = () => {
 };
 
 export default App;
-function loadStreams() {
-  throw new Error('Function not implemented.');
-}
 

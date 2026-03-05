@@ -284,6 +284,9 @@ export const api = {
     likePhoto: (photoId: string) => callApi<{ success: boolean; likes: number; isLiked: boolean; }>('POST', `/api/photos/${photoId}/like`, { userId: CURRENT_USER_ID }),
     uploadChatPhoto: (userId: string, base64Image: string) => callApi<{ url: string }>('POST', `/api/photos/upload/${userId}`, { image: base64Image }),
 
+    // --- Search ---
+    searchUsers: (query: string, limit?: number) => callApi<{ success: boolean; users: User[]; count: number }>('GET', `/api/search/users?q=${encodeURIComponent(query)}${limit ? `&limit=${limit}` : ''}`),
+
     // --- Miscellaneous ---
     getVisitors: (userId: string) => callApi<Visitor[]>('GET', `/api/visitors/list/${userId}`),
     clearVisitors: (userId: string) => callApi<{ success: boolean }>('DELETE', `/api/visitors/clear/${userId}`),

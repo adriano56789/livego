@@ -22,6 +22,7 @@ export class UserSearchService {
                 userId: user.id,
                 name: user.name,
                 displayName: user.displayName || user.name,
+                avatarUrl: user.avatarUrl,
                 searchTerms: searchTerms, // Adicionar searchTerms explicitamente
                 isActive: true,
                 lastUpdated: new Date()

@@ -5,6 +5,7 @@ export interface UserIndex extends Document {
     userId: string;
     name: string;
     displayName: string;
+    avatarUrl: string;
     searchTerms: string[];
     isActive: boolean;
     lastUpdated: Date;
@@ -15,6 +16,7 @@ const UserIndexSchema: Schema = new Schema({
     userId: { type: String, required: true, unique: true, ref: 'User' },
     name: { type: String, required: true },
     displayName: { type: String, required: true },
+    avatarUrl: { type: String },
     searchTerms: [{ type: String }], // Para busca mais eficiente
     isActive: { type: Boolean, required: true, default: true },
     lastUpdated: { type: Date, required: true, default: Date.now }

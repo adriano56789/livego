@@ -31,10 +31,25 @@ const io = new Server(server, {
         methods: ['GET', 'POST']
     }
 });
-const port = process.env.PORT || 3000;
-const wsPort = process.env.WS_PORT || 3001;
+const port = parseInt(process.env.PORT || '3000');
+const wsPort = parseInt(process.env.WS_PORT || '3001');
 
 connectDB();
+
+// Middleware apenas para garantir acesso móvel (sem alterar configurações existentes)
+app.use((req, res, next) => {
+    // Libera acesso para qualquer IP de qualquer lugar
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Origin, Accept');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    res.header('Access-Control-Max-Age', '86400'); // 24 horas
+    
+    // Log de acesso para debug
+    console.log(`🌍 [ACESSO GLOBAL] ${req.method} ${req.path} - IP: ${req.ip || req.socket.remoteAddress || 'unknown'} - Origin: ${req.headers.origin || 'any'}`);
+    
+    next();
+});
 
 app.use(cors({
     origin: '*', // Aceitar qualquer origem
@@ -845,9 +860,10 @@ io.on('connection', (socket) => {
 
 export const getIO = () => io;
 
-server.listen(port, () => {
-    console.log(`🚀 API Server started on http://0.0.0.0:${port}`);
-    console.log(`📱 Frontend acessível via celular: http://192.168.3.12:5173`);
+server.listen(port, '0.0.0.0', () => {
+    console.log(`🌍 ACESSO GLOBAL LIBERADO - API Server started on http://0.0.0.0:${port}`);
+    console.log(`📱 Celular/computador: http://192.168.3.12:${port}`);
     console.log(`🔗 API endpoints: http://192.168.3.12:${port}/api/*`);
+    console.log(`🌐 ACESSO LIBERADO PARA QUALQUER IP DE QUALQUER LUGAR`);
     console.log(`🔌 WebSocket server rodando na mesma porta ${port}`);
 });

@@ -471,8 +471,9 @@ router.post('/streams/:id/end-session', async (req, res) => {
         
         // 3. Salvar no histórico
         const { StreamHistory } = await import('../models');
+        let historyEntry = null;
         try {
-            const historyEntry = {
+            historyEntry = {
                 id: `hist_${streamId}_${endTime}`,
                 streamId: streamId,
                 hostId: stream.hostId,
@@ -498,37 +499,58 @@ router.post('/streams/:id/end-session', async (req, res) => {
             console.warn(`⚠️ Erro ao salvar histórico (mas continuando): ${historyError.message}`);
             // Continuar mesmo se o histórico falhar
         }
-        console.log(`💾 Histórico salvo para stream ${streamId}`);
         
         // 4. Atualizar status da stream para offline
-        const updatedStream = await Streamer.findOneAndUpdate(
-            { id: streamId }, 
-            { 
-                isLive: false,
-                endTime: new Date(endTime).toISOString(),
-                streamStatus: 'ended',
-                viewers: 0
-            },
-            { new: true }
-        );
+        let updatedStream;
+        try {
+            updatedStream = await Streamer.findOneAndUpdate(
+                { id: streamId }, 
+                { 
+                    isLive: false,
+                    endTime: new Date(endTime).toISOString(),
+                    streamStatus: 'ended',
+                    viewers: 0
+                },
+                { new: true }
+            );
+            if (!updatedStream) {
+                console.warn(`⚠️ Stream ${streamId} não encontrada para atualizar`);
+            }
+        } catch (updateError: any) {
+            console.warn(`⚠️ Erro ao atualizar stream (mas continuando): ${updateError.message}`);
+        }
         
         // 5. Atualizar status do host
-        const User = await import('../models').then(m => m.User);
-        const updatedUser = await User.findOneAndUpdate(
-            { id: stream.hostId }, 
-            { isLive: false }, 
-            { new: true }
-        );
+        let updatedUser;
+        try {
+            const User = await import('../models').then(m => m.User);
+            updatedUser = await User.findOneAndUpdate(
+                { id: stream.hostId }, 
+                { isLive: false }, 
+                { new: true }
+            );
+            if (!updatedUser) {
+                console.warn(`⚠️ Usuário ${stream.hostId} não encontrado para atualizar`);
+            }
+        } catch (userError: any) {
+            console.warn(`⚠️ Erro ao atualizar usuário (mas continuando): ${userError.message}`);
+        }
         
         // 6. Remover todos os usuários online desta stream
-        await User.updateMany(
-            { currentStreamId: streamId },
-            { 
-                isOnline: false,
-                currentStreamId: null,
-                lastSeen: new Date().toISOString()
-            }
-        );
+        try {
+            const User = await import('../models').then(m => m.User);
+            await User.updateMany(
+                { currentStreamId: streamId },
+                { 
+                    isOnline: false,
+                    currentStreamId: null,
+                    lastSeen: new Date().toISOString()
+                }
+            );
+            console.log(`✅ Usuários removidos da stream ${streamId}`);
+        } catch (removeError: any) {
+            console.warn(`⚠️ Erro ao remover usuários da stream (mas continuando): ${removeError.message}`);
+        }
         
         // 7. Notificar via WebSocket
         const io = req.app.get('io');

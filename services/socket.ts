@@ -114,6 +114,16 @@ class SocketService {
         this.on('viewers_count_updated', callback);
     }
 
+    // Evento para quando uma live é encerrada
+    onStreamEnded(callback: (data: { streamId: string; hostId: string; timestamp: string }) => void) {
+        this.on('stream_ended', callback);
+    }
+
+    // Evento para quando o usuário atual precisa sair de uma live encerrada
+    onLiveStreamEnded(callback: (data: { streamId: string; message: string; timestamp: string }) => void) {
+        this.on('live_stream_ended', callback);
+    }
+
     on(event: string, callback: Function) {
         if (!this.listeners.has(event)) {
             this.listeners.set(event, []);

@@ -471,27 +471,33 @@ router.post('/streams/:id/end-session', async (req, res) => {
         
         // 3. Salvar no histórico
         const { StreamHistory } = await import('../models');
-        const historyEntry = {
-            id: `hist_${streamId}_${endTime}`,
-            streamId: streamId,
-            hostId: stream.hostId,
-            hostName: stream.name,
-            hostAvatar: stream.avatar,
-            title: stream.name,
-            startTime: session?.startTime || new Date(stream.startTime || endTime).toISOString(),
-            endTime: new Date(endTime).toISOString(),
-            duration: durationStr,
-            peakViewers: session?.peakViewers || stream.viewers || 0,
-            totalCoins: session?.coins || 0,
-            totalFollowers: session?.followers || 0,
-            totalMembers: session?.members || 0,
-            totalFans: session?.fans || 0,
-            category: stream.category,
-            tags: stream.tags || [],
-            country: stream.country
-        };
-        
-        await StreamHistory.create(historyEntry);
+        try {
+            const historyEntry = {
+                id: `hist_${streamId}_${endTime}`,
+                streamId: streamId,
+                hostId: stream.hostId,
+                hostName: stream.name,
+                hostAvatar: stream.avatar,
+                title: stream.name,
+                startTime: session?.startTime || new Date(stream.startTime || endTime).toISOString(),
+                endTime: new Date(endTime).toISOString(),
+                duration: durationStr,
+                peakViewers: session?.peakViewers || stream.viewers || 0,
+                totalCoins: session?.coins || 0,
+                totalFollowers: session?.followers || 0,
+                totalMembers: session?.members || 0,
+                totalFans: session?.fans || 0,
+                category: stream.category,
+                tags: stream.tags || [],
+                country: stream.country
+            };
+            
+            await StreamHistory.create(historyEntry);
+            console.log(`💾 Histórico salvo para stream ${streamId}`);
+        } catch (historyError: any) {
+            console.warn(`⚠️ Erro ao salvar histórico (mas continuando): ${historyError.message}`);
+            // Continuar mesmo se o histórico falhar
+        }
         console.log(`💾 Histórico salvo para stream ${streamId}`);
         
         // 4. Atualizar status da stream para offline

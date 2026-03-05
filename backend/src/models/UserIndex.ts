@@ -3,9 +3,11 @@ import mongoose, { Document, Schema } from 'mongoose';
 export interface UserIndex extends Document {
     id: string;
     userId: string;
+    identification: string;
     name: string;
     displayName: string;
     avatarUrl: string;
+    isFriend?: boolean;
     searchTerms: string[];
     isActive: boolean;
     lastUpdated: Date;
@@ -14,9 +16,11 @@ export interface UserIndex extends Document {
 const UserIndexSchema: Schema = new Schema({
     id: { type: String, required: true, unique: true },
     userId: { type: String, required: true, unique: true, ref: 'User' },
+    identification: { type: String, required: true },
     name: { type: String, required: true },
     displayName: { type: String, required: true },
     avatarUrl: { type: String },
+    isFriend: { type: Boolean },
     searchTerms: [{ type: String }], // Para busca mais eficiente
     isActive: { type: Boolean, required: true, default: true },
     lastUpdated: { type: Date, required: true, default: Date.now }

@@ -970,34 +970,46 @@ const AppContent: React.FC = () => {
   const handleFollowUser = async (userToFollow: User, streamId?: string) => {
     if (!currentUser) return;
 
-    const isNowFollowing = !userToFollow.isFollowed;
-    const updatedFollowed = { ...userToFollow, isFollowed: isNowFollowing };
-    const updatedFollower = { ...currentUser, following: (currentUser.following || 0) + (isNowFollowing ? 1 : -1) };
+    try {
+        const response = await api.followUser(currentUser.id, userToFollow.id, streamId);
+        
+        if (response.success) {
+            const isNowFollowing = !userToFollow.isFollowed;
+            const updatedFollowed = { ...userToFollow, isFollowed: isNowFollowing };
+            const updatedFollower = { ...currentUser, following: (currentUser.following || 0) + (isNowFollowing ? 1 : -1) };
 
-    updateUserEverywhere(updatedFollower);
-    updateUserEverywhere(updatedFollowed);
+            updateUserEverywhere(updatedFollower);
+            updateUserEverywhere(updatedFollowed);
 
-    setFollowingUsers(prev => {
-        if (isNowFollowing) { 
-            if (prev.some(u => u.id === updatedFollowed.id)) {
-                return prev.map(u => u.id === updatedFollowed.id ? updatedFollowed : u);
+            setFollowingUsers(prev => {
+                if (isNowFollowing) { 
+                    if (prev.some(u => u.id === updatedFollowed.id)) {
+                        return prev.map(u => u.id === updatedFollowed.id ? updatedFollowed : u);
+                    }
+                    return [...prev, updatedFollowed];
+                } else { 
+                    return prev.filter(u => u.id !== updatedFollowed.id);
+                }
+            });
+
+            if (liveSession && activeStream && userToFollow.id === activeStream.hostId) {
+                const increment = isNowFollowing ? 1 : -1;
+                updateLiveSession({ followers: Math.max(0, (liveSession.followers || 0) + increment) });
             }
-            return [...prev, updatedFollowed];
-        } else { 
-            return prev.filter(u => u.id !== updatedFollowed.id);
+
+            // Se virou amizade, mostrar notificação especial
+            if (response.isFriendship && isNowFollowing) {
+                addToast(ToastType.Success, `🎉 Você e ${userToFollow.name} agora são amigos!`);
+            } else if (!streamId) {
+                const toastMessage = isNowFollowing
+                    ? t('toasts.followedUser', { name: userToFollow.name })
+                    : `Você deixou de seguir ${userToFollow.name}.`;
+                addToast(ToastType.Success, toastMessage);
+            }
         }
-    });
-
-    if (liveSession && activeStream && userToFollow.id === activeStream.hostId) {
-        const increment = isNowFollowing ? 1 : -1;
-        updateLiveSession({ followers: Math.max(0, (liveSession.followers || 0) + increment) });
-    }
-
-    if (!streamId) {
-        const toastMessage = isNowFollowing
-            ? t('toasts.followedUser', { name: userToFollow.name })
-            : `Você deixou de seguir ${userToFollow.name}.`;
-        addToast(ToastType.Success, toastMessage);
+    } catch (error) {
+        console.error('Erro ao seguir/deixar de seguir usuário:', error);
+        addToast(ToastType.Error, 'Não foi possível realizar esta ação');
     }
   };
 

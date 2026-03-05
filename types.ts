@@ -93,6 +93,7 @@ export interface User {
   topFansAvatars?: string[];
   isLive?: boolean;
   isFollowed?: boolean;
+  isFriend?: boolean;
   isOnline?: boolean;
   lastSeen?: string;
   diamonds: number;

@@ -21,7 +21,8 @@ const FollowersSchema: Schema = new Schema({
 // Índices para performance
 FollowersSchema.index({ followerId: 1, isActive: 1 });
 FollowersSchema.index({ followingId: 1, isActive: 1 });
-FollowersSchema.index({ followerId: 1, followingId: 1 }, { unique: true });
+// Índice único apenas para registros ativos
+FollowersSchema.index({ followerId: 1, followingId: 1, isActive: 1 }, { unique: true });
 
 FollowersSchema.set('toJSON', {
     transform: function(doc, ret) {

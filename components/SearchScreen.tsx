@@ -32,16 +32,21 @@ const UserItem: React.FC<{ user: User; onViewProfile: (user: User) => void; onFo
                     }}
                 />
                 <div className="min-w-0">
-                    <h3 className="font-semibold text-white truncate">{user.name}</h3>
+                    <div className="flex items-center space-x-2">
+                        <h3 className="font-semibold text-white truncate">{user.name}</h3>
+                        {user.isFriend && (
+                            <span className="text-green-400 text-sm flex-shrink-0">👥</span>
+                        )}
+                    </div>
                     <p className="text-sm text-gray-400">{t('profile.id')}: {user.identification}</p>
                 </div>
             </div>
             <button
                 onClick={handleFollow}
-                className={`text-sm font-semibold px-4 py-1.5 rounded-full transition-colors flex items-center space-x-1 shrink-0 ${
+                className={`text-sm font-semibold px-4 py-1.5 rounded-full transition-all duration-200 flex items-center space-x-1 shrink-0 ${
                     user.isFollowed
-                        ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                        : 'bg-purple-600 text-white hover:bg-purple-700'
+                        ? 'bg-gray-700 text-gray-300 hover:bg-gray-600 scale-95 shadow-inner'
+                        : 'bg-purple-600 text-white hover:bg-purple-700 hover:scale-105 shadow-md'
                 }`}
             >
                 {!user.isFollowed && <PlusIcon className="w-4 h-4" />}

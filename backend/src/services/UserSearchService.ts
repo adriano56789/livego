@@ -9,17 +9,21 @@ export class UserSearchService {
             // Gerar searchTerms manualmente
             const name = (user.name || '').toLowerCase();
             const displayName = (user.displayName || user.name || '').toLowerCase();
+            const identification = (user.identification || '').toLowerCase();
             
             const searchTerms = [
                 name,
                 displayName,
+                identification,
                 ...name.split(' ').filter((t: string) => t.length > 0),
-                ...displayName.split(' ').filter((t: string) => t.length > 0)
+                ...displayName.split(' ').filter((t: string) => t.length > 0),
+                ...identification.split(' ').filter((t: string) => t.length > 0)
             ].filter((term: string, index: number, arr: string[]) => arr.indexOf(term) === index); // Remover duplicatas
 
             const indexData = {
                 id: `user_idx_${user.id}`,
                 userId: user.id,
+                identification: user.identification,
                 name: user.name,
                 displayName: user.displayName || user.name,
                 avatarUrl: user.avatarUrl,

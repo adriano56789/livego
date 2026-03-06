@@ -1340,14 +1340,6 @@ const AppContent: React.FC = () => {
               <FooterNav currentUser={currentUser} onOpenGoLive={handleOpenGoLive} activeTab={activeScreen} onNavigate={handleNavigation} onOpenChat={() => handleNavigation('messages')} unreadCount={totalUnreadMessages} />
             </div>
           )}
-          {chattingWith && (
-            <ChatScreenWithWebSocket
-              currentUser={currentUser!}
-              otherUser={chattingWith}
-              onClose={() => setChattingWith(null)}
-              onViewProfile={handleViewProfile}
-            />
-          )}
         </>
       )}
 

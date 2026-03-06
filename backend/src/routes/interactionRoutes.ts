@@ -1,11 +1,94 @@
 import express from 'express';
-import { Message, User, Photo } from '../models';
+import { Message, User, Photo, Streamer, Followers, Friendship } from '../models';
 
 const router = express.Router();
 
 router.get('/presents/live/:id', async (req, res) => res.json([]));
 router.post('/streams/:id/private-invite', async (req, res) => res.json({ success: true }));
-router.get('/streams/:id/access-check', async (req, res) => res.json({ canJoin: true }));
+router.get('/streams/:id/access-check', async (req, res) => {
+    try {
+        const { id: streamId } = req.params;
+        const { userId } = req.query;
+        
+        if (!userId) {
+            return res.json({ canJoin: false, reason: 'User ID required' });
+        }
+        
+        // Buscar stream e host
+        const stream = await Streamer.findOne({ id: streamId });
+        if (!stream) {
+            return res.json({ canJoin: false, reason: 'Stream not found' });
+        }
+        
+        // Se não for privada, pode entrar
+        if (!stream.isPrivate) {
+            return res.json({ canJoin: true });
+        }
+        
+        // Buscar configurações de privacidade do host
+        const host = await User.findOne({ id: stream.hostId });
+        if (!host || !host.privateStreamSettings) {
+            return res.json({ canJoin: false, reason: 'Host settings not found' });
+        }
+        
+        const settings = host.privateStreamSettings;
+        const requestingUser = userId;
+        
+        console.log(`🔐 Checking access for user ${requestingUser} to stream ${streamId}`);
+        console.log(`🔒 Stream settings:`, settings);
+        
+        let canJoin = false;
+        let reason = '';
+        
+        // Verificar se é o próprio host
+        if (requestingUser === stream.hostId) {
+            canJoin = true;
+        }
+        // Verificar configuração de followers only
+        else if (settings.followersOnly) {
+            const isFollowing = await Followers.findOne({
+                followerId: requestingUser,
+                followingId: stream.hostId,
+                isActive: true
+            });
+            canJoin = !!isFollowing;
+            reason = canJoin ? '' : 'Only followers can join this stream';
+        }
+        // Verificar configuração de fans only
+        else if (settings.fansOnly) {
+            const isFan = await Followers.findOne({
+                followerId: requestingUser,
+                followingId: stream.hostId,
+                isActive: true
+            });
+            canJoin = !!isFan;
+            reason = canJoin ? '' : 'Only fans can join this stream';
+        }
+        // Verificar configuração de friends only
+        else if (settings.friendsOnly) {
+            const friendship = await Friendship.findOne({
+                $or: [
+                    { userId1: requestingUser, userId2: stream.hostId },
+                    { userId1: stream.hostId, userId2: requestingUser }
+                ],
+                isActive: true
+            });
+            canJoin = !!friendship;
+            reason = canJoin ? '' : 'Only friends can join this stream';
+        }
+        // Se não houver restrições específicas, pode entrar
+        else {
+            canJoin = true;
+        }
+        
+        console.log(`🔓 Access result for user ${requestingUser}: ${canJoin}, reason: ${reason}`);
+        
+        res.json({ canJoin, reason });
+    } catch (error: any) {
+        console.error('Error checking stream access:', error);
+        res.status(500).json({ canJoin: false, reason: 'Server error' });
+    }
+});
 router.post('/friends/invite', async (req, res) => res.json({ success: true }));
 router.post('/streams/:id/interactions', async (req, res) => res.json({ success: true }));
 
@@ -106,7 +189,12 @@ router.post('/photos/upload', async (req, res) => {
             updatedAt: new Date()
         });
 
-        res.json({ success: true, photo: newPhoto });
+        // Retornar no formato esperado pelo frontend
+        res.json({ 
+            success: true, 
+            url: newPhoto.url,
+            photo: newPhoto
+        });
     } catch (error: any) {
         console.error('Error uploading photo:', error);
         res.status(500).json({ error: error.message });

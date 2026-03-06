@@ -14,12 +14,65 @@ router.get('/settings/beauty/:id', async (req, res) => res.json({}));
 router.post('/settings/beauty/:id', async (req, res) => res.json({ success: true }));
 
 router.get('/settings/private-stream/:id', async (req, res) => {
-    const user = await User.findOne({ id: req.params.id });
-    res.json({ settings: user?.privateStreamSettings || {} });
+    try {
+        const user = await User.findOne({ id: req.params.id });
+        
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        
+        // Retornar configurações padrão se não existirem
+        const defaultSettings = {
+            privateInvite: false,
+            followersOnly: false,
+            fansOnly: false,
+            friendsOnly: false
+        };
+        
+        const settings = user.privateStreamSettings || defaultSettings;
+        console.log(`🔓 Getting private stream settings for user ${req.params.id}:`, settings);
+        
+        res.json({ settings });
+    } catch (error: any) {
+        console.error('Error getting private stream settings:', error);
+        res.status(500).json({ error: error.message });
+    }
 });
+
 router.post('/settings/private-stream/:id', async (req, res) => {
-    const user = await User.findOneAndUpdate({ id: req.params.id }, { privateStreamSettings: req.body.settings }, { new: true });
-    res.json({ success: !!user, user: user || {} as any });
+    try {
+        const { settings } = req.body;
+        const userId = req.params.id;
+        
+        if (!settings) {
+            return res.status(400).json({ error: 'Settings are required' });
+        }
+        
+        // Validar configurações
+        const validSettings = {
+            privateInvite: Boolean(settings.privateInvite),
+            followersOnly: Boolean(settings.followersOnly),
+            fansOnly: Boolean(settings.fansOnly),
+            friendsOnly: Boolean(settings.friendsOnly)
+        };
+        
+        console.log(`🔒 Updating private stream settings for user ${userId}:`, validSettings);
+        
+        const user = await User.findOneAndUpdate(
+            { id: userId }, 
+            { privateStreamSettings: validSettings }, 
+            { new: true }
+        );
+        
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        
+        res.json({ success: true, user });
+    } catch (error: any) {
+        console.error('Error updating private stream settings:', error);
+        res.status(500).json({ error: error.message });
+    }
 });
 
 router.post('/settings/pip/toggle/:id', async (req, res) => {

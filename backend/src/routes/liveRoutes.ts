@@ -6,29 +6,48 @@ const router = express.Router();
 router.get('/live/:category', async (req, res) => {
     try {
         const { category } = req.params;
+        const { country } = req.query;
         
+        // Base filter para streams ativos e válidos
+        let baseFilter: any = {
+            isLive: true,
+            name: { $exists: true, $nin: ['', null] },
+            hostId: { $exists: true, $nin: ['', null] },
+            avatar: { $exists: true, $nin: ['', null] }
+        };
+
         // Se for "global" ou "popular", retorna todas as lives ativas E válidas
         if (category === 'global' || category === 'popular') {
-            const streams = await Streamer.find({ 
-                isLive: true,
-                name: { $exists: true, $nin: ['', null] },
-                hostId: { $exists: true, $nin: ['', null] },
-                avatar: { $exists: true, $nin: ['', null] }
-            }).sort({ viewers: -1 });
+            let filter = baseFilter;
+            
+            // Se houver filtro por país, adicionar ao filter
+            if (country && country !== 'ICON_GLOBE') {
+                filter.country = country;
+                console.log(`🌍 Filtering streams by country: ${country}`);
+            }
+            
+            const streams = await Streamer.find(filter).sort({ viewers: -1 });
+            console.log(`📺 Found ${streams.length} streams for category: ${category}, country: ${country || 'all'}`);
             return res.json(streams);
         }
         
         // Para categorias específicas, filtra por tag ou categoria E valida dados
-        const categoryStreams = await Streamer.find({ 
-            isLive: true,
-            name: { $exists: true, $nin: ['', null] },
-            hostId: { $exists: true, $nin: ['', null] },
-            avatar: { $exists: true, $nin: ['', null] },
+        let categoryFilter: any = {
+            ...baseFilter,
             $or: [
                 { category: category.toLowerCase() },
                 { tags: { $in: [category.toLowerCase()] } }
             ]
-        }).sort({ viewers: -1 });
+        };
+        
+        // Se houver filtro por país em categorias específicas
+        if (country && country !== 'ICON_GLOBE') {
+            categoryFilter.country = country;
+            console.log(`🌍 Filtering ${category} streams by country: ${country}`);
+        }
+        
+        const categoryStreams = await Streamer.find(categoryFilter).sort({ viewers: -1 });
+        console.log(`📺 Found ${categoryStreams.length} streams for category: ${category}, country: ${country || 'all'}`);
         
         res.json(categoryStreams);
     } catch (error: any) {

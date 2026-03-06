@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import ChatScreen from './ChatScreen';
 import { chatWebSocket } from '../services/chatWebSocket';
 
@@ -15,6 +15,8 @@ interface ChatScreenWithWebSocketProps {
 }
 
 const ChatScreenWithWebSocket: React.FC<ChatScreenWithWebSocketProps> = (props) => {
+  const [messages, setMessages] = useState<any[]>([]);
+  
   useEffect(() => {
     // Conectar ao WebSocket quando o chat abrir
     const chatId = `chat_${props.currentUser.id}_${props.user.id}`;
@@ -26,9 +28,8 @@ const ChatScreenWithWebSocket: React.FC<ChatScreenWithWebSocketProps> = (props) 
     // Listener para novas mensagens
     const handleNewMessage = (event: CustomEvent) => {
       console.log('💬 Nova mensagem via WebSocket:', event.detail);
-      // Aqui você pode atualizar o estado das mensagens
-      // Por enquanto, vamos apenas recarregar as mensagens
-      window.location.reload();
+      // Adicionar mensagem ao estado em vez de recarregar a página
+      setMessages(prev => [...prev, event.detail]);
     };
     
     // Listener para status de usuários
@@ -47,7 +48,7 @@ const ChatScreenWithWebSocket: React.FC<ChatScreenWithWebSocketProps> = (props) 
     };
   }, [props.currentUser.id, props.user.id]);
 
-  return <ChatScreen {...props} />;
+  return <ChatScreen {...props} messages={messages} />;
 };
 
 export default ChatScreenWithWebSocket;

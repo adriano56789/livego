@@ -1,7 +1,7 @@
 import React from 'react';
-import { User } from '../types';
-import { BackIcon } from './icons';
-import { useTranslation } from '../i18n';
+import { User } from './types';
+import { BackIcon } from './components/icons';
+import { useTranslation } from './i18n';
 
 interface FansScreenProps {
   onBack: () => void;

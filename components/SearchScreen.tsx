@@ -45,7 +45,7 @@ const UserItem: React.FC<{ user: User; onViewProfile: (user: User) => void; onFo
                 onClick={handleFollow}
                 className={`text-sm font-semibold px-4 py-1.5 rounded-full transition-all duration-200 flex items-center space-x-1 shrink-0 ${
                     user.isFollowed
-                        ? 'bg-gray-700 text-gray-300 hover:bg-gray-600 scale-95 shadow-inner'
+                        ? 'bg-green-600 text-white hover:bg-green-700 scale-95 shadow-inner'
                         : 'bg-purple-600 text-white hover:bg-purple-700 hover:scale-105 shadow-md'
                 }`}
             >

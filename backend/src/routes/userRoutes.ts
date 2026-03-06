@@ -127,13 +127,33 @@ UserRoutes.post('/:id/toggle-follow', async (req, res) => {
             });
         } else {
             // Dar follow
-            await Followers.create({
-                id: `followers_${followerId}_${followingId}_${Date.now()}`,
+            // Verificar se já existe um follow inativo para reativar
+            const inactiveFollow = await Followers.findOne({
                 followerId,
                 followingId,
-                followedAt: new Date(),
-                isActive: true
+                isActive: false
             });
+            
+            if (inactiveFollow) {
+                // Reativar follow existente
+                await Followers.findOneAndUpdate(
+                    { followerId, followingId, isActive: false },
+                    { 
+                        isActive: true,
+                        followedAt: new Date(),
+                        unfollowedAt: undefined
+                    }
+                );
+            } else {
+                // Criar novo follow
+                await Followers.create({
+                    id: `followers_${followerId}_${followingId}`,
+                    followerId,
+                    followingId,
+                    followedAt: new Date(),
+                    isActive: true
+                });
+            }
             
             // Verificar se a pessoa já segue de volta (follow recíproco)
             const reciprocalFollow = await Followers.findOne({

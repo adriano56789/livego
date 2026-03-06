@@ -256,12 +256,12 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ user, onBack, isModal, currentU
         try {
             let finalImageUrl: string | undefined = undefined;
             if (imageToSend) {
-                // Convert the data URL back to a File object for the API (mocking it since api.ts just expects a File)
-                const res = await fetch(imageToSend);
-                const blob = await res.blob();
-                const file = new File([blob], "image.png", { type: "image/png" });
+                // Convert the data URL to base64 string for the API
+                const base64Data = imageToSend.includes('base64,') 
+                    ? imageToSend.split('base64,')[1] 
+                    : imageToSend;
 
-                const uploadResponse = await api.uploadChatPhoto(user.id, file) as { url: string };
+                const uploadResponse = await api.uploadChatPhoto(user.id, base64Data) as { url: string };
                 if (uploadResponse?.url) {
                     finalImageUrl = uploadResponse.url;
                 } else {

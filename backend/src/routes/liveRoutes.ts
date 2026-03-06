@@ -8,6 +8,8 @@ router.get('/live/:category', async (req, res) => {
         const { category } = req.params;
         const { country } = req.query;
         
+        console.log(`🔍 [DEBUG] API Route called - Category: ${category}, Country: ${country || 'none'}`);
+        
         // Base filter para streams ativos e válidos
         let baseFilter: any = {
             isLive: true,
@@ -26,8 +28,17 @@ router.get('/live/:category', async (req, res) => {
                 console.log(`🌍 Filtering streams by country: ${country}`);
             }
             
+            console.log(`🔍 [DEBUG] Final filter for global/popular:`, JSON.stringify(filter, null, 2));
+            
             const streams = await Streamer.find(filter).sort({ viewers: -1 });
             console.log(`📺 Found ${streams.length} streams for category: ${category}, country: ${country || 'all'}`);
+            
+            // Log country codes of returned streams for debugging
+            if (streams.length > 0) {
+                const countryCodes = streams.map(s => s.country || 'undefined').join(', ');
+                console.log(`🌍 [DEBUG] Stream country codes: ${countryCodes}`);
+            }
+            
             return res.json(streams);
         }
         
@@ -46,8 +57,16 @@ router.get('/live/:category', async (req, res) => {
             console.log(`🌍 Filtering ${category} streams by country: ${country}`);
         }
         
+        console.log(`🔍 [DEBUG] Final filter for category "${category}":`, JSON.stringify(categoryFilter, null, 2));
+        
         const categoryStreams = await Streamer.find(categoryFilter).sort({ viewers: -1 });
         console.log(`📺 Found ${categoryStreams.length} streams for category: ${category}, country: ${country || 'all'}`);
+        
+        // Log country codes of returned streams for debugging
+        if (categoryStreams.length > 0) {
+            const countryCodes = categoryStreams.map(s => s.country || 'undefined').join(', ');
+            console.log(`🌍 [DEBUG] Category stream country codes: ${countryCodes}`);
+        }
         
         res.json(categoryStreams);
     } catch (error: any) {
@@ -87,6 +106,8 @@ router.post('/streams', async (req, res) => {
     try {
         const { name, hostId, country, location, ...otherData } = req.body;
         
+        console.log(`🔍 [DEBUG] Creating stream - Country received: ${country || 'none'}`);
+        
         if (!name || name.trim() === '') {
             return res.status(400).json({ error: 'Stream name is required' });
         }
@@ -94,17 +115,20 @@ router.post('/streams', async (req, res) => {
         const streamId = `stream_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
         const finalHostId = hostId || '10755083';
         
-        // Buscar usuário para obter avatarUrl
+        // Buscar usuário para obter avatarUrl e país
         const user = await User.findOne({ id: finalHostId });
         const userAvatar = user?.avatarUrl || '';
+        const userCountry = user?.country || 'br'; // Get country from user if available
         
         // Criar URLs de avatar realistas usando picsum
         const avatarUrl = userAvatar || `https://picsum.photos/200/200?random=${streamId}`;
         const coverUrl = `https://picsum.photos/800/400?random=${streamId}_cover`;
         
-        // Usar país/localização enviada ou padrão Brasil
-        const finalCountry = country || 'br';
+        // Prioridade: país enviado > país do usuário > Brasil como fallback
+        const finalCountry = country || userCountry || 'br';
         const finalLocation = location || 'Brasil';
+        
+        console.log(`🌍 [DEBUG] Final country assignment: ${finalCountry} (sent: ${country || 'none'}, user: ${userCountry})`);
         
         const stream = await Streamer.create({
             id: streamId,

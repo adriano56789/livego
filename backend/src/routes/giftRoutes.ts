@@ -1,9 +1,7 @@
 import express from 'express';
 import { User, Gift, GiftTransaction, Streamer, Followers } from '../models';
-import { getIO } from '../server';
 
 const router = express.Router();
-const io = getIO();
 
 // Enviar presente
 router.post('/send', async (req, res) => {
@@ -54,81 +52,84 @@ router.post('/send', async (req, res) => {
             createdAt: new Date().toISOString()
         }]);
         
-        // Enviar notificação via WebSocket
-        io.to(`user_${toUserId}`).emit('gift_received', {
-            from: {
-                id: fromUser.id,
-                name: fromUser.name,
-                avatarUrl: fromUser.avatarUrl
-            },
-            gift: {
-                id: gift.id,
-                name: gift.name,
-                icon: gift.icon,
-                price: giftPrice
-            },
-            streamId,
-            timestamp: new Date().toISOString()
-        });
-        
-        // Enviar notificação de presente recebido
-        io.to(`user_${toUserId}`).emit('notification', {
-            id: `notif_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-            userId: toUserId,
-            type: 'gift_received',
-            message: `${fromUser.name} enviou ${gift.name} para você!`,
-            data: {
-                fromUserId,
-                fromUserName: fromUser.name,
-                giftName: gift.name,
-                giftIcon: gift.icon,
-                streamId
-            },
-            timestamp: new Date().toISOString(),
-            read: false
-        });
-        
-        // Atualizar contador de não lidas
-        io.to(`user_${toUserId}`).emit('unread_notification', {
-            userId: toUserId,
-            count: 1,
-            timestamp: new Date().toISOString()
-        });
-        
-        // Se estiver em live, atualizar presentes recebidos na stream
-        if (streamId) {
-            io.to(`stream_${streamId}`).emit('gift_sent_in_stream', {
-                fromUserId,
-                fromUserName: fromUser.name,
-                toUserId,
-                toUserName: toUser.name,
+        // Enviar notificações via WebSocket
+        const io = req.app.get('io');
+        if (io) {
+            io.to(`user_${toUserId}`).emit('gift_received', {
+                from: {
+                    id: fromUser.id,
+                    name: fromUser.name,
+                    avatarUrl: fromUser.avatarUrl
+                },
                 gift: {
                     id: gift.id,
                     name: gift.name,
                     icon: gift.icon,
                     price: giftPrice
                 },
-                quantity: quantity,
-                totalValue: totalCost,
+                streamId,
+                timestamp: new Date().toISOString()
+            });
+            
+            // Enviar notificação de presente recebido
+            io.to(`user_${toUserId}`).emit('notification', {
+                id: `notif_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                userId: toUserId,
+                type: 'gift_received',
+                message: `${fromUser.name} enviou ${gift.name} para você!`,
+                data: {
+                    fromUserId,
+                    fromUserName: fromUser.name,
+                    giftName: gift.name,
+                    giftIcon: gift.icon,
+                    streamId
+                },
+                timestamp: new Date().toISOString(),
+                read: false
+            });
+            
+            // Atualizar contador de não lidas
+            io.to(`user_${toUserId}`).emit('unread_notification', {
+                userId: toUserId,
+                count: 1,
+                timestamp: new Date().toISOString()
+            });
+            
+            // Se estiver em live, atualizar presentes recebidos na stream
+            if (streamId) {
+                io.to(`stream_${streamId}`).emit('gift_sent_in_stream', {
+                    fromUserId,
+                    fromUserName: fromUser.name,
+                    toUserId,
+                    toUserName: toUser.name,
+                    gift: {
+                        id: gift.id,
+                        name: gift.name,
+                        icon: gift.icon,
+                        price: giftPrice
+                    },
+                    quantity: quantity,
+                    totalValue: totalCost,
+                    timestamp: new Date().toISOString()
+                });
+            }
+            
+            // Atualizar diamantes em tempo real
+            io.emit('diamonds_updated', {
+                userId: fromUserId,
+                diamonds: fromUser.diamonds,
+                change: -totalCost,
+                timestamp: new Date().toISOString()
+            });
+            
+            // Atualizar earnings em tempo real
+            io.emit('earnings_updated', {
+                userId: toUserId,
+                earnings: toUser.earnings,
+                change: earningsInBRL,
                 timestamp: new Date().toISOString()
             });
         }
-        
-        // Atualizar diamantes em tempo real
-        io.emit('diamonds_updated', {
-            userId: fromUserId,
-            diamonds: fromUser.diamonds,
-            change: -totalCost,
-            timestamp: new Date().toISOString()
-        });
-        
-        // Atualizar earnings em tempo real
-        io.emit('earnings_updated', {
-            userId: toUserId,
-            earnings: toUser.earnings,
-            change: earningsInBRL,
-            timestamp: new Date().toISOString()
-        });
         
         console.log(`🎁 Presente enviado: ${fromUser.name} -> ${toUser.name} (${quantity}x ${gift.name} = R$${earningsInBRL.toFixed(2)})`);
         
@@ -165,29 +166,32 @@ router.post('/notify-live-start', async (req, res) => {
         const followers = await Followers.find({ followingId: userId });
         
         // Enviar notificações para todos os seguidores
-        followers.forEach(follower => {
-            io.to(`user_${follower.followerId}`).emit('notification', {
-                id: `notif_${Date.now()}_${Math.random().toString(36).substr(2, 9)}_${follower.followerId}`,
-                userId: follower.followerId,
-                type: 'user_live',
-                message: `${user.name} entrou ao vivo!`,
-                data: {
-                    streamerId: userId,
-                    streamerName: user.name,
-                    streamId,
-                    streamName,
-                    avatarUrl: user.avatarUrl
-                },
-                timestamp: new Date().toISOString(),
-                read: false
+        const io = req.app.get('io');
+        if (io) {
+            followers.forEach(follower => {
+                io.to(`user_${follower.followerId}`).emit('notification', {
+                    id: `notif_${Date.now()}_${Math.random().toString(36).substr(2, 9)}_${follower.followerId}`,
+                    userId: follower.followerId,
+                    type: 'user_live',
+                    message: `${user.name} entrou ao vivo!`,
+                    data: {
+                        streamerId: userId,
+                        streamerName: user.name,
+                        streamId,
+                        streamName,
+                        avatarUrl: user.avatarUrl
+                    },
+                    timestamp: new Date().toISOString(),
+                    read: false
+                });
+                
+                io.to(`user_${follower.followerId}`).emit('unread_notification', {
+                    userId: follower.followerId,
+                    count: 1,
+                    timestamp: new Date().toISOString()
+                });
             });
-            
-            io.to(`user_${follower.followerId}`).emit('unread_notification', {
-                userId: follower.followerId,
-                count: 1,
-                timestamp: new Date().toISOString()
-            });
-        });
+        }
         
         console.log(`🔔 Notificações enviadas para ${followers.length} seguidores de ${user.name}`);
         

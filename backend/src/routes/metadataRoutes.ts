@@ -98,6 +98,80 @@ router.get('/regions', async (req, res) => {
     }
 });
 
+// POST /api/feed/photos - Upload de foto no feed
+router.post('/feed/photos', async (req, res) => {
+    try {
+        const { userId, photoUrl, caption, tags, isPublic = true } = req.body;
+        
+        if (!userId || !photoUrl) {
+            return res.status(400).json({ error: 'userId e photoUrl são obrigatórios' });
+        }
+        
+        // Verificar se usuário existe
+        const user = await User.findOne({ id: userId });
+        if (!user) {
+            return res.status(404).json({ error: 'Usuário não encontrado' });
+        }
+        
+        // Importar modelo de foto se existir, ou criar coleção simples
+        const Photo = require('../models').Photo || require('mongoose').model('Photo');
+        
+        // Criar registro da foto no feed
+        const photo = await Photo.create({
+            id: `feed_photo_${userId}_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
+            userId,
+            photoUrl,
+            caption: caption || '',
+            tags: tags || [],
+            isPublic,
+            likes: 0,
+            comments: 0,
+            createdAt: new Date(),
+            updatedAt: new Date()
+        });
+        
+        // Notificar via WebSocket
+        const io = req.app.get('io');
+        if (io) {
+            io.emit('new_feed_photo', {
+                photoId: photo.id,
+                userId,
+                userName: user.name,
+                userAvatar: user.avatarUrl,
+                photoUrl,
+                caption,
+                timestamp: new Date()
+            });
+        }
+        
+        console.log(`📸 Foto adicionada ao feed por ${userId}: ${photo.id}`);
+        
+        res.json({
+            success: true,
+            photo: {
+                id: photo.id,
+                userId: photo.userId,
+                photoUrl: photo.photoUrl,
+                caption: photo.caption,
+                tags: photo.tags,
+                isPublic: photo.isPublic,
+                likes: photo.likes,
+                comments: photo.comments,
+                createdAt: photo.createdAt
+            },
+            user: {
+                id: user.id,
+                name: user.name,
+                avatarUrl: user.avatarUrl
+            }
+        });
+        
+    } catch (error: any) {
+        console.error('❌ Erro ao adicionar foto ao feed:', error);
+        res.status(500).json({ error: 'Erro interno ao adicionar foto ao feed' });
+    }
+});
+
 router.get('/reminders', async (req, res) => {
     try {
         // Reminders são usuários que estão ao vivo e seguidos pelo usuário atual

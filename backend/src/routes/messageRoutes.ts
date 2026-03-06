@@ -1,6 +1,5 @@
 import express from 'express';
 import { ChatMessage, User } from '../models/index';
-import { getIO } from '../server';
 
 const router = express.Router();
 
@@ -36,11 +35,13 @@ router.get('/', async (req, res) => {
         );
 
         // Notificar sobre mensagens lidas
-        const io = getIO();
-        io.to(`user_${userId}`).emit('messages_read', {
-            userId,
-            timestamp: new Date()
-        });
+        const io = req.app.get('io');
+        if (io) {
+            io.to(`user_${userId}`).emit('messages_read', {
+                userId,
+                timestamp: new Date()
+            });
+        }
 
         res.json({
             success: true,
@@ -90,11 +91,13 @@ router.get('/chats/:userId/messages', async (req, res) => {
         );
 
         // Notificar sobre mensagens lidas
-        const io = getIO();
-        io.to(`user_${currentUserId}`).emit('messages_read', {
-            userId: currentUserId,
-            timestamp: new Date()
-        });
+        const io = req.app.get('io');
+        if (io) {
+            io.to(`user_${currentUserId}`).emit('messages_read', {
+                userId: currentUserId,
+                timestamp: new Date()
+            });
+        }
 
         res.json({
             success: true,
@@ -135,23 +138,24 @@ router.post('/', async (req, res) => {
         const sender = await User.findOne({ id: senderId }).select('id name avatarUrl');
 
         // Enviar via WebSocket em tempo real
-        const io = getIO();
-        
-        // Notificar receptor
-        io.to(`user_${receiverId}`).emit('new_message', {
-            ...message.toJSON(),
-            sender: sender
-        });
+        const io = req.app.get('io');
+        if (io) {
+            // Notificar receptor
+            io.to(`user_${receiverId}`).emit('new_message', {
+                ...message.toJSON(),
+                sender: sender
+            });
 
-        // Notificar todos na conversa
-        io.to(`conversation_${conversationId}`).emit('conversation_update', {
-            conversationId,
-            lastMessage: {
-                content,
-                senderId,
-                timestamp: new Date()
-            }
-        });
+            // Notificar todos na conversa
+            io.to(`conversation_${conversationId}`).emit('conversation_update', {
+                conversationId,
+                lastMessage: {
+                    content,
+                    senderId,
+                    timestamp: new Date()
+                }
+            });
+        }
 
         res.json({
             success: true,

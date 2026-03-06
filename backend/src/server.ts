@@ -23,6 +23,9 @@ import conversationRoutes from './routes/conversationRoutes';
 import searchRoutes from './routes/searchRoutes';
 import messageRoutes from './routes/messageRoutes';
 import statusRoutes from './routes/statusRoutes';
+import followersRoutes from './routes/followersRoutes';
+import friendshipRoutes from './routes/friendshipRoutes';
+import blockRoutes from './routes/blockRoutes';
 
 dotenv.config();
 
@@ -83,6 +86,9 @@ app.use('/api/conversations', conversationRoutes); // Rotas de conversas
 app.use('/api/search', searchRoutes); // Rotas de busca de usuários
 app.use('/api/messages', messageRoutes); // Rotas de mensagens
 app.use('/api/status', statusRoutes); // Rotas de status online/offline
+app.use('/api/followers', followersRoutes); // Rotas de seguidores
+app.use('/api/friends', friendshipRoutes); // Rotas de amizades
+app.use('/api/blocks', blockRoutes); // Rotas de bloqueios
 // Disponibilizar io para as rotas
 app.set('io', io);
 

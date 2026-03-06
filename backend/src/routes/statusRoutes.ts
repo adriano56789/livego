@@ -1,6 +1,5 @@
 import express from 'express';
 import { User } from '../models/index';
-import { getIO } from '../server';
 
 const router = express.Router();
 
@@ -64,21 +63,22 @@ router.post('/online', async (req, res) => {
         );
 
         // Notificar via WebSocket
-        const io = getIO();
-        
-        // Notificar todos os usuários sobre mudança de status
-        io.emit('user_status_changed', {
-            userId,
-            isOnline: true,
-            lastSeen: new Date().toISOString()
-        });
+        const io = req.app.get('io');
+        if (io) {
+            // Notificar todos os usuários sobre mudança de status
+            io.emit('user_status_changed', {
+                userId,
+                isOnline: true,
+                lastSeen: new Date().toISOString()
+            });
 
-        // Entrar na sala do usuário para receber mensagens
-        io.sockets.sockets.forEach(socket => {
-            if (socket.data.userId === userId) {
-                socket.join(`user_${userId}`);
-            }
-        });
+            // Entrar na sala do usuário para receber mensagens
+            io.sockets.sockets.forEach((socket: any) => {
+                if (socket.data.userId === userId) {
+                    socket.join(`user_${userId}`);
+                }
+            });
+        }
 
         res.json({
             success: true,
@@ -112,21 +112,22 @@ router.post('/offline', async (req, res) => {
         );
 
         // Notificar via WebSocket
-        const io = getIO();
-        
-        // Notificar todos os usuários sobre mudança de status
-        io.emit('user_status_changed', {
-            userId,
-            isOnline: false,
-            lastSeen: new Date().toISOString()
-        });
+        const io = req.app.get('io');
+        if (io) {
+            // Notificar todos os usuários sobre mudança de status
+            io.emit('user_status_changed', {
+                userId,
+                isOnline: false,
+                lastSeen: new Date().toISOString()
+            });
 
-        // Sair da sala do usuário
-        io.sockets.sockets.forEach(socket => {
-            if (socket.data.userId === userId) {
-                socket.leave(`user_${userId}`);
-            }
-        });
+            // Sair da sala do usuário
+            io.sockets.sockets.forEach((socket: any) => {
+                if (socket.data.userId === userId) {
+                    socket.leave(`user_${userId}`);
+                }
+            });
+        }
 
         res.json({
             success: true,

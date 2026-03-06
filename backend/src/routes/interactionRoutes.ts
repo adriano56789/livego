@@ -89,11 +89,254 @@ router.get('/streams/:id/access-check', async (req, res) => {
         res.status(500).json({ canJoin: false, reason: 'Server error' });
     }
 });
-router.post('/friends/invite', async (req, res) => res.json({ success: true }));
-router.post('/streams/:id/interactions', async (req, res) => res.json({ success: true }));
+// POST /api/interactions/friends/invite - Enviar convite de amizade
+router.post('/friends/invite', async (req, res) => {
+    try {
+        const { fromUserId, toUserId, message } = req.body;
+        
+        if (!fromUserId || !toUserId) {
+            return res.status(400).json({ error: 'fromUserId e toUserId são obrigatórios' });
+        }
+        
+        if (fromUserId === toUserId) {
+            return res.status(400).json({ error: 'Não pode enviar convite para si mesmo' });
+        }
+        
+        // Verificar se usuários existem
+        const [fromUser, toUser] = await Promise.all([
+            User.findOne({ id: fromUserId }),
+            User.findOne({ id: toUserId })
+        ]);
+        
+        if (!fromUser || !toUser) {
+            return res.status(404).json({ error: 'Usuário não encontrado' });
+        }
+        
+        // Verificar se já são amigos
+        const existingFriendship = await require('../models').Friendship.findOne({
+            $or: [
+                { userId1: fromUserId, userId2: toUserId },
+                { userId1: toUserId, userId2: fromUserId }
+            ],
+            isActive: true
+        });
+        
+        if (existingFriendship) {
+            return res.status(400).json({ error: 'Já são amigos' });
+        }
+        
+        // Verificar se já existe convite pendente
+        const existingInvite = await require('../models').Friendship.findOne({
+            $or: [
+                { userId1: fromUserId, userId2: toUserId },
+                { userId1: toUserId, userId2: fromUserId }
+            ],
+            isActive: false // Convites pendentes
+        });
+        
+        if (existingInvite) {
+            return res.status(400).json({ error: 'Já existe um convite pendente' });
+        }
+        
+        // Criar convite de amizade (inativo até ser aceito)
+        const invite = await require('../models').Friendship.create({
+            id: `friend_invite_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            userId1: fromUserId,
+            userId2: toUserId,
+            initiatedBy: fromUserId,
+            friendshipStartedAt: new Date(),
+            isActive: false, // Pendente
+            message: message || ''
+        });
+        
+        // Notificar via WebSocket
+        const io = require('../server').getIO();
+        if (io) {
+            io.to(`user_${toUserId}`).emit('friend_invite_received', {
+                inviteId: invite.id,
+                fromUser: {
+                    id: fromUser.id,
+                    name: fromUser.name,
+                    avatarUrl: fromUser.avatarUrl
+                },
+                message,
+                timestamp: new Date()
+            });
+        }
+        
+        console.log(`📨 Convite de amizade enviado: ${fromUserId} → ${toUserId}`);
+        
+        res.json({
+            success: true,
+            invite,
+            fromUser: {
+                id: fromUser.id,
+                name: fromUser.name,
+                avatarUrl: fromUser.avatarUrl
+            },
+            toUser: {
+                id: toUser.id,
+                name: toUser.name,
+                avatarUrl: toUser.avatarUrl
+            }
+        });
+        
+    } catch (error: any) {
+        console.error('❌ Erro ao enviar convite de amizade:', error);
+        res.status(500).json({ error: 'Erro interno ao enviar convite' });
+    }
+});
 
-router.post('/invitations/send', async (req, res) => res.json({ success: true }));
-router.get('/invitations/received', async (req, res) => res.json([]));
+// POST /api/interactions/streams/:id/interactions - Registrar interação na stream
+router.post('/streams/:id/interactions', async (req, res) => {
+    try {
+        const streamId = req.params.id;
+        const { userId, type, data } = req.body;
+        
+        if (!userId || !type) {
+            return res.status(400).json({ error: 'userId e type são obrigatórios' });
+        }
+        
+        // Verificar se stream existe
+        const stream = await Streamer.findOne({ id: streamId });
+        if (!stream) {
+            return res.status(404).json({ error: 'Stream não encontrada' });
+        }
+        
+        // Verificar se usuário existe
+        const user = await User.findOne({ id: userId });
+        if (!user) {
+            return res.status(404).json({ error: 'Usuário não encontrado' });
+        }
+        
+        // Registrar interação (poderia ser em uma coleção separada)
+        const interaction = {
+            id: `interaction_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
+            streamId,
+            userId,
+            type, // 'like', 'share', 'comment', 'join', etc.
+            data: data || {},
+            timestamp: new Date()
+        };
+        
+        // Notificar via WebSocket
+        const io = require('../server').getIO();
+        if (io) {
+            io.to(`stream_${streamId}`).emit('stream_interaction', {
+                ...interaction,
+                user: {
+                    id: user.id,
+                    name: user.name,
+                    avatarUrl: user.avatarUrl
+                }
+            });
+        }
+        
+        console.log(`🎯 Interação registrada: ${type} por ${userId} na stream ${streamId}`);
+        
+        res.json({
+            success: true,
+            interaction
+        });
+        
+    } catch (error: any) {
+        console.error('❌ Erro ao registrar interação:', error);
+        res.status(500).json({ error: 'Erro interno ao registrar interação' });
+    }
+});
+
+// POST /api/interactions/invitations/send - Enviar convite geral
+router.post('/invitations/send', async (req, res) => {
+    try {
+        const { fromUserId, toUserId, type, message, data } = req.body;
+        
+        if (!fromUserId || !toUserId || !type) {
+            return res.status(400).json({ error: 'fromUserId, toUserId e type são obrigatórios' });
+        }
+        
+        // Verificar se usuários existem
+        const [fromUser, toUser] = await Promise.all([
+            User.findOne({ id: fromUserId }),
+            User.findOne({ id: toUserId })
+        ]);
+        
+        if (!fromUser || !toUser) {
+            return res.status(404).json({ error: 'Usuário não encontrado' });
+        }
+        
+        // Criar convite
+        const invitation = {
+            id: `invitation_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
+            fromUserId,
+            toUserId,
+            type, // 'stream', 'friend', 'private_chat', etc.
+            message: message || '',
+            data: data || {},
+            status: 'pending',
+            createdAt: new Date()
+        };
+        
+        // Notificar via WebSocket
+        const io = require('../server').getIO();
+        if (io) {
+            io.to(`user_${toUserId}`).emit('invitation_received', {
+                ...invitation,
+                fromUser: {
+                    id: fromUser.id,
+                    name: fromUser.name,
+                    avatarUrl: fromUser.avatarUrl
+                }
+            });
+        }
+        
+        console.log(`📩 Convite enviado: ${type} de ${fromUserId} para ${toUserId}`);
+        
+        res.json({
+            success: true,
+            invitation
+        });
+        
+    } catch (error: any) {
+        console.error('❌ Erro ao enviar convite:', error);
+        res.status(500).json({ error: 'Erro interno ao enviar convite' });
+    }
+});
+
+// GET /api/interactions/invitations/received - Listar convites recebidos
+router.get('/invitations/received', async (req, res) => {
+    try {
+        const { userId } = req.query;
+        
+        if (!userId) {
+            return res.status(400).json({ error: 'userId é obrigatório' });
+        }
+        
+        console.log(`🔍 Buscando convites recebidos por: ${userId}`);
+        
+        // Mock por enquanto - em produção buscaria do banco
+        const mockInvitations = [
+            {
+                id: 'invite_mock_1',
+                fromUserId: '123456',
+                fromUser: {
+                    id: '123456',
+                    name: 'Maria Silva',
+                    avatarUrl: 'https://picsum.photos/seed/maria/200/200.jpg'
+                },
+                type: 'stream',
+                message: 'Venha assistir minha live!',
+                status: 'pending',
+                createdAt: new Date(Date.now() - 3600000).toISOString()
+            }
+        ];
+        
+        res.json(mockInvitations);
+        
+    } catch (error: any) {
+        console.error('❌ Erro ao buscar convites:', error);
+        res.status(500).json({ error: 'Erro interno ao buscar convites' });
+    }
+});
 router.get('/rooms/:id', async (req, res) => {
     // In a real scenario, this gets Room/Streamer by ID
     const room = await import('../models').then(m => m.Streamer).then(S => S.findOne({ id: req.params.id }));

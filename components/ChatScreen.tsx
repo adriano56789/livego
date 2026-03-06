@@ -50,8 +50,8 @@ const ChatMessageBubble: React.FC<{ message: Message; isMe: boolean; user: User;
     const frameGlowClass = '';
 
     return (
-        <div 
-            key={message.id} 
+        <div
+            key={message.id}
             className={`flex items-end gap-3 ${isMe ? 'flex-row-reverse' : ''} ${isObservable ? 'message-bubble-observable' : ''} ${message.status === 'failed' ? 'opacity-70' : ''}`}
             data-message-id={message.id}
         >
@@ -65,15 +65,15 @@ const ChatMessageBubble: React.FC<{ message: Message; isMe: boolean; user: User;
                         className={`focus:outline-none rounded-lg overflow-hidden transition-transform hover:scale-105 active:scale-95 ${message.text ? 'mb-2' : ''}`}
                         aria-label="View image full screen"
                     >
-                        <img 
-                            src={message.imageUrl} 
-                            alt="Chat attachment" 
+                        <img
+                            src={message.imageUrl}
+                            alt="Chat attachment"
                             className="w-24 object-cover bg-black/20"
                         />
                     </button>
                 )}
                 {message.text && (
-                     <div className="flow-root">
+                    <div className="flow-root">
                         <div className="float-right ml-2 -mb-1 flex items-center space-x-1 relative top-1">
                             <span className="text-xs text-gray-300/70 whitespace-nowrap">{formatTimestamp(message.timestamp)}</span>
                             {isMe && <MessageStatus status={message.status} />}
@@ -82,7 +82,7 @@ const ChatMessageBubble: React.FC<{ message: Message; isMe: boolean; user: User;
                     </div>
                 )}
                 {!message.text && message.imageUrl && (
-                     <div className="flex justify-end items-center space-x-1 mt-1 px-2 pb-1">
+                    <div className="flex justify-end items-center space-x-1 mt-1 px-2 pb-1">
                         <span className="text-xs text-gray-300/70 whitespace-nowrap">{formatTimestamp(message.timestamp)}</span>
                         {isMe && <MessageStatus status={message.status} />}
                     </div>
@@ -97,7 +97,7 @@ const BecameFriendsIndicator: React.FC<{ onNavigate: () => void }> = ({ onNaviga
     return (
         <div className="flex justify-center my-4">
             <button onClick={onNavigate} className="bg-gray-700/80 text-gray-300 text-sm px-4 py-2 rounded-full flex items-center space-x-2 hover:bg-gray-600 transition-colors">
-                <UserIcon className="w-5 h-5" /> 
+                <UserIcon className="w-5 h-5" />
                 <span>{t('chat.becameFriends')}</span>
             </button>
         </div>
@@ -151,7 +151,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ user, onBack, isModal, currentU
 
     useEffect(() => {
         const handleNewMessage = (message: Message & { tempId?: string }) => {
-            if (message.chatId === chatKey) {
+            if (message.chatId === chatKey || (message.from === user.id && message.to === currentUser.id) || (message.from === currentUser.id && message.to === user.id)) {
                 setMessages(prev => {
                     const tempId = message.tempId;
                     // If it's an ack for an optimistic message, replace it
@@ -167,14 +167,13 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ user, onBack, isModal, currentU
             }
         };
 
-        // Simplificado - sem WebSocket para navegação isolada
-        // webSocketManager.on('newMessage', handleNewMessage);
+        const { webSocketManager } = require('../services/socket');
+        webSocketManager.on('newMessage', handleNewMessage);
         return () => {
-            // Simplificado - sem WebSocket para navegação isolada
-            // webSocketManager.off('newMessage', handleNewMessage);
+            webSocketManager.off('newMessage', handleNewMessage);
         };
-    }, [chatKey]);
-    
+    }, [chatKey, currentUser.id, user.id]);
+
     useEffect(() => {
         const observer = new IntersectionObserver(
             (entries) => {
@@ -182,7 +181,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ user, onBack, isModal, currentU
                 entries.forEach(entry => {
                     if (entry.isIntersecting) {
                         const messageId = (entry.target as HTMLElement).dataset.messageId;
-                        if(messageId) {
+                        if (messageId) {
                             messageIdsToRead.push(messageId);
                             observer.unobserve(entry.target);
                         }
@@ -191,7 +190,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ user, onBack, isModal, currentU
 
                 if (messageIdsToRead.length > 0) {
                     // Optimistically update UI
-                    setMessages(prev => prev.map(m => 
+                    setMessages(prev => prev.map(m =>
                         messageIdsToRead.includes(m.id) ? { ...m, status: 'read' } : m
                     ));
                     // Inform the server
@@ -218,7 +217,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ user, onBack, isModal, currentU
             };
             reader.readAsDataURL(file);
         }
-        if(event.target) event.target.value = '';
+        if (event.target) event.target.value = '';
     };
 
     const handleSendMessage = async () => {
@@ -227,7 +226,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ user, onBack, isModal, currentU
         const sendingMessage = messages.some(m => m.status === 'sending');
 
         if ((!hasText && !hasImage) || sendingMessage) return;
-        
+
         const textToSend = newMessage;
         const imageToSend = selectedImage;
 
@@ -257,30 +256,60 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ user, onBack, isModal, currentU
         try {
             let finalImageUrl: string | undefined = undefined;
             if (imageToSend) {
-                const uploadResponse = await api.uploadChatPhoto(user.id, imageToSend);
+                // Convert the data URL back to a File object for the API (mocking it since api.ts just expects a File)
+                const res = await fetch(imageToSend);
+                const blob = await res.blob();
+                const file = new File([blob], "image.png", { type: "image/png" });
+
+                const uploadResponse = await api.uploadChatPhoto(user.id, file) as { url: string };
                 if (uploadResponse?.url) {
                     finalImageUrl = uploadResponse.url;
                 } else {
                     throw new Error("Image upload failed");
                 }
             }
-            
-            await api.sendChatMessage(currentUser.id, user.id, textToSend, finalImageUrl, tempId);
 
+            const result = await api.sendChatMessage(currentUser.id, user.id, textToSend, finalImageUrl, tempId);
+
+            if (result && result.message) {
+                // Update the optimistic message with the real one and status 'sent'
+                setMessages(prev =>
+                    prev.map(msg =>
+                        msg.id === tempId
+                            ? { ...result.message, status: 'sent' as 'sent' }
+                            : msg
+                    )
+                );
+            } else {
+                setMessages(prev =>
+                    prev.map(msg =>
+                        msg.id === tempId
+                            ? { ...msg, status: 'failed' as 'failed' }
+                            : msg
+                    )
+                );
+            }
         } catch (error) {
             console.error("Failed to send message:", error);
-            setMessages(prev => prev.map(m => m.id === tempId ? { ...m, status: 'failed' as 'sent' } : m));
+            // Revert optimistic update on failure, or show failed status
+            setMessages(prev =>
+                prev.map(msg =>
+                    msg.id === tempId
+                        ? { ...msg, status: 'failed' as 'failed' }
+                        : msg
+                )
+            );
         }
     };
-    
+
     const handleViewImage = (clickedUrl: string) => {
         const imageMessages = messages.filter(m => m.imageUrl);
         const photoFeed: FeedPhoto[] = imageMessages.map(m => ({
             id: m.id,
             photoUrl: m.imageUrl!,
             user: m.from === currentUser.id ? currentUser : user,
-            likes: 0, 
-            isLiked: false, 
+            likes: 0,
+            isLiked: false,
         }));
 
         const initialIndex = photoFeed.findIndex(p => p.photoUrl === clickedUrl);
@@ -297,12 +326,12 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ user, onBack, isModal, currentU
     const contentClasses = isModal
         ? "bg-[#1C1C1E] text-white flex flex-col w-full max-w-md h-[75%] rounded-t-2xl"
         : "text-white flex flex-col w-full h-full";
-        
+
     const backdropClick = isModal ? onBack : undefined;
 
     return (
         <div className={containerClasses} onClick={backdropClick}>
-            <div 
+            <div
                 className={contentClasses}
                 onClick={e => e.stopPropagation()}
             >
@@ -324,7 +353,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ user, onBack, isModal, currentU
                             <ThreeDotsIcon className="w-6 h-6" />
                         </button>
                     ) : (
-                        <div className="w-6 h-6 p-2 -mr-2"></div> 
+                        <div className="w-6 h-6 p-2 -mr-2"></div>
                     )}
                 </header>
                 <main className="flex-grow p-4 overflow-y-auto no-scrollbar flex flex-col">
@@ -356,7 +385,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ user, onBack, isModal, currentU
                     {selectedImage && (
                         <div className="relative p-2 mb-2 w-fit">
                             <img src={selectedImage} alt="Preview" className="max-h-24 rounded-lg" />
-                            <button 
+                            <button
                                 onClick={() => setSelectedImage(null)}
                                 className="absolute -top-1 -right-1 bg-black/50 text-white rounded-full p-0.5"
                             >
@@ -365,14 +394,14 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ user, onBack, isModal, currentU
                         </div>
                     )}
                     <div className="flex items-center space-x-2">
-                        <input 
-                            type="file" 
-                            ref={fileInputRef} 
-                            className="hidden" 
+                        <input
+                            type="file"
+                            ref={fileInputRef}
+                            className="hidden"
                             accept="image/*"
                             onChange={handleImageSelect}
                         />
-                        <button 
+                        <button
                             onClick={() => fileInputRef.current?.click()}
                             className="bg-[#2C2C2E] text-gray-400 hover:bg-gray-700/50 rounded-lg transition-colors flex items-center justify-center w-11 h-11 flex-shrink-0"
                         >
@@ -388,7 +417,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ user, onBack, isModal, currentU
                                 className="w-full h-full bg-transparent text-white placeholder-gray-500 px-4 focus:outline-none"
                             />
                         </div>
-                        <button 
+                        <button
                             onClick={handleSendMessage}
                             className="bg-purple-600 text-white rounded-full hover:bg-purple-700 transition-colors flex items-center justify-center w-11 h-11 flex-shrink-0 disabled:bg-gray-600 disabled:cursor-not-allowed"
                             disabled={(!newMessage.trim() && !selectedImage) || messages.some(m => m.status === 'sending')}

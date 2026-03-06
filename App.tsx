@@ -72,27 +72,27 @@ const INITIAL_DATA = {
 // Event emitter simples para navegação
 class SimpleEventEmitter {
   private events: Map<string, Function[]> = new Map();
-  
+
   on(event: string, listener: Function) {
     if (!this.events.has(event)) {
       this.events.set(event, []);
     }
     this.events.get(event)!.push(listener);
   }
-  
+
   off(event: string, listener: Function) {
     if (this.events.has(event)) {
       const listeners = this.events.get(event)!.filter(l => l !== listener);
       this.events.set(event, listeners);
     }
   }
-  
+
   emit(event: string, payload: any) {
     if (this.events.has(event)) {
       this.events.get(event)!.forEach(listener => listener(payload));
     }
   }
-  
+
   connect() { /* No-op */ }
   disconnect() { /* No-op */ }
 }
@@ -100,26 +100,26 @@ class SimpleEventEmitter {
 const simpleEventManager = new SimpleEventEmitter();
 
 interface StreamRoomData {
-    gifts: Gift[];
-    receivedGifts: (Gift & { count: number })[];
+  gifts: Gift[];
+  receivedGifts: (Gift & { count: number })[];
 }
 
 interface PaymentSuccessData {
-    price: number;
-    diamonds: number;
-    method?: 'pix' | 'credit_card';
-    transactionId?: string;
-    timestamp?: Date;
+  price: number;
+  diamonds: number;
+  method?: 'pix' | 'credit_card';
+  transactionId?: string;
+  timestamp?: Date;
 }
 
 // Enhanced notification type to support direct stream entry
 interface ExtendedLiveNotification {
-    streamerId: string;
-    streamerName: string;
-    streamerAvatar: string;
-    message?: string;
-    streamId?: string;
-    isPrivate?: boolean;
+  streamerId: string;
+  streamerName: string;
+  streamerAvatar: string;
+  message?: string;
+  streamId?: string;
+  isPrivate?: boolean;
 }
 
 const AppContent: React.FC = () => {
@@ -127,7 +127,7 @@ const AppContent: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isLoadingCurrentUser, setIsLoadingCurrentUser] = useState<boolean>(false);
   const [isEnteringStream, setIsEnteringStream] = useState<boolean>(false);
-  
+
   const [activeScreen, setActiveScreen] = useState<'main' | 'profile' | 'messages' | 'video'>('main');
   const [messagesInitialTab, setMessagesInitialTab] = useState<'messages' | 'friends'>('messages');
   const [isReminderModalOpen, setIsReminderModalOpen] = useState<boolean>(false);
@@ -179,7 +179,7 @@ const AppContent: React.FC = () => {
   const [paymentSuccessData, setPaymentSuccessData] = useState<PaymentSuccessData | null>(null);
   const [liveNotification, setLiveNotification] = useState<ExtendedLiveNotification | null>(null);
   const [privateInviteData, setPrivateInviteData] = useState<InviteData | null>(null);
-    
+
   const [streamers, setStreamers] = useState<Streamer[]>(INITIAL_DATA.streamers);
   const [isLoadingStreamers, setIsLoadingStreamers] = useState(false);
   const [countries, setCountries] = useState<Country[]>(INITIAL_DATA.countries);
@@ -192,7 +192,7 @@ const AppContent: React.FC = () => {
   const [reminderStreamers, setReminderStreamers] = useState<Streamer[]>(INITIAL_DATA.reminderStreamers);
   const [selectedCountry, setSelectedCountry] = useState<string>('ICON_GLOBE');
   const [activeCategory, setActiveCategory] = useState('popular');
-  
+
   // Carregar dados da API na inicialização
   useEffect(() => {
     const loadInitialData = async () => {
@@ -213,10 +213,10 @@ const AppContent: React.FC = () => {
         setIsLoadingStreamers(false);
       }
     };
-    
+
     loadInitialData();
   }, []);
-  
+
   // Carregar gifts da API
   useEffect(() => {
     const loadGifts = async () => {
@@ -228,7 +228,7 @@ const AppContent: React.FC = () => {
         console.error('Error loading gifts:', error);
       }
     };
-    
+
     loadGifts();
   }, []);
   const [rankingData, setRankingData] = useState<Record<string, RankedUser[]>>(INITIAL_DATA.rankingData);
@@ -248,23 +248,23 @@ const AppContent: React.FC = () => {
     const id = Date.now();
     setToasts(prev => [...prev, { id, type, message }]);
     setTimeout(() => {
-        setToasts(prev => prev.filter(t => t.id !== id));
+      setToasts(prev => prev.filter(t => t.id !== id));
     }, 3000);
   }, []);
 
   const updateUserEverywhere = useCallback((updatedUser: User) => {
     const updater = (users: User[]) => users.map(u => u.id === updatedUser.id ? updatedUser : u);
-    
+
     if (currentUser?.id === updatedUser.id) {
-        setCurrentUser(updatedUser);
+      setCurrentUser(updatedUser);
     }
     if (viewingProfile?.id === updatedUser.id) {
-        setViewingProfile(updatedUser);
+      setViewingProfile(updatedUser);
     }
     if (pkOpponent?.id === updatedUser.id) {
-        setPkOpponent(updatedUser);
+      setPkOpponent(updatedUser);
     }
-    
+
     setAllUsers(updater);
     setFollowingUsers(updater);
     setFans(updater);
@@ -272,18 +272,18 @@ const AppContent: React.FC = () => {
     setListScreenUsers(updater);
 
     setConversations(prev => prev.map(c => c.friend.id === updatedUser.id ? { ...c, friend: updatedUser } : c));
-    
+
     const streamUpdater = (s: Streamer) => s.hostId === updatedUser.id ? { ...s, name: updatedUser.name, avatar: updatedUser.avatarUrl } : s;
     setStreamers(prev => prev.map(streamUpdater));
     setReminderStreamers(prev => prev.map(streamUpdater));
 
     if (activeStream?.hostId === updatedUser.id) {
-        setActiveStream(prev => prev ? streamUpdater(prev) : null);
+      setActiveStream(prev => prev ? streamUpdater(prev) : null);
     }
   }, [currentUser, viewingProfile, pkOpponent, activeStream]);
 
   // ... (keeping existing handlers like handleLeaveStreamView, handleLogout, etc.) ...
-  
+
   const handleLeaveStreamView = useCallback(() => {
     setActiveStream(null);
     setIsPKBattleActive(false);
@@ -311,59 +311,59 @@ const AppContent: React.FC = () => {
   // WebSocket events simplificados
   useEffect(() => {
     const handleKicked = (payload: { roomId: string }) => {
-        if (activeStream?.id === payload.roomId) {
-            handleLeaveStreamView();
-            addToast(ToastType.Error, "Você foi expulso desta sala e não pode mais entrar.");
-        }
+      if (activeStream?.id === payload.roomId) {
+        handleLeaveStreamView();
+        addToast(ToastType.Error, "Você foi expulso desta sala e não pode mais entrar.");
+      }
     };
     const handleJoinDenied = (payload: { roomId: string }) => {
-        addToast(ToastType.Error, "Você foi expulso desta sala e não pode mais entrar.");
+      addToast(ToastType.Error, "Você foi expulso desta sala e não pode mais entrar.");
     };
     simpleEventManager.on('kicked', handleKicked);
     simpleEventManager.on('joinDenied', handleJoinDenied);
     return () => {
-        simpleEventManager.off('kicked', handleKicked);
-        simpleEventManager.off('joinDenied', handleJoinDenied);
+      simpleEventManager.off('kicked', handleKicked);
+      simpleEventManager.off('joinDenied', handleJoinDenied);
     };
   }, [activeStream, addToast, handleLeaveStreamView]);
 
   // Removido - dados estáticos já inicializados
-  
+
   // Removido - WebSocket simplificado
-  
+
   useEffect(() => {
     const handleStreamerLive = (payload: { streamerId: string, streamerName: string, streamerAvatar: string }) => {
-        if (notificationSettings?.streamerLive) {
-            setLiveNotification(payload);
-        }
-        const userToUpdate = allUsers.find(u => u.id === payload.streamerId);
-        if (userToUpdate && !userToUpdate.isLive) {
-            updateUserEverywhere({ ...userToUpdate, isLive: true });
-        }
+      if (notificationSettings?.streamerLive) {
+        setLiveNotification(payload);
+      }
+      const userToUpdate = allUsers.find(u => u.id === payload.streamerId);
+      if (userToUpdate && !userToUpdate.isLive) {
+        updateUserEverywhere({ ...userToUpdate, isLive: true });
+      }
     };
-    
+
     const handlePrivateInvite = (payload: { streamId: string, hostId: string, streamName: string, inviterName: string, inviterAvatar: string }) => {
-         setPrivateInviteData({
-             streamId: payload.streamId,
-             hostId: payload.hostId,
-             streamName: payload.streamName,
-             hostName: payload.inviterName,
-             hostAvatar: payload.inviterAvatar
-         });
-         setIsGoLiveOpen(true);
+      setPrivateInviteData({
+        streamId: payload.streamId,
+        hostId: payload.hostId,
+        streamName: payload.streamName,
+        hostName: payload.inviterName,
+        hostAvatar: payload.inviterAvatar
+      });
+      setIsGoLiveOpen(true);
     };
 
     simpleEventManager.on('streamerLive', handleStreamerLive);
     simpleEventManager.on('privateStreamInvite', handlePrivateInvite);
-    
+
     return () => {
-        simpleEventManager.off('streamerLive', handleStreamerLive);
-        simpleEventManager.off('privateStreamInvite', handlePrivateInvite);
+      simpleEventManager.off('streamerLive', handleStreamerLive);
+      simpleEventManager.off('privateStreamInvite', handlePrivateInvite);
     };
   }, [addToast, notificationSettings, allUsers, updateUserEverywhere]);
 
   // Removido - dados estáticos já inicializados
-  
+
   // Removido - dados estáticos já inicializados
 
   // Removido - dados estáticos já inicializados
@@ -372,7 +372,7 @@ const AppContent: React.FC = () => {
   useEffect(() => {
     if (currentUser) {
       socketService.connect();
-      
+
       // Escutar atualizações de presença
       socketService.on('user_status_updated', (data: { userId: string; isOnline: boolean }) => {
         if (data.userId === currentUser.id) {
@@ -380,14 +380,14 @@ const AppContent: React.FC = () => {
           updateUserEverywhere(updatedUser);
         }
       });
-      
+
       // 🚀 Escutar quando lives são encerradas para remover cards em tempo real
       socketService.onStreamEnded((data: { streamId: string; hostId: string; timestamp: string }) => {
         console.log(`📡 Recebido evento stream_ended: ${data.streamId}`);
-        
+
         // Remover o card da lista de streamers
         setStreamers(prev => prev.filter(streamer => streamer.id !== data.streamId));
-        
+
         // Se o usuário está assistindo esta live, redirecionar para tela principal
         if (activeStream && activeStream.id === data.streamId) {
           setActiveStream(null);
@@ -395,15 +395,15 @@ const AppContent: React.FC = () => {
           setStreamRoomData(null);
           setIsPKBattleActive(false);
           setPkOpponent(null);
-          
+
           addToast(ToastType.Info, 'Esta transmissão foi encerrada');
         }
       });
-      
+
       // Escutar se o usuário atual precisa sair de uma live encerrada
       socketService.onLiveStreamEnded((data: { streamId: string; message: string; timestamp: string }) => {
         console.log(`📡 Recebido evento live_stream_ended: ${data.streamId}`);
-        
+
         // Se o usuário está assistindo esta live, redirecionar
         if (activeStream && activeStream.id === data.streamId) {
           setActiveStream(null);
@@ -411,18 +411,18 @@ const AppContent: React.FC = () => {
           setStreamRoomData(null);
           setIsPKBattleActive(false);
           setPkOpponent(null);
-          
+
           addToast(ToastType.Info, data.message);
         }
       });
-      
+
       // Escutar quando cards são removidos
       socketService.onCardRemoved((data: { streamId: string; hostId: string; timestamp: string }) => {
         console.log(`📡 Recebido evento card_removed: ${data.streamId}`);
-        
+
         // Remover o card da lista de streamers
         setStreamers(prev => prev.filter(streamer => streamer.id !== data.streamId));
-        
+
         // Se o usuário está assistindo esta live, redirecionar para tela principal
         if (activeStream && activeStream.id === data.streamId) {
           setActiveStream(null);
@@ -430,7 +430,7 @@ const AppContent: React.FC = () => {
           setStreamRoomData(null);
           setIsPKBattleActive(false);
           setPkOpponent(null);
-          
+
           addToast(ToastType.Info, 'Esta transmissão foi encerrada');
         }
       });
@@ -449,10 +449,10 @@ const AppContent: React.FC = () => {
       // Atualizar ranking ao vivo
       const liveRanking = await api.getRankingForPeriod('live');
       setRankingData(liveRanking);
-      
+
       // DESABILITADO: getOnlineUsers causando polling repetitivo
       // A atualização de usuários online agora é feita apenas via WebSocket no StreamRoom
-      
+
       console.log('🔄 Dados da stream atualizados em tempo real');
     } catch (error) {
       console.error('❌ Erro ao atualizar dados da stream:', error);
@@ -461,137 +461,137 @@ const AppContent: React.FC = () => {
 
   const handleStreamUpdate = (updates: Partial<Streamer>) => {
     setActiveStream(prev => {
-        if (!prev) return null;
-        return { ...prev, ...updates };
+      if (!prev) return null;
+      return { ...prev, ...updates };
     });
   };
-  
+
   const updateLiveSession = useCallback((updates: Partial<LiveSessionState>) => {
     setLiveSession(prev => {
-        if (!prev) return null;
-        const newSession = { ...prev, ...updates };
-        if (updates.viewers !== undefined) {
-            newSession.peakViewers = Math.max(prev.peakViewers, updates.viewers);
-        }
-        return newSession;
+      if (!prev) return null;
+      const newSession = { ...prev, ...updates };
+      if (updates.viewers !== undefined) {
+        newSession.peakViewers = Math.max(prev.peakViewers, updates.viewers);
+      }
+      return newSession;
     });
   }, []);
 
   // WebSocket handlers simplificados
   useEffect(() => {
     const handleFollowUpdate = (payload: { follower: User, followed: User, isUnfollow: boolean }) => {
-        const { follower, followed, isUnfollow } = payload;
-        
-        updateUserEverywhere(follower);
-        updateUserEverywhere(followed);
-        
-        if (currentUser && followed.id === currentUser.id) { 
-            setFans(prevFans => {
-                if (isUnfollow) {
-                    return prevFans.filter(fan => fan.id !== follower.id);
-                } else {
-                    if (prevFans.some(fan => fan.id === follower.id)) {
-                        return prevFans.map(fan => fan.id === follower.id ? follower : fan);
-                    }
-                    return [...prevFans, follower];
-                }
-            });
-        }
+      const { follower, followed, isUnfollow } = payload;
 
-        if (currentUser && follower.id === currentUser.id) { 
-            setFollowingUsers(prevFollowing => {
-                if (isUnfollow) {
-                    return prevFollowing.filter(user => user.id !== followed.id);
-                } else {
-                    if (prevFollowing.some(user => user.id === followed.id)) {
-                         return prevFollowing.map(user => user.id === followed.id ? followed : user);
-                    }
-                    return [...prevFollowing, followed];
-                }
-            });
-        }
+      updateUserEverywhere(follower);
+      updateUserEverywhere(followed);
+
+      if (currentUser && followed.id === currentUser.id) {
+        setFans(prevFans => {
+          if (isUnfollow) {
+            return prevFans.filter(fan => fan.id !== follower.id);
+          } else {
+            if (prevFans.some(fan => fan.id === follower.id)) {
+              return prevFans.map(fan => fan.id === follower.id ? follower : fan);
+            }
+            return [...prevFans, follower];
+          }
+        });
+      }
+
+      if (currentUser && follower.id === currentUser.id) {
+        setFollowingUsers(prevFollowing => {
+          if (isUnfollow) {
+            return prevFollowing.filter(user => user.id !== followed.id);
+          } else {
+            if (prevFollowing.some(user => user.id === followed.id)) {
+              return prevFollowing.map(user => user.id === followed.id ? followed : user);
+            }
+            return [...prevFollowing, followed];
+          }
+        });
+      }
     };
 
     const handleNewFollower = (payload: { follower: User }) => {
-        if (currentUser) {
-            const { follower } = payload;
-            setFans(prevFans => {
-                if (prevFans.some(fan => fan.id === follower.id)) {
-                    return prevFans.map(fan => fan.id === follower.id ? follower : fan);
-                }
-                return [...prevFans, follower];
-            });
-            updateUserEverywhere(follower);
-        }
+      if (currentUser) {
+        const { follower } = payload;
+        setFans(prevFans => {
+          if (prevFans.some(fan => fan.id === follower.id)) {
+            return prevFans.map(fan => fan.id === follower.id ? follower : fan);
+          }
+          return [...prevFans, follower];
+        });
+        updateUserEverywhere(follower);
+      }
     };
 
     const handleMicStateUpdate = (payload: { roomId: string; isMuted: boolean }) => {
-        if (activeStream?.id === payload.roomId) {
-            updateLiveSession({ isMicrophoneMuted: payload.isMuted });
-        }
+      if (activeStream?.id === payload.roomId) {
+        updateLiveSession({ isMicrophoneMuted: payload.isMuted });
+      }
     };
 
     const handleSoundStateUpdate = (payload: { roomId: string; isMuted: boolean }) => {
-        if (activeStream?.id === payload.roomId) {
-            updateLiveSession({ isStreamMuted: payload.isMuted });
-        }
+      if (activeStream?.id === payload.roomId) {
+        updateLiveSession({ isStreamMuted: payload.isMuted });
+      }
     };
 
     const handleUserUpdate = (payload: { user: User }) => {
-        updateUserEverywhere(payload.user);
+      updateUserEverywhere(payload.user);
     };
 
     const handleTransactionUpdate = (payload: { record: PurchaseRecord }) => {
-        const { record } = payload;
-        setPurchaseHistory(prev => {
-            const index = prev.findIndex(r => r.id === record.id);
-            if (index > -1) {
-                const newHistory = [...prev];
-                newHistory[index] = record;
-                return newHistory;
-            }
-            return [record, ...prev]; // Latest first
-        });
-
-        if (record.userId === currentUser?.id) {
-            if (record.status === 'Concluído' && record.type === 'withdraw_earnings') {
-                addToast(ToastType.Success, `Saque de R$ ${record.amountBRL.toFixed(2)} concluído!`);
-            } else if (record.status === 'Cancelado') {
-                 addToast(ToastType.Error, `Saque de R$ ${record.amountBRL.toFixed(2)} falhou.`);
-            }
+      const { record } = payload;
+      setPurchaseHistory(prev => {
+        const index = prev.findIndex(r => r.id === record.id);
+        if (index > -1) {
+          const newHistory = [...prev];
+          newHistory[index] = record;
+          return newHistory;
         }
+        return [record, ...prev]; // Latest first
+      });
+
+      if (record.userId === currentUser?.id) {
+        if (record.status === 'Concluído' && record.type === 'withdraw_earnings') {
+          addToast(ToastType.Success, `Saque de R$ ${record.amountBRL.toFixed(2)} concluído!`);
+        } else if (record.status === 'Cancelado') {
+          addToast(ToastType.Error, `Saque de R$ ${record.amountBRL.toFixed(2)} falhou.`);
+        }
+      }
     };
 
     // Global New Message Handler for Badges
     const handleNewMessage = (message: Message) => {
-        if (!currentUser) return;
-        
-        // If we are currently chatting with this user, we assume it's read immediately by ChatScreen component
-        if (chattingWith && chattingWith.id === message.from) {
-             return;
-        }
+      if (!currentUser) return;
 
-        // Otherwise, update the conversation list to increment badge
-        setConversations(prevConversations => {
-            const index = prevConversations.findIndex(c => c.friend.id === message.from);
-            
-            if (index > -1) {
-                const updated = [...prevConversations];
-                const oldConv = updated[index];
-                updated[index] = {
-                    ...oldConv,
-                    lastMessage: message.text || (message.imageUrl ? 'Imagem' : ''),
-                    timestamp: message.timestamp,
-                    unreadCount: (oldConv.unreadCount || 0) + 1
-                };
-                // Move to top
-                updated.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-                return updated;
-            } else {
-                // Para dados estáticos, apenas retorna o estado anterior
-                return prevConversations;
-            }
-        });
+      // If we are currently chatting with this user, we assume it's read immediately by ChatScreen component
+      if (chattingWith && chattingWith.id === message.from) {
+        return;
+      }
+
+      // Otherwise, update the conversation list to increment badge
+      setConversations(prevConversations => {
+        const index = prevConversations.findIndex(c => c.friend.id === message.from);
+
+        if (index > -1) {
+          const updated = [...prevConversations];
+          const oldConv = updated[index];
+          updated[index] = {
+            ...oldConv,
+            lastMessage: message.text || (message.imageUrl ? 'Imagem' : ''),
+            timestamp: message.timestamp,
+            unreadCount: (oldConv.unreadCount || 0) + 1
+          };
+          // Move to top
+          updated.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+          return updated;
+        } else {
+          // Para dados estáticos, apenas retorna o estado anterior
+          return prevConversations;
+        }
+      });
     };
 
     simpleEventManager.on('followUpdate', handleFollowUpdate);
@@ -603,15 +603,15 @@ const AppContent: React.FC = () => {
     simpleEventManager.on('newMessage', handleNewMessage);
 
     return () => {
-        simpleEventManager.off('followUpdate', handleFollowUpdate);
-        simpleEventManager.off('newFollower', handleNewFollower);
-        simpleEventManager.off('micStateUpdate', handleMicStateUpdate);
-        simpleEventManager.off('soundStateUpdate', handleSoundStateUpdate);
-        simpleEventManager.off('userUpdate', handleUserUpdate);
-        simpleEventManager.off('transactionUpdate', handleTransactionUpdate);
-        simpleEventManager.off('newMessage', handleNewMessage);
+      simpleEventManager.off('followUpdate', handleFollowUpdate);
+      simpleEventManager.off('newFollower', handleNewFollower);
+      simpleEventManager.off('micStateUpdate', handleMicStateUpdate);
+      simpleEventManager.off('soundStateUpdate', handleSoundStateUpdate);
+      simpleEventManager.off('userUpdate', handleUserUpdate);
+      simpleEventManager.off('transactionUpdate', handleTransactionUpdate);
+      simpleEventManager.off('newMessage', handleNewMessage);
     };
-}, [currentUser, updateUserEverywhere, activeStream, updateLiveSession, addToast, chattingWith]);
+  }, [currentUser, updateUserEverywhere, activeStream, updateLiveSession, addToast, chattingWith]);
 
   // ... (Keeping rest of the logic: handleSelectRegion, startLiveSession, logLiveEvent, handleLogin, etc.) ...
 
@@ -619,7 +619,7 @@ const AppContent: React.FC = () => {
     console.log('🔥 Region selected:', countryCode); // DEBUG
     setSelectedCountry(countryCode);
     setIsRegionModalOpen(false);
-    
+
     // Se não for Global, buscar streams da região
     if (countryCode !== 'ICON_GLOBE') {
       console.log('🌍 Loading streams for country:', countryCode); // DEBUG
@@ -650,7 +650,7 @@ const AppContent: React.FC = () => {
       }
     }
   };
-  
+
   const loadStreams = async () => {
     setIsLoadingStreamers(true);
     try {
@@ -664,11 +664,11 @@ const AppContent: React.FC = () => {
       setIsLoadingStreamers(false);
     }
   };
-  
+
   const startLiveSession = (streamer: Streamer) => {
     const newSession = {
       startTime: Date.now(),
-      viewers: streamer.viewers || 1, 
+      viewers: streamer.viewers || 1,
       peakViewers: streamer.viewers || 1,
       coins: 0,
       followers: 0,
@@ -710,10 +710,10 @@ const AppContent: React.FC = () => {
       setIsLoadingCurrentUser(false);
     }
   };
-  
+
   const handleNavigation = (screen: 'main' | 'profile' | 'messages' | 'video') => {
     if (screen === 'messages') {
-        setMessagesInitialTab('messages'); // Reset to default when using footer nav
+      setMessagesInitialTab('messages'); // Reset to default when using footer nav
     }
     setActiveScreen(screen);
   };
@@ -724,27 +724,27 @@ const AppContent: React.FC = () => {
     setMessagesInitialTab('friends');
     setActiveScreen('messages');
   };
-  
+
   const handleTabChange = async (tab: string) => {
     if (tab === 'nearby') {
-        setLocationPermissionStatus('prompt');
-        setIsLocationPermissionModalOpen(true);
+      setLocationPermissionStatus('prompt');
+      setIsLocationPermissionModalOpen(true);
     } else {
-        setActiveCategory(tab);
-        setShowLocationBanner(false);
-        
-        // Carregar streams da API para a categoria selecionada
-        setIsLoadingStreamers(true);
-        try {
-            const streams = await api.getLiveStreamers(tab === 'popular' ? 'global' : tab);
-            console.log(`🔍 [DEBUG] Streams da categoria "${tab}":`, streams.length, streams);
-            setStreamers(streams);
-        } catch (error) {
-            console.error('Error loading streams:', error);
-            setStreamers([]);
-        } finally {
-            setIsLoadingStreamers(false);
-        }
+      setActiveCategory(tab);
+      setShowLocationBanner(false);
+
+      // Carregar streams da API para a categoria selecionada
+      setIsLoadingStreamers(true);
+      try {
+        const streams = await api.getLiveStreamers(tab === 'popular' ? 'global' : tab);
+        console.log(`🔍 [DEBUG] Streams da categoria "${tab}":`, streams.length, streams);
+        setStreamers(streams);
+      } catch (error) {
+        console.error('Error loading streams:', error);
+        setStreamers([]);
+      } finally {
+        setIsLoadingStreamers(false);
+      }
     }
   };
 
@@ -770,32 +770,32 @@ const AppContent: React.FC = () => {
   };
 
   const checkCameraPermission = async () => {
-      setPermissionStep('camera');
-      await checkMicrophonePermission();
+    setPermissionStep('camera');
+    await checkMicrophonePermission();
   };
 
   const handleOpenGoLive = async () => {
-      await checkCameraPermission();
+    await checkCameraPermission();
   };
 
   const handlePermissionAllow = async () => {
     if (permissionStep === 'camera') {
-        try {
-            await navigator.mediaDevices.getUserMedia({ video: true });
-            await checkMicrophonePermission(); 
-        } catch (err) {
-            addToast(ToastType.Error, t('toasts.permissionsNeeded'));
-            setPermissionStep('idle');
-        }
+      try {
+        await navigator.mediaDevices.getUserMedia({ video: true });
+        await checkMicrophonePermission();
+      } catch (err) {
+        addToast(ToastType.Error, t('toasts.permissionsNeeded'));
+        setPermissionStep('idle');
+      }
     } else if (permissionStep === 'microphone') {
-        try {
-            await navigator.mediaDevices.getUserMedia({ audio: true });
-            setIsGoLiveOpen(true);
-            setPermissionStep('idle');
-        } catch (err) {
-            addToast(ToastType.Error, t('toasts.permissionsNeeded'));
-            setPermissionStep('idle');
-        }
+      try {
+        await navigator.mediaDevices.getUserMedia({ audio: true });
+        setIsGoLiveOpen(true);
+        setPermissionStep('idle');
+      } catch (err) {
+        addToast(ToastType.Error, t('toasts.permissionsNeeded'));
+        setPermissionStep('idle');
+      }
     }
   };
 
@@ -808,26 +808,26 @@ const AppContent: React.FC = () => {
     if (!currentUser) return;
     setIsEnteringStream(true);
     try {
-        if (streamer.isPrivate && streamer.hostId !== currentUser.id) {
-            addToast(ToastType.Error, "Você não tem permissão para entrar nesta sala privada.");
-            setIsEnteringStream(false);
-            return;
-        }
-
-        setStreamRoomData({
-            gifts: allGifts,
-            receivedGifts: []
-        });
-        setActiveStream(streamer);
-        startLiveSession(streamer);
-        simpleEventManager.connect();
-    } catch (error) {
-        addToast(ToastType.Error, "Falha ao carregar dados da live.");
-    } finally {
+      if (streamer.isPrivate && streamer.hostId !== currentUser.id) {
+        addToast(ToastType.Error, "Você não tem permissão para entrar nesta sala privada.");
         setIsEnteringStream(false);
+        return;
+      }
+
+      setStreamRoomData({
+        gifts: allGifts,
+        receivedGifts: []
+      });
+      setActiveStream(streamer);
+      startLiveSession(streamer);
+      simpleEventManager.connect();
+    } catch (error) {
+      addToast(ToastType.Error, "Falha ao carregar dados da live.");
+    } finally {
+      setIsEnteringStream(false);
     }
   };
-  
+
   const handleStartStream = async (streamer: Streamer) => {
     setIsGoLiveOpen(false);
     setPrivateInviteData(null);
@@ -847,15 +847,15 @@ const AppContent: React.FC = () => {
     setStreamers(updateStreamList);
 
     if (currentUser && streamer.hostId === currentUser.id) {
-        const updatedUser = { ...currentUser, isLive: true, isOnline: true };
-        updateUserEverywhere(updatedUser);
-        addToast(ToastType.Success, "Live iniciada com sucesso!");
-        
-        setLiveNotification({
-            streamerId: currentUser.id,
-            streamerName: currentUser.name,
-            streamerAvatar: currentUser.avatarUrl
-        });
+      const updatedUser = { ...currentUser, isLive: true, isOnline: true };
+      updateUserEverywhere(updatedUser);
+      addToast(ToastType.Success, "Live iniciada com sucesso!");
+
+      setLiveNotification({
+        streamerId: currentUser.id,
+        streamerName: currentUser.name,
+        streamerAvatar: currentUser.avatarUrl
+      });
     }
   };
 
@@ -863,63 +863,63 @@ const AppContent: React.FC = () => {
 
   const handleConfirmEndStream = async () => {
     setIsEndStreamConfirmOpen(false);
-    
+
     if (activeStream && liveSession) {
-        const endTime = Date.now();
-        const historyEntry: StreamHistoryEntry = {
-            id: `hist_stream-${activeStream.id}_${endTime}_${Math.random().toString(36).slice(2)}`,
-            streamerId: activeStream.hostId,
-            name: activeStream.name,
-            avatar: activeStream.avatar,
-            startTime: liveSession.startTime,
-            endTime: endTime,
-        };
+      const endTime = Date.now();
+      const historyEntry: StreamHistoryEntry = {
+        id: `hist_stream-${activeStream.id}_${endTime}_${Math.random().toString(36).slice(2)}`,
+        streamerId: activeStream.hostId,
+        name: activeStream.name,
+        avatar: activeStream.avatar,
+        startTime: liveSession.startTime,
+        endTime: endTime,
+      };
 
-        setStreamHistory(prev => [historyEntry, ...prev]);
-        simpleEventManager.disconnect();
+      setStreamHistory(prev => [historyEntry, ...prev]);
+      simpleEventManager.disconnect();
 
-        const durationMs = endTime - liveSession.startTime;
-        const totalSeconds = Math.floor(durationMs / 1000);
-        const hours = Math.floor(totalSeconds / 3600);
-        const minutes = Math.floor((totalSeconds % 3600) / 60);
-        const seconds = totalSeconds % 60;
-        const durationStr = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+      const durationMs = endTime - liveSession.startTime;
+      const totalSeconds = Math.floor(durationMs / 1000);
+      const hours = Math.floor(totalSeconds / 3600);
+      const minutes = Math.floor((totalSeconds % 3600) / 60);
+      const seconds = totalSeconds % 60;
+      const durationStr = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 
-        const summary: StreamSummaryData = {
-            viewers: liveSession.peakViewers,
-            duration: durationStr,
-            coins: liveSession.coins,
-            followers: liveSession.followers,
-            members: liveSession.members,
-            fans: liveSession.fans,
-            user: { name: activeStream.name, avatarUrl: activeStream.avatar }
-        };
-        setStreamSummaryData(summary);
-        setIsEndStreamSummaryOpen(true);
-        
-        // 🚀 CHAMADA À API ESPECÍFICA PARA REMOVER O CARD DA LIVE
-        try {
-            console.log(`🔴 Encerrando live ${activeStream.id} via API`);
-            console.log('📤 Enviando dados da sessão:', liveSession);
-            
-            // 1. Encerrar sessão da live (salvar histórico, etc.)
-            const response = await api.endLiveSession(activeStream.id, liveSession);
-            console.log('✅ Resposta da API endSession:', response);
-            
-            // 2. Remover o card especificamente
-            console.log(`🗑️ Removendo card ${activeStream.id}`);
-            const removeResponse = await api.removeLiveCard(activeStream.id);
-            console.log('✅ Resposta da API removeCard:', removeResponse);
-            console.log(`✅ Live ${activeStream.id} encerrada e card removido`);
-            
-            // 3. Recarregar a lista de streams para atualizar os cards
-            console.log('🔄 Recarregando lista de streams...');
-            await loadStreams();
-            console.log('✅ Lista de streams recarregada');
-        } catch (error) {
-            console.error('❌ Erro ao encerrar live via API:', error);
-            addToast(ToastType.Error, 'Erro ao encerrar transmissão');
-        }
+      const summary: StreamSummaryData = {
+        viewers: liveSession.peakViewers,
+        duration: durationStr,
+        coins: liveSession.coins,
+        followers: liveSession.followers,
+        members: liveSession.members,
+        fans: liveSession.fans,
+        user: { name: activeStream.name, avatarUrl: activeStream.avatar }
+      };
+      setStreamSummaryData(summary);
+      setIsEndStreamSummaryOpen(true);
+
+      // 🚀 CHAMADA À API ESPECÍFICA PARA REMOVER O CARD DA LIVE
+      try {
+        console.log(`🔴 Encerrando live ${activeStream.id} via API`);
+        console.log('📤 Enviando dados da sessão:', liveSession);
+
+        // 1. Encerrar sessão da live (salvar histórico, etc.)
+        const response = await api.endLiveSession(activeStream.id, liveSession);
+        console.log('✅ Resposta da API endSession:', response);
+
+        // 2. Remover o card especificamente
+        console.log(`🗑️ Removendo card ${activeStream.id}`);
+        const removeResponse = await api.removeLiveCard(activeStream.id);
+        console.log('✅ Resposta da API removeCard:', removeResponse);
+        console.log(`✅ Live ${activeStream.id} encerrada e card removido`);
+
+        // 3. Recarregar a lista de streams para atualizar os cards
+        console.log('🔄 Recarregando lista de streams...');
+        await loadStreams();
+        console.log('✅ Lista de streams recarregada');
+      } catch (error) {
+        console.error('❌ Erro ao encerrar live via API:', error);
+        addToast(ToastType.Error, 'Erro ao encerrar transmissão');
+      }
     }
 
     setActiveStream(null);
@@ -955,185 +955,185 @@ const AppContent: React.FC = () => {
     const userToView = fullUserFromState || user;
     setViewingProfile(userToView);
   };
-  
+
   const handleEditProfile = () => { setIsEditingProfile(true); setViewingProfile(null); }
-  
+
   const handleSaveProfile = async (updatedData: Partial<User>) => {
-      if (!currentUser) return;
-      const updatedUser = { ...currentUser, ...updatedData };
-      updateUserEverywhere(updatedUser);
-      setIsEditingProfile(false);
-      setViewingProfile(updatedUser);
-      addToast(ToastType.Success, t('toasts.profileSaved'));
+    if (!currentUser) return;
+    const updatedUser = { ...currentUser, ...updatedData };
+    updateUserEverywhere(updatedUser);
+    setIsEditingProfile(false);
+    setViewingProfile(updatedUser);
+    addToast(ToastType.Success, t('toasts.profileSaved'));
   };
 
   const handleFollowUser = async (userToFollow: User, streamId?: string) => {
     if (!currentUser) return;
 
     try {
-        const response = await api.followUser(currentUser.id, userToFollow.id, streamId);
-        
-        if (response.success) {
-            const isNowFollowing = !userToFollow.isFollowed;
-            const updatedFollowed = { ...userToFollow, isFollowed: isNowFollowing };
-            const updatedFollower = { ...currentUser, following: (currentUser.following || 0) + (isNowFollowing ? 1 : -1) };
+      const response = await api.followUser(currentUser.id, userToFollow.id, streamId);
 
-            updateUserEverywhere(updatedFollower);
-            updateUserEverywhere(updatedFollowed);
+      if (response.success) {
+        const isNowFollowing = !userToFollow.isFollowed;
+        const updatedFollowed = { ...userToFollow, isFollowed: isNowFollowing };
+        const updatedFollower = { ...currentUser, following: (currentUser.following || 0) + (isNowFollowing ? 1 : -1) };
 
-            setFollowingUsers(prev => {
-                if (isNowFollowing) { 
-                    if (prev.some(u => u.id === updatedFollowed.id)) {
-                        return prev.map(u => u.id === updatedFollowed.id ? updatedFollowed : u);
-                    }
-                    return [...prev, updatedFollowed];
-                } else { 
-                    return prev.filter(u => u.id !== updatedFollowed.id);
-                }
-            });
+        updateUserEverywhere(updatedFollower);
+        updateUserEverywhere(updatedFollowed);
 
-            if (liveSession && activeStream && userToFollow.id === activeStream.hostId) {
-                const increment = isNowFollowing ? 1 : -1;
-                updateLiveSession({ followers: Math.max(0, (liveSession.followers || 0) + increment) });
+        setFollowingUsers(prev => {
+          if (isNowFollowing) {
+            if (prev.some(u => u.id === updatedFollowed.id)) {
+              return prev.map(u => u.id === updatedFollowed.id ? updatedFollowed : u);
             }
+            return [...prev, updatedFollowed];
+          } else {
+            return prev.filter(u => u.id !== updatedFollowed.id);
+          }
+        });
 
-            // Se virou amizade, mostrar notificação especial
-            if (response.isFriendship && isNowFollowing) {
-                addToast(ToastType.Success, `🎉 Você e ${userToFollow.name} agora são amigos!`);
-            } else if (!streamId) {
-                const toastMessage = isNowFollowing
-                    ? t('toasts.followedUser', { name: userToFollow.name })
-                    : `Você deixou de seguir ${userToFollow.name}.`;
-                addToast(ToastType.Success, toastMessage);
-            }
+        if (liveSession && activeStream && userToFollow.id === activeStream.hostId) {
+          const increment = isNowFollowing ? 1 : -1;
+          updateLiveSession({ followers: Math.max(0, (liveSession.followers || 0) + increment) });
         }
+
+        // Se virou amizade, mostrar notificação especial
+        if (response.isFriendship && isNowFollowing) {
+          addToast(ToastType.Success, `🎉 Você e ${userToFollow.name} agora são amigos!`);
+        } else if (!streamId) {
+          const toastMessage = isNowFollowing
+            ? t('toasts.followedUser', { name: userToFollow.name })
+            : `Você deixou de seguir ${userToFollow.name}.`;
+          addToast(ToastType.Success, toastMessage);
+        }
+      }
     } catch (error) {
-        console.error('Erro ao seguir/deixar de seguir usuário:', error);
-        addToast(ToastType.Error, 'Não foi possível realizar esta ação');
+      console.error('Erro ao seguir/deixar de seguir usuário:', error);
+      addToast(ToastType.Error, 'Não foi possível realizar esta ação');
     }
   };
 
   const handleBlockUser = async (userToBlock: User) => {
-      if (!currentUser) return;
-      addToast(ToastType.Success, `${userToBlock.name} foi bloqueado.`);
-      if (viewingProfile?.id === userToBlock.id) {
-          setViewingProfile(null);
-      }
-      if (chattingWith?.id === userToBlock.id) {
-          setChattingWith(null);
-      }
+    if (!currentUser) return;
+    addToast(ToastType.Success, `${userToBlock.name} foi bloqueado.`);
+    if (viewingProfile?.id === userToBlock.id) {
+      setViewingProfile(null);
+    }
+    if (chattingWith?.id === userToBlock.id) {
+      setChattingWith(null);
+    }
   };
 
   const handleReportUser = async (userToReport: User) => {
-      if (!currentUser) return;
-      addToast(ToastType.Success, `Denúncia sobre ${userToReport.name} enviada.`);
+    if (!currentUser) return;
+    addToast(ToastType.Success, `Denúncia sobre ${userToReport.name} enviada.`);
   };
-  
+
   const handleUnblockUser = async (userToUnblock: User) => {
-      if (!currentUser) return;
-      addToast(ToastType.Success, `${userToUnblock.name} foi desbloqueado.`);
+    if (!currentUser) return;
+    addToast(ToastType.Success, `${userToUnblock.name} foi desbloqueado.`);
   };
 
   const handleOpenWallet = (initialTab: 'Diamante' | 'Ganhos' = 'Diamante') => {
-      setWalletInitialTab(initialTab);
-      setIsWalletScreenOpen(true);
+    setWalletInitialTab(initialTab);
+    setIsWalletScreenOpen(true);
   };
-  
+
   const handlePurchase = (pkg: { diamonds: number; price: number }) => {
-      setSelectedPackage(pkg);
-      setIsWalletScreenOpen(false);
-      setIsConfirmingPurchase(true);
+    setSelectedPackage(pkg);
+    setIsWalletScreenOpen(false);
+    setIsConfirmingPurchase(true);
   };
 
   const handleConfirmPurchase = async (pkg: { diamonds: number; price: number }) => {
-      if (!currentUser) return;
-      
-      const updatedUser = { ...currentUser, diamonds: currentUser.diamonds + pkg.diamonds };
-      updateUserEverywhere(updatedUser);
-      
-      setPaymentSuccessData({
-          price: pkg.price,
-          diamonds: pkg.diamonds,
-          method: 'pix',
-          timestamp: new Date()
-      });
-      setIsConfirmingPurchase(false);
-      setIsPaymentSuccessOpen(true);
-      setSelectedPackage(null);
+    if (!currentUser) return;
+
+    const updatedUser = { ...currentUser, diamonds: currentUser.diamonds + pkg.diamonds };
+    updateUserEverywhere(updatedUser);
+
+    setPaymentSuccessData({
+      price: pkg.price,
+      diamonds: pkg.diamonds,
+      method: 'pix',
+      timestamp: new Date()
+    });
+    setIsConfirmingPurchase(false);
+    setIsPaymentSuccessOpen(true);
+    setSelectedPackage(null);
   };
 
   const handlePurchaseFrame = async (frameId: string) => {
-      if (!currentUser) return;
-      
-      if (currentUser.diamonds < 100) {
-          addToast(ToastType.Error, "Diamantes insuficientes.");
-          return;
-      }
-      
-      const updatedUser = { ...currentUser, diamonds: currentUser.diamonds - 100 };
-      updateUserEverywhere(updatedUser);
-      addToast(ToastType.Success, "Moldura comprada com sucesso!");
+    if (!currentUser) return;
+
+    if (currentUser.diamonds < 100) {
+      addToast(ToastType.Error, "Diamantes insuficientes.");
+      return;
+    }
+
+    const updatedUser = { ...currentUser, diamonds: currentUser.diamonds - 100 };
+    updateUserEverywhere(updatedUser);
+    addToast(ToastType.Success, "Moldura comprada com sucesso!");
   };
-  
+
   const handleOpenPKTimerSettings = () => setIsPKTimerSettingsOpen(true);
 
   const handleSavePKTimer = async (duration: number) => {
-      setPkBattleDuration(duration);
-      addToast(ToastType.Success, t('toasts.pkTimerSaved'));
-      setIsPKTimerSettingsOpen(false);
+    setPkBattleDuration(duration);
+    addToast(ToastType.Success, t('toasts.pkTimerSaved'));
+    setIsPKTimerSettingsOpen(false);
   };
 
   const handleOpenListScreen = (listType: 'following' | 'fans' | 'visitors' | 'topFans' | 'blockList') => {
-      if (!currentUser) return;
-      
-      let users: User[] = [];
-      switch (listType) {
-          case 'following':
-              users = followingUsers;
-              break;
-          case 'fans':
-              users = fans;
-              break;
-          case 'visitors':
-              users = visitors.map(v => v.user);
-              break;
-          case 'topFans':
-              users = fans.slice(0, 10);
-              break;
-          case 'blockList':
-              users = [];
-              break;
-      }
-      
-      setListScreenUsers(users);
-      
-      switch (listType) {
-          case 'following':
-              setIsFollowingScreenOpen(true);
-              break;
-          case 'fans':
-              setIsFansScreenOpen(true);
-              break;
-          case 'visitors':
-              setIsVisitorsScreenOpen(true);
-              break;
-          case 'topFans':
-              setIsTopFansScreenOpen(true);
-              break;
-          case 'blockList':
-              setIsBlockListScreenOpen(true);
-              break;
-      }
+    if (!currentUser) return;
+
+    let users: User[] = [];
+    switch (listType) {
+      case 'following':
+        users = followingUsers;
+        break;
+      case 'fans':
+        users = fans;
+        break;
+      case 'visitors':
+        users = visitors.map(v => v.user);
+        break;
+      case 'topFans':
+        users = fans.slice(0, 10);
+        break;
+      case 'blockList':
+        users = [];
+        break;
+    }
+
+    setListScreenUsers(users);
+
+    switch (listType) {
+      case 'following':
+        setIsFollowingScreenOpen(true);
+        break;
+      case 'fans':
+        setIsFansScreenOpen(true);
+        break;
+      case 'visitors':
+        setIsVisitorsScreenOpen(true);
+        break;
+      case 'topFans':
+        setIsTopFansScreenOpen(true);
+        break;
+      case 'blockList':
+        setIsBlockListScreenOpen(true);
+        break;
+    }
   };
 
   const handlePurchaseEffect = async (gift: Gift) => {
-      if (currentUser && currentUser.diamonds && gift.price && currentUser.diamonds >= gift.price) {
-          const updatedUser = { ...currentUser, diamonds: currentUser.diamonds - gift.price };
-          updateUserEverywhere(updatedUser);
-          addToast(ToastType.Success, t('vip.store.purchaseSuccess', { name: gift.name }));
-      } else {
-          addToast(ToastType.Error, t('vip.store.notEnoughDiamonds'));
-      }
+    if (currentUser && currentUser.diamonds && gift.price && currentUser.diamonds >= gift.price) {
+      const updatedUser = { ...currentUser, diamonds: currentUser.diamonds - gift.price };
+      updateUserEverywhere(updatedUser);
+      addToast(ToastType.Success, t('vip.store.purchaseSuccess', { name: gift.name }));
+    } else {
+      addToast(ToastType.Error, t('vip.store.notEnoughDiamonds'));
+    }
   }
 
   const handleOpenMyStream = () => {
@@ -1153,7 +1153,7 @@ const AppContent: React.FC = () => {
   const handleOpenVIPCenter = () => {
     console.log('🔥 Abrindo loja VIP - usuário atual isVIP:', currentUser?.isVIP);
     setIsVIPCenterOpen(true);
-};
+  };
 
   const handleSubscribeVIP = async () => {
     if (!currentUser) return;
@@ -1162,29 +1162,29 @@ const AppContent: React.FC = () => {
     addToast(ToastType.Success, t('toasts.vipSuccess'));
     setIsVIPCenterOpen(false);
     console.log(' Usuário agora é VIP:', updatedUser.name);
-};
+  };
 
-const handleWatchLiveNotification = async () => {
+  const handleWatchLiveNotification = async () => {
     if (!liveNotification) return;
 
     const targetId = liveNotification.streamId || `stream_${liveNotification.streamerId}`;
-    
+
     let targetStream = streamers.find(s => s.id === targetId || s.hostId === liveNotification.streamerId);
-    
+
     if (!targetStream) {
-        targetStream = {
-            id: targetId,
-            hostId: liveNotification.streamerId,
-            name: liveNotification.streamerName,
-            avatar: liveNotification.streamerAvatar,
-            location: 'Unknown',
-            time: 'Just now',
-            message: liveNotification.message || 'Live Started!',
-            tags: [],
-            isPrivate: !!liveNotification.isPrivate,
-            country: 'br',
-            viewers: 0
-        };
+      targetStream = {
+        id: targetId,
+        hostId: liveNotification.streamerId,
+        name: liveNotification.streamerName,
+        avatar: liveNotification.streamerAvatar,
+        location: 'Unknown',
+        time: 'Just now',
+        message: liveNotification.message || 'Live Started!',
+        tags: [],
+        isPrivate: !!liveNotification.isPrivate,
+        country: 'br',
+        viewers: 0
+      };
     }
 
     setLiveNotification(null);
@@ -1194,22 +1194,22 @@ const handleWatchLiveNotification = async () => {
 
   if (!isAuthenticated) return <LoginScreen onLogin={handleLogin} />;
   if (isLoadingCurrentUser || !currentUser) return <div className="h-full w-full bg-black flex items-center justify-center"><LoadingSpinner /></div>;
-  
+
   return (
     <div className="h-full w-full bg-black text-white overflow-hidden relative font-sans">
       {/* ChatScreen com prioridade absoluta - sobre todas as outras telas */}
       {chattingWith && currentUser && (
         <div className="fixed inset-0 z-[999999] bg-black">
-          <ChatScreenWithWebSocket 
-            user={chattingWith} 
-            onBack={() => setChattingWith(null)} 
-            isModal={true} 
-            currentUser={currentUser} 
-            onNavigateToFriends={handleNavigateToFriends} 
-            onFollowUser={handleFollowUser} 
-            onBlockUser={handleBlockUser} 
-            onReportUser={handleReportUser} 
-            onOpenPhotoViewer={(photos, index) => setPhotoViewerData({ photos, initialIndex: index })} 
+          <ChatScreenWithWebSocket
+            user={chattingWith}
+            onBack={() => setChattingWith(null)}
+            isModal={true}
+            currentUser={currentUser}
+            onNavigateToFriends={handleNavigateToFriends}
+            onFollowUser={handleFollowUser}
+            onBlockUser={handleBlockUser}
+            onReportUser={handleReportUser}
+            onOpenPhotoViewer={(photos, index) => setPhotoViewerData({ photos, initialIndex: index })}
           />
         </div>
       )}
@@ -1222,8 +1222,8 @@ const handleWatchLiveNotification = async () => {
 
       {activeStream && streamRoomData && currentUser ? (
         isPKBattleActive && pkOpponent ? (
-          <PKBattleScreen 
-            streamer={activeStream} 
+          <PKBattleScreen
+            streamer={activeStream}
             opponent={pkOpponent}
             onEndPKBattle={handleEndPKBattle}
             onRequestEndStream={handleRequestEndStream}
@@ -1256,9 +1256,9 @@ const handleWatchLiveNotification = async () => {
             onOpenVIPCenter={handleOpenVIPCenter}
           />
         ) : (
-          <StreamRoom 
-            streamer={activeStream} 
-            onRequestEndStream={handleRequestEndStream} 
+          <StreamRoom
+            streamer={activeStream}
+            onRequestEndStream={handleRequestEndStream}
             onStartPKBattle={handleStartPKBattle}
             onViewProfile={handleViewProfile}
             currentUser={currentUser}
@@ -1291,57 +1291,77 @@ const handleWatchLiveNotification = async () => {
       ) : (
         <>
           {/* Demais telas só aparecem se não houver chat ativo */}
-      {!chattingWith && (
-        <div className="h-full w-full">
-          {activeScreen === 'main' && <MainScreen onOpenReminderModal={() => setIsReminderModalOpen(true)} onOpenRegionModal={() => setIsRegionModalOpen(true)} onSelectStream={handleSelectStream} onOpenSearch={() => setIsSearchScreenOpen(true)} streamers={streamers} isLoading={isLoadingStreamers} activeTab={activeCategory} onTabChange={handleTabChange} showLocationBanner={showLocationBanner}/>}
-          {activeScreen === 'video' && <VideoScreen onViewProfile={handleViewProfile} onOpenPhotoViewer={(photos, index) => setPhotoViewerData({ photos, initialIndex: index })} />}
-          {activeScreen === 'profile' && 
-                <ProfileScreen 
-                    currentUser={currentUser}
-                    onEdit={handleEditProfile} 
-                    onOpenMyLevel={() => setIsMyLevelScreenOpen(true)} 
-                    onOpenBlockList={() => handleOpenListScreen('blockList')} 
-                    onOpenAvatarProtection={() => setIsAvatarProtectionScreenOpen(true)} 
-                    onOpenFAQ={() => setIsFAQScreenOpen(true)} 
-                    onOpenSettings={() => setIsSettingsScreenOpen(true)} 
-                    onOpenSupportChat={() => setChattingWith({ id: 'support-livercore', name: 'Support', avatarUrl: 'https://picsum.photos/seed/support/200/200.jpg', diamonds: 0, level: 1, xp: 0, fans: 0, following: 0, isOnline: true })} 
-                    onOpenAdminWallet={() => setIsAdminWalletOpen(true)} 
-                    onOpenVIPCenter={handleOpenVIPCenter}
-                    onNavigateToMessages={() => currentUser && setChattingWith(currentUser)}
-                    onOpenFans={() => handleOpenListScreen('fans')}
-                    onOpenFollowing={() => handleOpenListScreen('following')}
-                    onOpenVisitors={() => setIsVisitorsScreenOpen(true)}
-                    onOpenTopFans={() => handleOpenListScreen('topFans')}
-                    onOpenWallet={handleOpenWallet}
-                    onOpenMarket={() => setIsMarketScreenOpen(true)}
-                    onEnterMyStream={() => {
-                        if (currentUser?.isLive) {
-                            const userStream = streamers.find(s => s.hostId === currentUser.id);
-                            if (userStream) handleSelectStream(userStream);
-                        }
-                    }}
-                    onOpenProfile={() => setViewingProfile(currentUser)}
-                    visitors={visitors} 
+          {!chattingWith && (
+            <div className="h-full w-full">
+              {activeScreen === 'main' && <MainScreen onOpenReminderModal={() => setIsReminderModalOpen(true)} onOpenRegionModal={() => setIsRegionModalOpen(true)} onSelectStream={handleSelectStream} onOpenSearch={() => setIsSearchScreenOpen(true)} streamers={streamers} isLoading={isLoadingStreamers} activeTab={activeCategory} onTabChange={handleTabChange} showLocationBanner={showLocationBanner} />}
+              {activeScreen === 'video' && <VideoScreen onViewProfile={handleViewProfile} onOpenPhotoViewer={(photos, index) => setPhotoViewerData({ photos, initialIndex: index })} />}
+              {activeScreen === 'profile' &&
+                <ProfileScreen
+                  currentUser={currentUser}
+                  onEdit={handleEditProfile}
+                  onOpenMyLevel={() => setIsMyLevelScreenOpen(true)}
+                  onOpenBlockList={() => handleOpenListScreen('blockList')}
+                  onOpenAvatarProtection={() => setIsAvatarProtectionScreenOpen(true)}
+                  onOpenFAQ={() => setIsFAQScreenOpen(true)}
+                  onOpenSettings={() => setIsSettingsScreenOpen(true)}
+                  onOpenSupportChat={() => setChattingWith({ id: 'support-livercore', name: 'Support', avatarUrl: 'https://picsum.photos/seed/support/200/200.jpg', diamonds: 0, level: 1, xp: 0, fans: 0, following: 0, isOnline: true })}
+                  onOpenAdminWallet={() => setIsAdminWalletOpen(true)}
+                  onOpenVIPCenter={handleOpenVIPCenter}
+                  onNavigateToMessages={() => currentUser && setChattingWith(currentUser)}
+                  onOpenFans={() => handleOpenListScreen('fans')}
+                  onOpenFollowing={() => handleOpenListScreen('following')}
+                  onOpenVisitors={() => setIsVisitorsScreenOpen(true)}
+                  onOpenTopFans={() => handleOpenListScreen('topFans')}
+                  onOpenWallet={handleOpenWallet}
+                  onOpenMarket={() => setIsMarketScreenOpen(true)}
+                  onEnterMyStream={() => {
+                    if (currentUser?.isLive) {
+                      const userStream = streamers.find(s => s.hostId === currentUser.id);
+                      if (userStream) handleSelectStream(userStream);
+                    }
+                  }}
+                  onOpenProfile={() => setViewingProfile(currentUser)}
+                  visitors={visitors}
                 />
-            }
-            {/* MessagesScreen removida para não substituir chat individual */}
-          <FooterNav currentUser={currentUser} onOpenGoLive={handleOpenGoLive} activeTab={activeScreen} onNavigate={handleNavigation} onOpenChat={() => currentUser && setChattingWith(currentUser)} unreadCount={totalUnreadMessages} />
-        </div>
-      )}
+              }
+              {/* MessagesScreen removida para não substituir chat individual */}
+              {activeScreen === 'messages' && (
+                <MessagesScreen
+                  onStartChat={setChattingWith}
+                  onViewProfile={handleViewProfile}
+                  conversations={conversations}
+                  friends={friends}
+                  initialTab="messages"
+                  onOpenFriendRequests={() => setIsFriendRequestsScreenOpen(true)}
+                  fans={fans}
+                  followingUsers={followingUsers}
+                />
+              )}
+              <FooterNav currentUser={currentUser} onOpenGoLive={handleOpenGoLive} activeTab={activeScreen} onNavigate={handleNavigation} onOpenChat={() => handleNavigation('messages')} unreadCount={totalUnreadMessages} />
+            </div>
+          )}
+          {chattingWith && (
+            <ChatScreenWithWebSocket
+              currentUser={currentUser!}
+              otherUser={chattingWith}
+              onClose={() => setChattingWith(null)}
+              onViewProfile={handleViewProfile}
+            />
+          )}
         </>
       )}
 
       <ReminderModal isOpen={isReminderModalOpen} onClose={() => setIsReminderModalOpen(false)} onSelectStream={handleSelectStream} streamers={reminderStreamers} onOpenLiveHistory={() => setIsLiveHistoryOpen(true)} />
       <RegionModal isOpen={isRegionModalOpen} onClose={() => setIsRegionModalOpen(false)} countries={countries} onSelectRegion={handleSelectRegion} selectedCountryCode={selectedCountry} />
       {/* Updated GoLiveScreen usage to accept inviteData */}
-      {isGoLiveOpen && <GoLiveScreen 
-          isOpen={isGoLiveOpen} 
-          onClose={() => { setIsGoLiveOpen(false); setPrivateInviteData(null); }} 
-          onStartStream={handleStartStream} 
-          onJoinStream={handleStartStream}
-          addToast={addToast} 
-          currentUser={currentUser} 
-          inviteData={privateInviteData}
+      {isGoLiveOpen && <GoLiveScreen
+        isOpen={isGoLiveOpen}
+        onClose={() => { setIsGoLiveOpen(false); setPrivateInviteData(null); }}
+        onStartStream={handleStartStream}
+        onJoinStream={handleStartStream}
+        addToast={addToast}
+        currentUser={currentUser}
+        inviteData={privateInviteData}
       />}
       <CameraPermissionModal isOpen={permissionStep !== 'idle'} permissionType={permissionStep} onAllowAlways={handlePermissionAllow} onAllowOnce={handlePermissionAllow} onDeny={handlePermissionDeny} onClose={() => setPermissionStep('idle')} />
       <LocationPermissionModal isOpen={isLocationPermissionModalOpen} onAllow={handleAllowLocation} onAllowOnce={handleAllowLocation} onDeny={handleDenyLocation} />
@@ -1369,17 +1389,17 @@ const handleWatchLiveNotification = async () => {
       {photoViewerData && <FullScreenPhotoViewer photos={photoViewerData.photos} initialIndex={photoViewerData.initialIndex} onClose={() => setPhotoViewerData(null)} onViewProfile={handleViewProfile} onPhotoLiked={() => setLastPhotoLikeUpdate(Date.now())} />}
       <LiveHistoryScreen isOpen={isLiveHistoryOpen} onClose={() => setIsLiveHistoryOpen(false)} history={streamHistory} />
       <AdminWalletScreen isOpen={isAdminWalletOpen} onClose={() => setIsAdminWalletOpen(false)} currentUser={currentUser} updateUser={updateUserEverywhere} addToast={addToast} />
-      <PrivateChatModal isOpen={isPrivateChatModalOpen} onClose={() => setIsPrivateChatModalOpen(false)} onStartChat={(user) => { setIsPrivateChatModalOpen(false); setChattingWith(user);}} conversations={conversations} />
+      <PrivateChatModal isOpen={isPrivateChatModalOpen} onClose={() => setIsPrivateChatModalOpen(false)} onStartChat={(user) => { setIsPrivateChatModalOpen(false); setChattingWith(user); }} conversations={conversations} />
       <PKBattleTimerSettingsScreen isOpen={isPKTimerSettingsOpen} onBack={() => setIsPKTimerSettingsOpen(false)} onSave={handleSavePKTimer} />
       {isVIPCenterOpen && currentUser && <VIPCenterScreen isOpen={isVIPCenterOpen} onClose={() => setIsVIPCenterOpen(false)} user={currentUser} onSubscribe={handleSubscribeVIP} />}
       {isPaymentSuccessOpen && paymentSuccessData && <PaymentSuccessScreen onClose={() => setIsPaymentSuccessOpen(false)} data={paymentSuccessData} addToast={(type, msg) => addToast(type === 'info' ? ToastType.Info : ToastType.Success, msg)} />}
-      
+
       {/* LiveNotificationModal rendered for standard notifications, but private invite uses GoLiveScreen directly */}
-      <LiveNotificationModal 
-        isOpen={!!liveNotification} 
-        onClose={() => setLiveNotification(null)} 
-        onWatch={handleWatchLiveNotification} 
-        data={liveNotification} 
+      <LiveNotificationModal
+        isOpen={!!liveNotification}
+        onClose={() => setLiveNotification(null)}
+        onWatch={handleWatchLiveNotification}
+        data={liveNotification}
       />
 
       <div className="absolute top-4 right-4 left-4 sm:left-auto space-y-2 z-[9999] pointer-events-none">
@@ -1394,11 +1414,11 @@ const handleWatchLiveNotification = async () => {
 };
 
 const App: React.FC = () => {
-    return (
-        <LanguageProvider>
-            <AppContent />
-        </LanguageProvider>
-    );
+  return (
+    <LanguageProvider>
+      <AppContent />
+    </LanguageProvider>
+  );
 };
 
 export default App;

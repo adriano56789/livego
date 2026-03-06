@@ -20,13 +20,13 @@ UserRoutes.get('/me', async (req, res) => {
         const jwt = require('jsonwebtoken');
         const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret_key_change_me_in_prod';
         const decoded = jwt.verify(token, JWT_SECRET);
-        
+
         // Find user by ID from token
         let user = await User.findOne({ id: decoded.id });
         if (!user) {
             return res.status(404).json({ error: 'User not found' });
         }
-        
+
         res.json(user);
     } catch (error) {
         console.error('Error in /api/users/me:', error);
@@ -44,7 +44,7 @@ UserRoutes.get('/:id/status', async (req, res) => {
     try {
         const userId = req.params.id;
         let user = await User.findOne({ id: userId });
-        
+
         // Se for o usuário de suporte e não existir, criar automaticamente
         if (!user && userId === 'support-livercore') {
             console.log('🔧 Criando usuário de suporte automaticamente');
@@ -61,11 +61,11 @@ UserRoutes.get('/:id/status', async (req, res) => {
                 lastSeen: new Date().toISOString()
             });
         }
-        
+
         if (!user) {
             return res.status(404).json({ error: 'User not found' });
         }
-        
+
         res.json({
             isOnline: user.isOnline || false,
             lastSeen: user.lastSeen || new Date().toISOString()
@@ -87,41 +87,41 @@ UserRoutes.post('/:id/toggle-follow', async (req, res) => {
     try {
         const followerId = '10755083'; // ID fixo para demonstração - pegar do token em produção
         const followingId = req.params.id;
-        
+
         if (followerId === followingId) {
             return res.status(400).json({ error: 'Cannot follow yourself' });
         }
-        
+
         // Verificar se já existe um follow
         const existingFollow = await Followers.findOne({
             followerId,
             followingId,
             isActive: true
         });
-        
+
         if (existingFollow) {
             // Dar unfollow
             await Followers.findOneAndUpdate(
                 { followerId, followingId, isActive: true },
-                { 
+                {
                     isActive: false,
                     unfollowedAt: new Date()
                 }
             );
-            
+
             // Atualizar contadores E listas
-            await User.findOneAndUpdate({ id: followerId }, { 
+            await User.findOneAndUpdate({ id: followerId }, {
                 $inc: { following: -1 },
                 $pull: { followingList: followingId }
             });
-            await User.findOneAndUpdate({ id: followingId }, { 
+            await User.findOneAndUpdate({ id: followingId }, {
                 $inc: { fans: -1 },
                 $pull: { followersList: followerId },
                 isFollowed: false
             });
-            
-            res.json({ 
-                success: true, 
+
+            res.json({
+                success: true,
                 isFollowing: false,
                 message: 'Unfollowed successfully'
             });
@@ -133,12 +133,12 @@ UserRoutes.post('/:id/toggle-follow', async (req, res) => {
                 followingId,
                 isActive: false
             });
-            
+
             if (inactiveFollow) {
                 // Reativar follow existente
                 await Followers.findOneAndUpdate(
                     { followerId, followingId, isActive: false },
-                    { 
+                    {
                         isActive: true,
                         followedAt: new Date(),
                         unfollowedAt: undefined
@@ -154,16 +154,16 @@ UserRoutes.post('/:id/toggle-follow', async (req, res) => {
                     isActive: true
                 });
             }
-            
+
             // Verificar se a pessoa já segue de volta (follow recíproco)
             const reciprocalFollow = await Followers.findOne({
                 followerId: followingId,
                 followingId: followerId,
                 isActive: true
             });
-            
+
             let isFriendship = false;
-            
+
             // Se houver follow recíproco, criar amizade
             if (reciprocalFollow) {
                 // Verificar se amizade já existe
@@ -174,7 +174,7 @@ UserRoutes.post('/:id/toggle-follow', async (req, res) => {
                     ],
                     isActive: true
                 });
-                
+
                 if (!existingFriendship) {
                     // Criar nova amizade
                     await Friendship.create({
@@ -185,32 +185,32 @@ UserRoutes.post('/:id/toggle-follow', async (req, res) => {
                         friendshipStartedAt: new Date(),
                         isActive: true
                     });
-                    
+
                     // Atualizar friendsList de ambos os usuários
-                    await User.findOneAndUpdate({ id: followerId }, { 
+                    await User.findOneAndUpdate({ id: followerId }, {
                         $push: { friendsList: followingId }
                     });
-                    await User.findOneAndUpdate({ id: followingId }, { 
+                    await User.findOneAndUpdate({ id: followingId }, {
                         $push: { friendsList: followerId }
                     });
-                    
+
                     isFriendship = true;
                 }
             }
-            
+
             // Atualizar contadores E listas
-            await User.findOneAndUpdate({ id: followerId }, { 
+            await User.findOneAndUpdate({ id: followerId }, {
                 $inc: { following: 1 },
                 $push: { followingList: followingId }
             });
-            await User.findOneAndUpdate({ id: followingId }, { 
+            await User.findOneAndUpdate({ id: followingId }, {
                 $inc: { fans: 1 },
                 $push: { followersList: followerId },
                 isFollowed: true
             });
-            
-            res.json({ 
-                success: true, 
+
+            res.json({
+                success: true,
                 isFollowing: true,
                 isFriendship,
                 message: isFriendship ? 'Followed and became friends!' : 'Followed successfully'
@@ -226,30 +226,30 @@ UserRoutes.post('/:id/block', async (req, res) => {
         const blockerId = '10755083'; // ID fixo para demonstração - pegar do token em produção
         const blockedId = req.params.id;
         const { reason } = req.body;
-        
+
         if (blockerId === blockedId) {
             return res.status(400).json({ error: 'Cannot block yourself' });
         }
-        
+
         // Verificar se já existe um bloqueio ativo
         const existingBlock = await Block.findOne({
             blockerId,
             blockedId,
             isActive: true
         });
-        
+
         if (existingBlock) {
             return res.status(400).json({ error: 'User already blocked' });
         }
-        
+
         // Verificar se usuários existem
         const blocker = await User.findOne({ id: blockerId });
         const blocked = await User.findOne({ id: blockedId });
-        
+
         if (!blocker || !blocked) {
             return res.status(404).json({ error: 'User not found' });
         }
-        
+
         // Criar bloqueio
         await Block.create({
             id: `block_${blockerId}_${blockedId}_${Date.now()}`,
@@ -259,35 +259,35 @@ UserRoutes.post('/:id/block', async (req, res) => {
             isActive: true,
             reason: reason || ''
         });
-        
+
         // Adicionar à lista de bloqueados do usuário
         await User.findOneAndUpdate(
             { id: blockerId },
             { $push: { blockedUsers: blockedId } }
         );
-        
+
         // Remover follow se existir
         await Followers.findOneAndUpdate(
             { followerId: blockedId, followingId: blockerId, isActive: true },
             { isActive: false, unfollowedAt: new Date() }
         );
-        
+
         await Followers.findOneAndUpdate(
             { followerId: blockerId, followingId: blockedId, isActive: true },
             { isActive: false, unfollowedAt: new Date() }
         );
-        
+
         // Atualizar contadores
         await User.findOneAndUpdate(
             { id: blockerId },
             { $inc: { following: -1 }, $pull: { followingList: blockedId } }
         );
-        
+
         await User.findOneAndUpdate(
             { id: blockedId },
             { $inc: { fans: -1 }, $pull: { followersList: blockerId } }
         );
-        
+
         res.json({ success: true, message: 'User blocked successfully' });
     } catch (error: any) {
         console.error('Error blocking user:', error);
@@ -299,33 +299,33 @@ UserRoutes.delete('/:id/unblock', async (req, res) => {
     try {
         const blockerId = '10755083'; // ID fixo para demonstração - pegar do token em produção
         const blockedId = req.params.id;
-        
+
         // Verificar se existe um bloqueio ativo
         const existingBlock = await Block.findOne({
             blockerId,
             blockedId,
             isActive: true
         });
-        
+
         if (!existingBlock) {
             return res.status(400).json({ error: 'User is not blocked' });
         }
-        
+
         // Desbloquear
         await Block.findOneAndUpdate(
             { blockerId, blockedId, isActive: true },
-            { 
+            {
                 isActive: false,
                 unblockedAt: new Date()
             }
         );
-        
+
         // Remover da lista de bloqueados
         await User.findOneAndUpdate(
             { id: blockerId },
             { $pull: { blockedUsers: blockedId } }
         );
-        
+
         res.json({ success: true, message: 'User unblocked successfully' });
     } catch (error: any) {
         console.error('Error unblocking user:', error);
@@ -336,21 +336,21 @@ UserRoutes.post('/:id/report', async (req, res) => res.json({ success: true }));
 UserRoutes.get('/:id/fans', async (req, res) => {
     try {
         const userId = req.params.id;
-        
+
         // Buscar follows ativos onde este usuário é seguido
         const follows = await Followers.find({
             followingId: userId,
             isActive: true
         });
-        
+
         // Extrair IDs dos seguidores
         const followerIds = follows.map((follow: any) => follow.followerId);
-        
+
         // Buscar dados completos dos seguidores
         const fans = await User.find({
             id: { $in: followerIds }
         }).select('id name avatarUrl level fans following isLive isOnline lastSeen');
-        
+
         res.json(fans);
     } catch (error: any) {
         console.error('Error getting fans:', error);
@@ -360,21 +360,21 @@ UserRoutes.get('/:id/fans', async (req, res) => {
 UserRoutes.get('/:id/following', async (req, res) => {
     try {
         const userId = req.params.id;
-        
+
         // Buscar follows ativos do usuário
         const follows = await Followers.find({
             followerId: userId,
             isActive: true
         });
-        
+
         // Extrair IDs dos usuários seguidos
         const followingIds = follows.map((follow: any) => follow.followingId);
-        
+
         // Buscar dados completos dos usuários seguidos
         const followingUsers = await User.find({
             id: { $in: followingIds }
         }).select('id name avatarUrl level fans following isLive isOnline lastSeen');
-        
+
         res.json(followingUsers);
     } catch (error: any) {
         console.error('Error getting following users:', error);
@@ -384,7 +384,7 @@ UserRoutes.get('/:id/following', async (req, res) => {
 UserRoutes.get('/:id/friends', async (req, res) => {
     try {
         const userId = req.params.id;
-        
+
         // Buscar amizades ativas do usuário
         const friendships = await Friendship.find({
             $or: [
@@ -392,17 +392,17 @@ UserRoutes.get('/:id/friends', async (req, res) => {
                 { userId2: userId, isActive: true }
             ]
         });
-        
+
         // Extrair IDs dos amigos
-        const friendIds = friendships.map((friendship: any) => 
+        const friendIds = friendships.map((friendship: any) =>
             friendship.userId1 === userId ? friendship.userId2 : friendship.userId1
         );
-        
+
         // Buscar dados completos dos amigos
         const friends = await User.find({
             id: { $in: friendIds }
         }).select('id name avatarUrl level fans following isLive isOnline lastSeen');
-        
+
         res.json(friends);
     } catch (error: any) {
         console.error('Error getting friends:', error);
@@ -416,21 +416,21 @@ UserRoutes.get('/:id/messages', async (req, res) => {
 UserRoutes.get('/me/blocklist', async (req, res) => {
     try {
         const blockerId = '10755083'; // ID fixo para demonstração - pegar do token em produção
-        
+
         // Buscar bloqueios ativos
         const blocks = await Block.find({
             blockerId,
             isActive: true
         });
-        
+
         // Extrair IDs dos usuários bloqueados
         const blockedIds = blocks.map((block: any) => block.blockedId);
-        
+
         // Buscar dados completos dos usuários bloqueados
         const blockedUsers = await User.find({
             id: { $in: blockedIds }
         }).select('id name avatarUrl level fans following isLive isOnline lastSeen');
-        
+
         res.json(blockedUsers);
     } catch (error: any) {
         console.error('Error getting blocklist:', error);
@@ -443,13 +443,54 @@ UserRoutes.get('/:id/status', async (req, res) => {
 });
 UserRoutes.get('/:id/photos', async (req, res) => {
     try {
-        const photos = await Photo.find({ userId: req.params.id }).sort({ createdAt: -1 });
-        res.json(photos);
+        const userId = req.params.id;
+        const photos = await Photo.find({ userId }).sort({ createdAt: -1 });
+
+        const user = await User.findOne({ id: userId });
+        const userObj = user || { id: userId, name: 'Unknown', avatarUrl: '' };
+
+        const formattedPhotos = photos.map(photo => {
+            const photoJson = photo.toJSON();
+            return {
+                ...photoJson,
+                photoUrl: photoJson.url,
+                user: userObj
+            };
+        });
+        res.json(formattedPhotos);
     } catch (error: any) {
         res.status(500).json({ error: error.message });
     }
 });
-UserRoutes.get('/:id/liked-photos', async (req, res) => res.json([]));
+UserRoutes.get('/:id/liked-photos', async (req, res) => {
+    try {
+        const userId = req.params.id;
+        // Basic implementation for demonstration, assuming photos liked by the user 
+        // In a real application, you'd query a Like collection that maps userIds to photoIds.
+        // For now, we'll just return a few recent photos and pretend they are liked.
+        const photos = await Photo.find().sort({ createdAt: -1 }).limit(10);
+
+        const userIds = [...new Set(photos.map(p => p.userId))];
+        const users = await User.find({ id: { $in: userIds } });
+        const userMap = users.reduce((acc, user) => {
+            acc[user.id] = user;
+            return acc;
+        }, {} as Record<string, any>);
+
+        const formattedPhotos = photos.map(photo => {
+            const photoJson = photo.toJSON();
+            return {
+                ...photoJson,
+                photoUrl: photoJson.url,
+                isLiked: true, // Force true for display
+                user: userMap[photoJson.userId] || { id: photoJson.userId, name: 'UnknownUser', avatarUrl: '' }
+            };
+        });
+        res.json(formattedPhotos);
+    } catch (error: any) {
+        res.status(500).json({ error: error.message });
+    }
+});
 UserRoutes.get('/:id/level-info', async (req, res) => {
     const user = await User.findOne({ id: req.params.id });
     if (!user) return res.status(404).json({ error: 'User not found' });

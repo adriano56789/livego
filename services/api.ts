@@ -43,13 +43,13 @@ const callApi = async <T>(method: string, path: string, body?: any): Promise<T> 
         return response.data as T;
     } catch (error: any) {
         console.error(`[API Fetch Failed] ${method} ${path}:`, error.response?.data || error.message);
-        
+
         // Tratar status 304 Not Modified mesmo no bloco catch
         if (error.response?.status === 304) {
             console.log(`[API] 304 Not Modified for ${path} - data not modified`);
             return error.response?.data as T;
         }
-        
+
         throw new Error(error.response?.data?.error || `HTTP Error ${error.response?.status || 'Unknown'}`);
     }
 };
@@ -82,6 +82,8 @@ export const api = {
     getUserStatus: (userId: string) => callApi<{ isOnline: boolean; lastSeen: string }>('GET', `/api/users/${userId}/status`),
     getUserPhotos: (userId: string) => callApi<FeedPhoto[]>('GET', `/api/users/${userId}/photos`),
     getLikedPhotos: (userId: string) => callApi<FeedPhoto[]>('GET', `/api/users/${userId}/liked-photos`),
+    getPhotoFeed: () => callApi<FeedPhoto[]>('GET', '/api/feed/photos'),
+    likePhoto: (photoId: string) => callApi<{ success: boolean; likes: number; isLiked: boolean }>('POST', `/api/photos/${photoId}/like`),
     getLevelInfo: (userId: string) => callApi<LevelInfo>('GET', `/api/users/${userId}/level-info`),
     recordVisit: (profileId: string, visitorId: string) => callApi<void>('POST', `/api/users/${profileId}/visit`, { userId: visitorId }),
 
@@ -141,36 +143,36 @@ export const api = {
     getRankingForPeriod: async (period: string): Promise<RankedUser[]> => {
         try {
             console.log('🏆 API: Buscando ranking para período:', period);
-            
+
             if (!period) {
                 console.warn('⚠️ API: período inválido');
                 return [];
             }
-            
+
             const response = await callApi<RankedUser[]>('GET', `/api/ranking/${period}`);
-            
+
             // Garantir que sempre retorne um array válido
             if (!response) {
                 console.warn('⚠️ API: Resposta null/undefined');
                 return [];
             }
-            
+
             if (!Array.isArray(response)) {
                 console.warn('⚠️ API: Resposta não é array', response);
                 return [];
             }
-            
+
             // Validar e filtrar usuários
-            const validUsers = response.filter(user => 
-                user && 
-                typeof user === 'object' && 
-                user.id && 
+            const validUsers = response.filter(user =>
+                user &&
+                typeof user === 'object' &&
+                user.id &&
                 user.name
             );
-            
+
             console.log(`✅ API: ${validUsers.length} usuários válidos retornados`);
             return validUsers;
-            
+
         } catch (error) {
             console.error('❌ API: Erro em getRankingForPeriod:', error);
             return []; // Sempre retornar array vazio em caso de erro
@@ -218,7 +220,7 @@ export const api = {
             return false;
         }
     },
-    
+
     leaveStream: async (streamId: string, userId: string) => {
         try {
             console.log(`👤 API: Usuário ${userId} saindo da stream ${streamId}`);
@@ -287,13 +289,12 @@ export const api = {
     // --- Search ---
     searchUsers: (query: string, limit?: number) => callApi<{ success: boolean; users: User[]; count: number }>('GET', `/api/search/users?q=${encodeURIComponent(query)}${limit ? `&limit=${limit}` : ''}`),
 
-    // --- Miscellaneous ---
+    // --- Chat & Messages ---
+    getChatMessages: (userId: string) => callApi<{ success: boolean, messages: Message[], total: number }>('GET', `/api/messages/chats/${userId}/messages?currentUserId=${CURRENT_USER_ID}`).then(res => res ? res.messages : []),
+    sendChatMessage: (from: string, to: string, text?: string, imageUrl?: string, tempId?: string): Promise<{ success: boolean; message: Message }> => callApi<{ success: boolean; message: Message }>('POST', '/api/chats/send', { from, to, text, imageUrl, tempId }) as Promise<{ success: boolean; message: Message }>,
+    markMessagesAsRead: (messageIds: string[], userId: string) => callApi<{ success: boolean }>('PUT', `/api/messages/messages/${messageIds[0]}/read`, { userId }),
     getVisitors: (userId: string) => callApi<Visitor[]>('GET', `/api/visitors/list/${userId}`),
     clearVisitors: (userId: string) => callApi<{ success: boolean }>('DELETE', `/api/visitors/clear/${userId}`),
-    getChatMessages: async (otherUserId: string) => {
-        const response = await callApi<{ success: boolean; messages: Message[]; total: number }>('GET', `/api/messages?userId=${CURRENT_USER_ID}`);
-        return response.messages || [];
-    },
     updateVideoQuality: (streamId: string, quality: string) => callApi<{ success: boolean, stream: Streamer }>('PUT', `/api/streams/${streamId}/quality`, { quality }),
     toggleMicrophone: (streamId: string) => callApi<void>('POST', `/api/streams/${streamId}/toggle-mic`),
     toggleStreamSound: (streamId: string) => callApi<void>('POST', `/api/streams/${streamId}/toggle-sound`),
@@ -306,8 +307,6 @@ export const api = {
     purchaseEffect: (userId: string, gift: Gift) => callApi<{ success: boolean, user: User }>('POST', `/api/effects/purchase/${userId}`, { giftId: gift.name }),
     getAvatarProtectionStatus: (userId: string) => callApi<{ isEnabled: boolean }>('GET', `/api/users/${userId}/avatar-protection`),
     toggleAvatarProtection: (userId: string, isEnabled: boolean) => callApi<{ success: boolean, user: User }>('POST', `/api/users/${userId}/avatar-protection`, { isEnabled }),
-    markMessagesAsRead: (messageIds: string[], readerId: string) => callApi<void>('POST', '/api/chats/mark-read', { messageIds, readerId }),
-    sendChatMessage: (from: string, to: string, text: string, imageUrl?: string, tempId?: string) => callApi<void>('POST', '/api/chats/send', { from, to, text, imageUrl, tempId }),
     kickUser: (streamId: string, userId: string, kickerId: string) => callApi<void>('POST', `/api/streams/${streamId}/kick`, { userId, kickerId }),
     makeModerator: (streamId: string, userId: string, hostId: string) => callApi<void>('POST', `/api/streams/${streamId}/moderator`, { userId, hostId }),
     endLiveStream: (streamId: string) => callApi<{ success: boolean }>('POST', `/api/lives/${streamId}/end`),

@@ -31,15 +31,87 @@ router.get('/streams/:id/messages', async (req, res) => {
 
 router.get('/feed/photos', async (req, res) => {
     try {
-        // Buscar todas as fotos ordenadas por data
+        // Fetch photos and populate user details manually based on userId
         const photos = await Photo.find().sort({ createdAt: -1 }).limit(50);
-        res.json(photos);
+
+        const userIds = [...new Set(photos.map(p => p.userId))];
+        const users = await User.find({ id: { $in: userIds } });
+        const userMap = users.reduce((acc, user) => {
+            acc[user.id] = user;
+            return acc;
+        }, {} as Record<string, any>);
+
+        const photosWithUsers = photos.map(photo => {
+            const photoJson = photo.toJSON();
+            return {
+                ...photoJson,
+                photoUrl: photoJson.url, // Map url to photoUrl as expected by frontend
+                user: userMap[photoJson.userId] || { id: photoJson.userId, name: 'UnknownUser', avatarUrl: '' }
+            };
+        });
+
+        res.json(photosWithUsers);
     } catch (error: any) {
         res.status(500).json({ error: error.message });
     }
 });
-router.post('/photos/:id/like', async (req, res) => res.json({ success: true, likes: 1, isLiked: true }));
-router.post('/photos/upload/:id', async (req, res) => res.json({ url: '' }));
+router.post('/photos/:id/like', async (req, res) => {
+    try {
+        const userId = req.body.userId || '10755083'; // TODO dynamically get userId
+        const photoId = req.params.id;
+
+        const photo = await Photo.findOne({ id: photoId });
+        if (!photo) {
+            return res.status(404).json({ error: 'Photo not found' });
+        }
+
+        let newLikes = photo.likes || 0;
+        let isLiked = false;
+
+        // Simple toggle logic since we don't have a likes table yet
+        // In a real scenario we would check `Like` collection mapping userId to photoId
+        // We'll invert the provided value or assume a +1 action.
+        if (req.body.action === 'unlike') {
+            newLikes = Math.max(0, newLikes - 1);
+            isLiked = false;
+        } else {
+            newLikes += 1;
+            isLiked = true;
+        }
+
+        photo.likes = newLikes;
+        await photo.save();
+
+        res.json({ success: true, likes: newLikes, isLiked });
+    } catch (error: any) {
+        res.status(500).json({ error: error.message });
+    }
+});
+router.post('/photos/upload', async (req, res) => {
+    try {
+        const { userId, photoUrl, description } = req.body;
+
+        if (!userId || !photoUrl) {
+            return res.status(400).json({ error: 'Missing userId or photoUrl' });
+        }
+
+        const newPhoto = await Photo.create({
+            id: `photo_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
+            userId,
+            url: photoUrl,
+            caption: description || '',
+            likes: 0,
+            isLiked: false,
+            createdAt: new Date(),
+            updatedAt: new Date()
+        });
+
+        res.json({ success: true, photo: newPhoto });
+    } catch (error: any) {
+        console.error('Error uploading photo:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
 
 router.get('/visitors/list/:id', async (req, res) => {
     // Mock visitors from User DB
@@ -51,10 +123,10 @@ router.get('/chats/:id/messages', async (req, res) => {
     try {
         const otherUserId = req.params.id;
         const currentUser = { id: '10755083' }; // Usuário fixo para demonstração
-        
+
         // Garantir que ambos os usuários existam
         const models = await import('../models');
-        
+
         // Criar usuário de suporte se não existir
         if (otherUserId === 'support-livercore') {
             let supportUser = await models.User.findOne({ id: 'support-livercore' });
@@ -74,19 +146,19 @@ router.get('/chats/:id/messages', async (req, res) => {
                 });
             }
         }
-        
+
         // Criar chatKey consistente (ordem alfabética para garantir o mesmo chatId)
         const userIds = [currentUser.id, otherUserId].sort();
         const chatKey = `chat_${userIds[0]}_${userIds[1]}`;
-        
+
         console.log(`🔍 Buscando mensagens para chatKey: ${chatKey}`);
-        
+
         let messages = await Message.find({ chatId: chatKey }).sort({ createdAt: 1 });
-        
+
         // Se não houver mensagens, criar mensagens de boas-vindas
         if (messages.length === 0) {
             console.log(`📝 Criando mensagens iniciais para chatKey: ${chatKey}`);
-            
+
             const welcomeMessages = [
                 {
                     id: Date.now().toString(),
@@ -116,13 +188,13 @@ router.get('/chats/:id/messages', async (req, res) => {
                     status: 'read'
                 }
             ];
-            
+
             await Message.insertMany(welcomeMessages);
             messages = await Message.find({ chatId: chatKey }).sort({ createdAt: 1 });
         }
-        
+
         console.log(`📝 Encontradas ${messages.length} mensagens`);
-        
+
         res.json(messages);
     } catch (error) {
         console.error('Erro ao buscar mensagens:', error);

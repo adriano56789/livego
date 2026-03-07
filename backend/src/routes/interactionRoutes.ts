@@ -459,18 +459,47 @@ router.post('/photos/upload/:id', async (req, res) => {
 router.get('/visitors/list/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        // Buscar visitantes do banco de dados
-        const visitors = await Visitor.find({ visitedId: id }).sort({ visitedAt: -1 }).limit(20);
+        
+        console.log(`🔍 Buscando visitantes do perfil: ${id}`);
+        
+        // Buscar visitantes do banco de dados com dados completos
+        const visitors = await Visitor.find({ visitedId: id })
+            .sort({ visitedAt: -1 })
+            .limit(20);
         
         if (visitors.length === 0) {
+            console.log(`📭 Nenhum visitante encontrado para ${id}`);
             return res.json([]);
         }
 
+        // Buscar dados completos dos visitantes
         const visitorIds = [...new Set(visitors.map(v => v.visitorId))];
         const users = await User.find({ id: { $in: visitorIds } });
         
-        res.json(users);
+        // Combinar dados de visitantes com informações dos usuários
+        const visitorsWithDetails = visitors.map(visitor => {
+            const visitorUser = users.find(u => u.id === visitor.visitorId);
+            return {
+                id: visitor.id,
+                visitorId: visitor.visitorId,
+                visitorName: visitorUser?.name || 'Unknown',
+                visitorAvatar: visitorUser?.avatarUrl || '',
+                visitedAt: visitor.visitedAt,
+                visitor: visitorUser ? {
+                    id: visitorUser.id,
+                    name: visitorUser.name,
+                    avatarUrl: visitorUser.avatarUrl,
+                    level: visitorUser.level,
+                    isOnline: visitorUser.isOnline
+                } : null
+            };
+        });
+        
+        console.log(`📊 Encontrados ${visitorsWithDetails.length} visitantes para ${id}`);
+        
+        res.json(visitorsWithDetails);
     } catch (error) {
+        console.error('❌ Erro ao buscar visitantes:', error);
         res.status(500).json({ error: 'Erro ao buscar visitantes' });
     }
 });

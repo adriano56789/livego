@@ -518,7 +518,55 @@ UserRoutes.get('/:id/level-info', async (req, res) => {
         nextRewards: ['Moldura Especial']
     });
 });
-UserRoutes.post('/:id/visit', async (req, res) => res.json({ success: true }));
+UserRoutes.post('/:id/visit', async (req, res) => {
+    try {
+        const { userId } = req.body;
+        const profileId = req.params.id;
+        
+        if (!userId || !profileId) {
+            return res.status(400).json({ error: 'userId e profileId são obrigatórios' });
+        }
+        
+        if (userId === profileId) {
+            return res.status(400).json({ error: 'Usuário não pode visitar o próprio perfil' });
+        }
+        
+        console.log(`👁️ Usuário ${userId} visitou o perfil de ${profileId}`);
+        
+        // Verificar se ambos os usuários existem
+        const [visitor, profile] = await Promise.all([
+            User.findOne({ id: userId }),
+            User.findOne({ id: profileId })
+        ]);
+        
+        if (!visitor || !profile) {
+            return res.status(404).json({ error: 'Usuário não encontrado' });
+        }
+        
+        // Importar Visitor dinamicamente para evitar dependência circular
+        const { Visitor } = await import('../models');
+        
+        // Salvar visita no banco
+        await Visitor.findOneAndUpdate(
+            { visitorId: userId, visitedId: profileId },
+            { 
+                visitedAt: new Date()
+            },
+            { upsert: true, new: true }
+        );
+        
+        console.log(`✅ Visita registrada: ${userId} → ${profileId}`);
+        
+        res.json({ 
+            success: true,
+            message: 'Visita registrada com sucesso'
+        });
+        
+    } catch (error: any) {
+        console.error('❌ Erro ao registrar visita:', error);
+        res.status(500).json({ error: 'Erro ao registrar visita' });
+    }
+});
 UserRoutes.post('/:id/buy-diamonds', async (req, res) => {
     try {
         const { amount } = req.body;

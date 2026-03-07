@@ -5,13 +5,17 @@ export interface IVisitor extends Document {
     visitorId: string;
     visitedId: string;
     visitedAt: Date;
+    visitorName?: string;
+    visitorAvatar?: string;
 }
 
 const VisitorSchema: Schema = new Schema({
     id: { type: String, required: true, unique: true },
     visitorId: { type: String, required: true, index: true },
     visitedId: { type: String, required: true, index: true },
-    visitedAt: { type: Date, default: Date.now }
+    visitedAt: { type: Date, default: Date.now },
+    visitorName: { type: String, default: null },
+    visitorAvatar: { type: String, default: null }
 });
 
 // Create a compound index to quickly find visitors for a user

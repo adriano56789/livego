@@ -6,14 +6,19 @@ const router = express.Router();
 // Middleware para extrair usuário do token JWT
 const getCurrentUserId = (req: any) => {
     const token = req.headers.authorization?.replace('Bearer ', '');
-    if (!token) return null;
+    if (!token) {
+        console.log('❌ Nenhum token fornecido');
+        return null;
+    }
     
     try {
         const jwt = require('jsonwebtoken');
         const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret_key_change_me_in_prod';
         const decoded = jwt.verify(token, JWT_SECRET);
+        console.log('✅ Token decodificado - userId:', decoded.id);
         return decoded.id;
-    } catch {
+    } catch (error) {
+        console.log('❌ Erro ao decodificar token:', error);
         return null;
     }
 };

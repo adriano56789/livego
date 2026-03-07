@@ -196,9 +196,14 @@ const EditProfileScreen: React.FC<EditProfileScreenProps> = ({ user, onBack, onS
           const dataUrl = event.target?.result as string;
           if (dataUrl) {
               try {
-                  // Upload logic simulation
-                  const uploadResp = await api.uploadChatPhoto(user.id, dataUrl); // Reusing this for simplicity
-                  const newObra: Obra = { id: `obra-${Date.now()}`, url: uploadResp.url };
+                  // Upload para API real
+                  const uploadResp = await api.uploadChatPhoto(user.id, dataUrl);
+                  
+                  // Usar o ID retornado pelo backend
+                  const newObra: Obra = { 
+                      id: uploadResp.photo?.id || uploadResp.url, 
+                      url: uploadResp.url 
+                  };
                   
                   // We need to 'save' this new image list.
                   const newObras = [newObra, ...currentObras];

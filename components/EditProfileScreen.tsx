@@ -339,10 +339,10 @@ const EditProfileScreen: React.FC<EditProfileScreenProps> = ({ user, onBack, onS
                   )}
                   <button
                     onClick={() => handleDeletePhoto(index)}
-                    className="absolute -top-1.5 -right-1.5 bg-gray-200 text-black rounded-full p-0.5 opacity-100 z-10"
+                    className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-opacity z-10 shadow-lg"
                     aria-label={`Delete photo ${index + 1}`}
                   >
-                    <TrashIcon className="w-4 h-4" />
+                    <TrashIcon className="w-3.5 h-3.5" />
                   </button>
                 </div>
               );

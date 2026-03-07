@@ -421,18 +421,22 @@ router.post('/photos/:id/like', async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 });
-router.post('/photos/upload', async (req, res) => {
+router.post('/photos/upload/:id', async (req, res) => {
     try {
-        const { userId, photoUrl, description } = req.body;
+        const userId = req.params.id;
+        const { photoUrl, description, image } = req.body;
 
-        if (!userId || !photoUrl) {
-            return res.status(400).json({ error: 'Missing userId or photoUrl' });
+        // Aceita tanto 'photoUrl' quanto 'image' para compatibilidade
+        const finalPhotoUrl = photoUrl || image;
+
+        if (!userId || !finalPhotoUrl) {
+            return res.status(400).json({ error: 'Missing userId or photoUrl/image' });
         }
 
         const newPhoto = await Photo.create({
             id: `photo_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
             userId,
-            url: photoUrl,
+            url: finalPhotoUrl,
             caption: description || '',
             likes: 0,
             isLiked: false,

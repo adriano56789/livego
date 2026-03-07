@@ -46,13 +46,19 @@ router.delete('/imagens/:id', async (req, res) => {
             return res.status(401).json({ error: 'Unauthorized' });
         }
         
-        const photo = await Photo.findOneAndDelete({ _id: req.params.id, userId });
+        console.log(`🗑️ Tentando deletar foto ${req.params.id} do usuário ${userId}`);
+        
+        // Usar 'id' em vez de '_id' para compatibilidade com frontend
+        const photo = await Photo.findOneAndDelete({ id: req.params.id, userId });
         if (!photo) {
+            console.log(`❌ Foto não encontrada: ${req.params.id}`);
             return res.status(404).json({ error: 'Photo not found' });
         }
         
+        console.log(`✅ Foto deletada: ${photo.id}`);
         res.json({ success: true });
     } catch (error: any) {
+        console.error('❌ Erro ao deletar foto:', error);
         res.status(500).json({ error: error.message });
     }
 });
@@ -66,18 +72,22 @@ router.put('/imagens/ordenar', async (req, res) => {
         
         const { orderedIds } = req.body;
         
-        // Update order of photos
+        console.log(`🔄 Ordenando fotos: ${orderedIds.join(', ')}`);
+        
+        // Update order of photos - usar 'id' em vez de '_id'
         const updatePromises = orderedIds.map((photoId: string, index: number) => 
             Photo.findOneAndUpdate(
-                { _id: photoId, userId },
+                { id: photoId, userId },
                 { order: index },
                 { new: true }
             )
         );
         
         const updatedPhotos = await Promise.all(updatePromises);
+        console.log(`✅ ${updatedPhotos.length} fotos ordenadas`);
         res.json({ success: true, images: updatedPhotos });
     } catch (error: any) {
+        console.error('❌ Erro ao ordenar fotos:', error);
         res.status(500).json({ error: error.message });
     }
 });

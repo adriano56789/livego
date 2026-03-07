@@ -25,3 +25,14 @@ export const protect = async (req: AuthRequest, res: Response, next: NextFunctio
         return res.status(401).json({ error: 'Not authorized, no token' });
     }
 };
+
+export const getUserIdFromToken = (req: any) => {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    if (!token) return null;
+    try {
+        const decoded: any = jwt.verify(token, JWT_SECRET);
+        return decoded.id;
+    } catch {
+        return null;
+    }
+};

@@ -54,8 +54,8 @@ const user = await User.create({
             email,
             password: hashedPassword,
             identification: userId,
-            avatarUrl: `https://picsum.photos/seed/user${userId}/200/200.jpg`,
-            coverUrl: `https://picsum.photos/seed/cover${userId}/800/400.jpg`,
+            avatarUrl: "", // Frontend should handle default avatar
+            coverUrl: "", // Frontend should handle default cover
             photos: [],
             country,
             age,

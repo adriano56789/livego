@@ -20,7 +20,7 @@ interface MainScreenProps {
 
 const StreamerCard: React.FC<{streamer: Streamer; onSelect: (streamer: Streamer) => void}> = ({ streamer, onSelect }) => (
     <div className="relative aspect-[3/4] rounded-lg overflow-hidden cursor-pointer group" onClick={() => onSelect(streamer)}>
-        <img src={streamer.avatar} alt={streamer.name} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110" />
+        <img src={streamer.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(streamer.name || "Streamer")}&background=random`} alt={streamer.name} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
         <div className="absolute top-2 left-2 flex items-center space-x-1.5">
             <div className="bg-black/50 p-1 rounded-full backdrop-blur-sm">

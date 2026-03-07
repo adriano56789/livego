@@ -102,14 +102,17 @@ const MediaItem: React.FC<{
 };
 
 const FullScreenPhotoViewer: React.FC<FullScreenPhotoViewerProps> = ({ photos, initialIndex, onClose, onViewProfile, onPhotoLiked }) => {
+  if (!photos || photos.length === 0) return null;
+  const validIndex = Math.max(0, Math.min(initialIndex, photos.length - 1));
+
   const [photoStates, setPhotoStates] = useState(new Map(photos.map(p => [p.id, { likes: p.likes, isLiked: p.isLiked }])));
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Use layout effect to ensure scrolling happens before paint if possible to avoid flicker
   useEffect(() => {
-    if (containerRef.current && photos[initialIndex]) {
+    if (containerRef.current && photos[validIndex]) {
         // Find the specific element by ID (safer than index if array mutates, though index is used here for simplicity)
-        const element = containerRef.current.children[initialIndex] as HTMLElement;
+        const element = containerRef.current.children[validIndex] as HTMLElement;
         if (element) {
             element.scrollIntoView({ behavior: 'auto', block: 'center' }); 
         }

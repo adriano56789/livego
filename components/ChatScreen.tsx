@@ -56,7 +56,7 @@ const ChatMessageBubble: React.FC<{ message: Message; isMe: boolean; user: User;
             data-message-id={message.id}
         >
             <div className="relative w-10 h-10 flex-shrink-0">
-                <img src={user.avatarUrl} alt="avatar" className="w-10 h-10 rounded-full object-cover" />
+                <img src={user.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || "User")}&background=random`} alt="avatar" className="w-10 h-10 rounded-full object-cover" />
             </div>
             <div className={`max-w-xs md:max-w-md rounded-2xl ${isMe ? 'bg-purple-600 rounded-br-none' : 'bg-gray-700 rounded-bl-none'} ${message.imageUrl && !message.text ? 'p-1' : 'px-3 py-2'}`}>
                 {message.imageUrl && (

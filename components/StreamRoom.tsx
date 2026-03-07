@@ -123,37 +123,28 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
 
     const isFollowed = useMemo(() => followingUsers.some(u => u.id === streamer.hostId), [followingUsers, streamer.hostId]);
 
-    const streamerUser: User = useMemo(() => ({
+    const [streamerUser, setStreamerUser] = useState<User | null>(null);
+
+    useEffect(() => {
+        const fetchStreamerData = async () => {
+            try {
+                const user = await api.getUser(streamer.hostId);
+                setStreamerUser(user);
+            } catch (error) {
+                console.error("Failed to fetch streamer data:", error);
+            }
+        };
+        fetchStreamerData();
+    }, [streamer.hostId]);
+
+    const streamerDisplayUser = isBroadcaster ? currentUser : (streamerUser || {
         id: streamer.hostId,
-        identification: streamer.hostId,
         name: streamer.name,
         avatarUrl: streamer.avatar,
-        coverUrl: `https://picsum.photos/seed/${streamer.id}/400/800`,
-        country: 'br',
-        age: 23,
-        gender: 'female',
+        identification: streamer.hostId,
         level: 1,
-        xp: 0,
-        location: streamer.location,
-        distance: 'desconhecida',
-        fans: 3,
-        following: 0,
-        receptores: 0,
-        enviados: 0,
-        topFansAvatars: [],
-        isLive: true,
-        diamonds: 50000,
-        earnings: 125000,
-        earnings_withdrawn: 0,
-        bio: 'Amante de streams!',
-        obras: [],
-        curtidas: [],
-        ownedFrames: [],
-        activeFrameId: null,
-        frameExpiration: null,
-    }), [streamer]);
-
-    const streamerDisplayUser = isBroadcaster ? currentUser : streamerUser;
+        // Fallback minimal user
+    } as User);
 
     // Simplificado - sem frames para navegação isolada
     const frameGlowClass = '';

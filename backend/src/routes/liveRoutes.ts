@@ -1,5 +1,6 @@
 import express from 'express';
 import { Streamer, User, Gift, GiftTransaction } from '../models';
+import { getUserIdFromToken } from '../middleware/auth';
 
 const router = express.Router();
 
@@ -102,9 +103,12 @@ router.get('/streams', async (req, res) => {
     }
 });
 
+
+
 router.post('/streams', async (req, res) => {
     try {
-        const { name, hostId, country, location, ...otherData } = req.body;
+        const { name, country, location, ...otherData } = req.body;
+        const hostId = getUserIdFromToken(req) || req.body.hostId;
         
         console.log(`🔍 [DEBUG] Creating stream - Country received: ${country || 'none'}`);
         
@@ -112,17 +116,25 @@ router.post('/streams', async (req, res) => {
             return res.status(400).json({ error: 'Stream name is required' });
         }
         
+        if (!hostId) {
+            return res.status(400).json({ error: 'Host ID is required (token or body)' });
+        }
+
         const streamId = `stream_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
-        const finalHostId = hostId || '10755083';
         
         // Buscar usuário para obter avatarUrl e país
-        const user = await User.findOne({ id: finalHostId });
-        const userAvatar = user?.avatarUrl || '';
-        const userCountry = user?.country || 'br'; // Get country from user if available
+        const user = await User.findOne({ id: hostId });
+        if (!user) {
+            return res.status(404).json({ error: 'Host user not found' });
+        }
+
+        const userAvatar = user.avatarUrl || '';
+        const userCountry = user.country || 'br'; 
         
-        // Criar URLs de avatar realistas usando picsum
-        const avatarUrl = userAvatar || `https://picsum.photos/200/200?random=${streamId}`;
-        const coverUrl = `https://picsum.photos/800/400?random=${streamId}_cover`;
+        // Use user avatar or empty string (frontend handles default)
+        const avatarUrl = userAvatar;
+        // No random cover
+        const coverUrl = '';
         
         // Prioridade: país enviado > país do usuário > Brasil como fallback
         const finalCountry = country || userCountry || 'br';
@@ -132,7 +144,7 @@ router.post('/streams', async (req, res) => {
         
         const stream = await Streamer.create({
             id: streamId,
-            hostId: finalHostId,
+            hostId: hostId,
             name: name.trim(),
             avatar: avatarUrl,
             location: finalLocation,

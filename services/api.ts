@@ -4,9 +4,28 @@
 import { User, Gift, Streamer, Message, RankedUser, Country, Conversation, NotificationSettings, BeautySettings, PurchaseRecord, EligibleUser, FeedPhoto, Obra, GoogleAccount, LiveSessionState, StreamHistoryEntry, Visitor, LevelInfo, Order, DiamondPackage, LiveNotification, Invitation, PixPaymentResponse, CreditCardPaymentRequest, SRSResponse, SRSPlayResponse, SRSStreamInfo } from '../types';
 import axios, { Method } from 'axios';
 
-const CURRENT_USER_ID = '10755083';
-
 const API_BASE_URL = import.meta.env?.VITE_API_BASE_URL || 'http://localhost:3000';
+
+const getCurrentUserId = () => {
+    try {
+        // Tentar obter do localStorage 'user' (LoginScreen)
+        const userStr = localStorage.getItem('user');
+        if (userStr) {
+            const user = JSON.parse(userStr);
+            return user?.id;
+        }
+
+        // Fallback para 'user_storage' (Zustand/Persist se houver)
+        const userStorageStr = localStorage.getItem('user_storage');
+        if (userStorageStr) {
+            const userStorage = JSON.parse(userStorageStr);
+            return userStorage?.state?.user?.id || userStorage?.id;
+        }
+    } catch (e) {
+        console.warn('Error reading user from storage', e);
+    }
+    return null;
+};
 
 /**
  * Core API Caller
@@ -82,8 +101,6 @@ export const api = {
     getUserStatus: (userId: string) => callApi<{ isOnline: boolean; lastSeen: string }>('GET', `/api/users/${userId}/status`),
     getUserPhotos: (userId: string) => callApi<FeedPhoto[]>('GET', `/api/users/${userId}/photos`),
     getLikedPhotos: (userId: string) => callApi<FeedPhoto[]>('GET', `/api/users/${userId}/liked-photos`),
-    getPhotoFeed: () => callApi<FeedPhoto[]>('GET', '/api/feed/photos'),
-    likePhoto: (photoId: string) => callApi<{ success: boolean; likes: number; isLiked: boolean }>('POST', `/api/photos/${photoId}/like`),
     getLevelInfo: (userId: string) => callApi<LevelInfo>('GET', `/api/users/${userId}/level-info`),
     recordVisit: (profileId: string, visitorId: string) => callApi<void>('POST', `/api/users/${profileId}/visit`, { userId: visitorId }),
 
@@ -125,7 +142,7 @@ export const api = {
     getEarningsInfo: (userId: string) => callApi<{ available_diamonds: number; gross_brl: number; platform_fee_brl: number; net_brl: number; }>('GET', `/api/earnings/get/${userId}`),
     calculateWithdrawal: (amount: number) => callApi<{ gross_value: number; platform_fee: number; net_value: number }>('POST', '/api/earnings/calculate', { amount }),
     confirmWithdrawal: (userId: string, amount: number) => callApi<{ success: boolean, user: User }>('POST', `/api/earnings/withdraw/${userId}`, { amount }),
-    setWithdrawalMethod: (method: string, details: any) => callApi<{ success: boolean, user: User }>('POST', `/api/earnings/method/set/${CURRENT_USER_ID}`, { method, details }),
+    setWithdrawalMethod: (method: string, details: any, userId?: string) => callApi<{ success: boolean, user: User }>('POST', `/api/earnings/method/set/${userId || getCurrentUserId()}`, { method, details }),
 
     // --- Checkout & Payments (New) ---
     getDiamondPackages: () => callApi<DiamondPackage[]>('GET', '/api/checkout/pack'),
@@ -278,19 +295,19 @@ export const api = {
     getReceivedInvitations: () => callApi<Invitation[]>('GET', '/api/invitations/received'),
     getRoomDetails: (roomId: string) => callApi<Streamer>('GET', `/api/rooms/${roomId}`),
     joinRoom: (roomId: string, userId: string) => callApi<{ success: boolean, canJoin: boolean }>('POST', `/api/rooms/${roomId}/join`, { userId }),
-    getPrivateRooms: () => callApi<Streamer[]>('GET', `/api/rooms?category=private&userId=${CURRENT_USER_ID}`),
+    getPrivateRooms: (userId?: string) => callApi<Streamer[]>('GET', `/api/rooms?category=private&userId=${userId || getCurrentUserId()}`),
     getStreamMessages: (streamId: string) => callApi<Message[]>('GET', `/api/streams/${streamId}/messages`),
 
     // --- Feed & Photos ---
     getPhotoFeed: () => callApi<FeedPhoto[]>('GET', '/api/feed/photos'),
-    likePhoto: (photoId: string) => callApi<{ success: boolean; likes: number; isLiked: boolean; }>('POST', `/api/photos/${photoId}/like`, { userId: CURRENT_USER_ID }),
+    likePhoto: (photoId: string, userId?: string) => callApi<{ success: boolean; likes: number; isLiked: boolean; }>('POST', `/api/photos/${photoId}/like`, { userId: userId || getCurrentUserId() }),
     uploadChatPhoto: (userId: string, base64Image: string) => callApi<{ url: string }>('POST', `/api/photos/upload/${userId}`, { image: base64Image }),
 
     // --- Search ---
     searchUsers: (query: string, limit?: number) => callApi<{ success: boolean; users: User[]; count: number }>('GET', `/api/search/users?q=${encodeURIComponent(query)}${limit ? `&limit=${limit}` : ''}`),
 
     // --- Chat & Messages ---
-    getChatMessages: (userId: string) => callApi<{ success: boolean, messages: Message[], total: number }>('GET', `/api/messages/chats/${userId}/messages?currentUserId=${CURRENT_USER_ID}`).then(res => res ? res.messages : []),
+    getChatMessages: (userId: string, currentUserId?: string) => callApi<{ success: boolean, messages: Message[], total: number }>('GET', `/api/messages/chats/${userId}/messages?currentUserId=${currentUserId || getCurrentUserId()}`).then(res => res ? res.messages : []),
     sendChatMessage: (from: string, to: string, text?: string, imageUrl?: string, tempId?: string): Promise<{ success: boolean; message: Message }> => callApi<{ success: boolean; message: Message }>('POST', '/api/chats/send', { from, to, text, imageUrl, tempId }) as Promise<{ success: boolean; message: Message }>,
     markMessagesAsRead: (messageIds: string[], userId: string) => callApi<{ success: boolean }>('PUT', `/api/messages/messages/${messageIds[0]}/read`, { userId }),
     getVisitors: (userId: string) => callApi<Visitor[]>('GET', `/api/visitors/list/${userId}`),

@@ -1,5 +1,6 @@
 import express from 'express';
 import { User, Streamer, Gift, Message, PurchaseRecord, Order, Photo, Follow, Friendship, Followers, Block } from '../models';
+import { getUserIdFromToken } from '../middleware/auth';
 
 export const UserRoutes = express.Router();
 
@@ -51,7 +52,7 @@ UserRoutes.get('/:id/status', async (req, res) => {
             user = await User.create({
                 id: 'support-livercore',
                 name: 'Support',
-                avatarUrl: 'https://picsum.photos/seed/support/200/200.jpg',
+                avatarUrl: '', // Generic avatar
                 diamonds: 0,
                 level: 1,
                 xp: 0,
@@ -83,9 +84,14 @@ UserRoutes.patch('/:id', async (req, res) => {
     const user = await User.findOneAndUpdate({ id: req.params.id }, req.body, { new: true });
     res.json({ success: !!user, user });
 });
+
+
 UserRoutes.post('/:id/toggle-follow', async (req, res) => {
     try {
-        const followerId = '10755083'; // ID fixo para demonstração - pegar do token em produção
+        const followerId = getUserIdFromToken(req);
+        if (!followerId) {
+            return res.status(401).json({ error: 'Unauthorized' });
+        }
         const followingId = req.params.id;
 
         if (followerId === followingId) {
@@ -415,7 +421,10 @@ UserRoutes.get('/:id/messages', async (req, res) => {
 });
 UserRoutes.get('/me/blocklist', async (req, res) => {
     try {
-        const blockerId = '10755083'; // ID fixo para demonstração - pegar do token em produção
+        const blockerId = getUserIdFromToken(req);
+        if (!blockerId) {
+            return res.status(401).json({ error: 'Unauthorized' });
+        }
 
         // Buscar bloqueios ativos
         const blocks = await Block.find({

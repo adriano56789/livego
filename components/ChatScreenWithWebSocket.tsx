@@ -46,7 +46,11 @@ const ChatScreenWithWebSocket: React.FC<ChatScreenWithWebSocketProps> = (props) 
       window.removeEventListener('newChatMessage', handleNewMessage as EventListener);
       window.removeEventListener('userStatusChanged', handleStatusChanged as EventListener);
     };
-  }, [props.currentUser.id, props.user.id]);
+  }, [props.currentUser?.id, props.user?.id]);
+
+  if (!props.currentUser || !props.user) {
+      return <div className="h-full flex items-center justify-center bg-black text-white">Carregando...</div>;
+  }
 
   return <ChatScreen {...props} messages={messages} />;
 };

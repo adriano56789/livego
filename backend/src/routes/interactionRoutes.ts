@@ -1,5 +1,6 @@
 import express from 'express';
-import { Message, User, Photo, Streamer, Followers, Friendship } from '../models';
+import { Message, User, Photo, Streamer, Followers, Friendship, Invitation, Visitor } from '../models';
+import { getUserIdFromToken } from '../middleware/auth';
 
 const router = express.Router();
 
@@ -248,7 +249,8 @@ router.post('/streams/:id/interactions', async (req, res) => {
 // POST /api/interactions/invitations/send - Enviar convite geral
 router.post('/invitations/send', async (req, res) => {
     try {
-        const { fromUserId, toUserId, type, message, data } = req.body;
+        const { toUserId, type, message, data } = req.body;
+        const fromUserId = getUserIdFromToken(req) || req.body.fromUserId;
         
         if (!fromUserId || !toUserId || !type) {
             return res.status(400).json({ error: 'fromUserId, toUserId e type são obrigatórios' });
@@ -313,24 +315,30 @@ router.get('/invitations/received', async (req, res) => {
         
         console.log(`🔍 Buscando convites recebidos por: ${userId}`);
         
-        // Mock por enquanto - em produção buscaria do banco
-        const mockInvitations = [
-            {
-                id: 'invite_mock_1',
-                fromUserId: '123456',
-                fromUser: {
-                    id: '123456',
-                    name: 'Maria Silva',
-                    avatarUrl: 'https://picsum.photos/seed/maria/200/200.jpg'
-                },
-                type: 'stream',
-                message: 'Venha assistir minha live!',
-                status: 'pending',
-                createdAt: new Date(Date.now() - 3600000).toISOString()
-            }
-        ];
+        // Buscar do banco de dados
+        const invitations = await Invitation.find({ 
+            toUserId: userId,
+            status: 'pending'
+        }).sort({ createdAt: -1 });
+
+        // Enriquecer com dados do remetente
+        const fromUserIds = [...new Set(invitations.map(i => i.fromUserId))];
+        const fromUsers = await User.find({ id: { $in: fromUserIds } });
+        const userMap = fromUsers.reduce((acc, user) => {
+            acc[user.id] = user;
+            return acc;
+        }, {} as Record<string, any>);
+
+        const enrichedInvitations = invitations.map(invitation => ({
+            ...invitation.toJSON(),
+            fromUser: userMap[invitation.fromUserId] ? {
+                id: userMap[invitation.fromUserId].id,
+                name: userMap[invitation.fromUserId].name,
+                avatarUrl: userMap[invitation.fromUserId].avatarUrl
+            } : null
+        }));
         
-        res.json(mockInvitations);
+        res.json(enrichedInvitations);
         
     } catch (error: any) {
         console.error('❌ Erro ao buscar convites:', error);
@@ -445,15 +453,55 @@ router.post('/photos/upload', async (req, res) => {
 });
 
 router.get('/visitors/list/:id', async (req, res) => {
-    // Mock visitors from User DB
-    const users = await User.find().limit(5);
-    res.json(users);
+    try {
+        const { id } = req.params;
+        // Buscar visitantes do banco de dados
+        const visitors = await Visitor.find({ visitedId: id }).sort({ visitedAt: -1 }).limit(20);
+        
+        if (visitors.length === 0) {
+            return res.json([]);
+        }
+
+        const visitorIds = [...new Set(visitors.map(v => v.visitorId))];
+        const users = await User.find({ id: { $in: visitorIds } });
+        
+        res.json(users);
+    } catch (error) {
+        res.status(500).json({ error: 'Erro ao buscar visitantes' });
+    }
+});
+
+router.post('/visitors/record', async (req, res) => {
+    try {
+        const { visitorId, visitedId } = req.body;
+        
+        if (!visitorId || !visitedId || visitorId === visitedId) {
+            return res.status(400).json({ error: 'Invalid visitor data' });
+        }
+
+        // Atualizar ou criar registro de visita
+        await Visitor.findOneAndUpdate(
+            { visitorId, visitedId },
+            { visitedAt: new Date() },
+            { upsert: true, new: true }
+        );
+
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: 'Erro ao registrar visita' });
+    }
 });
 router.delete('/visitors/clear/:id', async (req, res) => res.json({ success: true }));
 router.get('/chats/:id/messages', async (req, res) => {
     try {
         const otherUserId = req.params.id;
-        const currentUser = { id: '10755083' }; // Usuário fixo para demonstração
+        const currentUserId = req.query.currentUserId as string || getUserIdFromToken(req);
+        
+        if (!currentUserId) {
+            return res.status(401).json({ error: 'Unauthorized' });
+        }
+        
+        const currentUser = { id: currentUserId };
 
         // Garantir que ambos os usuários existam
         const models = await import('../models');
@@ -485,44 +533,6 @@ router.get('/chats/:id/messages', async (req, res) => {
         console.log(`🔍 Buscando mensagens para chatKey: ${chatKey}`);
 
         let messages = await Message.find({ chatId: chatKey }).sort({ createdAt: 1 });
-
-        // Se não houver mensagens, criar mensagens de boas-vindas
-        if (messages.length === 0) {
-            console.log(`📝 Criando mensagens iniciais para chatKey: ${chatKey}`);
-
-            const welcomeMessages = [
-                {
-                    id: Date.now().toString(),
-                    chatId: chatKey,
-                    from: currentUser.id,
-                    to: otherUserId,
-                    text: `Olá! Precisa de ajuda com a plataforma? 😊`,
-                    timestamp: new Date(Date.now() - 300000).toISOString(), // 5 min atrás
-                    status: 'delivered'
-                },
-                {
-                    id: (Date.now() + 1).toString(),
-                    chatId: chatKey,
-                    from: otherUserId,
-                    to: currentUser.id,
-                    text: `Olá! Sou o suporte da LiveGo. Como posso ajudar você? 🎥`,
-                    timestamp: new Date(Date.now() - 240000).toISOString(), // 4 min atrás
-                    status: 'delivered'
-                },
-                {
-                    id: (Date.now() + 2).toString(),
-                    chatId: chatKey,
-                    from: currentUser.id,
-                    to: otherUserId,
-                    text: `Estou testando o chat individual! 🚀`,
-                    timestamp: new Date(Date.now() - 180000).toISOString(), // 3 min atrás
-                    status: 'read'
-                }
-            ];
-
-            await Message.insertMany(welcomeMessages);
-            messages = await Message.find({ chatId: chatKey }).sort({ createdAt: 1 });
-        }
 
         console.log(`📝 Encontradas ${messages.length} mensagens`);
 

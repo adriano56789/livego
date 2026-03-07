@@ -249,10 +249,19 @@ router.put('/:userId/photos/:id/set-main', async (req, res) => {
         );
 
         // Definir esta foto como principal
-        await ProfilePhoto.findOneAndUpdate(
+        const updatedPhoto = await ProfilePhoto.findOneAndUpdate(
             { id },
-            { isMain: true, updatedAt: new Date() }
+            { isMain: true, updatedAt: new Date() },
+            { new: true }
         );
+
+        if (updatedPhoto) {
+            await User.findOneAndUpdate(
+                { id: userId },
+                { avatarUrl: updatedPhoto.photoUrl, updatedAt: new Date() }
+            );
+            console.log(`✅ Avatar do usuário atualizado: ${updatedPhoto.photoUrl}`);
+        }
 
         console.log(`✅ Foto ${id} definida como avatar principal`);
 

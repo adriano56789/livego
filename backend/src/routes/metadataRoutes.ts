@@ -176,7 +176,7 @@ router.get('/reminders', async (req, res) => {
     try {
         // Reminders são usuários que estão ao vivo e seguidos pelo usuário atual
         const token = req.headers.authorization?.replace('Bearer ', '');
-        let userId = '10755083'; // fallback
+        let userId: string | null = null;
         
         if (token) {
             try {
@@ -185,14 +185,19 @@ router.get('/reminders', async (req, res) => {
                 const decoded = jwt.verify(token, JWT_SECRET);
                 userId = decoded.id;
             } catch {
-                // Usar fallback
+                // Token inválido
             }
         }
         
+        // Se não houver usuário logado ou se não seguir ninguém, retornar usuários ao vivo aleatórios
+        if (!userId) {
+            const liveUsers = await User.find({ isLive: true }).limit(10);
+            return res.json(liveUsers);
+        }
+
         // Buscar usuários que o usuário atual segue e que estão ao vivo
         const currentUser = await User.findOne({ id: userId });
         if (!currentUser || !currentUser.followingList || currentUser.followingList.length === 0) {
-            // Se não segue ninguém, retornar usuários ao vivo aleatórios
             const liveUsers = await User.find({ isLive: true }).limit(10);
             return res.json(liveUsers);
         }
@@ -366,7 +371,7 @@ router.get('/ranking/:period', async (req, res) => {
 router.get('/notifications', async (req, res) => {
     try {
         const token = req.headers.authorization?.replace('Bearer ', '');
-        let userId = '10755083'; // fallback
+        let userId: string | null = null;
         
         if (token) {
             try {
@@ -375,10 +380,14 @@ router.get('/notifications', async (req, res) => {
                 const decoded = jwt.verify(token, JWT_SECRET);
                 userId = decoded.id;
             } catch {
-                // Usar fallback
+                // Token inválido
             }
         }
         
+        if (!userId) {
+            return res.json([]);
+        }
+
         // Buscar notificações do usuário
         const notifications = await LiveNotification.find({ userId }).sort({ createdAt: -1 }).limit(50);
         res.json(notifications);
@@ -454,7 +463,7 @@ router.post('/notifications/start-live', async (req, res) => {
 router.get('/history/streams', async (req, res) => {
     try {
         const token = req.headers.authorization?.replace('Bearer ', '');
-        let userId = '10755083'; // fallback
+        let userId: string | null = null;
         
         if (token) {
             try {
@@ -463,10 +472,14 @@ router.get('/history/streams', async (req, res) => {
                 const decoded = jwt.verify(token, JWT_SECRET);
                 userId = decoded.id;
             } catch {
-                // Usar fallback
+                // Token inválido
             }
         }
         
+        if (!userId) {
+            return res.json([]);
+        }
+
         // Buscar streams finalizados do usuário
         const streamHistory = await StreamSession.find({ userId })
             .sort({ endedAt: -1 })

@@ -64,6 +64,10 @@ export interface IUser extends Document {
     platformEarnings?: number;
     adminWithdrawalMethod?: { email: string; };
     frameExpiration?: string | null;
+    geoLocation?: {
+        type: 'Point';
+        coordinates: number[];
+    };
 }
 
 const UserSchema = new Schema<IUser>({
@@ -134,7 +138,11 @@ const UserSchema = new Schema<IUser>({
     adminWithdrawalMethod: {
         email: { type: String }
     },
-    frameExpiration: { type: String, default: null }
+    frameExpiration: { type: String, default: null },
+    geoLocation: {
+        type: { type: String, enum: ['Point'], default: 'Point' },
+        coordinates: { type: [Number], default: [0, 0] } // [longitude, latitude]
+    }
 }, {
     timestamps: true,
     toJSON: {
@@ -145,5 +153,8 @@ const UserSchema = new Schema<IUser>({
         }
     }
 });
+
+// Índice geoespacial para busca por proximidade
+UserSchema.index({ geoLocation: '2dsphere' });
 
 export const User = mongoose.model<IUser>('User', UserSchema);

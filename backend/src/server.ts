@@ -26,6 +26,7 @@ import statusRoutes from './routes/statusRoutes';
 import followersRoutes from './routes/followersRoutes';
 import friendshipRoutes from './routes/friendshipRoutes';
 import blockRoutes from './routes/blockRoutes';
+import locationRoutes from './routes/locationRoutes';
 
 dotenv.config();
 
@@ -89,6 +90,7 @@ app.use('/api/status', statusRoutes); // Rotas de status online/offline
 app.use('/api/followers', followersRoutes); // Rotas de seguidores
 app.use('/api/friends', friendshipRoutes); // Rotas de amizades
 app.use('/api/blocks', blockRoutes); // Rotas de bloqueios
+app.use('/api/location', locationRoutes); // Rotas de localização
 // Disponibilizar io para as rotas
 app.set('io', io);
 

@@ -202,8 +202,16 @@ const EditProfileScreen: React.FC<EditProfileScreenProps> = ({ user, onBack, onS
                   
                   // We need to 'save' this new image list.
                   const newObras = [newObra, ...currentObras];
-                  await api.updateProfile(user.id, { obras: newObras }); // Fallback to generic for Add
-                  setFormData(prev => ({ ...prev, obras: newObras }));
+                  const newAvatarUrl = newObras.length > 0 ? newObras[0].url : '';
+                  
+                  // Update profile with new obras AND new avatarUrl
+                  const updateResp = await api.updateProfile(user.id, { obras: newObras, avatarUrl: newAvatarUrl }); 
+                  
+                  if (updateResp.success && updateResp.user) {
+                      setFormData(prev => ({ ...prev, ...updateResp.user }));
+                  } else {
+                      setFormData(prev => ({ ...prev, obras: newObras, avatarUrl: newAvatarUrl }));
+                  }
               } catch(e) {
                   console.error("Upload failed", e);
               }
@@ -218,10 +226,21 @@ const EditProfileScreen: React.FC<EditProfileScreenProps> = ({ user, onBack, onS
 
       try {
           await api.profile.deleteImage(obraToDelete.id);
-          setFormData(prev => {
-            const newObras = prev.obras?.filter((_, index) => index !== indexToDelete) || [];
-            return { ...prev, obras: newObras };
-          });
+          
+          const newObras = formData.obras?.filter((_, index) => index !== indexToDelete) || [];
+          const newAvatarUrl = newObras.length > 0 ? newObras[0].url : '';
+          
+          // Update avatar if changed (e.g. if we deleted the first image)
+          if (indexToDelete === 0) {
+              const updateResp = await api.updateProfile(user.id, { avatarUrl: newAvatarUrl });
+              if (updateResp.success && updateResp.user) {
+                   setFormData(prev => ({ ...prev, ...updateResp.user, obras: newObras }));
+              } else {
+                   setFormData(prev => ({ ...prev, obras: newObras, avatarUrl: newAvatarUrl }));
+              }
+          } else {
+               setFormData(prev => ({ ...prev, obras: newObras }));
+          }
       } catch (error) {
           console.error("Failed to delete image", error);
       }
@@ -235,17 +254,24 @@ const EditProfileScreen: React.FC<EditProfileScreenProps> = ({ user, onBack, onS
     const draggedObra = obras.splice(dragPhoto.current, 1)[0];
     obras.splice(dragOverPhoto.current, 0, draggedObra);
 
+    const wasAvatarChanged = dragPhoto.current === 0 || dragOverPhoto.current === 0;
+
     // Reset refs
     dragPhoto.current = 0;
     dragOverPhoto.current = 0;
 
     // Optimistic Update
-    setFormData(prev => ({ ...prev, obras }));
+    const newAvatarUrl = obras.length > 0 ? obras[0].url : '';
+    setFormData(prev => ({ ...prev, obras, ...(wasAvatarChanged ? { avatarUrl: newAvatarUrl } : {}) }));
 
     // API Call
     try {
         const orderedIds = obras.map(o => o.id);
         await api.profile.reorderImages(orderedIds);
+        
+        if (wasAvatarChanged) {
+            await api.updateProfile(user.id, { avatarUrl: newAvatarUrl });
+        }
     } catch (error) {
         console.error("Failed to reorder images", error);
     }

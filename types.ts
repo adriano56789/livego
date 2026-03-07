@@ -22,6 +22,7 @@ export interface Streamer {
   srtIngestUrl?: string;
   streamKey?: string;
   playbackUrl?: string;
+  isLive?: boolean;
 }
 
 export interface Country {
@@ -96,6 +97,7 @@ export interface User {
   isFriend?: boolean;
   isOnline?: boolean;
   lastSeen?: string;
+  currentStreamId?: string;
   diamonds: number;
   earnings: number;
   earnings_withdrawn: number;
@@ -131,6 +133,10 @@ export interface User {
   platformEarnings?: number;
   adminWithdrawalMethod?: { email: string; };
   frameExpiration?: string | null;
+  geoLocation?: {
+    type: 'Point';
+    coordinates: number[];
+  };
 }
 
 export interface LevelInfo {

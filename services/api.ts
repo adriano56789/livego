@@ -27,50 +27,80 @@ const getCurrentUserId = () => {
     return null;
 };
 
+const inFlightRequests = new Map<string, Promise<any>>();
+
 /**
  * Core API Caller
  * Performs real HTTP requests to the backend.
  */
 const callApi = async <T>(method: string, path: string, body?: any): Promise<T> => {
+    const requestKey = `${method}:${path}:${JSON.stringify(body || {})}`;
+
+    if (method === 'GET' && inFlightRequests.has(requestKey)) {
+        console.log(`[API] Deduplicated request: ${method} ${path}`);
+        return inFlightRequests.get(requestKey) as Promise<T>;
+    }
+
     console.log(`[API ${method}] ${path}`, body ? body : '');
 
-    try {
-        const token = localStorage.getItem('token');
-        const headers: Record<string, string> = {
-            'Content-Type': 'application/json'
-        };
+    const requestPromise = (async () => {
+        try {
+            const token = localStorage.getItem('token');
+            const headers: Record<string, string> = {
+                'Content-Type': 'application/json'
+            };
 
-        if (token) {
-            headers['Authorization'] = `Bearer ${token}`;
-        }
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
 
-        const response = await axios({
-            method: method as Method,
-            url: `${API_BASE_URL}${path}`,
-            headers,
-            data: body,
-            params: method === 'GET' && body ? body : undefined
-        });
+            const response = await axios({
+                method: method as Method,
+                url: `${API_BASE_URL}${path}`,
+                headers,
+                data: body,
+                params: method === 'GET' && body ? body : undefined
+            });
 
-        // Tratar status 304 Not Modified - dados não modificados
-        if (response.status === 304) {
-            console.log(`[API] 304 Not Modified for ${path} - data not modified`);
+            // Check for HTML response
+            const contentType = response.headers['content-type'];
+            if (contentType && contentType.includes('text/html')) {
+                throw new Error('API returned HTML instead of JSON');
+            }
+            if (typeof response.data === 'string' && response.data.trim().startsWith('<')) {
+                 throw new Error('API returned HTML-like string instead of JSON');
+            }
+
+            // Tratar status 304 Not Modified - dados não modificados
+            if (response.status === 304) {
+                console.log(`[API] 304 Not Modified for ${path} - data not modified`);
+                return response.data as T;
+            }
+
+            console.log(`[API Response] ${path}:`, response.data);
             return response.data as T;
+        } catch (error: any) {
+            console.error(`[API Fetch Failed] ${method} ${path}:`, error.response?.data || error.message);
+
+            // Tratar status 304 Not Modified mesmo no bloco catch
+            if (error.response?.status === 304) {
+                console.log(`[API] 304 Not Modified for ${path} - data not modified`);
+                return error.response?.data as T;
+            }
+
+            throw new Error(error.response?.data?.error || `HTTP Error ${error.response?.status || 'Unknown'}`);
+        } finally {
+            if (method === 'GET') {
+                inFlightRequests.delete(requestKey);
+            }
         }
+    })();
 
-        console.log(`[API Response] ${path}:`, response.data);
-        return response.data as T;
-    } catch (error: any) {
-        console.error(`[API Fetch Failed] ${method} ${path}:`, error.response?.data || error.message);
-
-        // Tratar status 304 Not Modified mesmo no bloco catch
-        if (error.response?.status === 304) {
-            console.log(`[API] 304 Not Modified for ${path} - data not modified`);
-            return error.response?.data as T;
-        }
-
-        throw new Error(error.response?.data?.error || `HTTP Error ${error.response?.status || 'Unknown'}`);
+    if (method === 'GET') {
+        inFlightRequests.set(requestKey, requestPromise);
     }
+
+    return requestPromise;
 };
 
 
@@ -215,6 +245,10 @@ export const api = {
     togglePip: (userId: string, enabled: boolean) => callApi<{ success: boolean, user: User }>('POST', `/api/settings/pip/toggle/${userId}`, { enabled }),
     updateActivityPreference: (userId: string, show: boolean) => callApi<{ success: boolean, user: User }>('POST', `/api/users/${userId}/privacy/activity`, { show }),
     updateLocationVisibility: (userId: string, show: boolean) => callApi<{ success: boolean, user: User }>('POST', `/api/users/${userId}/privacy/location`, { show }),
+
+    // --- Location ---
+    updateLocation: (latitude: number, longitude: number) => callApi<{ success: boolean, user: User }>('POST', '/api/location/update', { latitude, longitude }),
+    getNearbyUsers: (latitude: number, longitude: number) => callApi<User[]>('GET', `/api/location/nearby?latitude=${latitude}&longitude=${longitude}`),
 
     // --- Permissions ---
     getCameraPermission: (userId: string) => callApi<{ status: 'granted' | 'denied' | 'prompt' }>('GET', `/api/permissions/camera/${userId}`),

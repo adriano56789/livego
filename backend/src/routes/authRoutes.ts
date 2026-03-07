@@ -15,9 +15,9 @@ router.post('/register', async (req, res) => {
             await mongoose.connect(process.env.MONGODB_URI || 'mongodb://admin:adriano123@localhost:27017/api?authSource=admin');
         }
 
-        const { 
-            name, 
-            email, 
+        const {
+            name,
+            email,
             password,
             country = "br",
             age = 25,
@@ -41,14 +41,14 @@ router.post('/register', async (req, res) => {
         const hashedPassword = await bcrypt.hash(password, salt);
 
         // Gerar ID único de 8 dígitos (sem timestamp)
-const generateUserId = () => {
-    // Gerar número aleatório de 8 dígitos
-    return Math.floor(10000000 + Math.random() * 90000000).toString();
-};
+        const generateUserId = () => {
+            // Gerar número aleatório de 8 dígitos
+            return Math.floor(10000000 + Math.random() * 90000000).toString();
+        };
 
-const userId = generateUserId();
+        const userId = generateUserId();
 
-const user = await User.create({
+        const user = await User.create({
             id: userId,
             name,
             email,
@@ -144,7 +144,7 @@ router.post('/login', async (req, res) => {
             try {
                 const decoded = jwt.verify(token, JWT_SECRET) as any;
                 const user = await User.findOne({ id: decoded.id });
-                
+
                 if (!user) {
                     return res.status(401).json({ error: 'User not found' });
                 }
@@ -206,6 +206,118 @@ router.post('/logout', async (req, res) => {
         }
         res.json({ success: true, message: 'Logged out successfully' });
     } catch (error: any) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// @route GET /api/accounts/google - Retorna todas as contas Google do usuário
+// @route GET /api/accounts/google/connected - Alias para /api/accounts/google
+router.get('/google/connected', async (req, res) => {
+    try {
+        const authHeader = req.headers.authorization;
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+            return res.json([]); // Sem token = sem contas conectadas
+        }
+
+        const token = authHeader.substring(7);
+        const jwt = require('jsonwebtoken');
+        const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret_key_change_me_in_prod';
+
+        let decoded: any;
+        try {
+            decoded = jwt.verify(token, JWT_SECRET);
+        } catch {
+            return res.json([]);
+        }
+
+        const user = await User.findOne({ id: decoded.id });
+        if (!user) {
+            return res.json([]);
+        }
+
+        // O usuário está conectado com o próprio email cadastrado
+        // Retorna no formato GoogleAccount esperado pelo frontend
+        const connectedAccounts = [{
+            id: user.id,
+            email: user.email || '',
+            name: user.name,
+            avatarUrl: user.avatarUrl || '',
+            isConnected: true
+        }];
+
+        res.json(connectedAccounts);
+    } catch (error: any) {
+        console.error('Error in /google/connected:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+router.get('/google', async (req, res) => {
+    try {
+        const authHeader = req.headers.authorization;
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+            return res.json([]);
+        }
+
+        const token = authHeader.substring(7);
+        const jwt = require('jsonwebtoken');
+        const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret_key_change_me_in_prod';
+
+        let decoded: any;
+        try {
+            decoded = jwt.verify(token, JWT_SECRET);
+        } catch {
+            return res.json([]);
+        }
+
+        const user = await User.findOne({ id: decoded.id });
+        if (!user) {
+            return res.json([]);
+        }
+
+        const accounts = [{
+            id: user.id,
+            email: user.email || '',
+            name: user.name,
+            avatarUrl: user.avatarUrl || '',
+            isConnected: true
+        }];
+
+        res.json(accounts);
+    } catch (error: any) {
+        console.error('Error in /google:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// @route POST /api/accounts/google/disconnect - Desconecta conta Google
+router.post('/google/disconnect', async (req, res) => {
+    try {
+        const authHeader = req.headers.authorization;
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+            return res.status(401).json({ error: 'Unauthorized' });
+        }
+
+        const token = authHeader.substring(7);
+        const jwt = require('jsonwebtoken');
+        const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret_key_change_me_in_prod';
+
+        let decoded: any;
+        try {
+            decoded = jwt.verify(token, JWT_SECRET);
+        } catch {
+            return res.status(401).json({ error: 'Invalid token' });
+        }
+
+        // Desconectar a conta (fazer logout)
+        await User.findOneAndUpdate(
+            { id: decoded.id },
+            { isOnline: false, lastSeen: new Date().toISOString() }
+        );
+
+        res.json({ success: true, message: 'Conta desconectada com sucesso' });
+    } catch (error: any) {
+        console.error('Error in /google/disconnect:', error);
         res.status(500).json({ error: error.message });
     }
 });

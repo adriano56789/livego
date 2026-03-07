@@ -7,7 +7,7 @@ const router = express.Router();
 router.get('/', async (req, res) => {
     try {
         const { userId } = req.query;
-        
+
         if (!userId) {
             return res.status(400).json({ error: 'userId é obrigatório' });
         }
@@ -15,9 +15,9 @@ router.get('/', async (req, res) => {
         console.log(`🔍 Buscando chats para usuário: ${userId}`);
 
         // Buscar chats onde o usuário participa
-        const chats = await Chat.find({ 
-            participants: userId, 
-            isActive: true 
+        const chats = await Chat.find({
+            participants: userId,
+            isActive: true
         }).sort({ 'lastMessage.timestamp': -1 });
 
         console.log(`📊 Encontrados ${chats.length} chats para usuário ${userId}`);
@@ -27,8 +27,8 @@ router.get('/', async (req, res) => {
             chats.map(async (chat) => {
                 // Buscar informações dos outros participantes
                 const otherParticipants = chat.participants.filter((p: any) => p !== userId);
-                const participantDetails = await User.find({ 
-                    id: { $in: otherParticipants } 
+                const participantDetails = await User.find({
+                    id: { $in: otherParticipants }
                 }).select('id name avatarUrl');
 
                 // Contar mensagens não lidas
@@ -60,7 +60,7 @@ router.get('/', async (req, res) => {
 
     } catch (error) {
         console.error('❌ Erro ao buscar chats:', error);
-        res.status(500).json({ 
+        res.status(500).json({
             error: 'Erro ao buscar chats',
             details: error instanceof Error ? error.message : 'Erro desconhecido'
         });
@@ -80,10 +80,10 @@ router.get('/:id/messages', async (req, res) => {
         console.log(`🔍 Buscando mensagens do chat ${id} para usuário ${userId}`);
 
         // Verificar se o usuário tem acesso ao chat
-        const chat = await Chat.findOne({ 
-            id, 
-            participants: userId, 
-            isActive: true 
+        const chat = await Chat.findOne({
+            id,
+            participants: userId,
+            isActive: true
         });
 
         if (!chat) {
@@ -92,18 +92,18 @@ router.get('/:id/messages', async (req, res) => {
 
         // Buscar mensagens paginadas
         const skip = (Number(page) - 1) * Number(limit);
-        
-        const messages = await ChatMessage.find({ 
-            conversationId: id 
+
+        const messages = await ChatMessage.find({
+            conversationId: id
         })
-        .sort({ sentAt: -1 })
-        .skip(skip)
-        .limit(Number(limit));
+            .sort({ sentAt: -1 })
+            .skip(skip)
+            .limit(Number(limit));
 
         // Buscar detalhes dos remetentes
         const senderIds = [...new Set(messages.map((m: any) => m.senderId))];
-        const senders = await User.find({ 
-            id: { $in: senderIds } 
+        const senders = await User.find({
+            id: { $in: senderIds }
         }).select('id name avatarUrl');
 
         const senderMap = senders.reduce((acc: any, sender) => {
@@ -149,7 +149,7 @@ router.get('/:id/messages', async (req, res) => {
 
     } catch (error) {
         console.error('❌ Erro ao buscar mensagens:', error);
-        res.status(500).json({ 
+        res.status(500).json({
             error: 'Erro ao buscar mensagens',
             details: error instanceof Error ? error.message : 'Erro desconhecido'
         });
@@ -202,7 +202,7 @@ router.post('/', async (req, res) => {
 
     } catch (error) {
         console.error('❌ Erro ao criar chat:', error);
-        res.status(500).json({ 
+        res.status(500).json({
             error: 'Erro ao criar chat',
             details: error instanceof Error ? error.message : 'Erro desconhecido'
         });
@@ -213,26 +213,28 @@ router.post('/', async (req, res) => {
 router.post('/send', async (req, res) => {
     try {
         console.log('🔍 Body recebido:', JSON.stringify(req.body, null, 2));
-        
+
         const { from, to, text, imageUrl, tempId } = req.body;
 
-        if (!from || !to || !text) {
-            return res.status(400).json({ error: 'from, to e text são obrigatórios' });
+        if (!from || !to || (!text && !imageUrl)) {
+            return res.status(400).json({ error: 'from, to e text ou imageUrl são obrigatórios' });
         }
 
-        console.log(`📨 Enviando mensagem de ${from} para ${to}: ${text}`);
+        console.log(`📨 Enviando mensagem de ${from} para ${to}: ${text || '[imagem]'}`);
 
         // Criar ID da conversa (ordenado para manter consistência)
-        const conversationId = [from, to].sort().join('_');
-        
+        const conversationId = `chat_private_${[from, to].sort().join('_')}`;
+        const messageType = imageUrl ? 'image' : 'text';
+        const content = imageUrl || text;
+
         // Criar nova mensagem
         const newMessage = await ChatMessage.create({
-            id: tempId || `msg_${conversationId}_${from}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-            conversationId: `chat_private_${conversationId}_${Date.now()}`,
+            id: tempId || `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            conversationId,
             senderId: from,
             receiverId: to,
-            content: text,
-            messageType: imageUrl ? 'image' : 'text',
+            content: content,
+            messageType,
             isRead: false,
             sentAt: new Date()
         });
@@ -240,12 +242,24 @@ router.post('/send', async (req, res) => {
         // Buscar detalhes do remetente
         const sender = await User.findOne({ id: from }).select('id name avatarUrl');
 
+        // Formatar resposta no formato Message esperado pelo frontend
+        const frontendMessage = {
+            id: newMessage.id,
+            chatId: conversationId,
+            from: newMessage.senderId,
+            to: newMessage.receiverId,
+            text: messageType !== 'image' ? (newMessage.content || '') : '',
+            imageUrl: messageType === 'image' ? newMessage.content : undefined,
+            timestamp: newMessage.sentAt?.toISOString() || new Date().toISOString(),
+            status: 'sent',
+        };
+
         // Enviar via WebSocket em tempo real
         const io = req.app.get('io');
-        
+
         // Notificar receptor
-        io.to(`user_${to}`).emit('new_chat_message', {
-            ...newMessage.toJSON(),
+        io.to(`user_${to}`).emit('newMessage', {
+            ...frontendMessage,
             sender: sender || { id: from, name: 'Usuário', avatarUrl: '' }
         });
 
@@ -258,14 +272,14 @@ router.post('/send', async (req, res) => {
 
         res.json({
             success: true,
-            message: newMessage
+            message: frontendMessage
         });
 
     } catch (error: any) {
         console.error('❌ Erro ao enviar mensagem:', error);
-        res.status(500).json({ 
+        res.status(500).json({
             error: 'Erro ao enviar mensagem',
-            details: error.message 
+            details: error.message
         });
     }
 });
@@ -281,10 +295,10 @@ router.post('/:id/messages', async (req, res) => {
         }
 
         // Verificar se o usuário tem acesso ao chat
-        const chat = await Chat.findOne({ 
-            id, 
-            participants: senderId, 
-            isActive: true 
+        const chat = await Chat.findOne({
+            id,
+            participants: senderId,
+            isActive: true
         });
 
         if (!chat) {
@@ -327,7 +341,7 @@ router.post('/:id/messages', async (req, res) => {
 
     } catch (error) {
         console.error('❌ Erro ao enviar mensagem:', error);
-        res.status(500).json({ 
+        res.status(500).json({
             error: 'Erro ao enviar mensagem',
             details: error instanceof Error ? error.message : 'Erro desconhecido'
         });
@@ -345,9 +359,9 @@ router.put('/messages/:id/read', async (req, res) => {
         }
 
         // Verificar se a mensagem pertence ao usuário
-        const message = await ChatMessage.findOne({ 
-            id, 
-            receiverId: userId 
+        const message = await ChatMessage.findOne({
+            id,
+            receiverId: userId
         });
 
         if (!message) {
@@ -372,7 +386,7 @@ router.put('/messages/:id/read', async (req, res) => {
 
     } catch (error) {
         console.error('❌ Erro ao marcar mensagem como lida:', error);
-        res.status(500).json({ 
+        res.status(500).json({
             error: 'Erro ao marcar mensagem como lida',
             details: error instanceof Error ? error.message : 'Erro desconhecido'
         });

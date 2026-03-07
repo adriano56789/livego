@@ -5,6 +5,7 @@ import BlockReportModal from './BlockReportModal';
 import { useTranslation } from '../i18n';
 import { api } from '../services/api';
 import { LoadingSpinner } from './Loading';
+import { socketService } from '../services/socket';
 
 interface ChatScreenProps {
     user: User;
@@ -167,10 +168,9 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ user, onBack, isModal, currentU
             }
         };
 
-        const { webSocketManager } = require('../services/socket');
-        webSocketManager.on('newMessage', handleNewMessage);
+        socketService.on('newMessage', handleNewMessage);
         return () => {
-            webSocketManager.off('newMessage', handleNewMessage);
+            socketService.off('newMessage', handleNewMessage);
         };
     }, [chatKey, currentUser.id, user.id]);
 
@@ -257,8 +257,8 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ user, onBack, isModal, currentU
             let finalImageUrl: string | undefined = undefined;
             if (imageToSend) {
                 // Convert the data URL to base64 string for the API
-                const base64Data = imageToSend.includes('base64,') 
-                    ? imageToSend.split('base64,')[1] 
+                const base64Data = imageToSend.includes('base64,')
+                    ? imageToSend.split('base64,')[1]
                     : imageToSend;
 
                 const uploadResponse = await api.uploadChatPhoto(user.id, base64Data) as { url: string };

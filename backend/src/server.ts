@@ -31,6 +31,7 @@ import locationRoutes from './routes/locationRoutes';
 dotenv.config();
 
 const app = express();
+app.set('etag', false); // Desabilitar ETag para sempre retornar 200 em vez de 304
 const server = http.createServer(app);
 const io = new Server(server, {
     cors: {
@@ -51,10 +52,10 @@ app.use((req, res, next) => {
     res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Origin, Accept');
     res.header('Access-Control-Allow-Credentials', 'true');
     res.header('Access-Control-Max-Age', '86400'); // 24 horas
-    
+
     // Log de acesso para debug
     console.log(`🌍 [ACESSO GLOBAL] ${req.method} ${req.path} - IP: ${req.ip || req.socket.remoteAddress || 'unknown'} - Origin: ${req.headers.origin || 'any'}`);
-    
+
     next();
 });
 
@@ -73,6 +74,7 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use(express.static('../dist'));
 
 app.use('/api/auth', authRoutes);
+app.use('/api/accounts', authRoutes); // Alias for /api/accounts/google/connected etc.
 app.use('/api/users', userRoutes);
 app.use('/api/media', mediaRoutes);
 app.use('/api/perfil', profileRoutes);
@@ -113,17 +115,17 @@ app.get('*', (req, res) => {
         console.log(`🔒 Redirecionando HTTP para HTTPS: ${httpsUrl}`);
         return res.redirect(301, httpsUrl);
     }
-    
+
     // Servir o arquivo index.html para SPA
     res.sendFile('index.html', { root: '../dist' });
 });
 
 // --- WebSocket Logic ---
 // Map baseado em userId para evitar duplicatas e controlar múltiplas conexões
-const onlineUsers = new Map<string, { 
-    userId: string; 
-    streamId: string; 
-    socketIds: Set<string>; 
+const onlineUsers = new Map<string, {
+    userId: string;
+    streamId: string;
+    socketIds: Set<string>;
     lastSeen: Date;
     firstConnectionTime: Date;
 }>();
@@ -136,13 +138,13 @@ io.on('connection', (socket) => {
     socket.on('join_stream', async (data: { userId: string; streamId: string }) => {
         try {
             const { userId, streamId } = data;
-            
+
             // VALIDAÇÃO CRÍTICA: Evitar processamento duplicado
             if (!userId || !streamId) {
                 console.warn('⚠️ join_stream: dados inválidos', { userId, streamId });
                 return;
             }
-            
+
             // Verificar se este socket já está associado a este usuário nesta stream
             const currentUserId = socketToUser.get(socket.id);
             if (currentUserId === userId) {
@@ -152,17 +154,17 @@ io.on('connection', (socket) => {
                     return;
                 }
             }
-            
+
             console.log(`👤 Usuário ${userId} entrando na stream ${streamId} via WebSocket (socket: ${socket.id})`);
-            
+
             // Mapear socket para usuário
             socketToUser.set(socket.id, userId);
-            
+
             // Verificar se usuário já está online
             let userEntry = onlineUsers.get(userId);
             const isFirstConnection = !userEntry;
             const isChangingStream = userEntry && userEntry.streamId !== streamId;
-            
+
             if (!userEntry) {
                 // Novo usuário online
                 userEntry = {
@@ -184,10 +186,10 @@ io.on('connection', (socket) => {
                 }
                 userEntry.lastSeen = new Date();
             }
-            
+
             // Entrar na sala do Socket.IO
             socket.join(streamId);
-            
+
             // Atualizar status no banco (apenas na primeira conexão ou mudança de stream)
             if (isFirstConnection || isChangingStream) {
                 const models = await import('./models');
@@ -197,24 +199,24 @@ io.on('connection', (socket) => {
                     lastSeen: new Date().toISOString()
                 });
             }
-            
+
             // DESABILITADO: Eventos user_joined/user_left causando spam
-// Apenas online_users_updated é suficiente para atualizar UI
-// if (isFirstConnection || isChangingStream) {
-//     socket.to(streamId).emit('user_joined', { userId, streamId });
-// }
-            
+            // Apenas online_users_updated é suficiente para atualizar UI
+            // if (isFirstConnection || isChangingStream) {
+            //     socket.to(streamId).emit('user_joined', { userId, streamId });
+            // }
+
             // Enviar lista atualizada de usuários online para todos na stream
             const onlineUsersInStream = Array.from(onlineUsers.values())
                 .filter(user => user.streamId === streamId)
                 .map(user => ({ userId: user.userId, lastSeen: user.lastSeen }));
-            
+
             io.to(streamId).emit('online_users_updated', {
                 streamId,
                 users: onlineUsersInStream,
                 count: onlineUsersInStream.length
             });
-            
+
             console.log(`✅ Usuário ${userId} conectado à stream ${streamId} (sockets: ${userEntry.socketIds.size})`);
         } catch (error) {
             console.error('❌ Erro ao entrar na stream via WebSocket:', error);
@@ -224,22 +226,22 @@ io.on('connection', (socket) => {
     socket.on('leave_stream', async (data: { userId: string; streamId: string }) => {
         try {
             const { userId, streamId } = data;
-            
+
             // VALIDAÇÃO CRÍTICA: Evitar processamento duplicado
             if (!userId || !streamId) {
                 console.warn('⚠️ leave_stream: dados inválidos', { userId, streamId });
                 return;
             }
-            
+
             // Verificar se este socket está realmente associado a este usuário
             const currentUserId = socketToUser.get(socket.id);
             if (currentUserId !== userId) {
                 console.warn(`� Socket ${socket.id} não está associado ao usuário ${userId} - IGNORANDO`);
                 return;
             }
-            
+
             console.log(`�👤 Usuário ${userId} saindo da stream ${streamId} via WebSocket (socket: ${socket.id})`);
-            
+
             const userEntry = onlineUsers.get(userId);
             if (!userEntry) {
                 console.warn(`⚠️ Usuário ${userId} não encontrado na lista de online users`);
@@ -247,16 +249,16 @@ io.on('connection', (socket) => {
                 socket.leave(streamId);
                 return;
             }
-            
+
             // Verificar se o usuário está realmente nesta stream
             if (userEntry.streamId !== streamId) {
                 console.warn(`⚠️ Usuário ${userId} está na stream ${userEntry.streamId}, não na ${streamId} - IGNORANDO`);
                 return;
             }
-            
+
             // Remover este socket da lista
             userEntry.socketIds.delete(socket.id);
-            
+
             // Se ainda tiver sockets, não remover usuário da lista nem emitir evento
             if (userEntry.socketIds.size > 0) {
                 console.log(`🔄 Usuário ${userId} ainda tem ${userEntry.socketIds.size} conexões ativas - mantendo online`);
@@ -264,16 +266,16 @@ io.on('connection', (socket) => {
                 socket.leave(streamId);
                 return;
             }
-            
+
             // Remover usuário completamente se não tiver mais sockets
             onlineUsers.delete(userId);
-            
+
             // Remover mapeamento de socket
             socketToUser.delete(socket.id);
-            
+
             // Sair da sala do Socket.IO
             socket.leave(streamId);
-            
+
             // Atualizar status no banco
             const models = await import('./models');
             await models.User.findOneAndUpdate({ id: userId }, {
@@ -281,22 +283,22 @@ io.on('connection', (socket) => {
                 currentStreamId: null,
                 lastSeen: new Date().toISOString()
             });
-            
+
             // DESABILITADO: Evento user_left causando spam
-// Apenas online_users_updated é suficiente para atualizar UI
-// socket.to(streamId).emit('user_left', { userId, streamId });
-            
+            // Apenas online_users_updated é suficiente para atualizar UI
+            // socket.to(streamId).emit('user_left', { userId, streamId });
+
             // Enviar lista atualizada de usuários online
             const onlineUsersInStream = Array.from(onlineUsers.values())
                 .filter(user => user.streamId === streamId)
                 .map(user => ({ userId: user.userId, lastSeen: user.lastSeen }));
-            
+
             io.to(streamId).emit('online_users_updated', {
                 streamId,
                 users: onlineUsersInStream,
                 count: onlineUsersInStream.length
             });
-            
+
             console.log(`✅ Usuário ${userId} desconectado da stream ${streamId}`);
         } catch (error) {
             console.error('❌ Erro ao sair da stream via WebSocket:', error);
@@ -317,13 +319,13 @@ io.on('connection', (socket) => {
     socket.on('disconnect', async () => {
         try {
             const userId = socketToUser.get(socket.id);
-            
+
             if (userId) {
                 // Marcar usuário como offline no banco
                 const { User } = await import('./models/index');
                 await User.findOneAndUpdate(
                     { id: userId },
-                    { 
+                    {
                         isOnline: false,
                         lastSeen: new Date().toISOString()
                     }
@@ -338,71 +340,71 @@ io.on('connection', (socket) => {
 
                 console.log(`🔴 Usuário ${userId} offline (socket: ${socket.id})`);
             }
-            
+
             // VALIDAÇÃO CRÍTICA: Se não há usuário associado, apenas limpar
             if (!userId) {
                 console.log(`🔌 Socket ${socket.id} desconectado sem usuário associado`);
                 return;
             }
-            
+
             const userEntry = onlineUsers.get(userId);
-            
+
             // VALIDAÇÃO: Se não há entrada para este usuário, apenas limpar
             if (!userEntry) {
                 console.log(`🔌 Socket ${socket.id} desconectado (usuário ${userId} não encontrado em onlineUsers)`);
                 socketToUser.delete(socket.id);
                 return;
             }
-            
+
             // VALIDAÇÃO: Se este socket não está na lista do usuário, apenas limpar
             if (!userEntry.socketIds.has(socket.id)) {
                 console.log(`🔌 Socket ${socket.id} não encontrado na lista do usuário ${userId}`);
                 socketToUser.delete(socket.id);
                 return;
             }
-            
+
             // Remover este socket da lista
             userEntry.socketIds.delete(socket.id);
-            
+
             console.log(`🔌 Socket ${socket.id} desconectado (usuário ${userId}, sockets restantes: ${userEntry.socketIds.size})`);
-            
+
             // Se ainda tiver sockets ativos, não marcar como offline nem emitir eventos
             if (userEntry.socketIds.size > 0) {
                 console.log(`🔄 Usuário ${userId} ainda tem ${userEntry.socketIds.size} conexões ativas - mantendo online sem eventos`);
                 socketToUser.delete(socket.id);
                 return;
             }
-            
+
             // Se não tiver mais sockets, remover usuário completamente
             console.log(`👋 Usuário ${userId} não tem mais conexões - marcando como offline`);
             onlineUsers.delete(userId);
-            
+
             // Marcar como offline no banco se não estiver em live
             const models = await import('./models');
-            const activeStreams = await models.Streamer.find({ 
-                hostId: userId, 
-                isLive: true 
+            const activeStreams = await models.Streamer.find({
+                hostId: userId,
+                isLive: true
             });
-            
+
             if (!activeStreams || activeStreams.length === 0) {
                 await models.User.findOneAndUpdate({ id: userId }, {
                     isOnline: false,
                     currentStreamId: null,
                     lastSeen: new Date().toISOString()
                 });
-                
+
                 // Notificar outros usuários na stream sobre saída
                 if (userEntry.streamId) {
-                    io.to(userEntry.streamId).emit('user_left', { 
-                        userId: userId, 
-                        streamId: userEntry.streamId 
+                    io.to(userEntry.streamId).emit('user_left', {
+                        userId: userId,
+                        streamId: userEntry.streamId
                     });
-                    
+
                     // Enviar lista atualizada de usuários online
                     const onlineUsersInStream = Array.from(onlineUsers.values())
                         .filter(user => user.streamId === userEntry.streamId)
                         .map(user => ({ userId: user.userId, lastSeen: user.lastSeen }));
-                    
+
                     io.to(userEntry.streamId).emit('online_users_updated', {
                         streamId: userEntry.streamId,
                         users: onlineUsersInStream,
@@ -410,10 +412,10 @@ io.on('connection', (socket) => {
                     });
                 }
             }
-            
+
             // Limpar mapeamento de socket
             socketToUser.delete(socket.id);
-            
+
         } catch (error) {
             console.error('❌ Erro ao processar disconnect:', error);
         }
@@ -426,14 +428,14 @@ io.on('connection', (socket) => {
                 isOnline: data.isOnline,
                 lastSeen: data.isOnline ? undefined : new Date().toISOString()
             });
-            
+
             // Broadcast para todos os usuários
             io.emit('user_status_changed', {
                 userId: data.userId,
                 isOnline: data.isOnline,
                 lastSeen: data.isOnline ? undefined : new Date().toISOString()
             });
-            
+
             console.log(`🔔 Status atualizado: ${data.userId} -> ${data.isOnline ? 'online' : 'offline'}`);
         } catch (error) {
             console.error('❌ Erro ao atualizar status:', error);
@@ -444,20 +446,20 @@ io.on('connection', (socket) => {
     socket.on('send_chat_message', async (data: { chatId: string; senderId: string; receiverId: string; content: string; messageType?: string }) => {
         try {
             const { chatId, senderId, receiverId, content, messageType = 'text' } = data;
-            
+
             // Verificar se o usuário tem acesso ao chat
             const { Chat, ChatMessage, User } = await import('./models/index');
-            const chat = await Chat.findOne({ 
-                id: chatId, 
-                participants: senderId, 
-                isActive: true 
+            const chat = await Chat.findOne({
+                id: chatId,
+                participants: senderId,
+                isActive: true
             });
-            
+
             if (!chat) {
                 socket.emit('error', { message: 'Chat não encontrado ou sem permissão' });
                 return;
             }
-            
+
             // Criar mensagem na nova coleção
             const message = await ChatMessage.create({
                 id: `msg_${chatId}_${senderId}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
@@ -469,7 +471,7 @@ io.on('connection', (socket) => {
                 isRead: false,
                 sentAt: new Date()
             });
-            
+
             // Atualizar última mensagem do chat
             await Chat.findOneAndUpdate(
                 { id: chatId },
@@ -483,10 +485,10 @@ io.on('connection', (socket) => {
                     updatedAt: new Date()
                 }
             );
-            
+
             // Buscar detalhes do remetente
             const sender = await User.findOne({ id: senderId }).select('id name avatarUrl');
-            
+
             // Formatar mensagem para envio
             const formattedMessage = {
                 id: message.id,
@@ -499,11 +501,11 @@ io.on('connection', (socket) => {
                 sentAt: message.sentAt,
                 sender: sender || { id: senderId, name: 'Usuário', avatarUrl: '' }
             };
-            
+
             // Enviar para todos os participantes do chat
             chat.participants.forEach((participantId: string) => {
                 io.to(`user_${participantId}`).emit('new_chat_message', formattedMessage);
-                
+
                 // Enviar notificação se não for o remetente
                 if (participantId !== senderId) {
                     io.to(`user_${participantId}`).emit('chat_notification', {
@@ -515,7 +517,7 @@ io.on('connection', (socket) => {
                     });
                 }
             });
-            
+
             console.log(`💬 Mensagem enviada via WebSocket: ${senderId} -> chat ${chatId}`);
         } catch (error) {
             console.error('❌ Erro ao enviar mensagem via WebSocket:', error);
@@ -527,18 +529,18 @@ io.on('connection', (socket) => {
     socket.on('mark_message_read', async (data: { messageId: string; userId: string }) => {
         try {
             const { messageId, userId } = data;
-            
+
             const { ChatMessage, Chat } = await import('./models/index');
-            const message = await ChatMessage.findOne({ 
+            const message = await ChatMessage.findOne({
                 id: messageId,
-                receiverId: userId 
+                receiverId: userId
             });
-            
+
             if (!message) {
                 socket.emit('error', { message: 'Mensagem não encontrada' });
                 return;
             }
-            
+
             // Marcar como lida
             await ChatMessage.findOneAndUpdate(
                 { id: messageId },
@@ -547,7 +549,7 @@ io.on('connection', (socket) => {
                     readAt: new Date()
                 }
             );
-            
+
             // Notificar outros participantes
             const chat = await Chat.findOne({ id: message.conversationId });
             if (chat) {
@@ -561,7 +563,7 @@ io.on('connection', (socket) => {
                     }
                 });
             }
-            
+
             console.log(`✅ Mensagem ${messageId} marcada como lida por ${userId}`);
         } catch (error) {
             console.error('❌ Erro ao marcar mensagem como lida:', error);
@@ -573,31 +575,31 @@ io.on('connection', (socket) => {
     socket.on('join_chat', async (data: { userId: string; chatId: string }) => {
         try {
             const { userId, chatId } = data;
-            
+
             // Verificar se usuário tem acesso ao chat
             const models = await import('./models');
-            const chat = await models.Chat.findOne({ 
-                id: chatId, 
-                participants: userId, 
-                isActive: true 
+            const chat = await models.Chat.findOne({
+                id: chatId,
+                participants: userId,
+                isActive: true
             });
-            
+
             if (!chat) {
                 socket.emit('error', { message: 'Chat não encontrado ou sem permissão' });
                 return;
             }
-            
+
             // Entrar na sala do usuário
             socket.join(`user_${userId}`);
             socket.join(`chat_${chatId}`);
-            
+
             // Atualizar status online no chat
             socket.to(`chat_${chatId}`).emit('user_joined_chat', {
                 userId,
                 chatId,
                 timestamp: new Date()
             });
-            
+
             console.log(`👤 Usuário ${userId} entrou no chat ${chatId}`);
         } catch (error) {
             console.error('❌ Erro ao entrar no chat:', error);
@@ -609,16 +611,16 @@ io.on('connection', (socket) => {
     socket.on('leave_chat', async (data: { userId: string; chatId: string }) => {
         try {
             const { userId, chatId } = data;
-            
+
             socket.leave(`chat_${chatId}`);
-            
+
             // Notificar outros participantes
             socket.to(`chat_${chatId}`).emit('user_left_chat', {
                 userId,
                 chatId,
                 timestamp: new Date()
             });
-            
+
             console.log(`� Usuário ${userId} saiu do chat ${chatId}`);
         } catch (error) {
             console.error('❌ Erro ao sair do chat:', error);
@@ -629,17 +631,17 @@ io.on('connection', (socket) => {
     socket.on('typing', async (data: { userId: string; chatId: string; isTyping: boolean }) => {
         try {
             const { userId, chatId, isTyping } = data;
-            
+
             // Verificar se usuário tem acesso ao chat
             const models = await import('./models');
-            const chat = await models.Chat.findOne({ 
-                id: chatId, 
-                participants: userId, 
-                isActive: true 
+            const chat = await models.Chat.findOne({
+                id: chatId,
+                participants: userId,
+                isActive: true
             });
-            
+
             if (!chat) return;
-            
+
             // Notificar outros participantes
             chat.participants.forEach((participantId: string) => {
                 if (participantId !== userId) {
@@ -651,7 +653,7 @@ io.on('connection', (socket) => {
                     });
                 }
             });
-            
+
         } catch (error) {
             console.error('❌ Erro ao notificar digitação:', error);
         }
@@ -666,7 +668,7 @@ io.on('connection', (socket) => {
                 followingId: data.followingId,
                 timestamp: new Date().toISOString()
             });
-            
+
             console.log(`🔔 Novo follow: ${data.followerId} -> ${data.followingId}`);
         } catch (error) {
             console.error('❌ Erro ao notificar follow:', error);
@@ -681,7 +683,7 @@ io.on('connection', (socket) => {
                 followingId: data.followingId,
                 timestamp: new Date().toISOString()
             });
-            
+
             console.log(`🔔 Unfollow: ${data.followerId} -> ${data.followingId}`);
         } catch (error) {
             console.error('❌ Erro ao notificar unfollow:', error);
@@ -698,7 +700,7 @@ io.on('connection', (socket) => {
                 initiatedBy: data.initiatedBy,
                 timestamp: new Date().toISOString()
             });
-            
+
             console.log(`🤝 Nova amizade: ${data.userId1} <-> ${data.userId2} (iniciado por ${data.initiatedBy})`);
         } catch (error) {
             console.error('❌ Erro ao notificar amizade:', error);
@@ -729,7 +731,7 @@ io.on('connection', (socket) => {
         try {
             const { User } = await import('./models/index');
             await User.findOneAndUpdate({ id: data.userId }, data.stats);
-            
+
             // Notificar todos os clientes sobre a atualização
             io.emit('user_stats_updated', {
                 userId: data.userId,
@@ -744,23 +746,23 @@ io.on('connection', (socket) => {
     socket.on('follow_user', async (data: { followerId: string; followedId: string; streamId?: string }) => {
         try {
             const { User, Followers, Friendship } = await import('./models/index');
-            
+
             // Atualizar contadores
             const follower = await User.findOne({ id: data.followerId });
             const followed = await User.findOne({ id: data.followedId });
-            
+
             if (follower && followed) {
                 // Verificar se já são amigos (seguimento mútuo)
-                const isAlreadyFollowing = await Followers.findOne({ 
-                    followerId: data.followerId, 
-                    followedId: data.followedId 
+                const isAlreadyFollowing = await Followers.findOne({
+                    followerId: data.followerId,
+                    followedId: data.followedId
                 });
-                
-                const isFollowedBack = await Followers.findOne({ 
-                    followerId: data.followedId, 
-                    followedId: data.followerId 
+
+                const isFollowedBack = await Followers.findOne({
+                    followerId: data.followedId,
+                    followedId: data.followerId
                 });
-                
+
                 if (!isAlreadyFollowing) {
                     // Criar relação de follow
                     await Followers.create({
@@ -769,14 +771,14 @@ io.on('connection', (socket) => {
                         followedId: data.followedId,
                         createdAt: new Date()
                     });
-                    
+
                     // Atualizar contadores
                     follower.following += 1;
                     followed.fans += 1;
                     await follower.save();
                     await followed.save();
                 }
-                
+
                 // Se for follow mútuo, criar amizade
                 if (isFollowedBack && !isAlreadyFollowing) {
                     await Friendship.create({
@@ -785,13 +787,13 @@ io.on('connection', (socket) => {
                         userId2: data.followedId,
                         createdAt: new Date()
                     });
-                    
+
                     // Atualizar listas de amigos
                     follower.friendsList = [...(follower.friendsList || []), data.followedId];
                     followed.friendsList = [...(followed.friendsList || []), data.followerId];
                     await follower.save();
                     await followed.save();
-                    
+
                     // Notificar sobre nova amizade
                     io.emit('friendship_created', {
                         userId1: data.followerId,
@@ -801,7 +803,7 @@ io.on('connection', (socket) => {
                         timestamp: new Date()
                     });
                 }
-                
+
                 // Notificar sobre novo follow
                 io.emit('user_followed', {
                     followerId: data.followerId,
@@ -810,13 +812,13 @@ io.on('connection', (socket) => {
                     followed: followed,
                     timestamp: new Date()
                 });
-                
+
                 // Atualizar estatísticas em tempo real
                 io.emit('user_stats_updated', {
                     userId: data.followerId,
                     stats: { following: follower.following, friendsList: follower.friendsList }
                 });
-                
+
                 io.emit('user_stats_updated', {
                     userId: data.followedId,
                     stats: { fans: followed.fans, friendsList: followed.friendsList }
@@ -835,7 +837,7 @@ io.on('connection', (socket) => {
                 { diamonds: data.diamonds },
                 { new: true }
             );
-            
+
             if (user) {
                 // Notificar sobre atualização de diamantes
                 io.emit('diamonds_updated', {
@@ -865,7 +867,7 @@ io.on('connection', (socket) => {
             const { User } = await import('./models/index');
             await User.findOneAndUpdate(
                 { id: userId },
-                { 
+                {
                     isOnline: true,
                     lastSeen: new Date().toISOString()
                 }
@@ -923,14 +925,14 @@ io.on('connection', (socket) => {
                 timestamp: new Date(),
                 read: false
             });
-            
+
             // Notificar sobre notificação não lida
             io.to(`user_${data.userId}`).emit('unread_notification', {
                 userId: data.userId,
                 count: 1, // Aqui poderia buscar do banco o total
                 timestamp: new Date()
             });
-            
+
         } catch (error) {
             console.error('❌ Erro ao enviar notificação:', error);
         }
@@ -944,7 +946,7 @@ io.on('connection', (socket) => {
                 userId: data.userId,
                 timestamp: new Date()
             });
-            
+
         } catch (error) {
             console.error('❌ Erro ao marcar notificação como lida:', error);
         }

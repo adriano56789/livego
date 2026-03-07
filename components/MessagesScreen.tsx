@@ -5,14 +5,14 @@ import { useTranslation } from '../i18n';
 import { FriendRequestListIcon, MaleIcon, FemaleIcon, RankIcon } from './icons';
 
 interface MessagesScreenProps {
-  onStartChat: (friend: User) => void;
-  onViewProfile: (friend: User) => void;
-  conversations: Conversation[];
-  friends: User[];
-  initialTab?: 'messages' | 'friends';
-  onOpenFriendRequests: () => void;
-  fans: User[];
-  followingUsers: User[];
+    onStartChat: (friend: User) => void;
+    onViewProfile: (friend: User) => void;
+    conversations: Conversation[];
+    friends: User[];
+    initialTab?: 'messages' | 'friends';
+    onOpenFriendRequests: () => void;
+    fans: User[];
+    followingUsers: User[];
 }
 
 const AgeBadge: React.FC<{ user: User }> = ({ user }) => (
@@ -36,34 +36,39 @@ interface ConversationItemProps {
     onViewProfile: (user: User) => void;
 }
 
-const ConversationItem: React.FC<ConversationItemProps> = ({ conversation, onStartChat, onViewProfile }) => (
-    <div className="flex items-center p-4 space-x-4 cursor-pointer hover:bg-gray-800/50" onClick={() => onStartChat(conversation.friend)}>
-        <button onClick={(e) => { e.stopPropagation(); onViewProfile(conversation.friend); }} className="relative flex-shrink-0 focus:outline-none rounded-full">
-            <img src={conversation.friend.avatarUrl} alt={conversation.friend.name} className="w-14 h-14 rounded-full object-cover" />
-            {conversation.friend.isOnline && (
-                <div className="absolute bottom-0 right-0 w-4 h-4 bg-green-400 rounded-full border-2 border-[#111111]"></div>
-            )}
-        </button>
-        <div className="flex-grow min-w-0">
-            <div className="flex justify-between items-center">
-                <h3 className="font-semibold text-white truncate">{conversation.friend.name}</h3>
-                <span className="text-xs text-gray-500 flex-shrink-0 ml-2">{conversation.timestamp}</span>
-            </div>
-            <div className="flex items-center space-x-1.5 mt-1">
-                {conversation.friend.age && <AgeBadge user={conversation.friend} />}
-                <LevelBadge level={conversation.friend.level} />
-            </div>
-            <div className="flex justify-between items-center mt-1">
-                <p className="text-sm text-gray-400 truncate flex-grow mr-2">{conversation.lastMessage}</p>
-                {conversation.unreadCount && conversation.unreadCount > 0 ? (
-                    <div className="bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
-                        {conversation.unreadCount}
-                    </div>
-                ) : null}
+const ConversationItem: React.FC<ConversationItemProps> = ({ conversation, onStartChat, onViewProfile }) => {
+    const friend = conversation.friend;
+    if (!friend) return null; // Guard: never render without a friend object
+    return (
+        <div className="flex items-center p-4 space-x-4 cursor-pointer hover:bg-gray-800/50" onClick={() => onStartChat(friend)}>
+            <button onClick={(e) => { e.stopPropagation(); onViewProfile(friend); }} className="relative flex-shrink-0 focus:outline-none rounded-full">
+                <img src={friend.avatarUrl || ''} alt={friend.name || ''} className="w-14 h-14 rounded-full object-cover" />
+                {friend.isOnline && (
+                    <div className="absolute bottom-0 right-0 w-4 h-4 bg-green-400 rounded-full border-2 border-[#111111]"></div>
+                )}
+            </button>
+            <div className="flex-grow min-w-0">
+                <div className="flex justify-between items-center">
+                    <h3 className="font-semibold text-white truncate">{friend.name || '—'}</h3>
+                    <span className="text-xs text-gray-500 flex-shrink-0 ml-2">{conversation.timestamp}</span>
+                </div>
+                <div className="flex items-center space-x-1.5 mt-1">
+                    {friend.age && <AgeBadge user={friend} />}
+                    <LevelBadge level={friend.level || 1} />
+                </div>
+                <div className="flex justify-between items-center mt-1">
+                    <p className="text-sm text-gray-400 truncate flex-grow mr-2">{conversation.lastMessage}</p>
+                    {conversation.unreadCount && conversation.unreadCount > 0 ? (
+                        <div className="bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
+                            {conversation.unreadCount}
+                        </div>
+                    ) : null}
+                </div>
             </div>
         </div>
-    </div>
-);
+    );
+};
+
 
 const FriendRequestSummaryItem: React.FC<{ latestRequest: User | null; onClick: () => void; }> = ({ latestRequest, onClick }) => {
     const date = new Date(Date.now() - Math.random() * 24 * 60 * 60 * 1000);
@@ -112,7 +117,7 @@ const FriendItem: React.FC<FriendItemProps> = ({ friend, onStartChat, onViewProf
                 </div>
             </div>
             {friend.isFollowed && (
-                 <button className="bg-gray-700 text-gray-300 text-sm font-semibold px-4 py-1.5 rounded-full">
+                <button className="bg-gray-700 text-gray-300 text-sm font-semibold px-4 py-1.5 rounded-full">
                     {t('common.followed')}
                 </button>
             )}
@@ -130,8 +135,14 @@ const MessagesScreen: React.FC<MessagesScreenProps> = ({ onStartChat, onViewProf
         }
     }, [initialTab]);
 
-    const fanIds = new Set(fans.map(f => f.id));
-    const outgoingRequests = followingUsers.filter(followed => !fanIds.has(followed.id));
+    // Defensive fallbacks — any prop can arrive undefined before API response
+    const safeConversations = conversations || [];
+    const safeFriends = friends || [];
+    const safeFans = fans || [];
+    const safeFollowingUsers = followingUsers || [];
+
+    const fanIds = new Set(safeFans.map(f => f.id));
+    const outgoingRequests = safeFollowingUsers.filter(followed => !fanIds.has(followed.id));
     const latestOutgoingRequest = outgoingRequests.length > 0 ? outgoingRequests[outgoingRequests.length - 1] : null;
 
     return (
@@ -151,7 +162,7 @@ const MessagesScreen: React.FC<MessagesScreenProps> = ({ onStartChat, onViewProf
                             className={`text-lg font-bold transition-colors ${activeTab === 'friends' ? 'text-white' : 'text-gray-500 hover:text-white'}`}
                         >
                             {t('common.friends')}
-                             {activeTab === 'friends' && <div className="h-0.5 bg-white mt-1 rounded-full"></div>}
+                            {activeTab === 'friends' && <div className="h-0.5 bg-white mt-1 rounded-full"></div>}
                         </button>
                     </div>
                 </nav>
@@ -163,16 +174,18 @@ const MessagesScreen: React.FC<MessagesScreenProps> = ({ onStartChat, onViewProf
                             <FriendRequestSummaryItem latestRequest={latestOutgoingRequest} onClick={onOpenFriendRequests} />
                         )}
 
-                        {conversations.length > 0 && conversations.map(convo => (
-                            <ConversationItem key={convo.id} conversation={convo} onStartChat={onStartChat} onViewProfile={onViewProfile} />
-                        ))}
-                        
-                        {conversations.length === 0 && friends.length > 0 && (
+                        {safeConversations.length > 0 && safeConversations
+                            .filter(convo => convo && convo.friend) // guard against missing friend
+                            .map(convo => (
+                                <ConversationItem key={convo.id} conversation={convo} onStartChat={onStartChat} onViewProfile={onViewProfile} />
+                            ))}
+
+                        {safeConversations.length === 0 && safeFriends.length > 0 && (
                             <>
                                 <div className="p-3 text-sm text-gray-400 font-semibold bg-black/50">
                                     Comece uma nova conversa
                                 </div>
-                                {friends.map(friend => (
+                                {safeFriends.map(friend => (
                                     <FriendItem key={friend.id} friend={friend} onStartChat={onStartChat} onViewProfile={onViewProfile} />
                                 ))}
                             </>
@@ -180,13 +193,13 @@ const MessagesScreen: React.FC<MessagesScreenProps> = ({ onStartChat, onViewProf
                     </div>
                 ) : (
                     <div>
-                         {friends.map(friend => (
+                        {safeFriends.map(friend => (
                             <FriendItem key={friend.id} friend={friend} onStartChat={onStartChat} onViewProfile={onViewProfile} />
                         ))}
                     </div>
                 )}
 
-                 { (activeTab === 'messages' && conversations.length === 0 && outgoingRequests.length === 0 && friends.length === 0) || (activeTab === 'friends' && friends.length === 0) ? (
+                {(activeTab === 'messages' && safeConversations.length === 0 && outgoingRequests.length === 0 && safeFriends.length === 0) || (activeTab === 'friends' && safeFriends.length === 0) ? (
                     <div className="flex flex-col items-center justify-center h-full text-center text-gray-500 p-8">
                         <p>Nenhum item aqui.</p>
                         <p className="text-sm">Comece a conversar com pessoas!</p>

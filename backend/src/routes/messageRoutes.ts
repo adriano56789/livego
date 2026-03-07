@@ -7,46 +7,40 @@ const router = express.Router();
 router.get('/', async (req, res) => {
     try {
         const { userId, limit = 50, offset = 0 } = req.query;
-        
+
         if (!userId) {
             return res.status(400).json({ error: 'userId é obrigatório' });
         }
-        
+
         console.log(`🔍 Buscando mensagens para usuário ${userId}`);
 
         // Buscar todas as mensagens onde o usuário participa
-        const messages = await ChatMessage.find({ 
+        const messages = await ChatMessage.find({
             $or: [
                 { senderId: userId },
                 { receiverId: userId }
             ]
         })
-        .sort({ timestamp: -1 })
-        .limit(parseInt(limit as string))
-        .skip(parseInt(offset as string));
+            .sort({ sentAt: -1 })
+            .limit(parseInt(limit as string))
+            .skip(parseInt(offset as string));
 
-        // Marcar mensagens recebidas como lidas
-        await ChatMessage.updateMany(
-            { 
-                receiverId: userId,
-                isRead: false
-            },
-            { isRead: true }
-        );
-
-        // Notificar sobre mensagens lidas
-        const io = req.app.get('io');
-        if (io) {
-            io.to(`user_${userId}`).emit('messages_read', {
-                userId,
-                timestamp: new Date()
-            });
-        }
+        // Mapear para o formato Message esperado pelo frontend
+        const mappedMessages = messages.reverse().map((msg: any) => ({
+            id: msg.id,
+            chatId: msg.conversationId || `chat_${[msg.senderId, msg.receiverId].sort().join('_')}`,
+            from: msg.senderId,
+            to: msg.receiverId,
+            text: msg.content || '',
+            imageUrl: msg.messageType === 'image' ? msg.content : undefined,
+            timestamp: msg.sentAt?.toISOString() || new Date().toISOString(),
+            status: msg.isRead ? 'read' : 'delivered',
+        }));
 
         res.json({
             success: true,
-            messages: messages.reverse(), // Ordenar por timestamp crescente
-            total: messages.length
+            messages: mappedMessages,
+            total: mappedMessages.length
         });
 
     } catch (error: any) {
@@ -61,36 +55,50 @@ router.get('/chats/:userId/messages', async (req, res) => {
         const { userId } = req.params;
         const { currentUserId } = req.query;
         const { limit = 50, offset = 0 } = req.query;
-        
+
         // Validar se o userId do usuário logado foi fornecido
         if (!currentUserId) {
             return res.status(400).json({ error: 'currentUserId é obrigatório' });
         }
-        
+
         console.log(`🔍 Buscando mensagens entre usuários ${currentUserId} e ${userId}`);
 
         // Buscar todas as mensagens onde os usuários participam
-        const messages = await ChatMessage.find({ 
+        const messages = await ChatMessage.find({
             $or: [
                 { senderId: currentUserId, receiverId: userId },
                 { senderId: userId, receiverId: currentUserId }
             ]
         })
-        .sort({ timestamp: -1 })
-        .limit(parseInt(limit as string))
-        .skip(parseInt(offset as string));
+            .sort({ sentAt: 1 }) // Ordem cronológica ascendente
+            .limit(parseInt(limit as string))
+            .skip(parseInt(offset as string));
 
-        // Marcar mensagens recebidas como lidas
-        await ChatMessage.updateMany(
-            { 
+        // Mapear para o formato Message esperado pelo frontend
+        const mappedMessages = messages.map((msg: any) => ({
+            id: msg.id,
+            chatId: msg.conversationId || `chat_${[msg.senderId, msg.receiverId].sort().join('_')}`,
+            from: msg.senderId,
+            to: msg.receiverId,
+            text: msg.messageType !== 'image' ? (msg.content || '') : '',
+            imageUrl: msg.messageType === 'image' ? msg.content : undefined,
+            timestamp: msg.sentAt?.toISOString() || new Date().toISOString(),
+            status: msg.isRead ? 'read' : 'delivered',
+        }));
+
+        console.log(`📊 Encontradas ${mappedMessages.length} mensagens`);
+
+        // Marcar mensagens recebidas como lidas (em segundo plano)
+        ChatMessage.updateMany(
+            {
                 senderId: userId,
                 receiverId: currentUserId,
                 isRead: false
             },
             { isRead: true }
-        );
+        ).catch(console.error);
 
-        // Notificar sobre mensagens lidas
+        // Notificar sobre mensagens lidas via WebSocket
         const io = req.app.get('io');
         if (io) {
             io.to(`user_${currentUserId}`).emit('messages_read', {
@@ -101,8 +109,8 @@ router.get('/chats/:userId/messages', async (req, res) => {
 
         res.json({
             success: true,
-            messages: messages.reverse(), // Ordenar por timestamp crescente
-            total: messages.length
+            messages: mappedMessages,
+            total: mappedMessages.length
         });
 
     } catch (error: any) {
@@ -115,7 +123,7 @@ router.get('/chats/:userId/messages', async (req, res) => {
 router.post('/', async (req, res) => {
     try {
         const { conversationId, senderId, receiverId, content, type = 'text' } = req.body;
-        
+
         if (!conversationId || !senderId || !receiverId || !content) {
             return res.status(400).json({ error: 'Dados incompletos' });
         }

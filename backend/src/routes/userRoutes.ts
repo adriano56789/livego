@@ -416,8 +416,87 @@ UserRoutes.get('/:id/friends', async (req, res) => {
     }
 });
 UserRoutes.get('/:id/messages', async (req, res) => {
-    // Get conversations where user is part of
-    res.json([]);
+    try {
+        const userId = req.params.id;
+
+        // Importar ChatMessage dinamicamente para evitar dependência circular
+        const { ChatMessage } = await import('../models/index');
+
+        // Buscar todas as mensagens onde o usuário participou
+        const messages = await ChatMessage.find({
+            $or: [
+                { senderId: userId },
+                { receiverId: userId }
+            ]
+        }).sort({ sentAt: -1 });
+
+        // Extrair IDs únicos dos interlocutores (a outra pessoa em cada conversa)
+        const partnerIds = new Set<string>();
+        const lastMessageByPartner = new Map<string, any>();
+
+        messages.forEach((msg: any) => {
+            const partnerId = msg.senderId === userId ? msg.receiverId : msg.senderId;
+            if (partnerId && partnerId !== userId) {
+                partnerIds.add(partnerId);
+                // Guardar apenas a mensagem mais recente por parceiro
+                if (!lastMessageByPartner.has(partnerId)) {
+                    lastMessageByPartner.set(partnerId, msg);
+                }
+            }
+        });
+
+        if (partnerIds.size === 0) {
+            return res.json([]);
+        }
+
+        // Buscar dados dos parceiros
+        const partners = await User.find({ id: { $in: Array.from(partnerIds) } });
+
+        // Contar mensagens não lidas por parceiro
+        const unreadCounts = await Promise.all(
+            Array.from(partnerIds).map(async (partnerId) => {
+                const { ChatMessage: CM } = await import('../models/index');
+                const count = await (CM as any).countDocuments({
+                    senderId: partnerId,
+                    receiverId: userId,
+                    isRead: false
+                });
+                return { partnerId, count };
+            })
+        );
+
+        const unreadMap = new Map<string, number>();
+        unreadCounts.forEach(({ partnerId, count }) => unreadMap.set(partnerId, count));
+
+        // Montar resposta em formato Conversation
+        const conversations = partners.map((partner: any) => {
+            const lastMsg = lastMessageByPartner.get(partner.id);
+            const lastMsgText = lastMsg?.content || '';
+            const lastMsgTime = lastMsg?.sentAt ? new Date(lastMsg.sentAt).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) : '';
+
+            return {
+                id: `conv_${userId}_${partner.id}`,
+                friend: partner,
+                lastMessage: lastMsgText,
+                timestamp: lastMsgTime,
+                unreadCount: unreadMap.get(partner.id) || 0
+            };
+        });
+
+        // Ordenar por mensagem mais recente primeiro
+        conversations.sort((a: any, b: any) => {
+            const aMsg = lastMessageByPartner.get(a.friend.id);
+            const bMsg = lastMessageByPartner.get(b.friend.id);
+            const aTime = aMsg?.sentAt ? new Date(aMsg.sentAt).getTime() : 0;
+            const bTime = bMsg?.sentAt ? new Date(bMsg.sentAt).getTime() : 0;
+            return bTime - aTime;
+        });
+
+        res.json(conversations);
+    } catch (error: any) {
+        console.error('Error getting conversations:', error);
+        res.status(500).json({ error: error.message });
+    }
 });
 UserRoutes.get('/me/blocklist', async (req, res) => {
     try {
@@ -522,46 +601,46 @@ UserRoutes.post('/:id/visit', async (req, res) => {
     try {
         const { userId } = req.body;
         const profileId = req.params.id;
-        
+
         if (!userId || !profileId) {
             return res.status(400).json({ error: 'userId e profileId são obrigatórios' });
         }
-        
+
         if (userId === profileId) {
             return res.status(400).json({ error: 'Usuário não pode visitar o próprio perfil' });
         }
-        
+
         console.log(`👁️ Usuário ${userId} visitou o perfil de ${profileId}`);
-        
+
         // Verificar se ambos os usuários existem
         const [visitor, profile] = await Promise.all([
             User.findOne({ id: userId }),
             User.findOne({ id: profileId })
         ]);
-        
+
         if (!visitor || !profile) {
             return res.status(404).json({ error: 'Usuário não encontrado' });
         }
-        
+
         // Importar Visitor dinamicamente para evitar dependência circular
         const { Visitor } = await import('../models');
-        
+
         // Salvar visita no banco
         await Visitor.findOneAndUpdate(
             { visitorId: userId, visitedId: profileId },
-            { 
+            {
                 visitedAt: new Date()
             },
             { upsert: true, new: true }
         );
-        
+
         console.log(`✅ Visita registrada: ${userId} → ${profileId}`);
-        
-        res.json({ 
+
+        res.json({
             success: true,
             message: 'Visita registrada com sucesso'
         });
-        
+
     } catch (error: any) {
         console.error('❌ Erro ao registrar visita:', error);
         res.status(500).json({ error: 'Erro ao registrar visita' });

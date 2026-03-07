@@ -231,6 +231,44 @@ const AppContent: React.FC = () => {
 
     loadGifts();
   }, []);
+
+  // Carregar dados do usuário logado (conversas, amigos, fãs, seguindo)
+  useEffect(() => {
+    if (!currentUser?.id) return;
+
+    const loadUserData = async () => {
+      try {
+        console.log('📥 Carregando dados do usuário:', currentUser.id);
+        const [convs, friendList, fanList, followingList] = await Promise.allSettled([
+          api.getConversations(currentUser.id),
+          api.getFriends(currentUser.id),
+          api.getFansUsers(currentUser.id),
+          api.getFollowingUsers(currentUser.id),
+        ]);
+
+        if (convs.status === 'fulfilled' && Array.isArray(convs.value)) {
+          console.log('💬 Conversações carregadas:', convs.value.length);
+          setConversations(convs.value);
+        }
+        if (friendList.status === 'fulfilled' && Array.isArray(friendList.value)) {
+          console.log('👥 Amigos carregados:', friendList.value.length);
+          setFriends(friendList.value);
+        }
+        if (fanList.status === 'fulfilled' && Array.isArray(fanList.value)) {
+          console.log('⭐ Fãs carregados:', fanList.value.length);
+          setFans(fanList.value);
+        }
+        if (followingList.status === 'fulfilled' && Array.isArray(followingList.value)) {
+          console.log('➡️ Seguindo carregados:', followingList.value.length);
+          setFollowingUsers(followingList.value);
+        }
+      } catch (error) {
+        console.error('Erro ao carregar dados do usuário:', error);
+      }
+    };
+
+    loadUserData();
+  }, [currentUser?.id]);
   const [rankingData, setRankingData] = useState<Record<string, RankedUser[]>>(INITIAL_DATA.rankingData);
   const [listScreenUsers, setListScreenUsers] = useState<User[]>([]);
   const [notificationSettings, setNotificationSettings] = useState<NotificationSettings | null>(INITIAL_DATA.notificationSettings);

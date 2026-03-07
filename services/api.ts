@@ -54,6 +54,12 @@ const callApi = async <T>(method: string, path: string, body?: any): Promise<T> 
                 headers['Authorization'] = `Bearer ${token}`;
             }
 
+            // Evitar 304 Not Modified — forçar o browser a sempre buscar dados frescos
+            if (method === 'GET') {
+                headers['Cache-Control'] = 'no-cache';
+                headers['Pragma'] = 'no-cache';
+            }
+
             const response = await axios({
                 method: method as Method,
                 url: `${API_BASE_URL}${path}`,
@@ -68,7 +74,7 @@ const callApi = async <T>(method: string, path: string, body?: any): Promise<T> 
                 throw new Error('API returned HTML instead of JSON');
             }
             if (typeof response.data === 'string' && response.data.trim().startsWith('<')) {
-                 throw new Error('API returned HTML-like string instead of JSON');
+                throw new Error('API returned HTML-like string instead of JSON');
             }
 
             // Tratar status 304 Not Modified - dados não modificados

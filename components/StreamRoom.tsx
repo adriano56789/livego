@@ -87,8 +87,22 @@ const globalFetchControl = new Map<string, boolean>();
 
 const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, onLeaveStreamView, onStartPKBattle, onViewProfile, currentUser, onOpenWallet, onFollowUser, onOpenPrivateChat, onOpenPrivateInviteModal, setActiveScreen, onStartChatWithStreamer, onOpenPKTimerSettings, onOpenFans, onOpenFriendRequests, gifts, receivedGifts, updateUser, liveSession, updateLiveSession, logLiveEvent, onStreamUpdate, refreshStreamRoomData, addToast, followingUsers, streamers, onSelectStream, onOpenVIPCenter, rankingData }) => {
     const { t } = useTranslation();
-    const [activeScreen, setActiveScreenState] = useState<'main' | 'profile' | 'messages' | 'video'>('main');
+    
+    // Early validation for required props
+    if (!streamer || !currentUser) {
+        console.error('[StreamRoom] Missing required props:', { streamer: !!streamer, currentUser: !!currentUser });
+        return (
+            <div className="absolute inset-0 bg-gray-900 text-white font-sans z-10 flex items-center justify-center">
+                <div className="text-center">
+                    <div className="text-red-500 text-xl mb-2">Erro ao carregar transmissão</div>
+                    <div className="text-gray-400">Verifique sua conexão e tente novamente</div>
+                </div>
+            </div>
+        );
+    }
+    
     const [isUiVisible, setIsUiVisible] = useState(true);
+    const [showChatScreen, setShowChatScreen] = useState(false);
     const [isToolsOpen, setIsToolsOpen] = useState(false);
     const [isBeautyPanelOpen, setBeautyPanelOpen] = useState(false);
     const [isCoHostModalOpen, setIsCoHostModalOpen] = useState(false);
@@ -231,22 +245,60 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
                 }
             } else {
                 // Scenario 2: I am a Viewer
-                // If the streamer has a demo video URL, play it
-                if (streamer.demoVideoUrl) {
-                    console.log("[StreamRoom] Playing demo video for viewer.");
-                    videoEl.src = streamer.demoVideoUrl;
-                    videoEl.loop = true;
-                    videoEl.muted = false; // Viewers want sound
-                    videoEl.volume = 0.8;
-                    // We need to attach the listener before setting src in some browsers, or ensuring it catches
-                    videoEl.onloadeddata = onVideoReady;
-                    // In case it's cached or ready state is immediate
-                    if (videoEl.readyState >= 3) {
-                        onVideoReady();
+                console.log("[StreamRoom] Starting WebRTC playback for viewer...");
+                
+                try {
+                    // Construct the WebRTC URL for SRS
+                    // Assuming standard SRS format: http://<server>/rtc/v1/play/
+                    // But our service expects the full stream URL like: webrtc://<server>/live/<streamId>
+                    // Let's use the one from streamer object or construct it
+                    
+                    // Fallback to construction if playbackUrl is missing or http-flv
+                    // SRS WebRTC url format: webrtc://hostname/app/stream
+                    const srsHost = 'livego.store'; // Should be env or from config
+                    const webrtcUrl = `webrtc://${srsHost}/live/${streamer.id}`;
+                    
+                    console.log(`[StreamRoom] Connecting to WebRTC: ${webrtcUrl}`);
+                    
+                    const remoteStream = await webRTCService.startPlay(webrtcUrl);
+                    
+                    if (remoteStream) {
+                         videoEl.srcObject = remoteStream;
+                         videoEl.muted = false;
+                         videoEl.volume = 1.0;
+                         videoEl.onloadeddata = onVideoReady;
+                         
+                         // Auto-play might be blocked, ensure we try
+                         try {
+                             await videoEl.play();
+                         } catch (e) {
+                             console.warn("Autoplay blocked, waiting for user interaction");
+                         }
+                    } else {
+                         throw new Error("No remote stream returned");
                     }
-                } else {
-                    // If no demo video, standard logic would be WebRTC play
-                    // For now, if no video, we just leave it empty (cover image shows)
+                } catch (e) {
+                    console.error("[StreamRoom] WebRTC Playback failed:", e);
+                    // Continue with fallback without throwing to prevent breaking render
+                    try {
+                        if (streamer.demoVideoUrl) {
+                            console.log("[StreamRoom] Falling back to demo video.");
+                            videoEl.src = streamer.demoVideoUrl;
+                            videoEl.loop = true;
+                            videoEl.muted = false;
+                            videoEl.onloadeddata = onVideoReady;
+                        } else if (streamer.playbackUrl && streamer.playbackUrl.includes('.flv')) {
+                             // Implement flv.js player here if needed, or just log
+                             console.warn("[StreamRoom] FLV playback not implemented in this view yet.");
+                        } else {
+                            // Final fallback: show cover image
+                            console.log("[StreamRoom] No video source available, showing cover");
+                            setIsVideoPlaying(false);
+                        }
+                    } catch (fallbackError) {
+                        console.error("[StreamRoom] Fallback also failed:", fallbackError);
+                        setIsVideoPlaying(false);
+                    }
                 }
             }
         };
@@ -484,7 +536,9 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
     };
 
     const handleFollowStreamer = () => {
-        onFollowUser(streamerUser, streamer.id);
+        if (streamerUser) {
+            onFollowUser(streamerUser, streamer.id);
+        }
     };
 
     const handleFollowChatUser = (userToFollow: User) => {
@@ -498,12 +552,7 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
         }
     }, [messages]);
 
-    // Sincronizar activeScreen com a prop
-    useEffect(() => {
-        if (setActiveScreen) {
-            setActiveScreen(activeScreen);
-        }
-    }, [activeScreen, setActiveScreen]);
+    // activeScreen é controlado pela prop setActiveScreen do componente pai
 
 
     const handleInvite = (opponent: User) => {
@@ -611,7 +660,7 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
             if (success && updatedSender) {
                 updateUser(updatedSender);
 
-                if (gift.triggersAutoFollow && !isFollowed) {
+                if (gift.triggersAutoFollow && !isFollowed && streamerUser) {
                     onFollowUser(streamerUser, streamer.id);
                 }
 
@@ -709,12 +758,19 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
             onTouchStart={(e) => handlePointerDown(e.targetTouches[0].clientX, e.targetTouches[0].clientY)}
             onTouchEnd={(e) => handlePointerUp(e.changedTouches[0].clientX, e.changedTouches[0].clientY)}
         >
-            {/* Renderizar ChatScreen quando a tela ativa for 'messages' */}
-            {activeScreen === 'messages' && (
+            {/* Renderizar ChatScreen quando showChatScreen for true */}
+            {showChatScreen && (
                 <ChatScreen 
                     currentUser={currentUser}
                     onOpenProfile={onViewProfile}
-                    onBack={() => setActiveScreenState('main')}
+                    onBack={() => setShowChatScreen(false)}
+                    isModal={false}
+                    user={currentUser}
+                    onNavigateToFriends={() => {}}
+                    onFollowUser={onFollowUser}
+                    onBlockUser={() => {}}
+                    onReportUser={() => {}}
+                    onOpenPhotoViewer={() => {}}
                 />
             )}
 
@@ -723,10 +779,15 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
                 {/* Fallback Image - Visible only if video is NOT playing */}
                 {!isVideoPlaying && (
                     <img
-                        src={streamerUser.coverUrl || streamerUser.avatarUrl}
-                        key={streamerUser.coverUrl}
+                        src={streamerUser?.coverUrl || streamerUser?.avatarUrl || '/placeholder-avatar.jpg'}
+                        key={streamerUser?.coverUrl || streamerUser?.avatarUrl}
                         className="absolute inset-0 w-full h-full object-cover z-10"
                         alt="Stream background"
+                        onError={(e) => {
+                            // Fallback to solid color if image fails to load
+                            const target = e.target as HTMLImageElement;
+                            target.style.display = 'none';
+                        }}
                     />
                 )}
 
@@ -767,14 +828,14 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
                     <div className="flex items-start space-x-2">
                         <div className="flex flex-col space-y-2">
                             {/* Streamer Info */}
-                            <button onClick={(e) => { e.stopPropagation(); onViewProfile(streamerDisplayUser); }} className="flex items-center bg-black/40 rounded-full p-1 pr-3 space-x-2 text-left">
+                            <button onClick={(e) => { e.stopPropagation(); streamerDisplayUser && onViewProfile(streamerDisplayUser); }} className="flex items-center bg-black/40 rounded-full p-1 pr-3 space-x-2 text-left">
                                 <div className="relative w-10 h-10 flex items-center justify-center">
                                     <div className="live-ring-animated">
-                                        <img src={streamerDisplayUser.avatarUrl} alt={streamerDisplayUser.name} className="w-8 h-8 rounded-full object-cover" />
+                                        <img src={streamerDisplayUser?.avatarUrl || '/placeholder-avatar.jpg'} alt={streamerDisplayUser?.name || 'Streamer'} className="w-8 h-8 rounded-full object-cover" />
                                     </div>
                                 </div>
                                 <div>
-                                    <p className="text-white font-bold text-sm">{streamerDisplayUser.name}</p>
+                                    <p className="text-white font-bold text-sm">{streamerDisplayUser?.name || streamer.name}</p>
                                     <div className="flex items-center space-x-1 text-gray-300 text-xs">
                                         <ViewerIcon className="w-4 h-4" />
                                         <span>{liveSession?.viewers.toLocaleString() || '0'}</span>
@@ -907,8 +968,10 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
                         ) : (
                             <button onClick={(e) => { 
                                 e.stopPropagation(); 
-                                console.log('🔥 Clique no ícone de chat para:', streamerUser.name);
-                                onStartChatWithStreamer(streamerUser); 
+                                console.log('🔥 Clique no ícone de chat para:', streamerUser?.name || streamer.name);
+                                if (streamerUser) {
+                                    onStartChatWithStreamer(streamerUser); 
+                                }
                             }} className="bg-black/40 w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0 hover:bg-white/10 transition-colors"><MessageIcon className="w-6 h-6 text-white" /></button>
                         )}
                     </div>

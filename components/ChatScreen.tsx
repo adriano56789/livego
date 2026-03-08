@@ -50,6 +50,13 @@ const ChatMessageBubble: React.FC<{ message: Message; isMe: boolean; user: User;
     // Simplificado - sem frames para navegação isolada
     const frameGlowClass = '';
 
+    // Usar dados do remetente da API se disponíveis, senão usar dados do user prop
+    const senderName = message.senderName || user.name;
+    const senderAvatar = message.senderAvatar || user.avatarUrl;
+    const senderAge = message.senderAge || user.age;
+    const senderLevel = message.senderLevel || user.level;
+    const senderIdentification = message.senderIdentification || user.identification;
+
     return (
         <div
             key={message.id}
@@ -57,9 +64,17 @@ const ChatMessageBubble: React.FC<{ message: Message; isMe: boolean; user: User;
             data-message-id={message.id}
         >
             <div className="relative w-10 h-10 flex-shrink-0">
-                <img src={user.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || "User")}&background=random`} alt="avatar" className="w-10 h-10 rounded-full object-cover" />
+                <img src={senderAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(senderName || "User")}&background=random`} alt="avatar" className="w-10 h-10 rounded-full object-cover" />
             </div>
             <div className={`max-w-xs md:max-w-md rounded-2xl ${isMe ? 'bg-purple-600 rounded-br-none' : 'bg-gray-700 rounded-bl-none'} ${message.imageUrl && !message.text ? 'p-1' : 'px-3 py-2'}`}>
+                {!isMe && (senderName || senderLevel) && (
+                    <div className="flex items-center gap-2 mb-1 text-xs text-gray-300">
+                        {senderName && <span className="font-medium">{senderName}</span>}
+                        {senderLevel && <span className="bg-purple-500/20 text-purple-300 px-1.5 py-0.5 rounded-full">Nível {senderLevel}</span>}
+                        {senderIdentification && <span className="text-gray-400">ID: {senderIdentification}</span>}
+                        {senderAge && <span className="text-gray-400">{senderAge} anos</span>}
+                    </div>
+                )}
                 {message.imageUrl && (
                     <button
                         onClick={() => onImageClick(message.imageUrl!)}

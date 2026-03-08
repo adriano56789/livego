@@ -25,17 +25,34 @@ router.get('/', async (req, res) => {
             .limit(parseInt(limit as string))
             .skip(parseInt(offset as string));
 
-        // Mapear para o formato Message esperado pelo frontend
-        const mappedMessages = messages.reverse().map((msg: any) => ({
-            id: msg.id,
-            chatId: msg.conversationId || `chat_${[msg.senderId, msg.receiverId].sort().join('_')}`,
-            from: msg.senderId,
-            to: msg.receiverId,
-            text: msg.content || '',
-            imageUrl: msg.messageType === 'image' ? msg.content : undefined,
-            timestamp: msg.sentAt?.toISOString() || new Date().toISOString(),
-            status: msg.isRead ? 'read' : 'delivered',
-        }));
+        // Buscar dados únicos dos remetentes
+        const senderIds = [...new Set(messages.map(msg => msg.senderId))];
+        const senders = await User.find({ id: { $in: senderIds } }).select('id name avatarUrl age level identification');
+        const senderMap = new Map(senders.map(sender => [sender.id, sender]));
+
+        // Mapear para o formato Message esperado pelo frontend com dados do remetente
+        const mappedMessages = messages.reverse().map((msg: any) => {
+            const sender = senderMap.get(msg.senderId);
+            const senderData = sender ? {
+                senderName: sender.name,
+                senderAvatar: sender.avatarUrl,
+                senderAge: sender.age,
+                senderLevel: sender.level,
+                senderIdentification: sender.identification
+            } : {};
+
+            return {
+                id: msg.id,
+                chatId: msg.conversationId || `chat_${[msg.senderId, msg.receiverId].sort().join('_')}`,
+                from: msg.senderId,
+                to: msg.receiverId,
+                text: msg.content || '',
+                imageUrl: msg.messageType === 'image' ? msg.content : undefined,
+                timestamp: msg.sentAt?.toISOString() || new Date().toISOString(),
+                status: msg.isRead ? 'read' : 'delivered',
+                ...senderData
+            };
+        });
 
         res.json({
             success: true,
@@ -74,17 +91,34 @@ router.get('/chats/:userId/messages', async (req, res) => {
             .limit(parseInt(limit as string))
             .skip(parseInt(offset as string));
 
-        // Mapear para o formato Message esperado pelo frontend
-        const mappedMessages = messages.map((msg: any) => ({
-            id: msg.id,
-            chatId: msg.conversationId || `chat_${[msg.senderId, msg.receiverId].sort().join('_')}`,
-            from: msg.senderId,
-            to: msg.receiverId,
-            text: msg.messageType !== 'image' ? (msg.content || '') : '',
-            imageUrl: msg.messageType === 'image' ? msg.content : undefined,
-            timestamp: msg.sentAt?.toISOString() || new Date().toISOString(),
-            status: msg.isRead ? 'read' : 'delivered',
-        }));
+        // Buscar dados únicos dos remetentes
+        const senderIds = [...new Set(messages.map(msg => msg.senderId))];
+        const senders = await User.find({ id: { $in: senderIds } }).select('id name avatarUrl age level identification');
+        const senderMap = new Map(senders.map(sender => [sender.id, sender]));
+
+        // Mapear para o formato Message esperado pelo frontend com dados do remetente
+        const mappedMessages = messages.map((msg: any) => {
+            const sender = senderMap.get(msg.senderId);
+            const senderData = sender ? {
+                senderName: sender.name,
+                senderAvatar: sender.avatarUrl,
+                senderAge: sender.age,
+                senderLevel: sender.level,
+                senderIdentification: sender.identification
+            } : {};
+
+            return {
+                id: msg.id,
+                chatId: msg.conversationId || `chat_${[msg.senderId, msg.receiverId].sort().join('_')}`,
+                from: msg.senderId,
+                to: msg.receiverId,
+                text: msg.messageType !== 'image' ? (msg.content || '') : '',
+                imageUrl: msg.messageType === 'image' ? msg.content : undefined,
+                timestamp: msg.sentAt?.toISOString() || new Date().toISOString(),
+                status: msg.isRead ? 'read' : 'delivered',
+                ...senderData
+            };
+        });
 
         console.log(`📊 Encontradas ${mappedMessages.length} mensagens`);
 

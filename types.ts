@@ -179,6 +179,12 @@ export interface Message {
   timestamp: string;
   status: 'sent' | 'delivered' | 'read' | 'sending' | 'failed';
   type?: 'system-friend-notification';
+  // Dados do remetente incluídos pela API
+  senderName?: string;
+  senderAvatar?: string;
+  senderAge?: number;
+  senderLevel?: number;
+  senderIdentification?: string;
 }
 
 export type RankedUser = User & { contribution: number; gender: 'male' | 'female' | 'not_specified'; age: number; };

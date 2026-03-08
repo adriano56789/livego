@@ -20,9 +20,9 @@ export interface IChatMessage extends Document {
 
 const ChatMessageSchema: Schema = new Schema({
     id: { type: String, required: true, unique: true },
-    conversationId: { type: String, required: true, ref: 'Conversation' },
-    senderId: { type: String, required: true, ref: 'User' },
-    receiverId: { type: String, required: true, ref: 'User' },
+    conversationId: { type: String, required: true },
+    senderId: { type: String, required: true },
+    receiverId: { type: String, required: true },
     content: { type: String, required: true },
     messageType: { type: String, enum: ['text', 'image', 'gift', 'system'], default: 'text' },
     isRead: { type: Boolean, default: false },

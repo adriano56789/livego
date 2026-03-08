@@ -10,6 +10,7 @@ export function standardizeUserResponse(user: any): any {
         return {
             id: "",
             name: "",
+            identification: "",
             avatarUrl: "",
             coverUrl: "",
             age: 0,
@@ -38,6 +39,7 @@ export function standardizeUserResponse(user: any): any {
         // Campos básicos com valores do usuário ou defaults
         id: user.id || "",
         name: user.name || "",
+        identification: user.identification || user.id || "",
         avatarUrl: user.avatarUrl || "",
         coverUrl: user.coverUrl || "",
         age: user.age || 0,
@@ -65,7 +67,7 @@ export function standardizeUserResponse(user: any): any {
         // Mantém todos os outros campos existentes no usuário
         ...Object.keys(user).reduce((acc, key) => {
             if (![
-                'id', 'name', 'avatarUrl', 'coverUrl', 'age', 'gender', 
+                'id', 'name', 'identification', 'avatarUrl', 'coverUrl', 'age', 'gender', 
                 'level', 'xp', 'rank', 'photos', 'followersList', 'followingList',
                 'friendsList', 'blockedUsers', 'fans', 'following', 
                 'messages', 'notifications', 'visitors'

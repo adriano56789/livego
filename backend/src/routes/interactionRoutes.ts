@@ -703,10 +703,7 @@ router.post('/vip/subscribe/:id', async (req, res) => {
 });
 
 router.post('/chats/mark-read', async (req, res) => res.json({}));
-router.post('/chats/send', async (req, res) => {
-    await Message.create({ id: Date.now().toString(), ...req.body, chatId: req.body.to });
-    res.json({});
-});
+// REMOVIDO: router.post('/chats/send') - já existe em chatRoutes.ts
 router.post('/streams/:id/kick', async (req, res) => res.json({}));
 router.post('/streams/:id/moderator', async (req, res) => res.json({}));
 router.get('/notifications', async (req, res) => res.json([]));

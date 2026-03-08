@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { User } from '../models';
 import mongoose from 'mongoose';
+import { standardizeUserResponse } from '../utils/userResponse';
 
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret_key_change_me_in_prod';
@@ -120,7 +121,7 @@ router.post('/register', async (req, res) => {
         res.status(201).json({
             success: true,
             token,
-            user
+            user: standardizeUserResponse(user)
         });
     } catch (error: any) {
         res.status(500).json({ error: error.message });
@@ -157,7 +158,7 @@ router.post('/login', async (req, res) => {
                 return res.json({
                     success: true,
                     token,
-                    user
+                    user: standardizeUserResponse(user)
                 });
             } catch (tokenError) {
                 return res.status(401).json({ error: 'Invalid token' });
@@ -190,7 +191,7 @@ router.post('/login', async (req, res) => {
         res.json({
             success: true,
             token,
-            user
+            user: standardizeUserResponse(user)
         });
     } catch (error: any) {
         res.status(500).json({ error: error.message });
@@ -242,7 +243,8 @@ router.get('/google/connected', async (req, res) => {
             email: user.email || '',
             name: user.name,
             avatarUrl: user.avatarUrl || '',
-            isConnected: true
+            isConnected: true,
+            user: standardizeUserResponse(user)
         }];
 
         res.json(connectedAccounts);
@@ -280,7 +282,8 @@ router.get('/google', async (req, res) => {
             email: user.email || '',
             name: user.name,
             avatarUrl: user.avatarUrl || '',
-            isConnected: true
+            isConnected: true,
+            user: standardizeUserResponse(user)
         }];
 
         res.json(accounts);

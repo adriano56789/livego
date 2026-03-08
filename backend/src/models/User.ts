@@ -24,6 +24,9 @@ export interface IUser extends Document {
     followersList: string[]; // Array de IDs de usuários que seguem este usuário
     blockedUsers: string[]; // Array de IDs de usuários bloqueados
     friendsList: string[]; // Array de IDs de amigos
+    messages: any[]; // Array de mensagens do usuário
+    notifications: any[]; // Array de notificações do usuário  
+    visitors: any[]; // Array de visitantes do perfil
     receptores: number;
     enviados: number;
     topFansAvatars?: string[];
@@ -94,6 +97,9 @@ const UserSchema = new Schema<IUser>({
     followersList: [{ type: String, default: [] }], // Array de IDs de usuários que seguem este usuário
     blockedUsers: [{ type: String, default: [] }], // Array de IDs de usuários bloqueados
     friendsList: [{ type: String, default: [] }], // Array de IDs de amigos
+    messages: [{ type: Schema.Types.Mixed, default: [] }], // Array de mensagens do usuário
+    notifications: [{ type: Schema.Types.Mixed, default: [] }], // Array de notificações do usuário
+    visitors: [{ type: Schema.Types.Mixed, default: [] }], // Array de visitantes do perfil
     receptores: { type: Number, default: 0 },
     enviados: { type: Number, default: 0 },
     topFansAvatars: [{ type: String }],

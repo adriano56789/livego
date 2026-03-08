@@ -1,5 +1,6 @@
 import express from 'express';
 import { PurchaseRecord } from '../models';
+import { standardizeUserResponse } from '../utils/userResponse';
 
 const router = express.Router();
 
@@ -52,7 +53,7 @@ router.post('/earnings/withdraw/:id', async (req, res) => {
             description: 'Withdrawal to bank account'
         });
 
-        res.json({ success: true, user });
+        res.json({ success: true, user: standardizeUserResponse(user) });
     } catch (err: any) {
         res.status(500).json({ error: err.message });
     }
@@ -63,7 +64,7 @@ router.post('/earnings/method/set/:id', async (req, res) => {
         { withdrawal_method: { method: req.body.method, details: req.body.details } },
         { new: true }
     ));
-    res.json({ success: !!user, user: user || {} as any });
+    res.json({ success: !!user, user: standardizeUserResponse(user) || {} as any });
 });
 
 export default router;

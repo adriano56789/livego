@@ -1,5 +1,6 @@
 import express from 'express';
 import { User, Photo } from '../models';
+import { standardizeUserResponse } from '../utils/userResponse';
 
 const router = express.Router();
 
@@ -145,7 +146,7 @@ singleValueRoutes.forEach(({ route, field }) => {
                 return res.status(404).json({ error: 'User not found' });
             }
             
-            res.json({ success: true, user });
+            res.json({ success: true, user: standardizeUserResponse(user) });
         } catch (error: any) {
             res.status(500).json({ error: error.message });
         }

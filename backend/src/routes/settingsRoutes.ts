@@ -1,5 +1,6 @@
 import express from 'express';
 import { User } from '../models';
+import { standardizeUserResponse } from '../utils/userResponse';
 
 const router = express.Router();
 
@@ -68,7 +69,7 @@ router.post('/settings/private-stream/:id', async (req, res) => {
             return res.status(404).json({ error: 'User not found' });
         }
         
-        res.json({ success: true, user });
+        res.json({ success: true, user: standardizeUserResponse(user) });
     } catch (error: any) {
         console.error('Error updating private stream settings:', error);
         res.status(500).json({ error: error.message });
@@ -77,7 +78,7 @@ router.post('/settings/private-stream/:id', async (req, res) => {
 
 router.post('/settings/pip/toggle/:id', async (req, res) => {
     const user = await User.findOneAndUpdate({ id: req.params.id }, { pipEnabled: req.body.enabled }, { new: true });
-    res.json({ success: !!user, user: user || {} as any });
+    res.json({ success: !!user, user: standardizeUserResponse(user) || {} as any });
 });
 
 router.get('/permissions/camera/:id', async (req, res) => {
@@ -97,7 +98,7 @@ router.get('/chat-permission/status/:id', async (req, res) => {
 });
 router.post('/chat-permission/update/:id', async (req, res) => {
     const user = await User.findOneAndUpdate({ id: req.params.id }, { chatPermission: req.body.permission }, { new: true });
-    res.json({ success: !!user, user: user || {} as any });
+    res.json({ success: !!user, user: standardizeUserResponse(user) || {} as any });
 });
 
 export default router;

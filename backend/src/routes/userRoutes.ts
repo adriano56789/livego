@@ -1,6 +1,7 @@
 import express from 'express';
 import { User, Streamer, Gift, Message, PurchaseRecord, Order, Photo, Follow, Friendship, Followers, Block } from '../models';
 import { getUserIdFromToken } from '../middleware/auth';
+import { standardizeUserResponse, standardizeUsersList } from '../utils/userResponse';
 
 export const UserRoutes = express.Router();
 
@@ -28,16 +29,16 @@ UserRoutes.get('/me', async (req, res) => {
             return res.status(404).json({ error: 'User not found' });
         }
 
-        res.json(user);
+        res.json(standardizeUserResponse(user));
     } catch (error) {
         console.error('Error in /api/users/me:', error);
         res.status(401).json({ error: 'Invalid token' });
     }
 });
-UserRoutes.get('/', async (req, res) => { res.json(await User.find()); });
+UserRoutes.get('/', async (req, res) => { res.json(standardizeUsersList(await User.find())); });
 UserRoutes.get('/:id', async (req, res) => {
     const user = await User.findOne({ id: req.params.id });
-    if (user) return res.json(user);
+    if (user) return res.json(standardizeUserResponse(user));
     res.status(404).json({ error: 'User not found' });
 });
 
@@ -82,7 +83,7 @@ UserRoutes.delete('/:id', async (req, res) => {
 });
 UserRoutes.patch('/:id', async (req, res) => {
     const user = await User.findOneAndUpdate({ id: req.params.id }, req.body, { new: true });
-    res.json({ success: !!user, user });
+    res.json({ success: !!user, user: standardizeUserResponse(user) });
 });
 
 
@@ -654,7 +655,7 @@ UserRoutes.post('/:id/buy-diamonds', async (req, res) => {
             { $inc: { diamonds: amount } },
             { new: true }
         );
-        res.json({ success: !!user, user });
+        res.json({ success: !!user, user: standardizeUserResponse(user) });
     } catch (err: any) {
         res.status(500).json({ error: err.message });
     }
@@ -665,15 +666,15 @@ UserRoutes.get('/:id/location-permission', async (req, res) => {
 });
 UserRoutes.post('/:id/location-permission', async (req, res) => {
     const user = await User.findOneAndUpdate({ id: req.params.id }, { locationPermission: req.body.status }, { new: true });
-    res.json({ success: !!user, user: user || {} as any });
+    res.json({ success: !!user, user: standardizeUserResponse(user) || {} as any });
 });
 UserRoutes.post('/:id/privacy/activity', async (req, res) => {
     const user = await User.findOneAndUpdate({ id: req.params.id }, { showActivityStatus: req.body.show }, { new: true });
-    res.json({ success: !!user, user: user || {} as any });
+    res.json({ success: !!user, user: standardizeUserResponse(user) || {} as any });
 });
 UserRoutes.post('/:id/privacy/location', async (req, res) => {
     const user = await User.findOneAndUpdate({ id: req.params.id }, { showLocation: req.body.show }, { new: true });
-    res.json({ success: !!user, user: user || {} as any });
+    res.json({ success: !!user, user: standardizeUserResponse(user) || {} as any });
 });
 UserRoutes.get('/:id/received-gifts', async (req, res) => {
     // If Gift records are saved as PurchaseRecord we query that, otherwise just an empty real query
@@ -682,7 +683,7 @@ UserRoutes.get('/:id/received-gifts', async (req, res) => {
 });
 UserRoutes.post('/:id/set-active-frame', async (req, res) => {
     const user = await User.findOneAndUpdate({ id: req.params.id }, { activeFrameId: req.body.frameId }, { new: true });
-    res.json({ success: !!user, user });
+    res.json({ success: !!user, user: standardizeUserResponse(user) });
 });
 UserRoutes.get('/:id/avatar-protection', async (req, res) => {
     const user = await User.findOne({ id: req.params.id });
@@ -690,6 +691,6 @@ UserRoutes.get('/:id/avatar-protection', async (req, res) => {
 });
 UserRoutes.post('/:id/avatar-protection', async (req, res) => {
     const user = await User.findOneAndUpdate({ id: req.params.id }, { isAvatarProtected: req.body.isEnabled }, { new: true });
-    res.json({ success: !!user, user });
+    res.json({ success: !!user, user: standardizeUserResponse(user) });
 });
 export default UserRoutes;

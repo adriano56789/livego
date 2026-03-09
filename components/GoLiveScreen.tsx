@@ -110,9 +110,15 @@ const GoLiveScreen: React.FC<GoLiveScreenProps> = ({ isOpen, onClose, onStartStr
                         if (!newDraft) {
                             throw new Error("API failed to return a stream draft.");
                         }
-                        setDraftStream(newDraft);
-                        setStreamTitle(newDraft.name);
-                        setStreamDescription(newDraft.message);
+                        
+                        // ACESSAR O STREAM DA RESPOSTA CORRETAMENTE
+                        const streamData = (newDraft as any).success ? (newDraft as any).stream : newDraft;
+                        console.log(' [DEBUG] streamData:', streamData);
+                        console.log(' [DEBUG] streamData.id:', streamData.id);
+                        
+                        setDraftStream(streamData);
+                        setStreamTitle(streamData.name);
+                        setStreamDescription(streamData.message);
                     } catch (error) {
                         console.error("Error setting up stream:", error);
                         addToast(ToastType.Error, "Falha ao criar rascunho da live.");
@@ -193,7 +199,9 @@ const GoLiveScreen: React.FC<GoLiveScreenProps> = ({ isOpen, onClose, onStartStr
     const handleAddCover = async () => {
         if (isInviteMode || !draftStream) return; // Disable upload for invite mode
         try {
-            const { success, stream } = await api.uploadStreamCover(draftStream.id, {});
+            // ENVIAR UMA URL DE CAPA VÁLIDA (placeholder)
+            const coverUrl = `https://picsum.photos/seed/cover-${draftStream.id}/400/600.jpg`;
+            const { success, stream } = await api.uploadStreamCover(draftStream.id, { coverUrl });
             if (success && stream) {
                 setDraftStream(stream);
                 addToast(ToastType.Success, "Capa da live atualizada!");
@@ -330,9 +338,7 @@ const GoLiveScreen: React.FC<GoLiveScreenProps> = ({ isOpen, onClose, onStartStr
             >
                 <div className="p-4 space-y-4">
                     {/* Modal Title Header */}
-                    <h1 className="text-2xl font-bold text-white drop-shadow-md">
-                        {isInviteMode ? "Você foi convidado para esta sala privada" : "Iniciando transmissão"}
-                    </h1>
+                    {/* Removido título "Iniciando transmissão" */}
 
                     {/* Unified Input Section - Reusing layout for both modes */}
                     <div className="flex items-start space-x-3">

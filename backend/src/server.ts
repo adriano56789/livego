@@ -4,7 +4,7 @@ import { Server } from 'socket.io';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { connectDB } from './config/db';
-import { User, Message, Follow, Friendship } from './models/index';
+import { User, Message, Follow, Friendship, Streamer } from './models/index';
 import userRoutes from './routes/userRoutes';
 import profileRoutes from './routes/profileRoutes';
 import walletRoutes from './routes/walletRoutes';
@@ -961,6 +961,42 @@ io.on('connection', (socket) => {
 });
 
 export const getIO = () => io;
+
+// 🚀 LIMPEZA AUTOMÁTICA DE LIVES INATIVAS (a cada 5 minutos)
+const cleanupInactiveStreams = async () => {
+    try {
+        console.log('🧹 [LIMPEZA] Verificando streams inativas...');
+        
+        // Limpar streams com 0 viewers há mais de 5 minutos
+        const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+        
+        const result = await Streamer.updateMany(
+            {
+                isLive: true,
+                streamStatus: 'active',
+                viewers: 0,
+                updatedAt: { $lt: fiveMinutesAgo }
+            },
+            {
+                $set: {
+                    isLive: false,
+                    streamStatus: 'ended',
+                    endedAt: new Date()
+                }
+            }
+        );
+        
+        if (result.modifiedCount > 0) {
+            console.log(`🧹 [LIMPEZA] ${result.modifiedCount} streams inativas marcadas como encerradas`);
+        }
+        
+    } catch (error) {
+        console.error('❌ [LIMPEZA] Erro ao limpar streams inativas:', error);
+    }
+};
+
+// Iniciar limpeza automática
+setInterval(cleanupInactiveStreams, 5 * 60 * 1000); // 5 minutos
 
 server.listen(port, '0.0.0.0', () => {
     console.log(`🌍 ACESSO GLOBAL LIBERADO - API Server started on http://0.0.0.0:${port}`);

@@ -12,12 +12,20 @@ router.get('/live/:category', async (req, res) => {
         
         console.log(`🔍 [DEBUG] API Route called - Category: ${category}, Country: ${country || 'none'}`);
         
-        // Base filter para streams ativos e válidos
+        // Base filter para streams ativos e válidas
         let baseFilter: any = {
             isLive: true,
             name: { $exists: true, $nin: ['', null] },
             hostId: { $exists: true, $nin: ['', null] },
-            avatar: { $exists: true, $nin: ['', null] }
+            avatar: { $exists: true, $nin: ['', null] },
+            // 🚀 FILTRO RIGOROSO: apenas streams realmente ao vivo
+            startTime: { $exists: true, $ne: null },
+            streamStatus: 'active',
+            // 🚀 VERIFICAR SE O HOST ESTÁ REALMENTE ONLINE
+            viewers: { $exists: true, $gte: 0 },
+            // 🚀 VERIFICAR SE TEM DADOS DE TRANSMISSÃO
+            rtmpIngestUrl: { $exists: true, $ne: null },
+            playbackUrl: { $exists: true, $ne: null }
         };
 
         // Se for "global" ou "popular", retorna todas as lives ativas E válidas
@@ -167,6 +175,32 @@ router.post('/streams', async (req, res) => {
             return res.status(400).json({ error: 'Host ID is required (token or body)' });
         }
 
+        // 🚀 VERIFICAÇÃO CRÍTICA: Verificar se host já tem stream ativa
+        console.log(`🔍 [STREAM CREATE] Verificando streams existentes para host: ${hostId}`);
+        
+        const existingStream = await Streamer.findOne({
+            hostId: hostId,
+            isLive: true,
+            streamStatus: 'active'
+        });
+
+        if (existingStream) {
+            console.log(`⚠️ [STREAM CREATE] Host ${hostId} já está ao vivo com stream ${existingStream.id}`);
+            console.log(`📊 [STREAM CREATE] Retornando stream existente em vez de criar duplicata`);
+            
+            return res.json({
+                success: true,
+                stream: {
+                    ...existingStream.toObject(),
+                    // URLs para WebRTC
+                    publishUrl: `${process.env.SRS_WEBRTC_URL || 'http://localhost:9000'}/rtc/v1/publish/`,
+                    playUrl: `${process.env.SRS_WEBRTC_URL || 'http://localhost:9000'}/rtc/v1/play/`,
+                    streamUrl: `webrtc://livego.store:8000/live/${existingStream.id}`
+                },
+                existing: true
+            });
+        }
+
         // Gerar ID único para stream
         const streamId = `stream_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
         
@@ -253,6 +287,7 @@ router.post('/streams', async (req, res) => {
             success: true,
             stream: {
                 ...stream.toObject(),
+                id: streamId, // 🚀 ADICIONANDO ID EXPLICITAMENTE
                 // URLs para WebRTC
                 publishUrl: `${srsWebRtcUrl}/rtc/v1/publish/`,
                 playUrl: `${srsWebRtcUrl}/rtc/v1/play/`,

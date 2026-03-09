@@ -4,7 +4,7 @@ export interface GiftTransaction extends Document {
     id: string;
     fromUserId: string;
     fromUserName: string;
-    fromUserAvatar: string;
+    fromUserAvatar?: string;
     toUserId: string;
     toUserName: string;
     streamId: string;
@@ -20,7 +20,7 @@ const GiftTransactionSchema = new Schema<GiftTransaction>({
     id: { type: String, required: true, unique: true },
     fromUserId: { type: String, required: true },
     fromUserName: { type: String, required: true },
-    fromUserAvatar: { type: String, required: true },
+    fromUserAvatar: { type: String, default: '' },
     toUserId: { type: String, required: true },
     toUserName: { type: String, required: true },
     streamId: { type: String, required: true },

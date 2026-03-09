@@ -110,9 +110,13 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({
           <button onClick={avatarAction} className="relative mb-4 group" aria-label={avatarAriaLabel}>
             <div className="relative w-24 h-24">
                 <img
-                  src={currentUser.avatarUrl}
+                  src={currentUser.avatarUrl || 'https://via.placeholder.com/150x150/4B5563/FFFFFF?text=AVATAR'}
                   alt="User Avatar"
                   className="w-full h-full rounded-full object-cover p-1 group-hover:opacity-80 transition-opacity"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.src = 'https://via.placeholder.com/150x150/4B5563/FFFFFF?text=AVATAR';
+                  }}
                 />
                 
                 {currentUser.isAvatarProtected && (

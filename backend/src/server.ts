@@ -27,6 +27,8 @@ import followersRoutes from './routes/followersRoutes';
 import friendshipRoutes from './routes/friendshipRoutes';
 import blockRoutes from './routes/blockRoutes';
 import locationRoutes from './routes/locationRoutes';
+import shopRoutes from './routes/shopRoutes';
+import frameRoutes from './routes/frameRoutes';
 
 dotenv.config();
 
@@ -77,9 +79,7 @@ app.use((req, res, next) => {
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// Servir arquivos estáticos do frontend
-app.use(express.static('../dist'));
-
+// Rotas da API PRIMEIRO (antes dos arquivos estáticos)
 app.use('/api/auth', authRoutes);
 app.use('/api/accounts', authRoutes); // Alias for /api/accounts/google/connected etc.
 app.use('/api/users', userRoutes);
@@ -100,6 +100,8 @@ app.use('/api/followers', followersRoutes); // Rotas de seguidores
 app.use('/api/friends', friendshipRoutes); // Rotas de amizades
 app.use('/api/blocks', blockRoutes); // Rotas de bloqueios
 app.use('/api/location', locationRoutes); // Rotas de localização
+app.use('/api/shop', shopRoutes); // Rotas da loja
+app.use('/api', frameRoutes); // Rotas de frames (quadros de avatar)
 // Disponibilizar io para as rotas
 app.set('io', io);
 
@@ -113,6 +115,9 @@ app.use('/api', interactionRoutes); // handles /api/rooms, /api/invitations, /ap
 app.use('/api/*', (req, res) => {
     res.status(404).json({ error: `API endpoint not found: ${req.method} ${req.path}` });
 });
+
+// Servir arquivos estáticos do frontend DEPOIS das rotas da API
+app.use(express.static('../dist'));
 
 // Fallback para frontend - servir index.html para SPA com redirecionamento HTTPS
 app.get('*', (req, res) => {

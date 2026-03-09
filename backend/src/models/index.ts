@@ -28,3 +28,8 @@ export { NotificationSettings } from './NotificationSettings';
 export { GiftNotificationSettings } from './GiftNotificationSettings';
 export { BeautySettings } from './BeautySettings';
 export { UserPermissions } from './UserPermissions';
+export { ShopItem } from './ShopItem';
+export { UserInventory } from './UserInventory';
+export { UserAvatar } from './UserAvatar';
+export { Frame } from './Frame';
+export { UserFrame } from './UserFrame';

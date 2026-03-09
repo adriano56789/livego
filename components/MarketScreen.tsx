@@ -1,9 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BackIcon, YellowDiamondIcon, HeadphonesIcon, PlusIcon } from './icons';
 import { useTranslation } from '../i18n';
-// FIX: Add Gift type import
-import { User, ToastType, Gift } from '../types';
-// import { avatarFrames, getRemainingDays } from '../services/database';
+import { User, ToastType } from '../types';
+import { shopAPI, ShopItem, UserInventory, UserAvatar } from '../services/shopAPI';
 import { api } from '../services/api';
 // Importar os frames originais
 import * as FrameIcons from './icons/frames';
@@ -48,12 +47,11 @@ interface MarketScreenProps {
   onOpenWallet: (initialTab: 'Diamante' | 'Ganhos') => void;
   onPurchaseFrame: (frameId: string) => void;
   addToast: (type: ToastType, message: string) => void;
-  gifts: Gift[];
 }
 
 const tabs = ['Quadro de avatar', 'Carro', 'Bolha', 'Anel'];
 
-const MarketScreen: React.FC<MarketScreenProps> = ({ onClose, user, updateUser, onOpenWallet, onPurchaseFrame, addToast, gifts }) => {
+const MarketScreen: React.FC<MarketScreenProps> = ({ onClose, user, updateUser, onOpenWallet, onPurchaseFrame, addToast }) => {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState(tabs[0]);
 

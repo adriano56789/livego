@@ -375,3 +375,5 @@ export const api = {
     markNotificationRead: (id: string) => callApi<{ success: boolean }>('PATCH', `/api/notifications/${id}/read`),
     getLiveDetails: (liveId: string) => callApi<Streamer>('GET', `/api/lives/${liveId}`),
 };
+
+export { callApi };

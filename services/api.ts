@@ -360,6 +360,25 @@ export const api = {
     toggleAutoPrivateInvite: (streamId: string, isEnabled: boolean) => callApi<void>('POST', `/api/streams/${streamId}/toggle-auto-invite`, { isEnabled }),
     purchaseFrame: (userId: string, frameId: string) => callApi<{ success: boolean, user: User }>('POST', `/api/effects/purchase-frame/${userId}`, { frameId }),
     setActiveFrame: (userId: string, frameId: string | null) => callApi<{ success: boolean, user: User }>('POST', `/api/users/${userId}/set-active-frame`, { frameId }),
+    buyFrame: async (userId: string, frameId: string, price: number, duration: number) => {
+      return callApi<{ success: boolean; user: any }>('POST', `/api/users/${userId}/frames/buy`, {
+        frameId,
+        price,
+        duration
+      });
+    },
+    equipFrame: async (userId: string, frameId: string | null) => {
+      if (frameId) {
+        return callApi<{ success: boolean; user: any }>('POST', `/api/users/${userId}/frames/equip`, {
+          frameId
+        });
+      } else {
+        return callApi<{ success: boolean; user: any }>('POST', `/api/users/${userId}/frames/unequip`);
+      }
+    },
+    getUserFrames: async (userId: string) => {
+      return callApi<{ ownedFrames: any[]; activeFrameId: string; diamonds: number }>('GET', `/api/users/${userId}/frames`);
+    },
     getAvatarFrames: () => callApi<Array<{ id: string, name: string, price: number, duration: number }>>('GET', '/api/effects/frames'),
     subscribeToVIP: (userId: string) => callApi<{ success: boolean, user: User }>('POST', `/api/vip/subscribe/${userId}`),
     purchaseEffect: (userId: string, gift: Gift) => callApi<{ success: boolean, user: User }>('POST', `/api/effects/purchase/${userId}`, { giftId: gift.name }),

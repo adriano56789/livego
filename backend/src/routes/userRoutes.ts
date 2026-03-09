@@ -693,4 +693,204 @@ UserRoutes.post('/:id/avatar-protection', async (req, res) => {
     const user = await User.findOneAndUpdate({ id: req.params.id }, { isAvatarProtected: req.body.isEnabled }, { new: true });
     res.json({ success: !!user, user: standardizeUserResponse(user) });
 });
+
+// Comprar quadro de avatar
+UserRoutes.post('/:userId/frames/buy', async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const { frameId, price, duration } = req.body;
+
+        if (!userId || !frameId || !price || !duration) {
+            return res.status(400).json({ error: 'Dados incompletos' });
+        }
+
+        // Importar modelos dinamicamente
+        const { Frame, UserFrame } = await import('../models');
+
+        // Verificar se o frame existe
+        const frame = await Frame.findOne({ id: frameId, isActive: true });
+        if (!frame) {
+            return res.status(404).json({ error: 'Frame não encontrado' });
+        }
+
+        // Verificar se o usuário já possui este frame ativo
+        const existingFrame = await UserFrame.findOne({
+            userId,
+            frameId,
+            isActive: true,
+            expirationDate: { $gt: new Date() }
+        });
+
+        if (existingFrame) {
+            return res.status(400).json({ error: 'Você já possui este frame' });
+        }
+
+        // Verificar diamonds do usuário
+        const user = await User.findOne({ id: userId });
+        if (!user || user.diamonds < price) {
+            return res.status(400).json({ error: 'Diamonds insuficientes' });
+        }
+
+        // Deduzir diamonds
+        user.diamonds -= price;
+        await user.save();
+
+        // Calcular data de expiração
+        const expirationDate = new Date(Date.now() + duration * 24 * 60 * 60 * 1000);
+
+        // Criar registro do frame do usuário
+        const userFrame = await UserFrame.create({
+            id: `userframe_${userId}_${frameId}_${Date.now()}`,
+            userId,
+            frameId,
+            purchaseDate: new Date(),
+            expirationDate,
+            isActive: true,
+            isEquipped: false
+        });
+
+        console.log(`✅ Frame ${frameId} comprado pelo usuário ${userId}`);
+
+        res.json({ 
+            success: true, 
+            user: standardizeUserResponse(user),
+            userFrame
+        });
+
+    } catch (error: any) {
+        console.error('❌ Erro ao comprar frame:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Equipar quadro de avatar
+UserRoutes.post('/:userId/frames/equip', async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const { frameId } = req.body;
+
+        if (!userId || !frameId) {
+            return res.status(400).json({ error: 'Dados incompletos' });
+        }
+
+        // Importar modelos dinamicamente
+        const { UserFrame } = await import('../models');
+
+        // Verificar se o frame pertence ao usuário e está ativo
+        const userFrame = await UserFrame.findOne({
+            userId,
+            frameId,
+            isActive: true,
+            expirationDate: { $gt: new Date() }
+        });
+
+        if (!userFrame) {
+            return res.status(404).json({ error: 'Frame não encontrado ou expirado' });
+        }
+
+        // Desmarcar todos os outros frames como equipados
+        await UserFrame.updateMany(
+            { userId, isActive: true },
+            { isEquipped: false }
+        );
+
+        // Marcar este frame como equipado
+        userFrame.isEquipped = true;
+        await userFrame.save();
+
+        // Atualizar activeFrameId do usuário
+        const user = await User.findOneAndUpdate(
+            { id: userId },
+            { activeFrameId: frameId },
+            { new: true }
+        );
+
+        console.log(`✅ Frame ${frameId} equipado pelo usuário ${userId}`);
+
+        res.json({ 
+            success: true, 
+            user: standardizeUserResponse(user),
+            equippedFrame: userFrame
+        });
+
+    } catch (error: any) {
+        console.error('❌ Erro ao equipar frame:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Desequipar quadro de avatar
+UserRoutes.post('/:userId/frames/unequip', async (req, res) => {
+    try {
+        const { userId } = req.params;
+
+        if (!userId) {
+            return res.status(400).json({ error: 'UserId é obrigatório' });
+        }
+
+        // Importar modelos dinamicamente
+        const { UserFrame } = await import('../models');
+
+        // Desmarcar todos os frames como equipados
+        await UserFrame.updateMany(
+            { userId, isActive: true },
+            { isEquipped: false }
+        );
+
+        // Remover activeFrameId do usuário
+        const user = await User.findOneAndUpdate(
+            { id: userId },
+            { activeFrameId: null },
+            { new: true }
+        );
+
+        console.log(`✅ Frame desequipado pelo usuário ${userId}`);
+
+        res.json({ 
+            success: true, 
+            user: standardizeUserResponse(user)
+        });
+
+    } catch (error: any) {
+        console.error('❌ Erro ao desequipar frame:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Listar frames do usuário
+UserRoutes.get('/:userId/frames', async (req, res) => {
+    try {
+        const { userId } = req.params;
+
+        // Importar modelos dinamicamente
+        const { UserFrame, Frame } = await import('../models');
+
+        // Buscar frames do usuário
+        const userFrames = await UserFrame.find({
+            userId,
+            isActive: true,
+            expirationDate: { $gt: new Date() }
+        }).populate('frameId');
+
+        // Buscar usuário para obter diamonds
+        const user = await User.findOne({ id: userId });
+
+        // Formatar resposta
+        const ownedFrames = userFrames.map(uf => ({
+            ...uf.toObject(),
+            frame: uf.frameId
+        }));
+
+        res.json({
+            ownedFrames,
+            activeFrameId: user?.activeFrameId || null,
+            diamonds: user?.diamonds || 0
+        });
+
+    } catch (error: any) {
+        console.error('❌ Erro ao buscar frames do usuário:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 export default UserRoutes;

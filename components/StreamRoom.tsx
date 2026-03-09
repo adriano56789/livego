@@ -21,6 +21,7 @@ import { RankedAvatar } from './live/RankedAvatar';
 import FullScreenGiftAnimation from './live/FullScreenGiftAnimation';
 import { webRTCService } from '../services/webrtcService.js';
 import { socketService } from '../services/socket';
+import AvatarWithFrame from './ui/AvatarWithFrame';
 
 interface ChatMessageType {
     id: number;
@@ -848,9 +849,24 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
                         <div className="flex flex-col space-y-2">
                             {/* Streamer Info */}
                             <button onClick={(e) => { e.stopPropagation(); streamerDisplayUser && onViewProfile(streamerDisplayUser); }} className="flex items-center bg-black/40 rounded-full p-1 pr-3 space-x-2 text-left">
-                                <div className="relative w-10 h-10 flex items-center justify-center">
+                                <div className="relative">
                                     <div className="live-ring-animated">
-                                        <img src={streamerDisplayUser?.avatarUrl || '/placeholder-avatar.jpg'} alt={streamerDisplayUser?.name || 'Streamer'} className="w-8 h-8 rounded-full object-cover" />
+                                        <AvatarWithFrame 
+                                            user={streamerDisplayUser || {
+                                                id: streamer.hostId,
+                                                name: streamer.name,
+                                                avatarUrl: streamer.avatar,
+                                                identification: streamer.hostId,
+                                                level: 1,
+                                                diamonds: 0,
+                                                fans: 0,
+                                                following: 0,
+                                                isOnline: true,
+                                                isVIP: false,
+                                                isAvatarProtected: false
+                                            }} 
+                                            size="sm"
+                                        />
                                     </div>
                                 </div>
                                 <div>

@@ -63,22 +63,31 @@ const MarketScreen: React.FC<MarketScreenProps> = ({ onClose, user, updateUser, 
   const handlePurchase = async () => {
     if (!selectedItem || isActionLoading) return;
     setIsActionLoading(true);
-    await onPurchaseFrame(selectedItem.id);
-    setIsActionLoading(false);
+
+    try {
+      const response = await api.buyFrame(user.id, selectedItem.id, selectedItem.price, selectedItem.duration);
+      if (response.success) {
+        // Atualizar dados do usuário com os frames
+        const updatedUser = { ...user, ...response.user };
+        updateUser(updatedUser);
+        addToast(ToastType.Success, 'Quadro comprado com sucesso!');
+      }
+    } catch (error: any) {
+      console.error('Erro ao comprar frame:', error);
+      addToast(ToastType.Error, error.message || 'Erro ao comprar quadro');
+    } finally {
+      setIsActionLoading(false);
+    }
   };
 
   const handleEquipFrame = async (frameId: string | null) => {
     setIsActionLoading(true);
     try {
-      const { success, user: updatedUser } = await api.setActiveFrame(user.id, frameId);
-      if (success && updatedUser) {
-        updateUser(updatedUser);
+      const response = await api.equipFrame(user.id, frameId);
+      if (response.success) {
+        updateUser(response.user);
         addToast(ToastType.Success, frameId ? 'Moldura equipada!' : 'Moldura desequipada.');
-      } else {
-        throw new Error('Falha ao alterar moldura.');
       }
-    } catch (error) {
-      addToast(ToastType.Error, (error as Error).message);
     } finally {
       setIsActionLoading(false);
     }

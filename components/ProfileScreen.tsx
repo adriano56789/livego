@@ -24,6 +24,7 @@ import {
 } from './icons';
 import { User } from '../types';
 import { useTranslation } from '../i18n';
+import AvatarWithFrame from './ui/AvatarWithFrame';
 
 interface ProfileScreenProps {
     currentUser: User;
@@ -108,40 +109,37 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({
         {/* Profile Header */}
         <div className="flex flex-col items-center pt-8 pb-4 px-4 bg-[#111111]">
           <button onClick={avatarAction} className="relative mb-4 group" aria-label={avatarAriaLabel}>
-            <div className="relative w-24 h-24">
-                <img
-                  src={currentUser.avatarUrl || 'https://via.placeholder.com/150x150/4B5563/FFFFFF?text=AVATAR'}
-                  alt="User Avatar"
-                  className="w-full h-full rounded-full object-cover p-1 group-hover:opacity-80 transition-opacity"
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    target.src = 'https://via.placeholder.com/150x150/4B5563/FFFFFF?text=AVATAR';
-                  }}
-                />
+            <div className="relative">
+              <AvatarWithFrame 
+                user={currentUser} 
+                size="xl" 
+                onClick={avatarAction}
+                className="mb-4"
+              />
                 
-                {currentUser.isAvatarProtected && (
-                  <div className="absolute top-0 right-0 bg-black/50 rounded-full p-1 z-10">
-                    <ShieldIcon className="w-5 h-5 text-blue-400" />
+              {currentUser.isAvatarProtected && (
+                <div className="absolute top-0 right-0 bg-black/50 rounded-full p-1 z-20">
+                  <ShieldIcon className="w-5 h-5 text-blue-400" />
+                </div>
+              )}
+                
+              {currentUser.isLive ? (
+                  <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-black/60 rounded-md px-2 py-1 flex items-center space-x-1.5 backdrop-blur-sm z-20">
+                    <LiveIndicatorIcon className="w-4 h-4 text-green-400" />
+                    <span className="text-xs font-bold text-white uppercase tracking-wider">{t('footer.live')}</span>
                   </div>
-                )}
-                
-                {currentUser.isLive ? (
-                    <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-black/60 rounded-md px-2 py-1 flex items-center space-x-1.5 backdrop-blur-sm z-10">
-                      <LiveIndicatorIcon className="w-4 h-4 text-green-400" />
-                      <span className="text-xs font-bold text-white uppercase tracking-wider">{t('footer.live')}</span>
-                    </div>
-                ) : (
-                    <>
-                        {currentUser.isOnline && (
-                          <div className="absolute bottom-1 right-1 w-4 h-4 bg-green-400 rounded-full border-2 border-black z-10" title="Online"></div>
-                        )}
-                        <div className="absolute -bottom-1 -right-1 bg-gray-800 rounded-full p-0.5 z-10">
-                          <div className="w-6 h-6 rounded-full overflow-hidden flex items-center justify-center">
-                            <BrazilFlagIcon />
-                          </div>
+              ) : (
+                  <>
+                      {currentUser.isOnline && (
+                        <div className="absolute bottom-1 right-1 w-4 h-4 bg-green-400 rounded-full border-2 border-black z-20" title="Online"></div>
+                      )}
+                      <div className="absolute -bottom-1 -right-1 bg-gray-800 rounded-full p-0.5 z-20">
+                        <div className="w-6 h-6 rounded-full overflow-hidden flex items-center justify-center">
+                          <BrazilFlagIcon />
                         </div>
-                    </>
-                )}
+                      </div>
+                  </>
+              )}
             </div>
         </button>
           <div className="flex items-center space-x-2 text-center">

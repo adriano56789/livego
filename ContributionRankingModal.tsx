@@ -1,9 +1,9 @@
 
 import React, { useState, useEffect } from 'react';
-import { CloseIcon, YellowDiamondIcon, CrownIcon, FemaleIcon, MaleIcon } from './icons';
-import { RankedUser, User } from '../types';
-import { api } from '../services/api';
-import { LoadingSpinner } from './Loading';
+import { CloseIcon, YellowDiamondIcon, CrownIcon, FemaleIcon, MaleIcon } from './components/icons';
+import { RankedUser, User } from './types';
+import { api } from './services/api';
+import { LoadingSpinner } from './components/Loading';
 
 type Period = 'Live' | 'Diária' | 'Semanal' | 'Mensal';
 type PeriodKey = 'daily' | 'weekly' | 'monthly';

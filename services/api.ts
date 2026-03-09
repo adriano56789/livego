@@ -312,7 +312,7 @@ export const api = {
     updateSimStatus: (isOnline: boolean) => callApi<{ success: boolean, user: User }>('POST', '/api/sim/status', { isOnline }),
 
     // --- SRS & WebRTC Signaling ---
-    publishWebRTC: (streamUrl: string, sdp: string) => callApi<SRSResponse>('POST', '/api/rtc/v1/publish', { streamUrl, sdp }),
+    publishWebRTC: (streamUrl: string, sdp: string, streamKey?: string) => callApi<SRSResponse>('POST', '/api/rtc/v1/publish', { streamUrl, sdp, streamKey }),
     playWebRTC: (streamUrl: string, sdp: string) => callApi<SRSPlayResponse>('POST', '/api/rtc/v1/play', { streamUrl, sdp }),
     stopWebRTC: (streamUrl: string) => callApi<SRSResponse>('DELETE', '/api/rtc/v1/stop', { streamUrl }),
     getStreamInfo: (streamId: string) => callApi<SRSStreamInfo>('GET', `/api/v1/streams/${streamId}`),
@@ -327,14 +327,16 @@ export const api = {
     sendPrivateInviteToGifter: (streamId: string, gifterId: string) => callApi<void>('POST', `/api/streams/${streamId}/private-invite`, { userId: gifterId }),
     inviteUserToPrivateStream: (streamId: string, userId: string) => callApi<{ success: boolean }>('POST', `/api/streams/${streamId}/private-invite`, { userId }),
     checkPrivateStreamAccess: (streamId: string, userId: string) => callApi<{ canJoin: boolean }>('GET', `/api/streams/${streamId}/access-check?userId=${userId}`),
-    inviteFriendForCoHost: (streamId: string, inviteeId: string) => callApi<{ success: boolean, message?: string, error?: string }>('POST', `/api/friends/invite`, { streamId, inviteeId }),
+    inviteFriendForCoHost: (streamId: string, inviteeId: string) => callApi<{ success: boolean, message?: string, error?: string }>('POST', '/api/friends/invite', { streamId, inviteeId }),
     sendStreamInteraction: (streamId: string, type: string, data: any) => callApi<{ success: boolean }>('POST', `/api/streams/${streamId}/interactions`, { type, ...data }),
+
+    // --- Stream Controls ---
+    toggleStreamSound: (streamId: string) => callApi<{ success: boolean }>('POST', `/api/streams/${streamId}/toggle-sound`),
 
     // --- Private Room Invitations ---
     sendInvitation: (roomId: string, userId: string) => callApi<{ success: boolean }>('POST', '/api/invitations/send', { roomId, userId }),
     getReceivedInvitations: () => callApi<Invitation[]>('GET', '/api/invitations/received'),
     getRoomDetails: (roomId: string) => callApi<Streamer>('GET', `/api/rooms/${roomId}`),
-    joinRoom: (roomId: string, userId: string) => callApi<{ success: boolean, canJoin: boolean }>('POST', `/api/rooms/${roomId}/join`, { userId }),
     getPrivateRooms: (userId?: string) => callApi<Streamer[]>('GET', `/api/rooms?category=private&userId=${userId || getCurrentUserId()}`),
     getStreamMessages: (streamId: string) => callApi<Message[]>('GET', `/api/streams/${streamId}/messages`),
 

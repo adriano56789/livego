@@ -226,8 +226,14 @@ const GoLiveScreen: React.FC<GoLiveScreenProps> = ({ isOpen, onClose, onStartStr
             }
 
             const streamUrl = `webrtc://72.60.249.175/live/${streamId}`;
+            
+            // ✅ Obter streamKey real do draft
+            const streamKey = draftStream?.streamKey || streamId;
+            
+            console.log(`[GoLive] Publicando com streamKey real: ${streamKey}`);
             console.log(`[GoLiveScreen] Iniciando transmissão WebRTC para: ${streamUrl}`);
-            const mediaStream = await webRTCService.startPublish(streamUrl);
+            
+            const mediaStream = await webRTCService.startPublish(streamUrl, streamKey);
 
             if (videoRef.current) {
                 videoRef.current.srcObject = mediaStream;

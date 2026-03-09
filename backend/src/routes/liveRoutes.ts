@@ -773,10 +773,19 @@ router.post('/streams/:id/gift', async (req, res) => {
 // WebRTC logic (SRS Integration)
 const SRS_API_URL = process.env.SRS_API_URL || 'http://72.60.249.175:1985';
 
-router.post('/rtc/v1/publish', async (req, res) => {
+import { validateStreamKey } from '../middleware/streamAuth';
+
+router.post('/rtc/v1/publish', validateStreamKey, async (req, res) => {
     try {
         const { streamUrl, sdp } = req.body;
-        console.log(`[SRS Proxy] Publishing to ${streamUrl}`);
+        const stream = req.stream; // Stream validada pelo middleware
+        
+        console.log(`[PUBLISH] ${stream.hostId} publishing to ${streamUrl}`);
+        console.log(`[PUBLISH DEBUG] Stream validated:`, {
+            streamId: stream.id,
+            hostId: stream.hostId,
+            streamKey: stream.streamKey
+        });
 
         const response = await fetch(`${SRS_API_URL}/rtc/v1/publish/`, {
             method: 'POST',
@@ -785,9 +794,18 @@ router.post('/rtc/v1/publish', async (req, res) => {
         });
 
         const data = await response.json();
+        
+        // Debug SRS response
+        console.log(`[PUBLISH] SRS Response:`, {
+            code: data.code,
+            hasSdp: !!data.sdp,
+            candidates: data.sdp?.match(/a=candidate:.*/g)?.length || 0,
+            success: data.code === 0
+        });
+        
         res.json(data);
     } catch (err: any) {
-        console.error('[SRS Publish Error]', err);
+        console.error('[PUBLISH Error]', err);
         res.status(500).json({ code: 500, error: err.message });
     }
 });

@@ -268,6 +268,25 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
                          videoEl.volume = 1.0;
                          videoEl.onloadeddata = onVideoReady;
                          
+                         // ✅ DEBUG: Verificar video element
+                         videoEl.onloadedmetadata = () => {
+                             console.log('[VIDEO ELEMENT]', {
+                                 videoWidth: videoEl.videoWidth,
+                                 videoHeight: videoEl.videoHeight,
+                                 readyState: videoEl.readyState,
+                                 streamTracks: videoEl.srcObject?.getTracks().length,
+                                 isPlaying: !videoEl.paused
+                             });
+                             
+                             if (videoEl.videoWidth === 0) {
+                                 console.error('[VIDEO ERROR] Vídeo não carregado (width = 0)');
+                             }
+                         };
+                         
+                         videoEl.onerror = (e) => {
+                             console.error('[VIDEO ERROR]', e);
+                         };
+                         
                          // Auto-play might be blocked, ensure we try
                          try {
                              await videoEl.play();

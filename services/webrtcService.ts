@@ -13,7 +13,7 @@ export class WebRTCService {
   // TURN Credentials
   private readonly turnConfig: RTCIceServer[] = [
     {
-      urls: 'stun:72.60.249.175:3478' // STUN do servidor público
+      urls: 'stun:stun.l.google.com:19302' // Fallback STUN
     },
     {
       urls: 'turn:72.60.249.175:3478',
@@ -102,20 +102,13 @@ export class WebRTCService {
                   }
               };
               this.pc?.addEventListener('icegatheringstatechange', checkGathering);
-              // Wait max 3 seconds for TURN candidates (increased timeout)
-              setTimeout(resolve, 3000); 
+              // Wait max 2 seconds for TURN candidates
+              setTimeout(resolve, 2000); 
           });
       }
 
-      // Verificação segura de localDescription
-      if (!this.pc || !this.pc.localDescription) {
-          throw new Error("Failed to generate SDP offer - no local description available");
-      }
-
-      const finalOfferSdp = this.pc.localDescription.sdp;
-      if (!finalOfferSdp) {
-          throw new Error("Failed to generate SDP offer - empty SDP");
-      }
+      const finalOfferSdp = this.pc.localDescription?.sdp;
+      if (!finalOfferSdp) throw new Error("Failed to generate SDP offer");
 
       console.log("[WebRTC Service] Offer generated with ICE candidates.");
 

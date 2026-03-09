@@ -1,5 +1,3 @@
-version: 3.8
-
 services:
   srs-server:
     build:
@@ -12,13 +10,13 @@ services:
     container_name: srs-server
     restart: unless-stopped
     ports:
-      - "1935:1935/tcp"   # RTMP
-      - "1985:1985/tcp"   # HTTP API
-      - "8080:8080/tcp"   # HTTP Server
-      - "8000:8000/udp"   # WebRTC ICE/STUN
-      - "9000:9000/tcp"   # WebRTC HTTPS
-      - "5060:5060/tcp"   # HTTP API (alternative)
-      - "10080:10080/udp" # WebRTC additional
+      - "1935:1935/tcp"
+      - "1985:1985/tcp"
+      - "8080:8080/tcp"
+      - "8000:8000/udp"
+      - "9000:9000/tcp"
+      - "5060:5060/tcp"
+      - "10080:10080/udp"
     volumes:
       - ./srs-config:/usr/local/srs/conf
       - ./srs-logs:/usr/local/srs/objs/logs

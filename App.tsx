@@ -374,10 +374,8 @@ const AppContent: React.FC = () => {
       if (notificationSettings?.streamerLive) {
         setLiveNotification(payload);
       }
-      const userToUpdate = allUsers.find(u => u.id === payload.streamerId);
-      if (userToUpdate && !userToUpdate.isLive) {
-        updateUserEverywhere({ ...userToUpdate, isLive: true });
-      }
+      // Removido - não atualizar isLive automaticamente
+      // Cards só devem ser criados quando o usuário realmente iniciar uma transmissão
     };
 
     const handlePrivateInvite = (payload: { streamId: string, hostId: string, streamName: string, inviterName: string, inviterAvatar: string }) => {

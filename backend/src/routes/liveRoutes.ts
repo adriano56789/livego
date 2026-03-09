@@ -78,6 +78,51 @@ router.get('/live/:category', async (req, res) => {
 });
 
 // Rota para buscar streams por região
+// API para listar lives ativas
+router.get('/streams/live', async (req, res) => {
+    try {
+        console.log(`🔍 [STREAMS LIVE] Buscando lives ativas`);
+        
+        // Buscar streams ativas com dados reais
+        const activeStreams = await Streamer.find({
+            isLive: true,
+            streamStatus: 'active',
+            name: { $exists: true, $nin: ['', null] },
+            hostId: { $exists: true, $nin: ['', null] }
+        }).sort({ viewers: -1 });
+        
+        // Enriquecer com dados dos hosts
+        const streamsWithHostData = await Promise.all(
+            activeStreams.map(async (stream) => {
+                const host = await User.findOne({ id: stream.hostId }).select('id name avatarUrl level country isOnline');
+                
+                return {
+                    ...stream.toObject(),
+                    host: host || {
+                        id: stream.hostId,
+                        name: 'Usuário',
+                        avatarUrl: '',
+                        level: 1,
+                        country: 'br',
+                        isOnline: false
+                    }
+                };
+            })
+        );
+        
+        console.log(`✅ [STREAMS LIVE] Encontradas ${activeStreams.length} lives ativas`);
+        
+        res.json({
+            success: true,
+            streams: streamsWithHostData,
+            count: activeStreams.length
+        });
+    } catch (error: any) {
+        console.error('❌ [STREAMS LIVE] Erro ao buscar lives ativas:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 router.get('/streams', async (req, res) => {
     try {
         const { region, country } = req.query;
@@ -106,12 +151,13 @@ router.get('/streams', async (req, res) => {
 
 
 
+// API para criar transmissão real
 router.post('/streams', async (req, res) => {
     try {
-        const { name, country, location, ...otherData } = req.body;
+        const { name, country, location, category = 'general', ...otherData } = req.body;
         const hostId = getUserIdFromToken(req) || req.body.hostId;
         
-        console.log(`🔍 [DEBUG] Creating stream - Country received: ${country || 'none'}`);
+        console.log(`🎥 [STREAM CREATE] Iniciando criação de stream - Host: ${hostId}`);
         
         if (!name || name.trim() === '') {
             return res.status(400).json({ error: 'Stream name is required' });
@@ -121,37 +167,40 @@ router.post('/streams', async (req, res) => {
             return res.status(400).json({ error: 'Host ID is required (token or body)' });
         }
 
+        // Gerar ID único para stream
         const streamId = `stream_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
         
-        // Buscar usuário para obter avatarUrl e país
+        // Buscar usuário para obter dados reais
         const user = await User.findOne({ id: hostId });
         if (!user) {
             return res.status(404).json({ error: 'Host user not found' });
         }
 
+        // Usar dados reais do usuário
         const userAvatar = user.avatarUrl || '';
         const userCountry = user.country || 'br'; 
         
-        // Use user avatar or empty string (frontend handles default)
-        const avatarUrl = userAvatar;
-        // No random cover
-        const coverUrl = '';
+        // Configurar URLs reais para SRS
+        const srsWebRtcUrl = process.env.SRS_WEBRTC_URL || 'http://localhost:9000';
+        const srsRtmpUrl = process.env.SRS_RTMP_URL || 'rtmp://localhost:1935/live';
+        const srsHttpUrl = process.env.SRS_HTTP_URL || 'http://localhost:8080';
         
         // Prioridade: país enviado > país do usuário > Brasil como fallback
         const finalCountry = country || userCountry || 'br';
         const finalLocation = location || 'Brasil';
         
-        console.log(`🌍 [DEBUG] Final country assignment: ${finalCountry} (sent: ${country || 'none'}, user: ${userCountry})`);
+        console.log(`🌍 [STREAM CREATE] País final: ${finalCountry} (enviado: ${country || 'none'}, usuário: ${userCountry})`);
         
+        // Criar stream com dados reais
         const stream = await Streamer.create({
             id: streamId,
             hostId: hostId,
             name: name.trim(),
-            avatar: avatarUrl,
+            avatar: userAvatar,
             location: finalLocation,
             time: 'Live Now',
             message: `Ao vivo: ${name.trim()}`,
-            tags: ['live'],
+            tags: ['live', category.toLowerCase()],
             isHot: false,
             icon: '',
             country: finalCountry,
@@ -159,109 +208,59 @@ router.post('/streams', async (req, res) => {
             isPrivate: false,
             quality: '720p',
             demoVideoUrl: '',
-            rtmpIngestUrl: `rtmp://livego.store:1935/live/${streamId}`,
+            // URLs reais do SRS
+            rtmpIngestUrl: `${srsRtmpUrl}/${streamId}`,
             srtIngestUrl: '',
             streamKey: streamId,
-            playbackUrl: `http://livego.store:8080/live/${streamId}.flv`,
+            playbackUrl: `${srsHttpUrl}/live/${streamId}.flv`,
+            webrtcUrl: `${srsWebRtcUrl}/rtc/v1/play/`,
+            // Status
             isLive: true,
             startTime: new Date().toISOString(),
-            category: 'general',
+            category: category.toLowerCase(),
             language: 'pt',
             maxViewers: 1000,
             recordingEnabled: false,
             chatEnabled: true,
             giftsEnabled: true,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-            __v: 0,
-            duration: 0,
-            thumbnail: '',
-            previewUrl: '',
             streamStatus: 'active',
+            // Configurações técnicas
             bitrate: '2000k',
             fps: 30,
             resolution: '1280x720',
             audioCodec: 'AAC',
             videoCodec: 'H264',
             latency: 'low',
-            dvrEnabled: false,
-            autoRecord: false,
-            allowComments: true,
-            allowGifts: true,
-            allowFollowers: true,
-            monetization: true,
-            ageRestriction: false,
-            geoRestriction: [],
-            streamPassword: '',
-            streamType: 'public',
-            sourceType: 'rtmp',
-            ingestStatus: 'ready',
-            viewerCount: 0,
-            peakViewers: 0,
-            averageViewers: 0,
-            totalViews: 0,
-            likes: 0,
-            shares: 0,
-            bookmarks: 0,
-            streamHealth: 'good',
-            networkQuality: 'excellent',
-            cpuUsage: 0,
-            memoryUsage: 0,
-            bandwidthUsage: 0,
-            storageUsed: 0,
-            maxDuration: 480,
-            autoStop: false,
-            scheduleEnabled: false,
-            scheduledStart: null,
-            scheduledEnd: null,
-            repeatEnabled: false,
-            repeatDays: [],
-            streamTitle: name.trim(),
-            streamDescription: `Ao vivo: ${name.trim()}`,
-            streamTags: ['live', 'streaming'],
-            categoryTags: ['general'],
-            languageTags: ['pt', 'portuguese'],
-            qualitySettings: {
-                auto: true,
-                videoQuality: '720p',
-                bitrate: '2000k',
-                fps: 30,
-                keyframeInterval: 2
-            },
-            privacySettings: {
-                isPrivate: false,
-                allowEmbed: true,
-                allowDownload: false,
-                ageRestriction: false,
-                geoRestriction: []
-            },
-            monetizationSettings: {
-                enabled: true,
-                allowDonations: true,
-                allowSubscriptions: true,
-                allowAds: true,
-                currency: 'BRL'
-            },
-            interactionSettings: {
-                allowChat: true,
-                allowGifts: true,
-                allowReactions: true,
-                allowPolls: true,
-                allowQa: true
-            },
-            technicalSettings: {
-                dvrEnabled: false,
-                autoRecord: false,
-                lowLatency: true,
-                adaptiveBitrate: true,
-                redundancy: false
-            },
-            ...otherData
+            // Configurações adicionais
+            ...otherData,
+            createdAt: new Date(),
+            updatedAt: new Date()
         });
         
-        res.json(stream);
+        // Atualizar status do usuário para live
+        await User.findOneAndUpdate(
+            { id: hostId },
+            { 
+                isLive: true,
+                currentStreamId: streamId,
+                lastSeen: new Date().toISOString()
+            }
+        );
+        
+        console.log(`✅ [STREAM CREATE] Stream ${streamId} criada com sucesso para host ${hostId}`);
+        
+        res.json({
+            success: true,
+            stream: {
+                ...stream.toObject(),
+                // URLs para WebRTC
+                publishUrl: `${srsWebRtcUrl}/rtc/v1/publish/`,
+                playUrl: `${srsWebRtcUrl}/rtc/v1/play/`,
+                streamUrl: `webrtc://livego.store:8000/live/${streamId}`
+            }
+        });
     } catch (error: any) {
-        console.error('Error creating stream:', error);
+        console.error('❌ [STREAM CREATE] Erro ao criar stream:', error);
         res.status(500).json({ error: error.message });
     }
 });
@@ -370,7 +369,301 @@ router.get('/streams/:id/online-users', async (req, res) => {
     return res.json([]);
 });
 // Rota para atualizar status online do usuário
-// Rota para quando usuário entra na stream
+// API para usuário entrar na live
+router.post('/streams/:streamId/join', async (req, res) => {
+    try {
+        const { userId } = req.body;
+        const streamId = req.params.streamId;
+        
+        console.log(`👤 [STREAM JOIN] Usuário ${userId} entrando na stream ${streamId}`);
+        
+        if (!userId || !streamId) {
+            return res.status(400).json({ success: false, error: 'UserId e StreamId são obrigatórios' });
+        }
+        
+        // Verificar se o usuário existe
+        const user = await User.findOne({ id: userId });
+        if (!user) {
+            return res.status(404).json({ success: false, error: 'Usuário não encontrado' });
+        }
+        
+        // Verificar se a stream existe e está ativa
+        const stream = await Streamer.findOne({ id: streamId, isLive: true });
+        if (!stream) {
+            return res.status(404).json({ success: false, error: 'Stream não encontrada ou inativa' });
+        }
+        
+        // Verificar se usuário já está na stream (evitar duplicatas)
+        if (user.isOnline && user.currentStreamId === streamId) {
+            console.log(`⚠️ [STREAM JOIN] Usuário ${userId} já está na stream ${streamId}`);
+            return res.json({ success: true, message: 'Usuário já está na stream', user });
+        }
+        
+        // Atualizar status do usuário
+        const updatedUser = await User.findOneAndUpdate(
+            { id: userId },
+            {
+                isOnline: true,
+                currentStreamId: streamId,
+                lastSeen: new Date().toISOString()
+            },
+            { new: true }
+        );
+        
+        // Incrementar viewers da stream
+        await Streamer.findOneAndUpdate(
+            { id: streamId },
+            { $inc: { viewers: 1 } }
+        );
+        
+        // Notificar via WebSocket
+        const io = req.app.get('io');
+        if (io) {
+            io.to(streamId).emit('user_joined', {
+                userId: userId,
+                streamId: streamId,
+                user: {
+                    id: user.id,
+                    name: user.name,
+                    avatarUrl: user.avatarUrl,
+                    level: user.level
+                },
+                timestamp: new Date().toISOString()
+            });
+        }
+        
+        console.log(`✅ [STREAM JOIN] Usuário ${userId} entrou na stream ${streamId}`);
+        
+        res.json({
+            success: true,
+            user: updatedUser,
+            stream: {
+                id: streamId,
+                viewers: (stream.viewers || 0) + 1
+            }
+        });
+    } catch (error: any) {
+        console.error('❌ [STREAM JOIN] Erro:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// API para usuário sair da live
+router.post('/streams/:streamId/leave', async (req, res) => {
+    try {
+        const { userId } = req.body;
+        const streamId = req.params.streamId;
+        
+        console.log(`👤 [STREAM LEAVE] Usuário ${userId} saindo da stream ${streamId}`);
+        
+        if (!userId || !streamId) {
+            return res.status(400).json({ success: false, error: 'UserId e StreamId são obrigatórios' });
+        }
+        
+        // Verificar se o usuário existe
+        const user = await User.findOne({ id: userId });
+        if (!user) {
+            return res.status(404).json({ success: false, error: 'Usuário não encontrado' });
+        }
+        
+        // Verificar se usuário está realmente na stream
+        if (!user.isOnline || user.currentStreamId !== streamId) {
+            console.log(`⚠️ [STREAM LEAVE] Usuário ${userId} não está na stream ${streamId}`);
+            return res.json({ success: true, message: 'Usuário não está na stream' });
+        }
+        
+        // Verificar se usuário é host de alguma stream ativa
+        const activeHostStreams = await Streamer.find({
+            hostId: userId,
+            isLive: true,
+            id: { $ne: streamId }
+        });
+        
+        // Se não for host de nenhuma outra stream, marcar como offline
+        if (!activeHostStreams || activeHostStreams.length === 0) {
+            await User.findOneAndUpdate(
+                { id: userId },
+                {
+                    isOnline: false,
+                    currentStreamId: null,
+                    lastSeen: new Date().toISOString()
+                }
+            );
+        } else {
+            // Se for host de outra stream, apenas limpar currentStreamId
+            await User.findOneAndUpdate(
+                { id: userId },
+                {
+                    currentStreamId: null,
+                    lastSeen: new Date().toISOString()
+                }
+            );
+        }
+        
+        // Decrementar viewers da stream
+        const stream = await Streamer.findOne({ id: streamId });
+        if (stream && (stream.viewers || 0) > 0) {
+            await Streamer.findOneAndUpdate(
+                { id: streamId },
+                { $inc: { viewers: -1 } }
+            );
+        }
+        
+        // Notificar via WebSocket
+        const io = req.app.get('io');
+        if (io) {
+            io.to(streamId).emit('user_left', {
+                userId: userId,
+                streamId: streamId,
+                user: {
+                    id: user.id,
+                    name: user.name,
+                    avatarUrl: user.avatarUrl,
+                    level: user.level
+                },
+                timestamp: new Date().toISOString()
+            });
+        }
+        
+        console.log(`✅ [STREAM LEAVE] Usuário ${userId} saiu da stream ${streamId}`);
+        
+        res.json({
+            success: true,
+            user: {
+                id: userId,
+                isOnline: activeHostStreams && activeHostStreams.length > 0,
+                currentStreamId: null
+            },
+            stream: {
+                id: streamId,
+                viewers: Math.max(0, (stream?.viewers || 0) - 1)
+            }
+        });
+    } catch (error: any) {
+        console.error('❌ [STREAM LEAVE] Erro:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// API para encerrar transmissão
+router.post('/streams/:streamId/end', async (req, res) => {
+    try {
+        const { userId } = req.body; // Host que está encerrando
+        const streamId = req.params.streamId;
+        
+        console.log(`🔴 [STREAM END] Encerrando stream ${streamId} pelo usuário ${userId}`);
+        
+        if (!userId || !streamId) {
+            return res.status(400).json({ success: false, error: 'UserId e StreamId são obrigatórios' });
+        }
+        
+        // Verificar se a stream existe
+        const stream = await Streamer.findOne({ id: streamId });
+        if (!stream) {
+            return res.status(404).json({ success: false, error: 'Stream não encontrada' });
+        }
+        
+        // Verificar se o usuário é o host
+        if (stream.hostId !== userId) {
+            return res.status(403).json({ success: false, error: 'Apenas o host pode encerrar a transmissão' });
+        }
+        
+        const endTime = new Date();
+        const durationMs = endTime.getTime() - new Date(stream.startTime || endTime).getTime();
+        const durationSeconds = Math.floor(durationMs / 1000);
+        
+        // Salvar no histórico
+        try {
+            const { StreamHistory } = await import('../models');
+            await StreamHistory.create({
+                id: `hist_${streamId}_${endTime.getTime()}`,
+                streamId: streamId,
+                hostId: stream.hostId,
+                hostName: stream.name,
+                hostAvatar: stream.avatar,
+                title: stream.name,
+                startTime: stream.startTime,
+                endTime: endTime.toISOString(),
+                duration: new Date(durationSeconds * 1000).toISOString().substr(11, 8),
+                peakViewers: stream.viewers || 0,
+                totalCoins: 0,
+                totalFollowers: 0,
+                totalMembers: stream.viewers || 0,
+                totalFans: 0,
+                category: stream.category,
+                tags: stream.tags || [],
+                country: stream.country
+            });
+            console.log(`💾 [STREAM END] Histórico salvo para stream ${streamId}`);
+        } catch (historyError: any) {
+            console.warn(`⚠️ [STREAM END] Erro ao salvar histórico: ${historyError.message}`);
+        }
+        
+        // Atualizar status da stream
+        await Streamer.findOneAndUpdate(
+            { id: streamId },
+            {
+                isLive: false,
+                streamStatus: 'ended',
+                endTime: endTime.toISOString(),
+                viewers: 0
+            }
+        );
+        
+        // Atualizar status do host
+        await User.findOneAndUpdate(
+            { id: userId },
+            {
+                isLive: false,
+                currentStreamId: null,
+                lastSeen: endTime.toISOString()
+            }
+        );
+        
+        // Remover todos os usuários da stream
+        await User.updateMany(
+            { currentStreamId: streamId },
+            {
+                isOnline: false,
+                currentStreamId: null,
+                lastSeen: endTime.toISOString()
+            }
+        );
+        
+        // Notificar via WebSocket
+        const io = req.app.get('io');
+        if (io) {
+            io.emit('stream_ended', {
+                streamId: streamId,
+                hostId: userId,
+                timestamp: endTime.toISOString()
+            });
+            
+            io.to(streamId).emit('live_stream_ended', {
+                streamId: streamId,
+                message: 'Esta transmissão foi encerrada',
+                timestamp: endTime.toISOString()
+            });
+        }
+        
+        console.log(`✅ [STREAM END] Stream ${streamId} encerrada com sucesso`);
+        
+        res.json({
+            success: true,
+            stream: {
+                id: streamId,
+                isLive: false,
+                endTime: endTime.toISOString(),
+                duration: durationSeconds
+            }
+        });
+    } catch (error: any) {
+        console.error('❌ [STREAM END] Erro:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// Rota para quando usuário entra na stream - LEGACY
 router.post('/streams/:id/join', async (req, res) => {
     try {
         const { userId } = req.body;

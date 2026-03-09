@@ -19,7 +19,7 @@ import UserActionModal from './UserActionModal';
 import FriendRequestNotification from './live/FriendRequestNotification';
 import { RankedAvatar } from './live/RankedAvatar';
 import FullScreenGiftAnimation from './live/FullScreenGiftAnimation';
-import { webRTCService } from '../services/webrtcService';
+import { webRTCService } from '../services/webrtcService.js';
 import { socketService } from '../services/socket';
 
 interface ChatMessageType {

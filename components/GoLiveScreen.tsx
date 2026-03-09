@@ -5,7 +5,7 @@ import BeautyEffectsPanel from './live/BeautyEffectsPanel';
 import LiveStreamManualModal from './live/LiveStreamManualModal';
 import { useTranslation } from '../i18n';
 import { api } from '../services/api';
-import { webRTCService } from '../services/webrtcService';
+import { webRTCService } from '../services/webrtcService.js';
 
 export interface InviteData {
     streamId: string;

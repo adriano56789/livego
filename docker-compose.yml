@@ -1,4 +1,24 @@
 services:
+  coturn-server:
+    image: coturn/coturn:latest
+    container_name: coturn-server
+    restart: unless-stopped
+    ports:
+      - "3478:3478/udp"
+      - "3478:3478/tcp"
+      - "49152-65535:49152-65535/udp"
+    environment:
+      - TURN_USERNAME=livego
+      - TURN_PASSWORD=livego123
+      - REALM=livego.store
+      - TURNSERVER_ENABLED=on
+      - TURNLOG_ENABLED=on
+      - DEBUG=0
+    volumes:
+      - ./turnserver.conf:/etc/coturn/turnserver.conf
+    networks:
+      - livego-network
+
   srs-server:
     build:
       context: .
@@ -23,6 +43,11 @@ services:
     environment:
       - SRS_DAEMON=off
       - SRS_IN_DOCKER=on
+      - TURN_SERVER_URL=turn:72.60.249.175:3478
+      - TURN_USERNAME=livego
+      - TURN_PASSWORD=adriano123
+    depends_on:
+      - coturn-server
     networks:
       - livego-network
 

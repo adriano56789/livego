@@ -9,16 +9,17 @@ export class WebRTCService {
   private state: WebRTCState = 'idle';
   private statsInterval: any = null;
   private currentStreamUrl: string | null = null;
+  private currentStreamId: string | null = null;
 
-  // TURN Credentials
-  private readonly turnConfig: RTCIceServer[] = [
+  // Configuração ICE com STUN/TURN do nosso servidor
+  private readonly iceConfig: RTCIceServer[] = [
     {
-      urls: 'stun:stun.l.google.com:19302' // Fallback STUN
+      urls: import.meta.env?.VITE_STUN_SERVER_URL || 'stun:localhost:3478',
     },
     {
-      urls: 'turn:72.60.249.175:3478',
-      username: 'livego',
-      credential: 'adriano123'
+      urls: import.meta.env?.VITE_TURN_SERVER_URL || 'turn:localhost:3478',
+      username: import.meta.env?.VITE_TURN_USERNAME || 'livego',
+      credential: import.meta.env?.VITE_TURN_PASSWORD || 'livego123'
     }
   ];
 
@@ -47,52 +48,54 @@ export class WebRTCService {
 
   // --- PUBLISH FLOW ---
 
-  public async startPublish(streamUrl: string, retryCount = 3): Promise<MediaStream> {
-    this.currentStreamUrl = streamUrl;
+  public async startPublish(streamId: string, streamKey: string, retryCount = 3): Promise<MediaStream> {
+    this.currentStreamId = streamId;
+    const webrtcUrl = import.meta.env?.VITE_SRS_WEBRTC_URL || 'webrtc://localhost/live';
+    this.currentStreamUrl = `${webrtcUrl}/${streamId}`;
     this.state = 'connecting';
-    console.log(`[WebRTC Service] Starting publish flow to ${streamUrl} via TURN... (Retries left: ${retryCount})`);
+    console.log(`[WebRTC Service] Iniciando publicação para stream ${streamId} via ${webrtcUrl} (Retries: ${retryCount})`);
     
     try {
-      // 1. Capture Media
+      // 1. Capturar mídia local
       if (!this.localStream) {
           try {
               this.localStream = await navigator.mediaDevices.getUserMedia({
                 video: { width: 1280, height: 720, frameRate: 30 },
                 audio: true
               });
+              console.log('[WebRTC Service] Mídia local capturada com sucesso');
           } catch (e) {
-              console.error("[WebRTC Service] Failed to capture local media", e);
-              throw new Error("Media capture failed");
+              console.error('[WebRTC Service] Falha ao capturar mídia local', e);
+              throw new Error('Falha na captura de mídia');
           }
       }
 
-      // 2. Initialize PeerConnection with TURN Config
+      // 2. Inicializar PeerConnection com nosso ICE
       this.cleanupPeerConnection();
       
       this.pc = new RTCPeerConnection({
-        iceServers: this.turnConfig,
-        sdpSemantics: 'unified-plan',
+        iceServers: this.iceConfig,
         bundlePolicy: 'max-bundle',
         rtcpMuxPolicy: 'require'
-      } as RTCConfiguration);
+      });
 
       // Debug ICE State
       this.pc.oniceconnectionstatechange = () => {
-          console.log(`[WebRTC Service] ICE Connection State: ${this.pc?.iceConnectionState}`);
+          console.log(`[WebRTC Service] Estado ICE: ${this.pc?.iceConnectionState}`);
       };
 
-      // 3. Add tracks
+      // 3. Adicionar tracks
       this.localStream.getTracks().forEach(track => {
         if (this.pc && this.localStream) {
             this.pc.addTrack(track, this.localStream);
         }
       });
 
-      // 4. Create Offer
+      // 4. Criar Offer
       const offer = await this.pc.createOffer();
       await this.pc.setLocalDescription(offer);
       
-      // Wait for ICE Gathering to complete (important for SRS monolithic SDP)
+      // Esperar coleta de ICE completar
       if (this.pc.iceGatheringState !== 'complete') {
           await new Promise<void>(resolve => {
               const checkGathering = () => {
@@ -102,21 +105,20 @@ export class WebRTCService {
                   }
               };
               this.pc?.addEventListener('icegatheringstatechange', checkGathering);
-              // Wait max 2 seconds for TURN candidates
-              setTimeout(resolve, 2000); 
+              setTimeout(resolve, 3000); // Aumentar timeout para nosso servidor
           });
       }
 
       const finalOfferSdp = this.pc.localDescription?.sdp;
-      if (!finalOfferSdp) throw new Error("Failed to generate SDP offer");
+      if (!finalOfferSdp) throw new Error('Falha ao gerar SDP offer');
 
-      console.log("[WebRTC Service] Offer generated with ICE candidates.");
+      console.log('[WebRTC Service] Offer gerado com ICE candidates');
 
-      // 5. Signal to simulated server via standardized api
-      const response = await api.publishWebRTC(streamUrl, finalOfferSdp);
+      // 5. Enviar para nosso backend SRS
+      const response = await api.publishWebRTC(this.currentStreamUrl, finalOfferSdp, streamKey);
       
       if (response && response.code === 0 && response.sdp) {
-          if (!this.pc) throw new Error("Connection closed during negotiation");
+          if (!this.pc) throw new Error('Conexão fechada durante negociação');
           if (this.pc.signalingState === 'stable') return this.localStream;
 
           const formattedSdp = this.formatSDP(response.sdp);
@@ -127,19 +129,18 @@ export class WebRTCService {
           
           this.state = 'connected';
           this.startStatsMonitoring();
-          this.setupICELogging();
-          console.log("[WebRTC Service] Publish connection established successfully.");
+          console.log('[WebRTC Service] Conexão de publish estabelecida');
       } else {
-          throw new Error("SRS Handshake failed");
+          throw new Error('Falha no handshake SRS');
       }
 
       return this.localStream;
 
     } catch (error) {
-      console.error('[WebRTC Service] Error starting publish:', error);
+      console.error('[WebRTC Service] Erro ao iniciar publish:', error);
       if (retryCount > 0) {
-          await new Promise(r => setTimeout(r, 1000));
-          return this.startPublish(streamUrl, retryCount - 1);
+          await new Promise(r => setTimeout(r, 2000));
+          return this.startPublish(streamId, streamKey, retryCount - 1);
       }
       this.state = 'failed';
       this.stop();
@@ -149,26 +150,27 @@ export class WebRTCService {
 
   // --- PLAYBACK FLOW ---
 
-  public async startPlay(streamUrl: string, retryCount = 3): Promise<MediaStream> {
-     this.currentStreamUrl = streamUrl;
+  public async startPlay(streamId: string, retryCount = 3): Promise<MediaStream> {
+     this.currentStreamId = streamId;
+     const webrtcUrl = import.meta.env?.VITE_SRS_WEBRTC_URL || 'webrtc://localhost/live';
+     this.currentStreamUrl = `${webrtcUrl}/${streamId}`;
      this.state = 'connecting';
-     console.log(`[WebRTC Service] Starting playback flow from ${streamUrl}... (Retries left: ${retryCount})`);
+     console.log(`[WebRTC Service] Iniciando playback da stream ${streamId} via ${webrtcUrl} (Retries: ${retryCount})`);
      
      try {
         this.cleanupPeerConnection();
         
         this.pc = new RTCPeerConnection({
-             iceServers: this.turnConfig,
-             sdpSemantics: 'unified-plan',
+             iceServers: this.iceConfig,
              bundlePolicy: 'max-bundle'
-        } as RTCConfiguration);
+        });
 
         this.pc.addTransceiver('audio', { direction: 'recvonly' });
         this.pc.addTransceiver('video', { direction: 'recvonly' });
 
         this.remoteStream = new MediaStream();
         this.pc.ontrack = (event) => {
-            console.log(`[WebRTC Service] Received remote track: ${event.track.kind}`);
+            console.log(`[WebRTC Service] Track recebido: ${event.track.kind}`);
             if (this.remoteStream) this.remoteStream.addTrack(event.track);
         };
 
@@ -177,20 +179,25 @@ export class WebRTCService {
 
         if (this.pc.iceGatheringState !== 'complete') {
              await new Promise<void>(resolve => {
-                  const check = () => { if (this.pc?.iceGatheringState === 'complete') resolve(); };
+                  const check = () => { 
+                      if (this.pc?.iceGatheringState === 'complete') {
+                          this.pc?.removeEventListener('icegatheringstatechange', check);
+                          resolve();
+                      }
+                  };
                   this.pc?.addEventListener('icegatheringstatechange', check);
-                  setTimeout(resolve, 2000);
+                  setTimeout(resolve, 3000); // Timeout para nosso servidor
              });
         }
         
         const finalOffer = this.pc.localDescription?.sdp;
-        if (!finalOffer) throw new Error("Failed to generate playback SDP offer");
+        if (!finalOffer) throw new Error('Falha ao gerar SDP offer para playback');
 
-        // Exchange SDP via standardized api
-        const response = await api.playWebRTC(streamUrl, finalOffer);
+        // Enviar para nosso backend SRS
+        const response = await api.playWebRTC(this.currentStreamUrl, finalOffer);
         
         if (response && response.code === 0 && response.sdp) {
-             if (!this.pc) throw new Error("Connection closed during negotiation");
+             if (!this.pc) throw new Error('Conexão fechada durante negociação');
              if (this.pc.signalingState === 'stable') return this.remoteStream!;
 
              const formattedSdp = this.formatSDP(response.sdp);
@@ -201,22 +208,22 @@ export class WebRTCService {
              
              this.state = 'connected';
              this.startStatsMonitoring();
-             this.setupICELogging();
+             console.log('[WebRTC Service] Conexão de playback estabelecida');
         } else {
-            throw new Error("SRS Playback Handshake failed");
+             throw new Error('Falha no handshake SRS para playback');
         }
 
-        return this.remoteStream;
+        return this.remoteStream!;
 
      } catch (error) {
-         console.error('[WebRTC Service] Error starting playback:', error);
-         if (retryCount > 0) {
-             await new Promise(r => setTimeout(r, 1000));
-             return this.startPlay(streamUrl, retryCount - 1);
-         }
-         this.state = 'failed';
-         this.stop();
-         throw error;
+        console.error('[WebRTC Service] Erro ao iniciar playback:', error);
+        if (retryCount > 0) {
+            await new Promise(r => setTimeout(r, 2000));
+            return this.startPlay(streamId, retryCount - 1);
+        }
+        this.state = 'failed';
+        this.stop();
+        throw error;
      }
   }
 
@@ -249,6 +256,8 @@ export class WebRTCService {
 
   public getLocalStream(): MediaStream | null { return this.localStream; }
   public getRemoteStream(): MediaStream | null { return this.remoteStream; }
+  public getState(): WebRTCState { return this.state; }
+  public getCurrentStreamId(): string | null { return this.currentStreamId; }
 
   private cleanupPeerConnection() {
       if (this.pc) {

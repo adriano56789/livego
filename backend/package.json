@@ -18,6 +18,7 @@
     "create-conversations": "ts-node scripts/createConversations.ts",
     "create-blocks": "ts-node scripts/createBlocks.ts",
     "create-birthdays": "ts-node scripts/createBirthdays.ts",
+    "restore-gifts": "ts-node scripts/restoreOriginalGifts.ts",
     "create-comments": "ts-node scripts/createComments.ts",
     "create-profile-photos": "ts-node scripts/createProfilePhotos.ts",
     "verify-profile-photos": "ts-node scripts/verifyProfilePhotos.ts",

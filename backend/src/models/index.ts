@@ -24,3 +24,7 @@ export { ChatMessage } from './ChatMessage';
 export { Invitation } from './Invitation';
 export { Visitor } from './Visitor';
 export { UserIndex } from './UserIndex';
+export { NotificationSettings } from './NotificationSettings';
+export { GiftNotificationSettings } from './GiftNotificationSettings';
+export { BeautySettings } from './BeautySettings';
+export { UserPermissions } from './UserPermissions';

@@ -20,10 +20,16 @@
     "styled-components": "^6.1.19"
   },
   "devDependencies": {
+    "@types/mongoose": "^5.11.97",
     "@types/node": "^22.14.0",
     "@vitejs/plugin-react": "^5.0.0",
     "ngrok": "^5.0.0-beta.2",
     "typescript": "~5.8.2",
     "vite": "^6.2.0"
-  }
+  },
+  "description": "<div align=\"center\">\r <img width=\"1200\" height=\"475\" alt=\"GHBanner\" src=\"https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6\" />\r </div>",
+  "main": "index.js",
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
 }

@@ -1,6 +1,7 @@
 import express from 'express';
 import { Streamer, User, Gift, GiftTransaction } from '../models';
 import { getUserIdFromToken } from '../middleware/auth';
+import { calculateNetEarnings } from '../utils/diamondConversion';
 
 const router = express.Router();
 
@@ -723,9 +724,12 @@ router.post('/streams/:id/gift', async (req, res) => {
         sender.enviados = (sender.enviados || 0) + totalValue;
         await sender.save();
 
-        // Update receiver earnings
+        // Calcular earnings em BRL e aplicar desconto de 20% da plataforma
+        const { gross: grossEarnings, platformFee, net: netEarnings } = calculateNetEarnings(totalValue);
+
+        // Update receiver earnings em dinheiro (BRL)
         if (receiver) {
-            receiver.earnings = (receiver.earnings || 0) + totalValue;
+            receiver.earnings = (receiver.earnings || 0) + netEarnings;
             receiver.receptores = (receiver.receptores || 0) + totalValue;
             await receiver.save();
         }
@@ -747,7 +751,7 @@ router.post('/streams/:id/gift', async (req, res) => {
             createdAt: new Date().toISOString()
         }]);
 
-        console.log(`✅ Gift sent: ${giftName} x${amount} from ${sender.name} to stream ${req.params.id}`);
+        console.log(`✅ Gift sent: ${giftName} x${amount} from ${sender.name} to stream ${req.params.id} - Gross: R$${grossEarnings.toFixed(2)}, Net: R$${netEarnings.toFixed(2)} (Platform fee: R$${platformFee.toFixed(2)})`);
         
         res.json({ 
             success: true, 

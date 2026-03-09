@@ -58,6 +58,9 @@ export function standardizeUserResponse(user: any): any {
         // Campos numéricos com valor padrão 0
         fans: user.fans || 0,
         following: user.following || 0,
+        diamonds: user.diamonds || 0,
+        earnings: user.earnings || 0,
+        earnings_withdrawn: user.earnings_withdrawn || 0,
         
         // Novos campos sempre como arrays vazios
         messages: Array.isArray(user.messages) ? user.messages : [],
@@ -69,7 +72,7 @@ export function standardizeUserResponse(user: any): any {
             if (![
                 'id', 'name', 'identification', 'avatarUrl', 'coverUrl', 'age', 'gender', 
                 'level', 'xp', 'rank', 'photos', 'followersList', 'followingList',
-                'friendsList', 'blockedUsers', 'fans', 'following', 
+                'friendsList', 'blockedUsers', 'fans', 'following', 'diamonds', 'earnings', 'earnings_withdrawn',
                 'messages', 'notifications', 'visitors'
             ].includes(key)) {
                 acc[key] = user[key];

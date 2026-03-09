@@ -419,6 +419,26 @@ const AppContent: React.FC = () => {
         }
       });
 
+      // Escutar atualizações de diamantes em tempo real
+      socketService.on('diamonds_updated', (data: { userId: string; diamonds: number; change: number; timestamp: string }) => {
+        console.log(`💎 [WebSocket] Diamantes atualizados: ${data.userId} -> ${data.diamonds} (${data.change > 0 ? '+' : ''}${data.change})`);
+        
+        if (data.userId === currentUser.id) {
+          const updatedUser = { ...currentUser, diamonds: data.diamonds };
+          updateUserEverywhere(updatedUser);
+        }
+      });
+
+      // Escutar atualizações de earnings em tempo real
+      socketService.on('earnings_updated', (data: { userId: string; earnings: number; change: number; timestamp: string }) => {
+        console.log(`💰 [WebSocket] Earnings atualizados: ${data.userId} -> R$${data.earnings.toFixed(2)} (${data.change > 0 ? '+' : ''}R$${data.change.toFixed(2)})`);
+        
+        if (data.userId === currentUser.id) {
+          const updatedUser = { ...currentUser, earnings: data.earnings };
+          updateUserEverywhere(updatedUser);
+        }
+      });
+
       // 🚀 Escutar quando lives são encerradas para remover cards em tempo real
       socketService.onStreamEnded((data: { streamId: string; hostId: string; timestamp: string }) => {
         console.log(`📡 Recebido evento stream_ended: ${data.streamId}`);
@@ -476,6 +496,8 @@ const AppContent: React.FC = () => {
 
     return () => {
       socketService.off('user_status_updated');
+      socketService.off('diamonds_updated');
+      socketService.off('earnings_updated');
       socketService.off('stream_ended');
       socketService.off('live_stream_ended');
       socketService.off('card_removed');

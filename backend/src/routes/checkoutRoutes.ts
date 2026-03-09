@@ -4,9 +4,12 @@ import { Order } from '../models';
 const router = express.Router();
 
 const diamondPackages = [
-    { id: 'pack1', diamonds: 100, price: 5.00, bonus: 0, icon: 'gem' },
-    { id: 'pack2', diamonds: 500, price: 25.00, bonus: 50, icon: 'gem_stack' },
-    { id: 'pack3', diamonds: 1000, price: 50.00, bonus: 150, icon: 'chest' }
+    { id: 'pack1', diamonds: 800, price: 7.00, bonus: 0, icon: 'gem' },
+    { id: 'pack2', diamonds: 3000, price: 25.00, bonus: 0, icon: 'gem_stack' },
+    { id: 'pack3', diamonds: 6000, price: 60.00, bonus: 0, icon: 'chest' },
+    { id: 'pack4', diamonds: 20000, price: 180.00, bonus: 0, icon: 'treasure' },
+    { id: 'pack5', diamonds: 36000, price: 350.00, bonus: 0, icon: 'crown' },
+    { id: 'pack6', diamonds: 65000, price: 600.00, bonus: 0, icon: 'diamond_throne' }
 ];
 
 router.get('/pack', async (req, res) => res.json(diamondPackages));

@@ -4,7 +4,7 @@
 import { User, Gift, Streamer, Message, RankedUser, Country, Conversation, NotificationSettings, BeautySettings, PurchaseRecord, EligibleUser, FeedPhoto, Obra, GoogleAccount, LiveSessionState, StreamHistoryEntry, Visitor, LevelInfo, Order, DiamondPackage, LiveNotification, Invitation, PixPaymentResponse, CreditCardPaymentRequest, SRSResponse, SRSPlayResponse, SRSStreamInfo } from '../types';
 import axios, { Method } from 'axios';
 
-const API_BASE_URL = import.meta.env?.VITE_API_BASE_URL || '';
+const API_BASE_URL = import.meta.env?.VITE_API_BASE_URL || 'http://localhost:3000';
 
 const getCurrentUserId = () => {
     try {

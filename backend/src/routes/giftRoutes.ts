@@ -1,5 +1,6 @@
 import express from 'express';
 import { User, Gift, GiftTransaction, Streamer, Followers } from '../models';
+import { calculateNetEarnings } from '../utils/diamondConversion';
 
 const router = express.Router();
 
@@ -30,9 +31,11 @@ router.post('/send', async (req, res) => {
         fromUser.diamonds -= totalCost;
         await fromUser.save();
         
-        // Atualizar earnings do receptor (conversão: 1 diamante = R$ 0.10)
-        const earningsInBRL = totalCost * 0.10;
-        toUser.earnings = (toUser.earnings || 0) + earningsInBRL;
+        // Calcular earnings em BRL e aplicar desconto de 20% da plataforma
+        const { gross: grossEarnings, platformFee, net: netEarnings } = calculateNetEarnings(totalCost);
+        
+        // Atualizar earnings do receptor em dinheiro (BRL)
+        toUser.earnings = (toUser.earnings || 0) + netEarnings;
         await toUser.save();
         
         // Registrar transação
@@ -126,12 +129,12 @@ router.post('/send', async (req, res) => {
             io.emit('earnings_updated', {
                 userId: toUserId,
                 earnings: toUser.earnings,
-                change: earningsInBRL,
+                change: netEarnings,
                 timestamp: new Date().toISOString()
             });
         }
         
-        console.log(`🎁 Presente enviado: ${fromUser.name} -> ${toUser.name} (${quantity}x ${gift.name} = R$${earningsInBRL.toFixed(2)})`);
+        console.log(`🎁 Presente enviado: ${fromUser.name} -> ${toUser.name} (${quantity}x ${gift.name} = ${totalCost} diamantes) - Gross: R$${grossEarnings.toFixed(2)}, Net: R$${netEarnings.toFixed(2)} (Platform fee: R$${platformFee.toFixed(2)})`);
         
         res.json({ 
             success: true, 
@@ -141,7 +144,9 @@ router.post('/send', async (req, res) => {
             transaction: {
                 quantity,
                 totalCost,
-                earningsInBRL
+                grossEarnings,
+                platformFee,
+                netEarnings
             }
         });
         

@@ -198,8 +198,8 @@ const AppContent: React.FC = () => {
     const loadInitialData = async () => {
       setIsLoadingStreamers(true);
       try {
-        // Carregar streams
-        const streams = await api.getLiveStreamers('global');
+        // Carregar streams da categoria padrão (popular)
+        const streams = await api.getLiveStreamers('popular');
         console.log('🔍 [DEBUG] Streams recebidas da API:', streams.length, streams);
         setStreamers(streams);
 
@@ -694,10 +694,10 @@ const AppContent: React.FC = () => {
       }
     } else {
       // Se for Global, carregar todos os streams
-      console.log('🌍 Loading global streams'); // DEBUG
+      console.log('🌍 Loading popular streams'); // DEBUG
       setIsLoadingStreamers(true);
       try {
-        const streams = await api.getLiveStreamers('global');
+        const streams = await api.getLiveStreamers('popular');
         console.log('📺 Global streams loaded:', streams.length); // DEBUG
         setStreamers(streams);
       } catch (error) {
@@ -712,7 +712,7 @@ const AppContent: React.FC = () => {
   const loadStreams = async () => {
     setIsLoadingStreamers(true);
     try {
-      const streams = await api.getLiveStreamers('global');
+      const streams = await api.getLiveStreamers('popular');
       setStreamers(streams);
       console.log('📺 Streams recarregadas:', streams.length);
     } catch (error) {
@@ -794,7 +794,7 @@ const AppContent: React.FC = () => {
       // Carregar streams da API para a categoria selecionada
       setIsLoadingStreamers(true);
       try {
-        const streams = await api.getLiveStreamers(tab === 'popular' ? 'global' : tab);
+        const streams = await api.getLiveStreamers(tab);
         console.log(`🔍 [DEBUG] Streams da categoria "${tab}":`, streams.length, streams);
         setStreamers(streams);
       } catch (error) {

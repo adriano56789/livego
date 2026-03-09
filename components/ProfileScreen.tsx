@@ -210,9 +210,10 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({
           {/* Menu List */}
           <div className="bg-[#111111] rounded-lg overflow-hidden">
               {menuItems.map((item, index) => {
-                  if ((item as any).isAdminOnly && currentUser.platformEarnings === undefined) {
-                      return null;
-                  }
+                  // 🚀 MOSTRAR CARTEIRA ADM SEMPRE (remover condição escondida)
+                  // if ((item as any).isAdminOnly && currentUser.platformEarnings === undefined) {
+                  //     return null;
+                  // }
                   return (
                       <button key={index} onClick={item.action} disabled={!item.action} className="flex items-center justify-between p-4 hover:bg-[#2c2c2e] transition-colors w-full text-left disabled:opacity-60 disabled:cursor-not-allowed border-b border-gray-800/50 last:border-none">
                           <div className="flex items-center space-x-3">

@@ -37,30 +37,17 @@ interface CategoryModalProps {
     categories: Category[];
 }
 
-const CATEGORIES_BY_REGION: Record<string, Category[]> = {
-    'br': [
-        { key: 'popular', label: 'Popular no Brasil' },
-        { key: 'music', label: 'Música Sertaneja / Funk' },
-        { key: 'chat', label: 'Bate-papo' },
-        { key: 'games', label: 'Jogos' },
-        { key: 'pk', label: 'Batalha PK' },
-    ],
-    'us': [
-        { key: 'popular', label: 'Trending in US' },
-        { key: 'music', label: 'Pop & Rap' },
-        { key: 'chat', label: 'Just Chatting' },
-        { key: 'games', label: 'Gaming' },
-        { key: 'pk', label: 'PK Battles' },
-    ],
-    'global': [
-        { key: 'popular', label: 'Global Top' },
-        { key: 'music', label: 'Music' },
-        { key: 'chat', label: 'Chat' },
-        { key: 'dance', label: 'Dance' },
-        { key: 'pk', label: 'PK' },
-        { key: 'private', label: 'Private' }
-    ]
-};
+const CATEGORIES = [
+    { key: 'popular', label: 'Popular' },
+    { key: 'followed', label: 'Seguido' },
+    { key: 'nearby', label: 'Perto' },
+    { key: 'pk', label: 'PK' },
+    { key: 'new', label: 'Novo' },
+    { key: 'music', label: 'Música' },
+    { key: 'dance', label: 'Dança' },
+    { key: 'party', label: 'Festa' },
+    { key: 'private', label: 'Privado' }
+];
 
 const CategoryModal: React.FC<CategoryModalProps> = ({ onClose, onSelectCategory, selectedCategoryKey, categories }) => {
     return (
@@ -93,7 +80,7 @@ const GoLiveScreen: React.FC<GoLiveScreenProps> = ({ isOpen, onClose, onStartStr
     const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
 
     const [selectedRegion, setSelectedRegion] = useState(currentUser.country || 'global');
-    const categories: Category[] = CATEGORIES_BY_REGION[selectedRegion] || CATEGORIES_BY_REGION['global'];
+    const categories: Category[] = CATEGORIES;
 
     const [selectedCategoryKey, setSelectedCategoryKey] = useState(categories[0]?.key || 'popular');
     const [isBeautyPanelOpen, setIsBeautyPanelOpen] = useState(false);
@@ -399,7 +386,7 @@ const GoLiveScreen: React.FC<GoLiveScreenProps> = ({ isOpen, onClose, onStartStr
                                 value={selectedRegion}
                                 onChange={e => {
                                     setSelectedRegion(e.target.value);
-                                    setSelectedCategoryKey(CATEGORIES_BY_REGION[e.target.value]?.[0]?.key || 'popular');
+                                    setSelectedCategoryKey(CATEGORIES[0]?.key || 'popular');
                                 }}
                                 className="bg-gray-700/80 text-gray-300 text-sm px-3 py-1 rounded-full border-none focus:outline-none"
                             >

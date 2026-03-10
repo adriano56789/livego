@@ -1,11 +1,10 @@
-
-
 import React, { useState, useEffect } from 'react';
 import { User, ToastType, Visitor } from '../types';
 import { BackIcon } from './icons';
 import { useTranslation } from '../i18n';
 import { api } from '../services/api';
 import { LoadingSpinner } from './Loading';
+import AvatarWithFrame from './ui/AvatarWithFrame';
 
 interface VisitorsScreenProps {
   onBack: () => void;
@@ -35,7 +34,11 @@ const VisitorItem: React.FC<{ visitor: Visitor; onClick: () => void }> = ({ visi
     return (
         <div className="flex items-center justify-between p-4 hover:bg-gray-800/50 cursor-pointer" onClick={onClick}>
             <div className="flex items-center space-x-4">
-                <img src={visitor.avatarUrl} alt={visitor.name} className="w-14 h-14 rounded-full object-cover" />
+                <AvatarWithFrame 
+                    user={visitor} 
+                    size="md" 
+                    className="w-14 h-14"
+                />
                 <div>
                     <h3 className="font-semibold text-white">{visitor.name}</h3>
                     <p className="text-sm text-gray-400">{t('profile.id')}: {visitor.identification}</p>

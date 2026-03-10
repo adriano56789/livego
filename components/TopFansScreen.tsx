@@ -1,11 +1,10 @@
-
-
 import React, { useState, useEffect } from 'react';
 import { User, RankedUser } from '../types';
 import { BackIcon, YellowDiamondIcon, CrownIcon } from './icons';
 import { useTranslation } from '../i18n';
 import { api } from '../services/api';
 import { LoadingSpinner } from './Loading';
+import AvatarWithFrame from './ui/AvatarWithFrame';
 
 const formatContribution = (num: number) => {
     if (num >= 1000000) return (num / 1000000).toFixed(1).replace('.', ',') + 'M';
@@ -28,7 +27,11 @@ const FanItem: React.FC<{ user: RankedUser; rank: number; onClick: () => void }>
         >
             <div className="flex items-center space-x-4">
                 <span className="w-8 text-center text-xl font-bold text-gray-300">{rank}</span>
-                <img src={user.avatarUrl} alt={user.name} className={`w-14 h-14 rounded-full object-cover border-2 ${getRankColor()}`} />
+                <AvatarWithFrame 
+                    user={user} 
+                    size="md" 
+                    className={`w-14 h-14 border-2 ${getRankColor()}`}
+                />
                 <div>
                     <h3 className="font-semibold text-white flex items-center">{user.name} {rank === 1 && <CrownIcon className="w-5 h-5 ml-1 text-yellow-400" />}</h3>
                     <p className="text-sm text-gray-400">ID: {user.identification}</p>

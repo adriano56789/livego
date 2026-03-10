@@ -1,8 +1,7 @@
-
-
 import React from 'react';
 import { User } from '../types';
 import { UserIcon, StarIcon, BlockIcon } from './icons';
+import AvatarWithFrame from './ui/AvatarWithFrame';
 
 interface UserActionModalProps {
   isOpen: boolean;
@@ -25,7 +24,11 @@ const UserActionModal: React.FC<UserActionModalProps> = ({ isOpen, onClose, user
     return (
         <div className="absolute inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
             <div className="bg-[#1c1c1e] rounded-2xl w-full max-w-sm p-6 text-center" onClick={e => e.stopPropagation()}>
-                <img src={user.avatarUrl} alt={user.name} className="w-20 h-20 rounded-full object-cover mx-auto mb-4 border-2 border-purple-500" />
+                <AvatarWithFrame 
+                    user={user} 
+                    size="xl" 
+                    className="w-20 h-20 mx-auto mb-4"
+                />
                 <h2 className="text-xl font-bold text-white">{user.name}</h2>
                 <p className="text-sm text-gray-400 mb-6">Nível {user.level}</p>
 

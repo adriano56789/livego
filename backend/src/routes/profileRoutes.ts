@@ -1,8 +1,29 @@
 import express from 'express';
-import { User, Photo } from '../models';
+import { User, Photo, Birthday } from '../models';
 import { standardizeUserResponse } from '../utils/userResponse';
 
 const router = express.Router();
+
+// Função auxiliar para calcular signo
+const calculateZodiacSign = (birthDate: Date): string => {
+    const month = birthDate.getMonth() + 1;
+    const day = birthDate.getDate();
+    
+    if ((month === 3 && day >= 21) || (month === 4 && day <= 19)) return 'Áries';
+    if ((month === 4 && day >= 20) || (month === 5 && day <= 20)) return 'Touro';
+    if ((month === 5 && day >= 21) || (month === 6 && day <= 20)) return 'Gêmeos';
+    if ((month === 6 && day >= 21) || (month === 7 && day <= 22)) return 'Câncer';
+    if ((month === 7 && day >= 23) || (month === 8 && day <= 22)) return 'Leão';
+    if ((month === 8 && day >= 23) || (month === 9 && day <= 22)) return 'Virgem';
+    if ((month === 9 && day >= 23) || (month === 10 && day <= 22)) return 'Libra';
+    if ((month === 10 && day >= 23) || (month === 11 && day <= 21)) return 'Escorpião';
+    if ((month === 11 && day >= 22) || (month === 12 && day <= 21)) return 'Sagitário';
+    if ((month === 12 && day >= 22) || (month === 1 && day <= 19)) return 'Capricórnio';
+    if ((month === 1 && day >= 20) || (month === 2 && day <= 18)) return 'Aquário';
+    if ((month === 2 && day >= 19) || (month === 3 && day <= 20)) return 'Peixes';
+    
+    return 'Desconhecido';
+};
 
 // Middleware para extrair usuário do token JWT
 const getCurrentUserId = (req: any) => {
@@ -144,6 +165,27 @@ singleValueRoutes.forEach(({ route, field }) => {
             
             if (!user) {
                 return res.status(404).json({ error: 'User not found' });
+            }
+
+            // Se for aniversário, salvar também no modelo Birthday
+            if (field === 'birthday' && value) {
+                const birthDate = new Date(value);
+                const age = new Date().getFullYear() - birthDate.getFullYear();
+                
+                await Birthday.findOneAndUpdate(
+                    { userId },
+                    {
+                        userId,
+                        birthDate,
+                        age,
+                        zodiacSign: calculateZodiacSign(birthDate),
+                        isActive: true,
+                        updatedAt: new Date()
+                    },
+                    { upsert: true, new: true }
+                );
+                
+                console.log(`✅ Aniversário salvo para usuário ${userId}: ${value}`);
             }
             
             res.json({ success: true, user: standardizeUserResponse(user) });

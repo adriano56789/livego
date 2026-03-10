@@ -6,6 +6,7 @@ import BlockReportModal from './BlockReportModal';
 import { useTranslation } from '../i18n';
 import { api } from '../services/api';
 import { LoadingSpinner } from './Loading';
+import AvatarWithFrame from './ui/AvatarWithFrame';
 
 interface UserProfileScreenProps {
   user: User;
@@ -236,7 +237,11 @@ const UserProfileScreen: React.FC<UserProfileScreenProps> = ({ user, isCurrentUs
                     </div>
                      <div className="absolute -bottom-12 left-1/2 -translate-x-1/2">
                         <div className="relative w-24 h-24">
-                            <img src={user.avatarUrl} onError={handleImageError} alt={user.name} className="w-full h-full rounded-full object-cover p-1 bg-[#2c2c2e]" />
+                            <AvatarWithFrame 
+                                user={user} 
+                                size="lg" 
+                                className="w-24 h-24"
+                            />
 
                             {user.isLive ? (
                                 <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-black/60 rounded-md px-2 py-1 flex items-center space-x-1.5 backdrop-blur-sm z-10">

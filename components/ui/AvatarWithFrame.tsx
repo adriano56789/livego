@@ -62,24 +62,25 @@ const AvatarWithFrame: React.FC<AvatarWithFrameProps> = ({
   const FrameComponent = getFrameComponent(user.activeFrameId);
 
   const avatarSize = sizeClasses[size];
-  const frameSize = size === 'sm' ? 'w-14 h-14' : 
-                   size === 'md' ? 'w-20 h-20' : 
-                   size === 'lg' ? 'w-24 h-24' : 'w-28 h-28';
 
   return (
-    <div className={`relative inline-block ${className}`}>
-      {/* Frame */}
+    <div className={`relative inline-block ${avatarSize} ${className}`}>
+      {/* Frame - centralizado com descimento sutil para cobrir parte inferior */}
       {hasValidFrame && FrameComponent && (
-        <div className={`absolute inset-0 ${frameSize} pointer-events-none z-10`}>
-          <FrameComponent className="w-full h-full" />
+        <div className={`absolute inset-0 flex items-center justify-center pointer-events-none z-10`}>
+          <FrameComponent 
+            className="w-full h-full" 
+            style={{ 
+              transform: 'scale(1.4) translateY(2px)',
+              transformOrigin: 'center'
+            }}
+          />
         </div>
       )}
       
       {/* Avatar */}
       <div 
-        className={`${avatarSize} rounded-full overflow-hidden bg-gray-700 border-2 border-gray-600 cursor-pointer hover:border-blue-400 transition-colors ${
-          hasValidFrame ? 'z-0' : 'z-10'
-        }`}
+        className={`${avatarSize} rounded-full overflow-hidden bg-gray-700 cursor-pointer hover:border-blue-400 transition-colors z-0`}
         onClick={onClick}
       >
         <img

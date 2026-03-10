@@ -42,7 +42,6 @@ interface ProfileScreenProps {
     onOpenAvatarProtection: () => void;
     onOpenFAQ: () => void;
     onOpenSettings: () => void;
-    onOpenSupportChat: () => void;
     onOpenAdminWallet: () => void;
     visitors: User[];
 }
@@ -77,7 +76,6 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({
     onOpenAvatarProtection,
     onOpenFAQ,
     onOpenSettings,
-    onOpenSupportChat,
     onOpenAdminWallet,
     visitors
 }) => {
@@ -92,7 +90,6 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({
         { icon: <FansIcon className="h-6 w-6 text-green-400" />, label: t('profile.menu.myFans'), action: onOpenTopFans },
         { icon: <BlockIcon className="h-6 w-6 text-red-500" />, label: t('profile.menu.blockList'), action: onOpenBlockList },
         { icon: <AvatarProtectIcon className="h-6 w-6 text-purple-400" />, label: t('profile.menu.avatarProtection'), action: onOpenAvatarProtection },
-        { icon: <EnvelopeIcon className="h-6 w-6 text-cyan-400" />, label: t('profile.menu.support'), action: onOpenSupportChat },
         { icon: <EnvelopeIcon className="h-6 w-6 text-gray-400" />, label: t('profile.menu.messages'), action: onNavigateToMessages },
         { icon: <FAQIcon className="h-6 w-6 text-gray-400" />, label: t('profile.menu.faq'), action: onOpenFAQ },
         { icon: <SettingsIcon className="h-6 w-6 text-gray-400" />, label: t('profile.menu.settings'), action: onOpenSettings },

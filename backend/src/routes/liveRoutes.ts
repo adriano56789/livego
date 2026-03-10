@@ -175,24 +175,62 @@ router.post('/streams', async (req, res) => {
             return res.status(400).json({ error: 'Host ID is required (token or body)' });
         }
 
-        // 🚀 VERIFICAÇÃO CRÍTICA: Verificar se host já tem stream ativa
+        // 🚀 VERIFICAÇÃO CRÍTICA: Verificar se host já tem stream existente (qualquer status)
         console.log(`🔍 [STREAM CREATE] Verificando streams existentes para host: ${hostId}`);
         
-        const existingStream = await Streamer.findOne({
-            hostId: hostId,
-            isLive: true,
-            streamStatus: 'active'
-        });
+        const existingStream = await Streamer.findOne({ hostId: hostId });
 
         if (existingStream) {
-            console.log(`⚠️ [STREAM CREATE] Host ${hostId} já está ao vivo com stream ${existingStream.id}`);
-            console.log(`📊 [STREAM CREATE] Retornando stream existente em vez de criar duplicata`);
+            console.log(`⚠️ [STREAM CREATE] Host ${hostId} já tem stream ${existingStream.id} (status: ${existingStream.streamStatus || 'N/A'}, isLive: ${existingStream.isLive})`);
             
+            // Se o stream existente estiver offline, reativá-lo em vez de criar novo
+            if (!existingStream.isLive || existingStream.streamStatus !== 'active') {
+                console.log(`🔄 [STREAM CREATE] Reativando stream existente ${existingStream.id}`);
+                
+                // Atualizar stream existente para status ativo
+                const updatedStream = await Streamer.findOneAndUpdate(
+                    { id: existingStream.id },
+                    {
+                        $set: {
+                            isLive: true,
+                            streamStatus: 'active',
+                            startTime: new Date().toISOString(),
+                            viewers: 0,
+                            name: name.trim(),
+                            message: `Ao vivo: ${name.trim()}`,
+                            tags: ['live', category.toLowerCase()],
+                            country: country || existingStream.country || 'br',
+                            location: location || existingStream.location || 'Brasil',
+                            updatedAt: new Date()
+                        }
+                    },
+                    { new: true }
+                );
+                
+                if (!updatedStream) {
+                    return res.status(500).json({ error: 'Failed to reactivate stream' });
+                }
+                
+                console.log(`✅ [STREAM CREATE] Stream reativado: ${updatedStream.id}`);
+                
+                return res.json({
+                    success: true,
+                    stream: {
+                        ...updatedStream.toObject(),
+                        publishUrl: `${process.env.SRS_WEBRTC_URL || 'http://localhost:9000'}/rtc/v1/publish/`,
+                        playUrl: `${process.env.SRS_WEBRTC_URL || 'http://localhost:9000'}/rtc/v1/play/`,
+                        streamUrl: `webrtc://livego.store:8000/live/${updatedStream.id}`
+                    },
+                    reactivated: true
+                });
+            }
+            
+            // Se já estiver ativo, retornar existente
+            console.log(`📊 [STREAM CREATE] Retornando stream ativo existente - sem duplicata`);
             return res.json({
                 success: true,
                 stream: {
                     ...existingStream.toObject(),
-                    // URLs para WebRTC
                     publishUrl: `${process.env.SRS_WEBRTC_URL || 'http://localhost:9000'}/rtc/v1/publish/`,
                     playUrl: `${process.env.SRS_WEBRTC_URL || 'http://localhost:9000'}/rtc/v1/play/`,
                     streamUrl: `webrtc://livego.store:8000/live/${existingStream.id}`

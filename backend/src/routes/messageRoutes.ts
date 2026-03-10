@@ -105,7 +105,8 @@ router.get('/chats/:userId/messages', async (req, res) => {
                 senderAvatar: sender.avatarUrl,
                 senderAge: sender.age,
                 senderLevel: sender.level,
-                senderIdentification: sender.identification
+                senderIdentification: sender.identification,
+                senderBirthday: sender.birthday
             } : {};
 
             return {
@@ -178,7 +179,7 @@ router.post('/', async (req, res) => {
         });
 
         // Buscar detalhes do remetente
-        const sender = await User.findOne({ id: senderId }).select('id name avatarUrl age level identification');
+        const sender = await User.findOne({ id: senderId }).select('id name avatarUrl age level identification birthday');
 
         // Preparar mensagem para frontend
         const messageData = {
@@ -194,7 +195,8 @@ router.post('/', async (req, res) => {
             senderAvatar: sender?.avatarUrl,
             senderAge: sender?.age,
             senderLevel: sender?.level,
-            senderIdentification: sender?.identification
+            senderIdentification: sender?.identification,
+            senderBirthday: sender?.birthday
         };
 
         // Enviar via WebSocket em tempo real

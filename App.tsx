@@ -13,6 +13,7 @@ import StreamRoom from './components/StreamRoom';
 import PKBattleScreen from './components/PKBattleScreen';
 import { ToastType, ToastData, Streamer, User, Gift, StreamSummaryData, LiveSessionState, RankedUser, Conversation, Country, NotificationSettings, BeautySettings, FeedPhoto, StreamHistoryEntry, Visitor, PurchaseRecord, Message } from './types';
 import Toast from './components/Toast';
+import MessageNotification from './components/MessageNotification';
 import { socketService } from './services/socket';
 import UserProfileScreen from './components/BroadcasterProfileScreen';
 import EditProfileScreen from './components/EditProfileScreen';
@@ -138,6 +139,13 @@ const AppContent: React.FC = () => {
   const [locationPermissionStatus, setLocationPermissionStatus] = useState<'prompt' | 'granted' | 'denied'>('prompt');
   const [showLocationBanner, setShowLocationBanner] = useState(false);
   const [toasts, setToasts] = useState<ToastData[]>([]);
+  const [messageNotifications, setMessageNotifications] = useState<Array<{
+    id: string;
+    senderName: string;
+    senderAvatar: string;
+    text: string;
+    timestamp: string;
+  }>>([]);
   const [activeStream, setActiveStream] = useState<Streamer | null>(null);
   const [streamRoomData, setStreamRoomData] = useState<StreamRoomData | null>(null);
   const [isPKBattleActive, setIsPKBattleActive] = useState<boolean>(false);
@@ -269,6 +277,35 @@ const AppContent: React.FC = () => {
 
     loadUserData();
   }, [currentUser?.id]);
+
+  // Listener para notificações de novas mensagens
+  useEffect(() => {
+    const handleNewMessage = (event: CustomEvent) => {
+      const message = event.detail;
+      
+      // Não mostrar notificação se estiver no chat com o remetente
+      if (chattingWith && chattingWith.id === message.from) {
+        return;
+      }
+      
+      // Adicionar notificação
+      const notification = {
+        id: `msg_${Date.now()}_${Math.random()}`,
+        senderName: message.senderName || 'Usuário',
+        senderAvatar: message.senderAvatar || '',
+        text: message.text || 'Enviou uma mensagem',
+        timestamp: message.timestamp || new Date().toISOString()
+      };
+      
+      setMessageNotifications(prev => [...prev, notification]);
+    };
+
+    window.addEventListener('newChatMessage', handleNewMessage as EventListener);
+    
+    return () => {
+      window.removeEventListener('newChatMessage', handleNewMessage as EventListener);
+    };
+  }, [chattingWith?.id]);
   const [rankingData, setRankingData] = useState<Record<string, RankedUser[]>>(INITIAL_DATA.rankingData);
   const [listScreenUsers, setListScreenUsers] = useState<User[]>([]);
   const [notificationSettings, setNotificationSettings] = useState<NotificationSettings | null>(INITIAL_DATA.notificationSettings);
@@ -785,8 +822,20 @@ const AppContent: React.FC = () => {
 
   const handleTabChange = async (tab: string) => {
     if (tab === 'nearby') {
-      setLocationPermissionStatus('prompt');
-      setIsLocationPermissionModalOpen(true);
+      // Verificar status atual da permissão
+      if (locationPermissionStatus === 'granted') {
+        // Se já foi concedido, ir diretamente para nearby
+        setActiveCategory('nearby');
+        setShowLocationBanner(false);
+      } else if (locationPermissionStatus === 'denied') {
+        // Se foi negado, ir para nearby mas mostrar banner
+        setActiveCategory('nearby');
+        setShowLocationBanner(true);
+      } else {
+        // Se está prompt, mostrar modal de permissão
+        setLocationPermissionStatus('prompt');
+        setIsLocationPermissionModalOpen(true);
+      }
     } else {
       setActiveCategory(tab);
       setShowLocationBanner(false);
@@ -1365,7 +1414,6 @@ const AppContent: React.FC = () => {
                   onOpenAvatarProtection={() => setIsAvatarProtectionScreenOpen(true)}
                   onOpenFAQ={() => setIsFAQScreenOpen(true)}
                   onOpenSettings={() => setIsSettingsScreenOpen(true)}
-                  onOpenSupportChat={() => setChattingWith({ id: 'support-livercore', name: 'Support', avatarUrl: 'https://picsum.photos/seed/support/200/200.jpg', diamonds: 0, level: 1, xp: 0, fans: 0, following: 0, isOnline: true })}
                   onOpenAdminWallet={() => setIsAdminWalletOpen(true)}
                   onOpenVIPCenter={handleOpenVIPCenter}
                   onNavigateToMessages={() => currentUser && setChattingWith(currentUser)}
@@ -1392,7 +1440,7 @@ const AppContent: React.FC = () => {
                   onViewProfile={handleViewProfile}
                   conversations={conversations}
                   friends={friends}
-                  initialTab="messages"
+                  initialTab={messagesInitialTab}
                   onOpenFriendRequests={() => setIsFriendRequestsScreenOpen(true)}
                   fans={fans}
                   followingUsers={followingUsers}
@@ -1417,7 +1465,7 @@ const AppContent: React.FC = () => {
         inviteData={privateInviteData}
       />}
       <CameraPermissionModal isOpen={permissionStep !== 'idle'} permissionType={permissionStep} onAllowAlways={handlePermissionAllow} onAllowOnce={handlePermissionAllow} onDeny={handlePermissionDeny} onClose={() => setPermissionStep('idle')} />
-      <LocationPermissionModal isOpen={isLocationPermissionModalOpen} onAllow={handleAllowLocation} onAllowOnce={handleAllowLocation} onDeny={handleDenyLocation} />
+      <LocationPermissionModal isOpen={isLocationPermissionModalOpen} onAllow={handleAllowLocation} onAllowOnce={handleAllowLocation} onDeny={handleDenyLocation} permissionStatus={locationPermissionStatus} />
       {isEndStreamConfirmOpen && <EndStreamConfirmationModal onCancel={() => setIsEndStreamConfirmOpen(false)} onConfirm={handleConfirmEndStream} isPK={isPKBattleActive} />}
       {isEndStreamSummaryOpen && streamSummaryData && <EndStreamSummaryScreen data={streamSummaryData} onClose={() => { setIsEndStreamSummaryOpen(false); setStreamSummaryData(null); }} />}
       {viewingProfile && <UserProfileScreen user={viewingProfile} isCurrentUser={viewingProfile.id === currentUser.id} onBack={() => setViewingProfile(null)} onEdit={handleEditProfile} onOpenTopFans={() => { setViewingProfile(null); handleOpenListScreen('topFans'); }} onOpenFollowing={() => { setViewingProfile(null); handleOpenListScreen('following'); }} onOpenFans={() => { setViewingProfile(null); handleOpenListScreen('fans'); }} onFollow={handleFollowUser} onStartChat={setChattingWith} onBlockUser={handleBlockUser} onReportUser={handleReportUser} onOpenPhotoViewer={(photos, index) => setPhotoViewerData({ photos, initialIndex: index })} lastPhotoLikeUpdate={lastPhotoLikeUpdate} onPhotoLiked={() => setLastPhotoLikeUpdate(Date.now())} />}
@@ -1457,6 +1505,18 @@ const AppContent: React.FC = () => {
       <LiveHistoryScreen isOpen={isLiveHistoryOpen} onClose={() => setIsLiveHistoryOpen(false)} history={streamHistory} />
       <AdminWalletScreen isOpen={isAdminWalletOpen} onClose={() => setIsAdminWalletOpen(false)} currentUser={currentUser} updateUser={updateUserEverywhere} addToast={addToast} />
       <PrivateChatModal isOpen={isPrivateChatModalOpen} onClose={() => setIsPrivateChatModalOpen(false)} onStartChat={(user) => { setIsPrivateChatModalOpen(false); setChattingWith(user); }} conversations={conversations} />
+      
+      {/* Notificações de mensagens */}
+      {messageNotifications.map((notification) => (
+        <MessageNotification
+          key={notification.id}
+          message={notification}
+          onClose={() => {
+            setMessageNotifications(prev => prev.filter(n => n.id !== notification.id));
+          }}
+        />
+      ))}
+      
       <PKBattleTimerSettingsScreen isOpen={isPKTimerSettingsOpen} onBack={() => setIsPKTimerSettingsOpen(false)} onSave={handleSavePKTimer} />
       {isVIPCenterOpen && currentUser && <VIPCenterScreen isOpen={isVIPCenterOpen} onClose={() => setIsVIPCenterOpen(false)} user={currentUser} onSubscribe={handleSubscribeVIP} />}
       {isPaymentSuccessOpen && paymentSuccessData && <PaymentSuccessScreen onClose={() => setIsPaymentSuccessOpen(false)} data={paymentSuccessData} addToast={(type, msg) => addToast(type === 'info' ? ToastType.Info : ToastType.Success, msg)} />}

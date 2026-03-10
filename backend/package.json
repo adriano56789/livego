@@ -28,7 +28,8 @@
     "verify-real-chat": "ts-node scripts/verifyRealChat.ts",
     "ensure-real-data": "ts-node scripts/ensureRealData.ts",
     "test-websocket": "ts-node scripts/testWebSocket.ts",
-    "check-network": "ts-node scripts/checkNetworkConfig.ts"
+    "check-network": "ts-node scripts/checkNetworkConfig.ts",
+    "populate-frames": "ts-node scripts/populateFrames.ts"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

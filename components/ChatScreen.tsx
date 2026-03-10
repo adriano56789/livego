@@ -349,39 +349,24 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ user, onBack, isModal, currentU
     };
 
     const handleViewImage = (clickedUrl: string) => {
-        console.log('🖼️ Clique na imagem detectado - URL:', clickedUrl);
+        console.log('🖼️ Clique na imagem - Abrindo imediatamente:', clickedUrl);
         
-        const imageMessages = messages.filter(m => m.imageUrl);
-        console.log('📸 Mensagens com imagem encontradas:', imageMessages.length);
-        
-        const photoFeed: FeedPhoto[] = imageMessages.map(m => ({
-            id: m.id,
-            photoUrl: m.imageUrl!,
-            user: m.from === currentUser.id ? currentUser : user,
+        // Criar photoFeed apenas com a imagem clicada para performance
+        const photoFeed: FeedPhoto[] = [{
+            id: 'current-image',
+            photoUrl: clickedUrl,
+            user: currentUser,
             likes: 0,
             isLiked: false,
-        }));
+        }];
 
-        console.log('🖼️ PhotoFeed criado com', photoFeed.length, 'fotos');
-        console.log('🔍 URLs no photoFeed:', photoFeed.map(p => p.photoUrl));
+        console.log('🚀 Abrindo visualização imediata');
 
-        const initialIndex = photoFeed.findIndex(p => p.photoUrl === clickedUrl);
-        console.log('🎯 Índice da imagem clicada:', initialIndex);
-
-        if (initialIndex !== -1) {
-            console.log('✅ Chamando onOpenPhotoViewer com', photoFeed.length, 'fotos, índice:', initialIndex);
-            console.log('📱 onOpenPhotoViewer function:', typeof onOpenPhotoViewer);
-            
-            try {
-                onOpenPhotoViewer(photoFeed, initialIndex);
-                console.log('✅ onOpenPhotoViewer chamado com sucesso');
-            } catch (error) {
-                console.error('❌ Erro ao chamar onOpenPhotoViewer:', error);
-            }
-        } else {
-            console.error('❌ Imagem não encontrada no photoFeed');
-            console.log('🔍 URL clicada:', clickedUrl);
-            console.log('📋 URLs disponíveis:', photoFeed.map(p => p.photoUrl));
+        try {
+            onOpenPhotoViewer(photoFeed, 0);
+            console.log('✅ Visualização aberta com sucesso');
+        } catch (error) {
+            console.error('❌ Erro ao abrir visualização:', error);
         }
     };
 

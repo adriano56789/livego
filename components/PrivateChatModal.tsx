@@ -26,7 +26,11 @@ const RankBadge: React.FC<{ rank: number }> = ({ rank }) => (
 
 const ConversationItem: React.FC<{ conversation: Conversation; onClick: () => void }> = ({ conversation, onClick }) => (
     <div className="flex items-center p-4 space-x-4 cursor-pointer hover:bg-gray-800/50" onClick={onClick}>
-        <img src={conversation.friend.avatarUrl} alt={conversation.friend.name} className="w-14 h-14 rounded-full object-cover" />
+        <img 
+            src={conversation.friend.avatarUrl || null} 
+            alt={conversation.friend.name} 
+            className="w-14 h-14 rounded-full object-cover" 
+        />
         <div className="flex-grow">
             <div className="flex justify-between items-center">
                 <h3 className="font-semibold text-white">{conversation.friend.name}</h3>

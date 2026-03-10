@@ -73,7 +73,16 @@ const MediaItem: React.FC<{
                     )}
                 </div>
             ) : (
-                <img src={photo.photoUrl} alt="Full screen view" className="max-w-full max-h-full object-contain" />
+                <img 
+                    src={photo.photoUrl} 
+                    alt="Full screen view" 
+                    className="max-w-full max-h-full object-contain"
+                    onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        console.error('❌ Erro ao carregar imagem:', photo.photoUrl);
+                        target.style.display = 'none';
+                    }}
+                />
             )}
             
             {/* Bottom Overlay Controls */}
@@ -107,6 +116,33 @@ const FullScreenPhotoViewer: React.FC<FullScreenPhotoViewerProps> = ({ photos, i
 
   const [photoStates, setPhotoStates] = useState(new Map(photos.map(p => [p.id, { likes: p.likes, isLiked: p.isLiked }])));
   const containerRef = useRef<HTMLDivElement>(null);
+  const scrollPositionRef = useRef<number>(0);
+
+  // Salvar posição do scroll ao abrir
+  useEffect(() => {
+    scrollPositionRef.current = window.scrollY;
+    
+    // Bloquear scroll do body e manter posição
+    const originalOverflow = document.body.style.overflow;
+    const originalPosition = document.body.style.position;
+    const originalTop = document.body.style.top;
+    
+    document.body.style.overflow = 'hidden';
+    document.body.style.position = 'fixed';
+    document.body.style.top = `-${scrollPositionRef.current}px`;
+    document.body.style.width = '100%';
+    
+    return () => {
+      // Restaurar estilos originais
+      document.body.style.overflow = originalOverflow;
+      document.body.style.position = originalPosition;
+      document.body.style.top = originalTop;
+      document.body.style.width = '';
+      
+      // Restaurar scroll após restaurar estilos
+      window.scrollTo(0, scrollPositionRef.current);
+    };
+  }, []);
 
   // Use layout effect to ensure scrolling happens before paint if possible to avoid flicker
   useEffect(() => {
@@ -118,6 +154,10 @@ const FullScreenPhotoViewer: React.FC<FullScreenPhotoViewerProps> = ({ photos, i
         }
     }
   }, []); // Run once on mount
+
+  const handleClose = () => {
+    onClose();
+  };
 
   const handleLike = async (photoId: string) => {
     const currentState = photoStates.get(photoId);
@@ -147,8 +187,8 @@ const FullScreenPhotoViewer: React.FC<FullScreenPhotoViewerProps> = ({ photos, i
   };
   
   return (
-    <div className="absolute inset-0 bg-black z-[999999] flex flex-col">
-      <button onClick={onClose} className="fixed top-4 right-4 z-[1000000] w-10 h-10 bg-black/20 backdrop-blur-md rounded-full flex items-center justify-center hover:bg-black/40 transition-colors">
+    <div className="fixed inset-0 bg-black z-[9999] flex flex-col">
+      <button onClick={handleClose} className="fixed top-4 right-4 z-[10000] w-10 h-10 bg-black/20 backdrop-blur-md rounded-full flex items-center justify-center hover:bg-black/40 transition-colors">
         <CloseIcon className="w-6 h-6 text-white" />
       </button>
 

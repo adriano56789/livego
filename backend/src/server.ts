@@ -109,7 +109,7 @@ app.use('/api', metadataRoutes); // handles /api/ranking, /api/gifts, /api/regio
 app.use('/api', settingsRoutes); // handles /api/settings, /api/notifications/settings, /api/permissions
 app.use('/api', liveRoutes); // handles /api/live, /api/streams, /api/rtc, /api/lives
 app.use('/api/pk', pkRoutes);
-app.use('/api', interactionRoutes); // handles /api/rooms, /api/invitations, /api/chats, /api/photos, /api/visitors, /api/effects
+app.use('/api/interactions', interactionRoutes); // handles /api/interactions/presents, /api/interactions/streams
 
 // Fallback para API - retornar 404 para endpoints não encontrados
 app.use('/api/*', (req, res) => {

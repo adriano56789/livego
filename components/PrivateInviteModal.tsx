@@ -30,7 +30,21 @@ const PrivateInviteModal: React.FC<PrivateInviteModalProps> = ({ isOpen, onClose
       setIsLoading(true);
       api.getGiftSendersForStream(streamId)
         .then(data => {
-          setEligibleUsers(data || []);
+          // Converter novo formato da API para o formato esperado pelo componente
+          const convertedData = data.gifts.map((user: any) => ({
+            id: user.userId,
+            name: user.userName,
+            avatarUrl: user.userAvatar,
+            giftsSent: user.gifts.map((gift: any) => ({
+              name: gift.giftName,
+              icon: gift.giftIcon,
+              quantity: gift.quantity,
+              price: gift.giftPrice
+            }))
+          }));
+          
+          console.log(' [DEBUG] Dados convertidos:', convertedData);
+          setEligibleUsers(convertedData);
         })
         .catch(err => {
           addToast(ToastType.Error, "Falha ao carregar usuários elegíveis.");

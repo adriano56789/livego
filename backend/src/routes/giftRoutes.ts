@@ -57,6 +57,45 @@ router.post('/send', async (req, res) => {
         
         // Enviar notificações via WebSocket
         const io = req.app.get('io');
+        
+        // 🚀 VERIFICAR SE O PRESENTE LIBERA ACESSO À SALA PRIVADA
+        if (streamId && streamId !== 'unknown') {
+            const streamer = await Streamer.findOne({ id: streamId });
+            
+            if (streamer && streamer.privateGiftId && streamer.privateGiftId === giftId) {
+                console.log(`🔑 [PRIVATE ROOM] Presente correto enviado! GiftId: ${giftId} - Streamer: ${streamer.hostId}`);
+                
+                // Enviar convite para sala privada via WebSocket
+                if (io) {
+                    io.to(`user_${toUserId}`).emit('private_room_invite', {
+                        fromUserId: fromUserId,
+                        fromUserName: fromUser.name,
+                        fromUserAvatar: fromUser.avatarUrl,
+                        streamId: streamId,
+                        giftId: giftId,
+                        giftName: gift.name,
+                        giftIcon: gift.icon,
+                        message: `${fromUser.name} enviou ${gift.name} e ganhou acesso à sala privada!`,
+                        timestamp: new Date().toISOString()
+                    });
+                    
+                    // Notificar o usuário que enviou o presente
+                    io.to(`user_${fromUserId}`).emit('private_room_access_granted', {
+                        streamId: streamId,
+                        streamerName: toUser.name,
+                        giftName: gift.name,
+                        message: `Você ganhou acesso à sala privada de ${toUser.name}!`,
+                        timestamp: new Date().toISOString()
+                    });
+                    
+                    console.log(`✅ [PRIVATE ROOM] Convite enviado para ${fromUserId} e notificação para ${toUserId}`);
+                }
+            } else if (streamer && streamer.privateGiftId) {
+                console.log(`🚫 [PRIVATE ROOM] Presente incorreto. Enviado: ${giftId}, Necessário: ${streamer.privateGiftId}`);
+            }
+        }
+        
+        // Enviar notificações via WebSocket
         if (io) {
             io.to(`user_${toUserId}`).emit('gift_received', {
                 from: {
@@ -152,6 +191,77 @@ router.post('/send', async (req, res) => {
         
     } catch (error: any) {
         console.error('❌ Erro ao enviar presente:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Listar presentes enviados em uma live específica
+router.get('/stream/:streamId', async (req, res) => {
+    try {
+        const { streamId } = req.params;
+        const { limit = 50 } = req.query;
+        
+        // Buscar transações de presentes para esta live
+        const gifts = await GiftTransaction.find({ 
+            streamId: streamId,
+            fromUserId: { $ne: '65384127' } // Excluir auto-presentes do streamer
+        })
+        .sort({ createdAt: -1 })
+        .limit(parseInt(limit as string))
+        .lean();
+        
+        if (gifts.length === 0) {
+            return res.json({
+                success: true,
+                gifts: [],
+                message: 'Ninguém enviou presentes nesta live ainda'
+            });
+        }
+        
+        // Agrupar por usuário para mostrar total de presentes por pessoa
+        const usersGifts = gifts.reduce((acc: any, gift) => {
+            const userId = gift.fromUserId;
+            if (!acc[userId]) {
+                acc[userId] = {
+                    userId: gift.fromUserId,
+                    userName: gift.fromUserName,
+                    userAvatar: gift.fromUserAvatar,
+                    gifts: [],
+                    totalValue: 0,
+                    totalDiamonds: 0
+                };
+            }
+            
+            acc[userId].gifts.push({
+                id: gift.id,
+                giftName: gift.giftName,
+                giftIcon: gift.giftIcon,
+                giftPrice: gift.giftPrice,
+                quantity: gift.quantity,
+                totalValue: gift.totalValue,
+                timestamp: gift.createdAt
+            });
+            
+            acc[userId].totalValue += gift.totalValue;
+            acc[userId].totalDiamonds += gift.giftPrice * gift.quantity;
+            
+            return acc;
+        }, {});
+        
+        const result = Object.values(usersGifts);
+        
+        console.log(`📋 [GIFTS LIST] ${gifts.length} presentes encontrados para stream ${streamId} de ${result.length} usuários diferentes`);
+        
+        res.json({
+            success: true,
+            gifts: result,
+            totalUsers: result.length,
+            totalGifts: gifts.length,
+            totalValue: result.reduce((sum: number, user: any) => sum + user.totalValue, 0)
+        });
+        
+    } catch (error: any) {
+        console.error('❌ Erro ao listar presentes da live:', error);
         res.status(500).json({ error: error.message });
     }
 });

@@ -1,11 +1,147 @@
 import express from 'express';
-import { Message, User, Photo, Streamer, Followers, Friendship, Invitation, Visitor } from '../models';
+import { Message, User, Photo, Streamer, Followers, Friendship, Invitation, Visitor, GiftTransaction } from '../models';
 import { getUserIdFromToken } from '../middleware/auth';
 
 const router = express.Router();
 
-router.get('/presents/live/:id', async (req, res) => res.json([]));
-router.post('/streams/:id/private-invite', async (req, res) => res.json({ success: true }));
+// Listar presentes enviados em uma live específica
+router.get('/presents/live/:id', async (req, res) => {
+    try {
+        const { id: streamId } = req.params;
+        const { limit = 50 } = req.query;
+        
+        // Verificar se o stream existe
+        const stream = await Streamer.findOne({ id: streamId });
+        if (!stream) {
+            return res.status(404).json({ success: false, error: 'Stream não encontrado' });
+        }
+        
+        // Buscar transações de presentes para esta live (de outros usuários para o host)
+        const gifts = await GiftTransaction.find({ 
+            streamId: streamId,
+            fromUserId: { $ne: stream.hostId }, // Apenas presentes de outros usuários (não o host)
+            toUserId: stream.hostId // Apenas presentes enviados para o host
+        })
+        .sort({ createdAt: -1 })
+        .limit(parseInt(limit as string))
+        .lean();
+        
+        if (gifts.length === 0) {
+            return res.json({
+                success: true,
+                gifts: [],
+                message: 'Ninguém enviou presentes nesta live ainda'
+            });
+        }
+        
+        // Agrupar por usuário para mostrar total de presentes por pessoa
+        const usersGifts = gifts.reduce((acc: any, gift) => {
+            const userId = gift.fromUserId;
+            if (!acc[userId]) {
+                acc[userId] = {
+                    userId: gift.fromUserId,
+                    userName: gift.fromUserName,
+                    userAvatar: gift.fromUserAvatar,
+                    gifts: [],
+                    totalValue: 0,
+                    totalDiamonds: 0
+                };
+            }
+            
+            acc[userId].gifts.push({
+                id: gift.id,
+                giftName: gift.giftName,
+                giftIcon: gift.giftIcon,
+                giftPrice: gift.giftPrice,
+                quantity: gift.quantity,
+                totalValue: gift.totalValue,
+                timestamp: gift.createdAt
+            });
+            
+            acc[userId].totalValue += gift.totalValue;
+            acc[userId].totalDiamonds += gift.giftPrice * gift.quantity;
+            
+            return acc;
+        }, {});
+        
+        const result = Object.values(usersGifts);
+        
+        console.log(`📋 [PRESENTS LIVE] ${gifts.length} presentes encontrados para stream ${streamId} do host ${stream.hostId} de ${result.length} usuários diferentes`);
+        
+        res.json({
+            success: true,
+            gifts: result,
+            totalUsers: result.length,
+            totalGifts: gifts.length,
+            totalValue: result.reduce((sum: number, user: any) => sum + user.totalValue, 0)
+        });
+        
+    } catch (error: any) {
+        console.error('❌ Erro ao listar presentes da live:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+router.post('/streams/:id/private-invite', async (req, res) => {
+    try {
+        const { id: streamId } = req.params;
+        const { userId } = req.body;
+        
+        if (!userId) {
+            return res.status(400).json({ success: false, error: 'User ID required' });
+        }
+        
+        // Buscar stream e validar
+        const stream = await Streamer.findOne({ id: streamId });
+        if (!stream) {
+            return res.status(404).json({ success: false, error: 'Stream not found' });
+        }
+        
+        // Buscar usuário a ser convidado
+        const userToInvite = await User.findOne({ id: userId });
+        if (!userToInvite) {
+            return res.status(404).json({ success: false, error: 'Usuário não encontrado' });
+        }
+        
+        // Enviar notificação de convite via WebSocket
+        const io = req.app.get('io');
+        if (io) {
+            // Notificar o usuário convidado
+            io.to(`user_${userId}`).emit('private_stream_invite', {
+                streamId: streamId,
+                streamName: stream.name,
+                hostId: stream.hostId,
+                hostName: stream.name,
+                message: `Você foi convidado para a sala privada de ${stream.name}!`,
+                timestamp: new Date().toISOString()
+            });
+            
+            // Notificar o host sobre o convite enviado
+            io.to(`user_${stream.hostId}`).emit('invite_sent', {
+                userId: userId,
+                userName: userToInvite.name,
+                streamId: streamId,
+                message: `Convite enviado para ${userToInvite.name}`,
+                timestamp: new Date().toISOString()
+            });
+            
+            console.log(`🎫 [PRIVATE INVITE] Convite enviado: ${stream.hostId} → ${userId} (Stream: ${streamId})`);
+        }
+        
+        res.json({ 
+            success: true, 
+            message: 'Convite enviado com sucesso',
+            invitedUser: {
+                id: userToInvite.id,
+                name: userToInvite.name,
+                avatarUrl: userToInvite.avatarUrl
+            }
+        });
+        
+    } catch (error: any) {
+        console.error('❌ Erro ao enviar convite privado:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
 router.get('/streams/:id/access-check', async (req, res) => {
     try {
         const { id: streamId } = req.params;

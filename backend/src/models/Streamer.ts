@@ -30,6 +30,7 @@ export interface IStreamer extends Document {
     recordingEnabled?: boolean;
     chatEnabled?: boolean;
     giftsEnabled?: boolean;
+    privateGiftId?: string; // ID do presente necessário para acessar sala privada
 }
 
 const StreamerSchema = new Schema<IStreamer>({
@@ -62,6 +63,7 @@ const StreamerSchema = new Schema<IStreamer>({
     recordingEnabled: { type: Boolean, default: false },
     chatEnabled: { type: Boolean, default: true },
     giftsEnabled: { type: Boolean, default: true },
+    privateGiftId: { type: String }, // ID do presente necessário para acessar sala privada
 }, {
     timestamps: true,
     toJSON: {

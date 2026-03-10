@@ -1,7 +1,5 @@
-
-
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { Gift } from '../../types';
+import { Gift, User } from '../../types';
 import { YellowDiamondIcon, CheckIcon } from '../icons';
 import { useTranslation } from '../../i18n';
 import { api } from '../../services/api';
@@ -18,9 +16,10 @@ interface GiftModalProps {
     isSendingGift?: boolean;
     isVIP: boolean;
     onOpenVIPCenter: () => void;
+    currentUser: User;
 }
 
-const GiftModal: React.FC<GiftModalProps> = ({ isOpen, onClose, userDiamonds, onSendGift, onRecharge, gifts, receivedGifts, isBroadcaster = false, isSendingGift = false, isVIP, onOpenVIPCenter }) => {
+const GiftModal: React.FC<GiftModalProps> = ({ isOpen, onClose, userDiamonds, onSendGift, onRecharge, gifts, receivedGifts, isBroadcaster = false, isSendingGift = false, isVIP, onOpenVIPCenter, currentUser }) => {
     const { t } = useTranslation();
     const [isEditMode, setIsEditMode] = useState(false);
     const [giftsByTab, setGiftsByTab] = useState<Record<string, Gift[]>>({});
@@ -36,8 +35,9 @@ const GiftModal: React.FC<GiftModalProps> = ({ isOpen, onClose, userDiamonds, on
             // Buscar presentes recebidos pelo usuário
             setLoadingCategories(prev => new Set(prev).add(category));
             try {
-                // Usar o ID do usuário atual (hardcoded por enquanto)
-                const userId = '10755083';
+                // Usar o ID do usuário atual real
+                const userId = currentUser.id;
+                console.log('🔍 Buscando presentes recebidos para usuário:', userId);
                 const receivedGifts = await api.getReceivedGifts(userId);
                 console.log('Presentes recebidos (galeria):', receivedGifts);
                 setReceivedGiftsData(receivedGifts);

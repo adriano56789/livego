@@ -1048,11 +1048,12 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
                 userDiamonds={currentUser.diamonds || 0}
                 onSendGift={handleSendGift}
                 onRecharge={handleRecharge}
-                isVIP={currentUser.isVIP || false}
-                onOpenVIPCenter={onOpenVIPCenter}
                 gifts={gifts}
                 receivedGifts={receivedGifts}
                 isBroadcaster={isBroadcaster}
+                onOpenVIPCenter={onOpenVIPCenter}
+                isVIP={currentUser.isVIP || false}
+                currentUser={currentUser}
             />
             <UserActionModal
                 isOpen={userActionModalState.isOpen}

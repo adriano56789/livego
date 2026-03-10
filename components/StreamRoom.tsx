@@ -6,7 +6,7 @@ import CoHostModal from './CoHostModal';
 import EntryChatMessage from './live/EntryChatMessage';
 import ChatScreen from './ChatScreen';
 import ToolsModal from './ToolsModal';
-import { GiftIcon, MessageIcon, SendIcon, MoreIcon, CloseIcon, PlusIcon, SoundWaveIcon, ViewerIcon, GoldCoinWithGIcon, HeartIcon, TrophyIcon, BellIcon } from './icons';
+import { GiftIcon, MessageIcon, SendIcon, MoreIcon, CloseIcon, PlusIcon, SoundWaveIcon, ViewerIcon, GoldCoinWithGIcon, HeartIcon, TrophyIcon, BellIcon, RankIcon } from './icons';
 import { Streamer, User, Gift, ToastType, RankedUser, LiveSessionState } from '../types';
 import ContributionRankingModal from './ContributionRankingModal';
 import BeautyEffectsPanel from './live/BeautyEffectsPanel';
@@ -72,11 +72,17 @@ interface StreamRoomProps {
     rankingData: RankedUser[];
 }
 
-const FollowChatMessage: React.FC<{ follower: string; followed: string }> = ({ follower, followed }) => {
+const FollowChatMessage: React.FC<{ follower: string; followed: string; level?: number }> = ({ follower, followed, level }) => {
     const { t } = useTranslation();
     return (
         <div className="bg-purple-500/30 rounded-full p-1.5 px-3 flex items-center self-start text-xs">
             <span className="text-purple-300 font-bold">{follower}</span>
+            {level && (
+                <span className="bg-purple-600 text-white text-xs font-semibold px-2 py-1 rounded-full flex items-center space-x-1 ml-2">
+                    <RankIcon className="h-3 w-3" />
+                    <span>{level}</span>
+                </span>
+            )}
             <span className="text-gray-200 ml-1.5">{t('streamRoom.followed')}</span>
             <span className="text-purple-300 font-bold ml-1.5">{followed}! 🎉</span>
         </div>
@@ -968,7 +974,7 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
                                 />;
                             }
                             if (msg.type === 'follow' && msg.user && msg.followedUser) {
-                                return <FollowChatMessage key={msg.id} follower={msg.user} followed={msg.followedUser} />;
+                                return <FollowChatMessage key={msg.id} follower={msg.user} followed={msg.followedUser} level={msg.level} />;
                             }
                             if (msg.type === 'friend_request' && msg.follower) {
                                 return <FriendRequestNotification key={msg.id} followerName={msg.follower.name} onClick={onOpenFriendRequests} />;

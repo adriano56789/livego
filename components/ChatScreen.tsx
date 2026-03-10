@@ -410,8 +410,8 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ user, onBack, isModal, currentU
                             <span>{user.name}</span>
                             {user.isLive && <LiveIndicatorIcon className="w-4 h-4 text-red-500" />}
                         </h1>
-                        <span className={`text-xs ${userStatus?.isOnline ? 'text-green-400' : 'text-gray-500'}`}>
-                            {userStatus?.isOnline ? t('common.online') : formatLastSeen(userStatus?.lastSeen)}
+                        <span className={`text-xs ${(userStatus?.isOnline ?? user.isOnline) ? 'text-green-400' : 'text-gray-500'}`}>
+                            {(userStatus?.isOnline ?? user.isOnline) ? t('common.online') : formatLastSeen(userStatus?.lastSeen)}
                         </span>
                     </div>
                     {user.id !== 'support-livercore' ? (

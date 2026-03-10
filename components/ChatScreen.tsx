@@ -56,6 +56,16 @@ const ChatMessageBubble: React.FC<{ message: Message; isMe: boolean; user: User;
     const senderAge = message.senderAge || user.age;
     const senderLevel = message.senderLevel || user.level;
     const senderIdentification = message.senderIdentification || user.identification;
+    const senderBirthday = message.senderBirthday || user.birthday;
+
+    // Verificar se hoje é aniversário
+    const isBirthday = () => {
+        if (!senderBirthday) return false;
+        const today = new Date();
+        const birthday = new Date(senderBirthday);
+        return today.getDate() === birthday.getDate() && 
+               today.getMonth() === birthday.getMonth();
+    };
 
     return (
         <div
@@ -64,15 +74,16 @@ const ChatMessageBubble: React.FC<{ message: Message; isMe: boolean; user: User;
             data-message-id={message.id}
         >
             <div className="relative w-10 h-10 flex-shrink-0">
-                <img src={senderAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(senderName || "User")}&background=random`} alt="avatar" className="w-10 h-10 rounded-full object-cover" />
+                <img src={senderAvatar || `https://picsum.photos/seed/${senderName || 'support'}/200/200.jpg`} alt="avatar" className="w-10 h-10 rounded-full object-cover" />
             </div>
             <div className={`max-w-xs md:max-w-md rounded-2xl ${isMe ? 'bg-purple-600 rounded-br-none' : 'bg-gray-700 rounded-bl-none'} ${message.imageUrl && !message.text ? 'p-1' : 'px-3 py-2'}`}>
                 {!isMe && (senderName || senderLevel) && (
                     <div className="flex items-center gap-2 mb-1 text-xs text-gray-300">
                         {senderName && <span className="font-medium">{senderName}</span>}
                         {senderLevel && <span className="bg-purple-500/20 text-purple-300 px-1.5 py-0.5 rounded-full">Nível {senderLevel}</span>}
-                        {senderIdentification && <span className="text-gray-400">ID: {senderIdentification}</span>}
+                        {isBirthday() && <span className="text-pink-400">🎂</span>}
                         {senderAge && <span className="text-gray-400">{senderAge} anos</span>}
+                        {senderIdentification && <span className="text-gray-400">ID: {senderIdentification}</span>}
                     </div>
                 )}
                 {message.imageUrl && (
@@ -317,34 +328,41 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ user, onBack, isModal, currentU
         }
     };
 
-    const handleDeleteAllMessages = async () => {
-        console.log('🗑️ Solicitando apagar todas as mensagens do chat');
-        
-        const confirmDelete = window.confirm('Tem certeza que deseja apagar todas as mensagens deste chat? Esta ação não pode ser desfeita.');
-        
-        if (!confirmDelete) {
-            return;
+    const handleDeleteMessage = async (messageId: string) => {
+        try {
+            await api.deleteMessage(messageId, currentUser.id);
+            // Substituir mensagem por "mensagem excluída"
+            setMessages(prev => prev.map(msg => 
+                msg.id === messageId 
+                    ? { ...msg, text: 'mensagem excluída', imageUrl: undefined, status: 'sent' as 'sent' }
+                    : msg
+            ));
+        } catch (error) {
+            console.error('❌ Erro ao apagar mensagem:', error);
         }
+    };
+
+    const handleDeleteAllMessages = async () => {
+        console.log('🗑️ Apagando mensagens diretamente');
         
         try {
-            // Apagar todas as mensagens do chat atual
+            // Apagar todas as mensagens do usuário atual
             const deletePromises = messages
-                .filter(msg => msg.from === currentUser.id) // Apenas mensagens do usuário atual
-                .map(msg => api.deleteMessage(msg.id));
+                .filter(msg => msg.from === currentUser.id)
+                .map(msg => api.deleteMessage(msg.id, currentUser.id));
             
             await Promise.all(deletePromises);
             
-            // Remover todas as mensagens do estado local
-            setMessages(prev => prev.filter(msg => msg.from !== currentUser.id));
-            console.log('✅ Todas as mensagens do usuário foram apagadas com sucesso');
+            // Substituir mensagens por "mensagem excluída"
+            setMessages(prev => prev.map(msg => 
+                msg.from === currentUser.id 
+                    ? { ...msg, text: 'mensagem excluída', imageUrl: undefined, status: 'sent' as 'sent' }
+                    : msg
+            ));
             
-            // Fechar modal
             setIsActionsModalOpen(false);
-            
         } catch (error) {
             console.error('❌ Erro ao apagar mensagens:', error);
-            // Recarregar dados do servidor para manter sincronia
-            fetchInitialData();
         }
     };
 
@@ -399,13 +417,9 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ user, onBack, isModal, currentU
                             {(userStatus?.isOnline ?? user.isOnline) ? t('common.online') : formatLastSeen(userStatus?.lastSeen)}
                         </span>
                     </div>
-                    {user.id !== 'support-livercore' ? (
-                        <button onClick={() => setIsActionsModalOpen(true)} className="p-2 -mr-2">
-                            <ThreeDotsIcon className="w-6 h-6" />
-                        </button>
-                    ) : (
-                        <div className="w-6 h-6 p-2 -mr-2"></div>
-                    )}
+                    <button onClick={() => setIsActionsModalOpen(true)} className="p-2 -mr-2">
+                        <ThreeDotsIcon className="w-6 h-6" />
+                    </button>
                 </header>
                 <main className="flex-grow p-4 overflow-y-auto no-scrollbar flex flex-col">
                     {isLoading ? (

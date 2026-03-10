@@ -27,7 +27,7 @@ router.get('/', async (req, res) => {
 
         // Buscar dados únicos dos remetentes
         const senderIds = [...new Set(messages.map(msg => msg.senderId))];
-        const senders = await User.find({ id: { $in: senderIds } }).select('id name avatarUrl age level identification');
+        const senders = await User.find({ id: { $in: senderIds } }).select('id name avatarUrl age level identification birthday');
         const senderMap = new Map(senders.map(sender => [sender.id, sender]));
 
         // Mapear para o formato Message esperado pelo frontend com dados do remetente
@@ -38,7 +38,8 @@ router.get('/', async (req, res) => {
                 senderAvatar: sender.avatarUrl,
                 senderAge: sender.age,
                 senderLevel: sender.level,
-                senderIdentification: sender.identification
+                senderIdentification: sender.identification,
+                senderBirthday: sender.birthday
             } : {};
 
             return {

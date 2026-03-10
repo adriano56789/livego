@@ -433,10 +433,24 @@ router.post('/photos/upload/:id', async (req, res) => {
             return res.status(400).json({ error: 'Missing userId or photoUrl/image' });
         }
 
+        console.log(`📸 Upload de foto para chat - Usuário: ${userId}`);
+
+        // Se for base64, converter para data URL completo
+        let processedUrl = finalPhotoUrl;
+        if (finalPhotoUrl.startsWith('/9j/') || finalPhotoUrl.startsWith('data:image/')) {
+            // Se já for data URL, usar como está
+            if (finalPhotoUrl.startsWith('data:image/')) {
+                processedUrl = finalPhotoUrl;
+            } else {
+                // Se for apenas base64, adicionar prefixo
+                processedUrl = `data:image/jpeg;base64,${finalPhotoUrl}`;
+            }
+        }
+
         const newPhoto = await Photo.create({
             id: `photo_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
             userId,
-            url: finalPhotoUrl,
+            url: processedUrl,
             caption: description || '',
             likes: 0,
             isLiked: false,
@@ -444,14 +458,19 @@ router.post('/photos/upload/:id', async (req, res) => {
             updatedAt: new Date()
         });
 
+        console.log('✅ Foto salva com URL:', processedUrl);
+
         // Retornar no formato esperado pelo frontend
         res.json({ 
             success: true, 
             url: newPhoto.url,
-            photo: newPhoto
+            photo: {
+                id: newPhoto.id,
+                url: newPhoto.url
+            }
         });
     } catch (error: any) {
-        console.error('Error uploading photo:', error);
+        console.error('❌ Erro no upload de foto:', error);
         res.status(500).json({ error: error.message });
     }
 });

@@ -156,13 +156,13 @@ router.get('/chats/:userId/messages', async (req, res) => {
 // POST /api/messages - Enviar nova mensagem
 router.post('/', async (req, res) => {
     try {
-        const { conversationId, senderId, receiverId, content, type = 'text' } = req.body;
+        const { conversationId, senderId, receiverId, content, messageType = 'text', imageUrl } = req.body;
 
-        if (!conversationId || !senderId || !receiverId || !content) {
+        if (!conversationId || !senderId || !receiverId || (!content && !imageUrl)) {
             return res.status(400).json({ error: 'Dados incompletos' });
         }
 
-        console.log(`📨 Nova mensagem de ${senderId} para ${receiverId}`);
+        console.log(`📨 Nova mensagem de ${senderId} para ${receiverId} - Tipo: ${messageType}`);
 
         // Criar mensagem
         const message = await ChatMessage.create({
@@ -170,38 +170,63 @@ router.post('/', async (req, res) => {
             conversationId,
             senderId,
             receiverId,
-            content,
-            type,
-            timestamp: new Date(),
+            content: messageType === 'image' ? imageUrl : content,
+            messageType,
+            sentAt: new Date(),
             isRead: false
         });
 
         // Buscar detalhes do remetente
-        const sender = await User.findOne({ id: senderId }).select('id name avatarUrl');
+        const sender = await User.findOne({ id: senderId }).select('id name avatarUrl age level identification');
+
+        // Preparar mensagem para frontend
+        const messageData = {
+            id: message.id,
+            chatId: conversationId,
+            from: senderId,
+            to: receiverId,
+            text: messageType !== 'image' ? (content || '') : '',
+            imageUrl: messageType === 'image' ? imageUrl : undefined,
+            timestamp: message.sentAt?.toISOString() || new Date().toISOString(),
+            status: 'sent',
+            senderName: sender?.name,
+            senderAvatar: sender?.avatarUrl,
+            senderAge: sender?.age,
+            senderLevel: sender?.level,
+            senderIdentification: sender?.identification
+        };
 
         // Enviar via WebSocket em tempo real
         const io = req.app.get('io');
         if (io) {
             // Notificar receptor
-            io.to(`user_${receiverId}`).emit('new_message', {
-                ...message.toJSON(),
-                sender: sender
-            });
+            io.to(`user_${receiverId}`).emit('new_message', messageData);
 
             // Notificar todos na conversa
             io.to(`conversation_${conversationId}`).emit('conversation_update', {
                 conversationId,
                 lastMessage: {
-                    content,
+                    content: messageType === 'image' ? '[Imagem]' : content,
                     senderId,
                     timestamp: new Date()
                 }
+            });
+
+            // Adicionar notificação ao histórico do receptor
+            io.to(`user_${receiverId}`).emit('chat_notification', {
+                type: 'new_message',
+                from: senderId,
+                fromName: sender?.name,
+                fromAvatar: sender?.avatarUrl,
+                message: messageType === 'image' ? '[Imagem]' : (content || ''),
+                timestamp: new Date().toISOString(),
+                conversationId
             });
         }
 
         res.json({
             success: true,
-            message: message
+            message: messageData
         });
 
     } catch (error: any) {

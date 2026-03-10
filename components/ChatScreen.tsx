@@ -318,7 +318,11 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ user, onBack, isModal, currentU
     };
 
     const handleViewImage = (clickedUrl: string) => {
+        console.log('🖼️ Clique na imagem detectado - URL:', clickedUrl);
+        
         const imageMessages = messages.filter(m => m.imageUrl);
+        console.log('📸 Mensagens com imagem encontradas:', imageMessages.length);
+        
         const photoFeed: FeedPhoto[] = imageMessages.map(m => ({
             id: m.id,
             photoUrl: m.imageUrl!,
@@ -327,10 +331,26 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ user, onBack, isModal, currentU
             isLiked: false,
         }));
 
+        console.log('🖼️ PhotoFeed criado com', photoFeed.length, 'fotos');
+        console.log('🔍 URLs no photoFeed:', photoFeed.map(p => p.photoUrl));
+
         const initialIndex = photoFeed.findIndex(p => p.photoUrl === clickedUrl);
+        console.log('🎯 Índice da imagem clicada:', initialIndex);
 
         if (initialIndex !== -1) {
-            onOpenPhotoViewer(photoFeed, initialIndex);
+            console.log('✅ Chamando onOpenPhotoViewer com', photoFeed.length, 'fotos, índice:', initialIndex);
+            console.log('📱 onOpenPhotoViewer function:', typeof onOpenPhotoViewer);
+            
+            try {
+                onOpenPhotoViewer(photoFeed, initialIndex);
+                console.log('✅ onOpenPhotoViewer chamado com sucesso');
+            } catch (error) {
+                console.error('❌ Erro ao chamar onOpenPhotoViewer:', error);
+            }
+        } else {
+            console.error('❌ Imagem não encontrada no photoFeed');
+            console.log('🔍 URL clicada:', clickedUrl);
+            console.log('📋 URLs disponíveis:', photoFeed.map(p => p.photoUrl));
         }
     };
 

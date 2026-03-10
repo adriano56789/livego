@@ -263,6 +263,17 @@ router.post('/send', async (req, res) => {
             sender: sender || { id: from, name: 'Usuário', avatarUrl: '' }
         });
 
+        // Adicionar notificação ao histórico do receptor
+        io.to(`user_${to}`).emit('chat_notification', {
+            type: 'new_message',
+            from: from,
+            fromName: sender?.name || 'Usuário',
+            fromAvatar: sender?.avatarUrl || '',
+            message: messageType === 'image' ? '[Imagem]' : (text || ''),
+            timestamp: new Date().toISOString(),
+            conversationId
+        });
+
         // Notificar remetente sobre sucesso
         io.to(`user_${from}`).emit('message_sent', {
             tempId,

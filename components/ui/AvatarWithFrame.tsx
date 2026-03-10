@@ -12,24 +12,15 @@ interface AvatarWithFrameProps {
 
 // Mapeamento dos frames para seus componentes
 const frameComponentMap: Record<string, React.ComponentType<any>> = {
-  'FrameDiamondIcon': FrameIcons.FrameDiamondIcon,
-  'FrameNeonPinkIcon': FrameIcons.FrameNeonPinkIcon,
-  'FrameFloralWreathIcon': FrameIcons.FrameFloralWreathIcon,
-  'FramePinkGemIcon': FrameIcons.FramePinkGemIcon,
-  'FrameGoldenFloralIcon': FrameIcons.FrameGoldenFloralIcon,
-  'FramePurpleFloralIcon': FrameIcons.FramePurpleFloralIcon,
-  'FrameBlueCrystalIcon': FrameIcons.FrameBlueCrystalIcon,
-  'FrameBlueFireIcon': FrameIcons.FrameBlueFireIcon,
-  'FrameSilverThornIcon': FrameIcons.FrameSilverThornIcon,
-  'FrameNeonDiamondIcon': FrameIcons.FrameNeonDiamondIcon,
-  'FrameRoseHeartIcon': FrameIcons.FrameRoseHeartIcon,
-  'FrameOrnateBronzeIcon': FrameIcons.FrameOrnateBronzeIcon,
-  'FramePinkLaceIcon': FrameIcons.FramePinkLaceIcon,
-  'FrameMagentaWingsIcon': FrameIcons.FrameMagentaWingsIcon,
-  'FrameSilverBeadedIcon': FrameIcons.FrameSilverBeadedIcon,
-  'FrameRegalPurpleIcon': FrameIcons.FrameRegalPurpleIcon,
-  'FrameIcyWingsIcon': FrameIcons.FrameIcyWingsIcon,
-  'FrameBlazingSunIcon': FrameIcons.FrameBlazingSunIcon,
+  'FrameBlueCrystal': FrameIcons.FrameBlueCrystal,
+  'FrameRoseGarden': FrameIcons.FrameRoseGarden,
+  'FrameCopperPearls': FrameIcons.FrameCopperPearls,
+  'FrameOrnateMagenta': FrameIcons.FrameOrnateMagenta,
+  'FrameNeonFeathers': FrameIcons.FrameNeonFeathers,
+  'FrameBaroqueElegance': FrameIcons.FrameBaroqueElegance,
+  'FrameMysticalWings': FrameIcons.FrameMysticalWings,
+  'FrameCosmicFire': FrameIcons.FrameCosmicFire,
+  'FrameCelestialCrown': FrameIcons.FrameCelestialCrown,
 };
 
 // Função para verificar se o frame ainda é válido

@@ -749,11 +749,29 @@ UserRoutes.post('/:userId/frames/buy', async (req, res) => {
             isEquipped: false
         });
 
+        console.log(`✅ Frame ${frameId} criado no UserFrame:`, userFrame);
+
+        // Atualizar ownedFrames no usuário
+        await User.findOneAndUpdate(
+            { id: userId },
+            { 
+                $push: { 
+                    ownedFrames: { 
+                        frameId, 
+                        expirationDate: expirationDate.toISOString() 
+                    } 
+                } 
+            }
+        );
+
         console.log(`✅ Frame ${frameId} comprado pelo usuário ${userId}`);
 
+        // Buscar usuário atualizado com frames
+        const updatedUser = await User.findOne({ id: userId });
+        
         res.json({ 
             success: true, 
-            user: standardizeUserResponse(user),
+            user: standardizeUserResponse(updatedUser),
             userFrame
         });
 
@@ -776,30 +794,36 @@ UserRoutes.post('/:userId/frames/equip', async (req, res) => {
         // Importar modelos dinamicamente
         const { UserFrame } = await import('../models');
 
-        // Verificar se o frame pertence ao usuário e está ativo
-        const userFrame = await UserFrame.findOne({
-            userId,
-            frameId,
-            isActive: true,
-            expirationDate: { $gt: new Date() }
-        });
+        console.log(`🔍 Procurando frame: userId=${userId}, frameId=${frameId}`);
 
-        if (!userFrame) {
-            return res.status(404).json({ error: 'Frame não encontrado ou expirado' });
+        // Verificar se o frame pertence ao usuário usando o array ownedFrames (abordagem consistente)
+        const user = await User.findOne({ id: userId });
+        
+        if (!user) {
+            return res.status(404).json({ error: 'Usuário não encontrado' });
         }
 
-        // Desmarcar todos os outros frames como equipados
-        await UserFrame.updateMany(
-            { userId, isActive: true },
-            { isEquipped: false }
-        );
+        console.log(`📋 Usuário encontrado:`, user.id, `ownedFrames:`, user.ownedFrames);
 
-        // Marcar este frame como equipado
-        userFrame.isEquipped = true;
-        await userFrame.save();
+        // Verificar se o usuário possui este frame
+        const ownedFrame = (user.ownedFrames || []).find((f: any) => f.frameId === frameId);
+        
+        if (!ownedFrame) {
+            console.log(`❌ Frame não encontrado no ownedFrames`);
+            return res.status(404).json({ error: 'Frame não encontrado' });
+        }
+
+        // Verificar se o frame não expirou
+        const expirationDate = new Date(ownedFrame.expirationDate);
+        if (expirationDate <= new Date()) {
+            console.log(`❌ Frame expirado: ${expirationDate} vs ${new Date()}`);
+            return res.status(404).json({ error: 'Frame expirado' });
+        }
+
+        console.log(`✅ Frame válido encontrado:`, ownedFrame);
 
         // Atualizar activeFrameId do usuário
-        const user = await User.findOneAndUpdate(
+        const updatedUser = await User.findOneAndUpdate(
             { id: userId },
             { activeFrameId: frameId },
             { new: true }
@@ -809,8 +833,8 @@ UserRoutes.post('/:userId/frames/equip', async (req, res) => {
 
         res.json({ 
             success: true, 
-            user: standardizeUserResponse(user),
-            equippedFrame: userFrame
+            user: standardizeUserResponse(updatedUser),
+            equippedFrame: ownedFrame
         });
 
     } catch (error: any) {
@@ -828,17 +852,8 @@ UserRoutes.post('/:userId/frames/unequip', async (req, res) => {
             return res.status(400).json({ error: 'UserId é obrigatório' });
         }
 
-        // Importar modelos dinamicamente
-        const { UserFrame } = await import('../models');
-
-        // Desmarcar todos os frames como equipados
-        await UserFrame.updateMany(
-            { userId, isActive: true },
-            { isEquipped: false }
-        );
-
         // Remover activeFrameId do usuário
-        const user = await User.findOneAndUpdate(
+        const updatedUser = await User.findOneAndUpdate(
             { id: userId },
             { activeFrameId: null },
             { new: true }
@@ -848,7 +863,7 @@ UserRoutes.post('/:userId/frames/unequip', async (req, res) => {
 
         res.json({ 
             success: true, 
-            user: standardizeUserResponse(user)
+            user: standardizeUserResponse(updatedUser)
         });
 
     } catch (error: any) {

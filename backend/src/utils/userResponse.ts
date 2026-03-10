@@ -62,6 +62,10 @@ export function standardizeUserResponse(user: any): any {
         earnings: user.earnings || 0,
         earnings_withdrawn: user.earnings_withdrawn || 0,
         
+        // Campos de frames
+        ownedFrames: Array.isArray(user.ownedFrames) ? user.ownedFrames : [],
+        activeFrameId: user.activeFrameId || null,
+        
         // Novos campos sempre como arrays vazios
         messages: Array.isArray(user.messages) ? user.messages : [],
         notifications: Array.isArray(user.notifications) ? user.notifications : [],
@@ -73,7 +77,7 @@ export function standardizeUserResponse(user: any): any {
                 'id', 'name', 'identification', 'avatarUrl', 'coverUrl', 'age', 'gender', 
                 'level', 'xp', 'rank', 'photos', 'followersList', 'followingList',
                 'friendsList', 'blockedUsers', 'fans', 'following', 'diamonds', 'earnings', 'earnings_withdrawn',
-                'messages', 'notifications', 'visitors'
+                'messages', 'notifications', 'visitors', 'ownedFrames', 'activeFrameId'
             ].includes(key)) {
                 acc[key] = user[key];
             }

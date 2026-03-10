@@ -4,29 +4,20 @@ import { useTranslation } from '../i18n';
 import { User, ToastType } from '../types';
 import { shopAPI, ShopItem, UserInventory, UserAvatar } from '../services/shopAPI';
 import { api } from '../services/api';
-// Importar os frames originais
+// Importar os frames novos
 import * as FrameIcons from './icons/frames';
 
-// Frames originais do aplicativo
+// Frames novos do aplicativo
 const avatarFrames = [
-  { id: 'FrameDiamondIcon', name: 'Diamond', price: 500, duration: 7, component: FrameIcons.FrameDiamondIcon },
-  { id: 'FrameNeonPinkIcon', name: 'Neon Pink', price: 750, duration: 7, component: FrameIcons.FrameNeonPinkIcon },
-  { id: 'FrameFloralWreathIcon', name: 'Floral Wreath', price: 1000, duration: 14, component: FrameIcons.FrameFloralWreathIcon },
-  { id: 'FramePinkGemIcon', name: 'Pink Gem', price: 1250, duration: 14, component: FrameIcons.FramePinkGemIcon },
-  { id: 'FrameGoldenFloralIcon', name: 'Golden Floral', price: 1500, duration: 30, component: FrameIcons.FrameGoldenFloralIcon },
-  { id: 'FramePurpleFloralIcon', name: 'Purple Floral', price: 2000, duration: 30, component: FrameIcons.FramePurpleFloralIcon },
-  { id: 'FrameBlueCrystalIcon', name: 'Blue Crystal', price: 1800, duration: 30, component: FrameIcons.FrameBlueCrystalIcon },
-  { id: 'FrameBlueFireIcon', name: 'Blue Fire', price: 2200, duration: 30, component: FrameIcons.FrameBlueFireIcon },
-  { id: 'FrameSilverThornIcon', name: 'Silver Thorn', price: 2500, duration: 30, component: FrameIcons.FrameSilverThornIcon },
-  { id: 'FrameNeonDiamondIcon', name: 'Neon Diamond', price: 3000, duration: 30, component: FrameIcons.FrameNeonDiamondIcon },
-  { id: 'FrameRoseHeartIcon', name: 'Rose Heart', price: 3500, duration: 30, component: FrameIcons.FrameRoseHeartIcon },
-  { id: 'FrameOrnateBronzeIcon', name: 'Ornate Bronze', price: 2800, duration: 30, component: FrameIcons.FrameOrnateBronzeIcon },
-  { id: 'FramePinkLaceIcon', name: 'Pink Lace', price: 3200, duration: 30, component: FrameIcons.FramePinkLaceIcon },
-  { id: 'FrameMagentaWingsIcon', name: 'Magenta Wings', price: 4000, duration: 30, component: FrameIcons.FrameMagentaWingsIcon },
-  { id: 'FrameSilverBeadedIcon', name: 'Silver Beaded', price: 2700, duration: 30, component: FrameIcons.FrameSilverBeadedIcon },
-  { id: 'FrameRegalPurpleIcon', name: 'Regal Purple', price: 2900, duration: 30, component: FrameIcons.FrameRegalPurpleIcon },
-  { id: 'FrameIcyWingsIcon', name: 'Icy Wings', price: 3800, duration: 30, component: FrameIcons.FrameIcyWingsIcon },
-  { id: 'FrameBlazingSunIcon', name: 'Blazing Sun', price: 4500, duration: 30, component: FrameIcons.FrameBlazingSunIcon }
+  { id: 'FrameBlueCrystal', name: 'Blue Crystal', price: 500, duration: 7, component: FrameIcons.FrameBlueCrystal },
+  { id: 'FrameRoseGarden', name: 'Rose Garden', price: 750, duration: 7, component: FrameIcons.FrameRoseGarden },
+  { id: 'FrameCopperPearls', name: 'Copper Pearls', price: 1000, duration: 14, component: FrameIcons.FrameCopperPearls },
+  { id: 'FrameOrnateMagenta', name: 'Ornate Magenta', price: 1250, duration: 14, component: FrameIcons.FrameOrnateMagenta },
+  { id: 'FrameNeonFeathers', name: 'Neon Feathers', price: 1500, duration: 30, component: FrameIcons.FrameNeonFeathers },
+  { id: 'FrameBaroqueElegance', name: 'Baroque Elegance', price: 2000, duration: 30, component: FrameIcons.FrameBaroqueElegance },
+  { id: 'FrameMysticalWings', name: 'Mystical Wings', price: 1800, duration: 30, component: FrameIcons.FrameMysticalWings },
+  { id: 'FrameCosmicFire', name: 'Cosmic Fire', price: 2200, duration: 30, component: FrameIcons.FrameCosmicFire },
+  { id: 'FrameCelestialCrown', name: 'Celestial Crown', price: 2500, duration: 30, component: FrameIcons.FrameCelestialCrown }
 ];
 
 // Mock function para getRemainingDays
@@ -62,6 +53,13 @@ const MarketScreen: React.FC<MarketScreenProps> = ({ onClose, user, updateUser, 
 
   const handlePurchase = async () => {
     if (!selectedItem || isActionLoading) return;
+    
+    // Verificar se já possui o frame antes de tentar comprar
+    if (isFrameOwned) {
+      addToast(ToastType.Error, 'Você já possui este frame');
+      return;
+    }
+    
     setIsActionLoading(true);
 
     try {

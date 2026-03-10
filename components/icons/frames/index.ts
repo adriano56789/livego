@@ -1,18 +1,12 @@
-export * from './FrameDiamondIcon'
-export * from './FrameNeonPinkIcon'
-export * from './FrameFloralWreathIcon'
-export * from './FramePinkGemIcon'
-export * from './FrameGoldenFloralIcon'
-export * from './FramePurpleFloralIcon'
-export * from './FrameBlueCrystalIcon'
-export * from './FrameBlueFireIcon'
-export * from './FrameSilverThornIcon'
-export * from './FrameNeonDiamondIcon'
-export * from './FrameRoseHeartIcon'
-export * from './FrameOrnateBronzeIcon'
-export * from './FramePinkLaceIcon'
-export * from './FrameMagentaWingsIcon'
-export * from './FrameSilverBeadedIcon'
-export * from './FrameRegalPurpleIcon'
-export * from './FrameIcyWingsIcon'
-export * from './FrameBlazingSunIcon'
+// Avatar Frame Components - All 9 Frames
+// Each frame is a standalone, animated React component
+
+export { FrameBlueCrystal } from './FrameBlueCrystal';
+export { FrameRoseGarden } from './FrameRoseGarden';
+export { FrameCopperPearls } from './FrameCopperPearls';
+export { FrameOrnateMagenta } from './FrameOrnateMagenta';
+export { FrameNeonFeathers } from './FrameNeonFeathers';
+export { FrameBaroqueElegance } from './FrameBaroqueElegance';
+export { FrameMysticalWings } from './FrameMysticalWings';
+export { FrameCosmicFire } from './FrameCosmicFire';
+export { FrameCelestialCrown } from './FrameCelestialCrown';

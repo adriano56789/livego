@@ -30,6 +30,16 @@ const PrivateInviteModal: React.FC<PrivateInviteModalProps> = ({ isOpen, onClose
       setIsLoading(true);
       api.getGiftSendersForStream(streamId)
         .then(data => {
+          console.log(' [DEBUG] API retornou:', data);
+          
+          if (!data || !data.gifts) {
+            console.log(' [DEBUG] API não retornou dados válidos');
+            setEligibleUsers([]);
+            return;
+          }
+          
+          console.log(` [DEBUG] ${data.gifts.length} usuários com presentes encontrados`);
+          
           // Converter novo formato da API para o formato esperado pelo componente
           const convertedData = data.gifts.map((user: any) => ({
             id: user.userId,

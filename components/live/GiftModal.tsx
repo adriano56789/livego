@@ -148,7 +148,7 @@ const GiftModal: React.FC<GiftModalProps> = ({ isOpen, onClose, userDiamonds, on
             return;
         }
         setSelectedGift(gift);
-        setQuantity(1);
+        // Não resetar quantidade para permitir que usuário mantenha a quantidade escolhida
     };
 
     const canReorderCurrentTab = useMemo(() => {

@@ -351,6 +351,7 @@ export const api = {
     // --- Chat & Messages ---
     getChatMessages: (userId: string, currentUserId?: string) => callApi<{ success: boolean, messages: Message[], total: number }>('GET', `/api/messages/chats/${userId}/messages?currentUserId=${currentUserId || getCurrentUserId()}`).then(res => res ? res.messages : []),
     sendChatMessage: (from: string, to: string, text?: string, imageUrl?: string, tempId?: string): Promise<{ success: boolean; message: Message }> => callApi<{ success: boolean; message: Message }>('POST', '/api/chats/send', { from, to, text, imageUrl, tempId }) as Promise<{ success: boolean; message: Message }>,
+    deleteMessage: (messageId: string, userId?: string): Promise<{ success: boolean }> => callApi<{ success: boolean }>('DELETE', `/api/messages/${messageId}?userId=${userId || getCurrentUserId()}`),
     markMessagesAsRead: (messageIds: string[], userId: string) => callApi<{ success: boolean }>('PUT', `/api/messages/messages/${messageIds[0]}/read`, { userId }),
     getVisitors: (userId: string) => callApi<Visitor[]>('GET', `/api/visitors/list/${userId}`),
     clearVisitors: (userId: string) => callApi<{ success: boolean }>('DELETE', `/api/visitors/clear/${userId}`),

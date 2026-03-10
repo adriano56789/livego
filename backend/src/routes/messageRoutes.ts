@@ -235,4 +235,44 @@ router.post('/', async (req, res) => {
     }
 });
 
+// DELETE /api/messages/:messageId - Apagar mensagem específica
+router.delete('/:messageId', async (req, res) => {
+    try {
+        const { messageId } = req.params;
+        const { userId } = req.query;
+
+        if (!messageId) {
+            return res.status(400).json({ error: 'messageId é obrigatório' });
+        }
+
+        console.log(`🗑️ Apagando mensagem ${messageId} pelo usuário ${userId}`);
+
+        // Buscar a mensagem para verificar se o usuário tem permissão
+        const message = await ChatMessage.findOne({ id: messageId });
+
+        if (!message) {
+            return res.status(404).json({ error: 'Mensagem não encontrada' });
+        }
+
+        // Verificar se o usuário é o remetente ou o destinatário da mensagem
+        if (message.senderId !== userId && message.receiverId !== userId) {
+            return res.status(403).json({ error: 'Sem permissão para apagar esta mensagem' });
+        }
+
+        // Apagar a mensagem
+        await ChatMessage.deleteOne({ id: messageId });
+
+        console.log(`✅ Mensagem ${messageId} apagada com sucesso`);
+
+        res.json({
+            success: true,
+            message: 'Mensagem apagada com sucesso'
+        });
+
+    } catch (error: any) {
+        console.error('❌ Erro ao apagar mensagem:', error);
+        res.status(500).json({ error: 'Erro interno ao apagar mensagem' });
+    }
+});
+
 export default router;

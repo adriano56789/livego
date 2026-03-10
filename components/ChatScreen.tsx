@@ -317,6 +317,37 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ user, onBack, isModal, currentU
         }
     };
 
+    const handleDeleteAllMessages = async () => {
+        console.log('🗑️ Solicitando apagar todas as mensagens do chat');
+        
+        const confirmDelete = window.confirm('Tem certeza que deseja apagar todas as mensagens deste chat? Esta ação não pode ser desfeita.');
+        
+        if (!confirmDelete) {
+            return;
+        }
+        
+        try {
+            // Apagar todas as mensagens do chat atual
+            const deletePromises = messages
+                .filter(msg => msg.from === currentUser.id) // Apenas mensagens do usuário atual
+                .map(msg => api.deleteMessage(msg.id));
+            
+            await Promise.all(deletePromises);
+            
+            // Remover todas as mensagens do estado local
+            setMessages(prev => prev.filter(msg => msg.from !== currentUser.id));
+            console.log('✅ Todas as mensagens do usuário foram apagadas com sucesso');
+            
+            // Fechar modal
+            setIsActionsModalOpen(false);
+            
+        } catch (error) {
+            console.error('❌ Erro ao apagar mensagens:', error);
+            // Recarregar dados do servidor para manter sincronia
+            fetchInitialData();
+        }
+    };
+
     const handleViewImage = (clickedUrl: string) => {
         console.log('🖼️ Clique na imagem detectado - URL:', clickedUrl);
         
@@ -483,6 +514,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ user, onBack, isModal, currentU
                     onReportUser(user);
                     setIsActionsModalOpen(false);
                 }}
+                onDeleteMessages={handleDeleteAllMessages}
             />
         </div>
     );

@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useTranslation } from '../i18n';
 
@@ -8,9 +7,10 @@ interface BlockReportModalProps {
   onBlock: () => void;
   onReport: () => void;
   onUnfriend?: () => void;
+  onDeleteMessages?: () => void;
 }
 
-const BlockReportModal: React.FC<BlockReportModalProps> = ({ isOpen, onClose, onBlock, onReport, onUnfriend }) => {
+const BlockReportModal: React.FC<BlockReportModalProps> = ({ isOpen, onClose, onBlock, onReport, onUnfriend, onDeleteMessages }) => {
   const { t } = useTranslation();
   return (
     <div 
@@ -25,6 +25,17 @@ const BlockReportModal: React.FC<BlockReportModalProps> = ({ isOpen, onClose, on
         >
             <div className="px-2 pb-2 space-y-2">
                 <div className="bg-[#2a2a2c] rounded-xl overflow-hidden">
+                    {onDeleteMessages && (
+                        <>
+                            <button 
+                                onClick={onDeleteMessages} 
+                                className="w-full py-3 text-orange-500 text-center text-lg font-bold hover:bg-gray-700/50 transition-colors"
+                            >
+                                🗑️ Apagar Mensagens
+                            </button>
+                            <div className="h-px bg-gray-600/50"></div>
+                        </>
+                    )}
                     {onUnfriend && (
                        <>
                         <button 

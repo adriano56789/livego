@@ -5,169 +5,88 @@ dotenv.config();
 
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://admin:adriano123@localhost:27017/api?authSource=admin';
 
-// Mapeamento dos frames baseado nos ícones existentes
+// Mapeamento dos novos frames ultra bonitos
 const frames = [
     {
-        id: 'FrameDiamondIcon',
-        name: 'Diamond',
+        id: 'FrameBlueCrystal',
+        name: 'Blue Crystal',
         price: 500,
         duration: 7,
-        description: 'Frame brilhante com diamantes',
+        description: 'Cristal azul ultra brilhante com diamantes',
         icon: '💎',
-        image: 'https://picsum.photos/seed/frame_diamond/200/200.jpg'
-    },
-    {
-        id: 'FrameNeonPinkIcon',
-        name: 'Neon Pink',
-        price: 750,
-        duration: 7,
-        description: 'Frame neon rosa vibrante',
-        icon: '🌸',
-        image: 'https://picsum.photos/seed/frame_neon_pink/200/200.jpg'
-    },
-    {
-        id: 'FrameFloralWreathIcon',
-        name: 'Floral Wreath',
-        price: 1000,
-        duration: 14,
-        description: 'Guirlanda floral elegante',
-        icon: '🌺',
-        image: 'https://picsum.photos/seed/frame_floral_wreath/200/200.jpg'
-    },
-    {
-        id: 'FramePinkGemIcon',
-        name: 'Pink Gem',
-        price: 1250,
-        duration: 14,
-        description: 'Gema rosa preciosa',
-        icon: '💖',
-        image: 'https://picsum.photos/seed/frame_pink_gem/200/200.jpg'
-    },
-    {
-        id: 'FrameGoldenFloralIcon',
-        name: 'Golden Floral',
-        price: 1500,
-        duration: 30,
-        description: 'Frame dourado com flores',
-        icon: '🌻',
-        image: 'https://picsum.photos/seed/frame_golden_floral/200/200.jpg'
-    },
-    {
-        id: 'FramePurpleFloralIcon',
-        name: 'Purple Floral',
-        price: 2000,
-        duration: 30,
-        description: 'Frame roxo floral',
-        icon: '🌷',
-        image: 'https://picsum.photos/seed/frame_purple_floral/200/200.jpg'
-    },
-    {
-        id: 'FrameBlueCrystalIcon',
-        name: 'Blue Crystal',
-        price: 1800,
-        duration: 30,
-        description: 'Cristal azul mágico',
-        icon: '🔷',
         image: 'https://picsum.photos/seed/frame_blue_crystal/200/200.jpg'
     },
     {
-        id: 'FrameBlueFireIcon',
-        name: 'Blue Fire',
+        id: 'FrameRoseGarden',
+        name: 'Rose Garden',
+        price: 750,
+        duration: 7,
+        description: 'Jardim de rosas com pétalas flutuantes',
+        icon: '�',
+        image: 'https://picsum.photos/seed/frame_rose_garden/200/200.jpg'
+    },
+    {
+        id: 'FrameCopperPearls',
+        name: 'Copper Pearls',
+        price: 1000,
+        duration: 14,
+        description: 'Pérolas de cobre com brilho dourado',
+        icon: '🦪',
+        image: 'https://picsum.photos/seed/frame_copper_pearls/200/200.jpg'
+    },
+    {
+        id: 'FrameOrnateMagenta',
+        name: 'Ornate Magenta',
+        price: 1250,
+        duration: 14,
+        description: 'Ornamentos magenta ultra detalhados',
+        icon: '�',
+        image: 'https://picsum.photos/seed/frame_ornate_magenta/200/200.jpg'
+    },
+    {
+        id: 'FrameNeonFeathers',
+        name: 'Neon Feathers',
+        price: 1500,
+        duration: 30,
+        description: 'Penas neon vibrantes flutuantes',
+        icon: '🪶',
+        image: 'https://picsum.photos/seed/frame_neon_feathers/200/200.jpg'
+    },
+    {
+        id: 'FrameMysticalWings',
+        name: 'Mystical Wings',
+        price: 1800,
+        duration: 30,
+        description: 'Asas místicas com aura mágica',
+        icon: '🦋',
+        image: 'https://picsum.photos/seed/frame_mystical_wings/200/200.jpg'
+    },
+    {
+        id: 'FrameBaroqueElegance',
+        name: 'Baroque Elegance',
+        price: 2000,
+        duration: 30,
+        description: 'Elegância barroca ultra ornamentada',
+        icon: '🏛️',
+        image: 'https://picsum.photos/seed/frame_baroque_elegance/200/200.jpg'
+    },
+    {
+        id: 'FrameCosmicFire',
+        name: 'Cosmic Fire',
         price: 2200,
         duration: 30,
-        description: 'Fogo azul intenso',
+        description: 'Fogo cósmico com energia pulsante',
         icon: '🔥',
-        image: 'https://picsum.photos/seed/frame_blue_fire/200/200.jpg'
+        image: 'https://picsum.photos/seed/frame_cosmic_fire/200/200.jpg'
     },
     {
-        id: 'FrameSilverThornIcon',
-        name: 'Silver Thorn',
+        id: 'FrameCelestialCrown',
+        name: 'Celestial Crown',
         price: 2500,
         duration: 30,
-        description: 'Espinhos de prata',
-        icon: '🥀',
-        image: 'https://picsum.photos/seed/frame_silver_thorn/200/200.jpg'
-    },
-    {
-        id: 'FrameNeonDiamondIcon',
-        name: 'Neon Diamond',
-        price: 3000,
-        duration: 30,
-        description: 'Diamante neon cintilante',
-        icon: '💠',
-        image: 'https://picsum.photos/seed/frame_neon_diamond/200/200.jpg'
-    },
-    {
-        id: 'FrameRoseHeartIcon',
-        name: 'Rose Heart',
-        price: 3500,
-        duration: 30,
-        description: 'Coração de rosas',
-        icon: '🌹',
-        image: 'https://picsum.photos/seed/frame_rose_heart/200/200.jpg'
-    },
-    {
-        id: 'FrameOrnateBronzeIcon',
-        name: 'Ornate Bronze',
-        price: 2800,
-        duration: 30,
-        description: 'Bronze ornamentado',
-        icon: '🏆',
-        image: 'https://picsum.photos/seed/frame_ornate_bronze/200/200.jpg'
-    },
-    {
-        id: 'FramePinkLaceIcon',
-        name: 'Pink Lace',
-        price: 3200,
-        duration: 30,
-        description: 'Renda rosa delicada',
-        icon: '🎀',
-        image: 'https://picsum.photos/seed/frame_pink_lace/200/200.jpg'
-    },
-    {
-        id: 'FrameMagentaWingsIcon',
-        name: 'Magenta Wings',
-        price: 4000,
-        duration: 30,
-        description: 'Asas magenta poderosas',
-        icon: '🦋',
-        image: 'https://picsum.photos/seed/frame_magenta_wings/200/200.jpg'
-    },
-    {
-        id: 'FrameSilverBeadedIcon',
-        name: 'Silver Beaded',
-        price: 2700,
-        duration: 30,
-        description: 'Contas de prata',
-        icon: '📿',
-        image: 'https://picsum.photos/seed/frame_silver_beaded/200/200.jpg'
-    },
-    {
-        id: 'FrameRegalPurpleIcon',
-        name: 'Regal Purple',
-        price: 2900,
-        duration: 30,
-        description: 'Roxo real majestoso',
+        description: 'Coroa celestial majestosa',
         icon: '👑',
-        image: 'https://picsum.photos/seed/frame_regal_purple/200/200.jpg'
-    },
-    {
-        id: 'FrameIcyWingsIcon',
-        name: 'Icy Wings',
-        price: 3800,
-        duration: 30,
-        description: 'Asas de gelo',
-        icon: '❄️',
-        image: 'https://picsum.photos/seed/frame_icy_wings/200/200.jpg'
-    },
-    {
-        id: 'FrameBlazingSunIcon',
-        name: 'Blazing Sun',
-        price: 4500,
-        duration: 30,
-        description: 'Sol ardente',
-        icon: '☀️',
-        image: 'https://picsum.photos/seed/frame_blazing_sun/200/200.jpg'
+        image: 'https://picsum.photos/seed/frame_celestial_crown/200/200.jpg'
     }
 ];
 

@@ -583,24 +583,15 @@ router.post('/streams/:id/toggle-auto-follow', async (req, res) => res.json({}))
 router.post('/streams/:id/toggle-auto-invite', async (req, res) => res.json({}));
 
 const avatarFrames: Record<string, { price: number, durationDays: number, name: string }> = {
-    'FrameDiamondIcon': { price: 500, durationDays: 7, name: 'Diamond' },
-    'FrameNeonPinkIcon': { price: 750, durationDays: 7, name: 'Neon Pink' },
-    'FrameFloralWreathIcon': { price: 1000, durationDays: 14, name: 'Floral Wreath' },
-    'FramePinkGemIcon': { price: 1250, durationDays: 14, name: 'Pink Gem' },
-    'FrameGoldenFloralIcon': { price: 1500, durationDays: 30, name: 'Golden Floral' },
-    'FramePurpleFloralIcon': { price: 2000, durationDays: 30, name: 'Purple Floral' },
-    'FrameBlueCrystalIcon': { price: 1750, durationDays: 21, name: 'Blue Crystal' },
-    'FrameBlueFireIcon': { price: 1600, durationDays: 21, name: 'Blue Fire' },
-    'FrameSilverThornIcon': { price: 1800, durationDays: 21, name: 'Silver Thorn' },
-    'FrameNeonDiamondIcon': { price: 2200, durationDays: 45, name: 'Neon Diamond' },
-    'FrameRoseHeartIcon': { price: 2500, durationDays: 45, name: 'Rose Heart' },
-    'FrameOrnateBronzeIcon': { price: 1900, durationDays: 21, name: 'Ornate Bronze' },
-    'FramePinkLaceIcon': { price: 2000, durationDays: 30, name: 'Pink Lace' },
-    'FrameMagentaWingsIcon': { price: 2400, durationDays: 45, name: 'Magenta Wings' },
-    'FrameSilverBeadedIcon': { price: 2100, durationDays: 30, name: 'Silver Beaded' },
-    'FrameRegalPurpleIcon': { price: 1850, durationDays: 21, name: 'Regal Purple' },
-    'FrameIcyWingsIcon': { price: 2300, durationDays: 45, name: 'Icy Wings' },
-    'FrameBlazingSunIcon': { price: 2600, durationDays: 60, name: 'Blazing Sun' }
+    'FrameBlueCrystal': { price: 500, durationDays: 7, name: 'Blue Crystal' },
+    'FrameRoseGarden': { price: 750, durationDays: 7, name: 'Rose Garden' },
+    'FrameCopperPearls': { price: 1000, durationDays: 14, name: 'Copper Pearls' },
+    'FrameOrnateMagenta': { price: 1250, durationDays: 14, name: 'Ornate Magenta' },
+    'FrameNeonFeathers': { price: 1500, durationDays: 30, name: 'Neon Feathers' },
+    'FrameBaroqueElegance': { price: 2000, durationDays: 30, name: 'Baroque Elegance' },
+    'FrameMysticalWings': { price: 1800, durationDays: 30, name: 'Mystical Wings' },
+    'FrameCosmicFire': { price: 2200, durationDays: 30, name: 'Cosmic Fire' },
+    'FrameCelestialCrown': { price: 2500, durationDays: 30, name: 'Celestial Crown' }
 };
 
 // GET /api/effects/frames - Buscar frames disponíveis

@@ -1267,7 +1267,10 @@ const AppContent: React.FC = () => {
             onFollowUser={handleFollowUser}
             onBlockUser={handleBlockUser}
             onReportUser={handleReportUser}
-            onOpenPhotoViewer={(photos, index) => setPhotoViewerData({ photos, initialIndex: index })}
+            onOpenPhotoViewer={(photos, index) => {
+                console.log('🖼️ App.tsx: ChatScreen onOpenPhotoViewer chamado com', photos.length, 'fotos, índice:', index);
+                setPhotoViewerData({ photos, initialIndex: index });
+            }}
           />
         </div>
       )}
@@ -1436,7 +1439,21 @@ const AppContent: React.FC = () => {
       <LanguageSelectionModal isOpen={isLanguageModalOpen} onClose={() => setIsLanguageModalOpen(false)} currentLanguage={language} onSave={(lang) => { setLanguage(lang); setIsLanguageModalOpen(false); }} />
       {isSearchScreenOpen && <SearchScreen onClose={() => setIsSearchScreenOpen(false)} onViewProfile={handleViewProfile} allUsers={allUsers} onFollowUser={handleFollowUser} />}
       {activeStream && isPrivateInviteModalOpen && <PrivateInviteModal isOpen={isPrivateInviteModalOpen} onClose={() => setIsPrivateInviteModalOpen(false)} streamId={activeStream.id} currentUser={currentUser} addToast={addToast} followingUsers={followingUsers} onFollowUser={handleFollowUser} allGifts={allGifts} />}
-      {photoViewerData && <FullScreenPhotoViewer photos={photoViewerData.photos} initialIndex={photoViewerData.initialIndex} onClose={() => setPhotoViewerData(null)} onViewProfile={handleViewProfile} onPhotoLiked={() => setLastPhotoLikeUpdate(Date.now())} />}
+      {photoViewerData && (
+        <>
+          {console.log('🖼️ App.tsx: Renderizando FullScreenPhotoViewer com', photoViewerData.photos.length, 'fotos, índice:', photoViewerData.initialIndex)}
+          <FullScreenPhotoViewer 
+            photos={photoViewerData.photos} 
+            initialIndex={photoViewerData.initialIndex} 
+            onClose={() => {
+              console.log('🖼️ App.tsx: Fechando FullScreenPhotoViewer');
+              setPhotoViewerData(null);
+            }} 
+            onViewProfile={handleViewProfile} 
+            onPhotoLiked={() => setLastPhotoLikeUpdate(Date.now())} 
+          />
+        </>
+      )}
       <LiveHistoryScreen isOpen={isLiveHistoryOpen} onClose={() => setIsLiveHistoryOpen(false)} history={streamHistory} />
       <AdminWalletScreen isOpen={isAdminWalletOpen} onClose={() => setIsAdminWalletOpen(false)} currentUser={currentUser} updateUser={updateUserEverywhere} addToast={addToast} />
       <PrivateChatModal isOpen={isPrivateChatModalOpen} onClose={() => setIsPrivateChatModalOpen(false)} onStartChat={(user) => { setIsPrivateChatModalOpen(false); setChattingWith(user); }} conversations={conversations} />

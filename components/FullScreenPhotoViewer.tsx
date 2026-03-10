@@ -147,8 +147,8 @@ const FullScreenPhotoViewer: React.FC<FullScreenPhotoViewerProps> = ({ photos, i
   };
   
   return (
-    <div className="absolute inset-0 bg-black z-[100] flex flex-col">
-      <button onClick={onClose} className="fixed top-4 right-4 z-20 w-10 h-10 bg-black/20 backdrop-blur-md rounded-full flex items-center justify-center hover:bg-black/40 transition-colors">
+    <div className="absolute inset-0 bg-black z-[999999] flex flex-col">
+      <button onClick={onClose} className="fixed top-4 right-4 z-[1000000] w-10 h-10 bg-black/20 backdrop-blur-md rounded-full flex items-center justify-center hover:bg-black/40 transition-colors">
         <CloseIcon className="w-6 h-6 text-white" />
       </button>
 

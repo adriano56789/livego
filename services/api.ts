@@ -341,7 +341,7 @@ export const api = {
     getStreamMessages: (streamId: string) => callApi<Message[]>('GET', `/api/streams/${streamId}/messages`),
 
     // --- Feed & Photos ---
-    getPhotoFeed: () => callApi<FeedPhoto[]>('GET', '/api/feed/photos'),
+    getPhotoFeed: () => callApi<FeedPhoto[]>('GET', '/api/interactions/feed/photos'),
     likePhoto: (photoId: string, userId?: string) => callApi<{ success: boolean; likes: number; isLiked: boolean; }>('POST', `/api/photos/${photoId}/like`, { userId: userId || getCurrentUserId() }),
     uploadChatPhoto: (userId: string, base64Image: string) => callApi<{ success: boolean; url: string; photo: { id: string; url: string; } }>('POST', `/api/photos/upload/${userId}`, { image: base64Image }),
 

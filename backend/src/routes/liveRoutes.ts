@@ -1291,6 +1291,7 @@ router.post('/lives/start', async (req, res) => res.json({ success: true }));
 router.get('/lives/:id', async (req, res) => res.json({}));
 router.post('/lives/:id/end', async (req, res) => {
     await Streamer.deleteOne({ id: req.params.id });
+
     res.json({ success: true });
 });
 

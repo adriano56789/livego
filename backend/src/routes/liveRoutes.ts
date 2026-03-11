@@ -1211,6 +1211,82 @@ router.get('/v1/streams/:id', async (req, res) => {
     }
 });
 
+// PUT /api/streams/:id/quality - Atualizar qualidade do stream
+router.put('/streams/:id/quality', async (req, res) => {
+    try {
+        const { id: streamId } = req.params;
+        const { quality, userId } = req.body;
+        
+        console.log(`🎥 [STREAM_QUALITY] Stream: ${streamId}, Quality: ${quality}, User: ${userId}`);
+        
+        // 1. Validar se o stream existe
+        const streamer = await Streamer.findOne({ id: streamId });
+        if (!streamer) {
+            console.log(`❌ [STREAM_QUALITY] Stream não encontrado: ${streamId}`);
+            return res.status(404).json({ 
+                success: false, 
+                error: 'Stream não encontrado' 
+            });
+        }
+        
+        // 2. Validar se o usuário é o host do stream
+        if (streamer.hostId !== userId) {
+            console.log(`❌ [STREAM_QUALITY] Usuário não é host: ${userId} != ${streamer.hostId}`);
+            return res.status(403).json({ 
+                success: false, 
+                error: 'Apenas o host pode alterar a qualidade' 
+            });
+        }
+        
+        // 3. Validar se a qualidade é válida
+        const validQualities = ['360p', '480p', '720p', '1080p'];
+        if (!validQualities.includes(quality)) {
+            console.log(`❌ [STREAM_QUALITY] Qualidade inválida: ${quality}`);
+            return res.status(400).json({ 
+                success: false, 
+                error: 'Qualidade inválida' 
+            });
+        }
+        
+        // 4. Atualizar qualidade no banco de dados
+        await Streamer.updateOne(
+            { id: streamId },
+            { quality: quality }
+        );
+        
+        console.log(`✅ [STREAM_QUALITY] Qualidade atualizada: ${quality}`);
+        
+        // 5. Enviar evento WebSocket para atualizar frontend
+        const io = req.app.get('io');
+        if (io) {
+            io.emit(`stream_${streamId}_quality_updated`, {
+                quality,
+                streamId,
+                userId
+            });
+            console.log(`📡 [STREAM_QUALITY] Evento WebSocket emitido para stream_${streamId}`);
+        }
+        
+        res.json({ 
+            success: true, 
+            message: `Qualidade alterada para ${quality} com sucesso`,
+            streamId,
+            quality,
+            stream: {
+                ...streamer.toJSON(),
+                quality
+            }
+        });
+        
+    } catch (error) {
+        console.error('❌ [STREAM_QUALITY] Erro:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: 'Erro ao atualizar qualidade do stream' 
+        });
+    }
+});
+
 router.post('/lives/start', async (req, res) => res.json({ success: true }));
 router.get('/lives/:id', async (req, res) => res.json({}));
 router.post('/lives/:id/end', async (req, res) => {

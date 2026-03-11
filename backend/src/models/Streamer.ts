@@ -31,6 +31,7 @@ export interface IStreamer extends Document {
     chatEnabled?: boolean;
     giftsEnabled?: boolean;
     privateGiftId?: string; // ID do presente necessário para acessar sala privada
+    isAutoPrivateInviteEnabled?: boolean; // Auto-convite para sala privada ativado
 }
 
 const StreamerSchema = new Schema<IStreamer>({
@@ -64,6 +65,7 @@ const StreamerSchema = new Schema<IStreamer>({
     chatEnabled: { type: Boolean, default: true },
     giftsEnabled: { type: Boolean, default: true },
     privateGiftId: { type: String }, // ID do presente necessário para acessar sala privada
+    isAutoPrivateInviteEnabled: { type: Boolean, default: false }, // Auto-convite para sala privada ativado
 }, {
     timestamps: true,
     toJSON: {

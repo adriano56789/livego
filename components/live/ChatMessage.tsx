@@ -1,5 +1,5 @@
 import React from 'react';
-import { PlusIcon, SettingsIcon, IdBadgeIcon } from '../icons';
+import { PlusIcon, SettingsIcon, IdBadgeIcon, RankIcon } from '../icons';
 import { User } from '../../types';
 
 interface ChatMessageProps {
@@ -25,7 +25,11 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ userObject, message, onAvatar
         </button>
         <div className="flex-1 min-w-0">
             <div className="flex items-center space-x-1.5">
-                <p className="text-gray-400">{user} <span className="text-purple-400 font-semibold text-xs ml-1">Lv.{level}</span></p>
+                <p className="text-gray-400">{user}</p>
+                <span className="bg-purple-600 text-white text-xs font-semibold px-2 py-1 rounded-full flex items-center space-x-1">
+                    <RankIcon className="h-3 w-3" />
+                    <span>{level}</span>
+                </span>
                 {isModerator && (
                     <div className="bg-yellow-500/20 rounded-full p-0.5 flex items-center justify-center" title="Moderador">
                         <IdBadgeIcon className="w-3 h-3 text-yellow-400" />

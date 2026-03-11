@@ -10,6 +10,7 @@ interface ResolutionPanelProps {
 }
 
 const qualityOptions = [
+    { key: '1080p', label: '1080p (Full HD)' },
     { key: '720p', label: '720p (HD)' },
     { key: '480p', label: '480p (Padrão)' },
     { key: '360p', label: '360p (Fluente)' },

@@ -16,10 +16,9 @@ router.get('/presents/live/:id', async (req, res) => {
             return res.status(404).json({ success: false, error: 'Stream não encontrado' });
         }
         
-        // Buscar transações de presentes para esta live (de outros usuários para o host)
+        // Buscar transações de presentes para esta live (de todos os usuários, incluindo o host)
         const gifts = await GiftTransaction.find({ 
             streamId: streamId,
-            fromUserId: { $ne: stream.hostId }, // Apenas presentes de outros usuários (não o host)
             toUserId: stream.hostId // Apenas presentes enviados para o host
         })
         .sort({ createdAt: -1 })
@@ -734,8 +733,69 @@ router.get('/chats/:id/messages', async (req, res) => {
 router.put('/streams/:id/quality', async (req, res) => res.json({ success: true, stream: {} }));
 router.post('/streams/:id/toggle-mic', async (req, res) => res.json({}));
 router.post('/streams/:id/toggle-sound', async (req, res) => res.json({}));
-router.post('/streams/:id/toggle-auto-follow', async (req, res) => res.json({}));
-router.post('/streams/:id/toggle-auto-invite', async (req, res) => res.json({}));
+router.post('/streams/:id/auto-follow', async (req, res) => res.json({}));
+router.post('/streams/:id/toggle-auto-invite', async (req, res) => {
+    try {
+        const { id: streamId } = req.params;
+        const { userId } = req.body; // ID do usuário que está fazendo a requisição
+        
+        console.log(`🔄 [TOGGLE_AUTO_INVITE] Stream: ${streamId}, User: ${userId}`);
+        
+        // 1. Validar se o stream existe
+        const streamer = await Streamer.findOne({ id: streamId });
+        if (!streamer) {
+            console.log(`❌ [TOGGLE_AUTO_INVITE] Stream não encontrado: ${streamId}`);
+            return res.status(404).json({ 
+                success: false, 
+                error: 'Stream não encontrado' 
+            });
+        }
+        
+        // 2. Validar se o usuário é o host do stream
+        if (streamer.hostId !== userId) {
+            console.log(`❌ [TOGGLE_AUTO_INVITE] Usuário não é host: ${userId} != ${streamer.hostId}`);
+            return res.status(403).json({ 
+                success: false, 
+                error: 'Apenas o host pode alterar esta configuração' 
+            });
+        }
+        
+        // 3. Alternar o status do auto-convite
+        const novoStatus = !streamer.isAutoPrivateInviteEnabled;
+        
+        await Streamer.updateOne(
+            { id: streamId },
+            { isAutoPrivateInviteEnabled: novoStatus }
+        );
+        
+        console.log(`✅ [TOGGLE_AUTO_INVITE] Status atualizado: ${novoStatus}`);
+        
+        // 4. Enviar evento WebSocket para atualizar frontend
+        const io = req.app.get('io');
+        if (io) {
+            io.emit(`stream_${streamId}_auto_invite_toggled`, {
+                enabled: novoStatus,
+                streamId,
+                userId
+            });
+            console.log(`📡 [TOGGLE_AUTO_INVITE] Evento WebSocket emitido para stream_${streamId}`);
+        }
+        
+        res.json({ 
+            success: true, 
+            message: `Auto-convite ${novoStatus ? 'ativado' : 'desativado'} com sucesso`,
+            streamId,
+            enabled: novoStatus
+        });
+        
+    } catch (error) {
+        console.error('❌ [TOGGLE_AUTO_INVITE] Erro:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: 'Erro ao atualizar auto-convite' 
+        });
+    }
+});
 
 const avatarFrames: Record<string, { price: number, durationDays: number, name: string }> = {
     'FrameBlueCrystal': { price: 500, durationDays: 7, name: 'Blue Crystal' },

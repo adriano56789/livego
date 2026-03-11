@@ -605,7 +605,7 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
     };
 
     const handleSelectResolution = async (resolution: string) => {
-        const { success, stream } = await api.updateVideoQuality(streamer.id, resolution);
+        const { success, stream } = await api.updateVideoQuality(streamer.id, resolution, currentUser.id);
         if (success && stream) {
             setCurrentResolution(resolution);
             onStreamUpdate({ quality: resolution });

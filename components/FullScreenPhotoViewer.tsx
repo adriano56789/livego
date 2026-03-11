@@ -188,18 +188,30 @@ const FullScreenPhotoViewer: React.FC<FullScreenPhotoViewerProps> = ({ photos, i
   // Use layout effect to ensure scrolling happens before paint if possible to avoid flicker
   useEffect(() => {
     if (containerRef.current && photos[validIndex]) {
-      // Find the specific element by ID (safer than index if array mutates, though index is used here for simplicity)
-      const element = containerRef.current.children[validIndex] as HTMLElement;
-      if (element) {
+      // Encontrar o container interno com flex
+      const flexContainer = containerRef.current.querySelector('.flex.h-full') as HTMLElement;
+      if (flexContainer) {
         // Usar scrollLeft para horizontal em vez de scrollIntoView
         const containerWidth = containerRef.current.clientWidth;
-        const elementWidth = element.clientWidth;
         const targetScrollLeft = validIndex * containerWidth;
         
         containerRef.current.scrollLeft = targetScrollLeft;
       }
     }
   }, [validIndex]); // Run when index changes
+
+  // Garantir scroll correto após renderização completa
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (containerRef.current && photos[validIndex]) {
+        const containerWidth = containerRef.current.clientWidth;
+        const targetScrollLeft = validIndex * containerWidth;
+        containerRef.current.scrollLeft = targetScrollLeft;
+      }
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, [validIndex, photos.length]);
 
   const handleLike = async (photoId: string) => {
     const currentState = photoStates.get(photoId);

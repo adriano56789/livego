@@ -1,6 +1,5 @@
 import express from 'express';
 import { User, Gift, GiftTransaction, Streamer, Followers } from '../models';
-import { calculateNetEarnings } from '../utils/diamondConversion';
 
 const router = express.Router();
 
@@ -31,12 +30,17 @@ router.post('/send', async (req, res) => {
         fromUser.diamonds -= totalCost;
         await fromUser.save();
         
-        // Calcular earnings em BRL e aplicar desconto de 20% da plataforma
-        const { gross: grossEarnings, platformFee, net: netEarnings } = calculateNetEarnings(totalCost);
-        
-        // Atualizar earnings do receptor em dinheiro (BRL)
-        toUser.earnings = (toUser.earnings || 0) + netEarnings;
-        await toUser.save();
+        // Se for presente para stream, acumular diamantes na stream
+        if (streamId && streamId !== 'unknown') {
+            await Streamer.findOneAndUpdate(
+                { id: streamId },
+                { $inc: { diamonds: totalCost } }
+            );
+        } else {
+            // Se não for para stream, adicionar diretamente aos earnings do usuário
+            toUser.earnings = (toUser.earnings || 0) + totalCost;
+            await toUser.save();
+        }
         
         // Registrar transação
         await GiftTransaction.create([{
@@ -88,10 +92,10 @@ router.post('/send', async (req, res) => {
                         timestamp: new Date().toISOString()
                     });
                     
-                    console.log(`✅ [PRIVATE ROOM] Convite enviado para ${fromUserId} e notificação para ${toUserId}`);
+                    console.log(` Convite enviado para ${fromUserId} e notificação para ${toUserId}`);
                 }
             } else if (streamer && streamer.privateGiftId) {
-                console.log(`🚫 [PRIVATE ROOM] Presente incorreto. Enviado: ${giftId}, Necessário: ${streamer.privateGiftId}`);
+                console.log(` Presente incorreto. Enviado: ${giftId}, Necessário: ${streamer.privateGiftId}`);
             }
         }
         
@@ -167,13 +171,12 @@ router.post('/send', async (req, res) => {
             // Atualizar earnings em tempo real
             io.emit('earnings_updated', {
                 userId: toUserId,
-                earnings: toUser.earnings,
-                change: netEarnings,
+                diamonds: totalCost,
                 timestamp: new Date().toISOString()
             });
         }
         
-        console.log(`🎁 Presente enviado: ${fromUser.name} -> ${toUser.name} (${quantity}x ${gift.name} = ${totalCost} diamantes) - Gross: R$${grossEarnings.toFixed(2)}, Net: R$${netEarnings.toFixed(2)} (Platform fee: R$${platformFee.toFixed(2)})`);
+        console.log(`🎁 Presente enviado: ${fromUser.name} -> ${toUser.name} (${quantity}x ${gift.name} = ${totalCost} diamantes)`);
         
         res.json({ 
             success: true, 
@@ -183,9 +186,7 @@ router.post('/send', async (req, res) => {
             transaction: {
                 quantity,
                 totalCost,
-                grossEarnings,
-                platformFee,
-                netEarnings
+                diamonds: totalCost
             }
         });
         

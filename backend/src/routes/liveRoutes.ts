@@ -1,7 +1,6 @@
 import express from 'express';
 import { Streamer, User, Gift, GiftTransaction } from '../models';
 import { getUserIdFromToken } from '../middleware/auth';
-import { calculateNetEarnings } from '../utils/diamondConversion';
 
 const router = express.Router();
 
@@ -683,6 +682,47 @@ router.post('/streams/:streamId/end', async (req, res) => {
             }
         );
         
+        // Transferir diamantes da live para carteira de ganhos do host
+        try {
+            const stream = await Streamer.findOne({ id: streamId });
+            if (stream && stream.diamonds && stream.diamonds > 0) {
+                const diamondsToTransfer = stream.diamonds;
+                
+                console.log(`💰 [STREAM END] Transferindo ${diamondsToTransfer} diamantes da live ${streamId} para carteira do host ${userId}`);
+                
+                // Adicionar diamantes à carteira de ganhos do usuário
+                await User.findOneAndUpdate(
+                    { id: userId },
+                    { 
+                        $inc: { earnings: diamondsToTransfer },
+                        lastSeen: endTime.toISOString()
+                    }
+                );
+                
+                // Zerar diamantes da live
+                await Streamer.findOneAndUpdate(
+                    { id: streamId },
+                    { diamonds: 0 }
+                );
+                
+                console.log(`✅ [STREAM END] ${diamondsToTransfer} diamantes transferidos com sucesso para carteira de ${userId}`);
+                
+                // Notificar via WebSocket sobre transferência
+                const io = req.app.get('io');
+                if (io) {
+                    io.emit('earnings_updated', {
+                        userId: userId,
+                        diamonds: diamondsToTransfer,
+                        timestamp: endTime.toISOString(),
+                        source: 'live_end',
+                        streamId: streamId
+                    });
+                }
+            }
+        } catch (transferError: any) {
+            console.error(`❌ [STREAM END] Erro ao transferir diamantes: ${transferError.message}`);
+        }
+        
         // Atualizar status do host
         await User.findOneAndUpdate(
             { id: userId },
@@ -1090,15 +1130,13 @@ router.post('/streams/:id/gift', async (req, res) => {
         sender.enviados = (sender.enviados || 0) + totalValue;
         await sender.save();
 
-        // Calcular earnings em BRL e aplicar desconto de 20% da plataforma
-        const { gross: grossEarnings, platformFee, net: netEarnings } = calculateNetEarnings(totalValue);
-
-        // Update receiver earnings em dinheiro (BRL)
-        if (receiver) {
-            receiver.earnings = (receiver.earnings || 0) + netEarnings;
-            receiver.receptores = (receiver.receptores || 0) + totalValue;
-            await receiver.save();
-        }
+        // Acumular diamantes na stream (não converter para BRL ainda)
+        await Streamer.findOneAndUpdate(
+            { id: req.params.id },
+            { 
+                $inc: { diamonds: totalValue }
+            }
+        );
 
         // Register gift transaction
         await GiftTransaction.create([{
@@ -1117,12 +1155,18 @@ router.post('/streams/:id/gift', async (req, res) => {
             createdAt: new Date().toISOString()
         }]);
 
-        console.log(`✅ Gift sent: ${giftName} x${amount} from ${sender.name} to stream ${req.params.id} - Gross: R$${grossEarnings.toFixed(2)}, Net: R$${netEarnings.toFixed(2)} (Platform fee: R$${platformFee.toFixed(2)})`);
+        console.log(`💎 Gift sent: ${giftName} x${amount} from ${sender.name} to stream ${req.params.id} - ${totalValue} diamonds accumulated`);
         
         res.json({ 
             success: true, 
             updatedSender: sender, 
-            updatedReceiver: receiver || {} as any 
+            updatedReceiver: receiver || {} as any,
+            transaction: {
+                giftName,
+                amount: amount || 1,
+                totalValue,
+                diamonds: totalValue
+            }
         });
     } catch (error: any) {
         console.error('Error sending gift:', error);
@@ -1293,6 +1337,121 @@ router.post('/lives/:id/end', async (req, res) => {
     await Streamer.deleteOne({ id: req.params.id });
 
     res.json({ success: true });
+});
+
+// GET /api/live/nearby - Streams próximas por localização
+router.get('/live/nearby', async (req, res) => {
+    try {
+        const { latitude, longitude, maxDistance = 50000, limit = 20 } = req.query;
+        
+        if (!latitude || !longitude) {
+            return res.status(400).json({ error: 'Latitude and longitude are required' });
+        }
+
+        const lat = parseFloat(latitude as string);
+        const lng = parseFloat(longitude as string);
+        const maxDist = parseInt(maxDistance as string);
+
+        // Buscar streams ativas próximas usando geoLocation do host
+        const nearbyStreams = await Streamer.find({
+            isLive: true,
+            streamStatus: 'active',
+            name: { $exists: true, $nin: ['', null] },
+            hostId: { $exists: true, $ne: null }
+        })
+        .populate({
+            path: 'hostId',
+            select: 'geoLocation name avatarUrl',
+            match: {
+                geoLocation: {
+                    $near: {
+                        $geometry: {
+                            type: 'Point',
+                            coordinates: [lng, lat]
+                        },
+                        $maxDistance: maxDist
+                    }
+                }
+            }
+        })
+        .limit(parseInt(limit as string));
+
+        // Filtrar streams que têm host com localização próxima
+        const validStreams = nearbyStreams.filter(stream => stream.hostId);
+
+        console.log(`📍 [NEARBY STREAMS] ${validStreams.length} streams encontradas próximas a (${lat}, ${lng})`);
+        
+        res.json(validStreams);
+    } catch (error: any) {
+        console.error('Error fetching nearby streams:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// GET /api/live/following - Streams de usuários que o usuário segue
+router.get('/live/following', async (req, res) => {
+    try {
+        const userId = req.query.userId as string;
+        
+        if (!userId) {
+            return res.status(400).json({ error: 'User ID is required' });
+        }
+
+        // Buscar usuário e seus seguidos
+        const User = await import('../models').then(m => m.User);
+        const user = await User.findOne({ id: userId });
+        
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        // Buscar IDs dos usuários que segue
+        const followingIds = user.followingList || [];
+        
+        if (followingIds.length === 0) {
+            return res.json([]);
+        }
+
+        // Buscar streams ativas dos usuários que segue
+        const followingStreams = await Streamer.find({
+            isLive: true,
+            streamStatus: 'active',
+            hostId: { $in: followingIds },
+            name: { $exists: true, $nin: ['', null] }
+        })
+        .sort({ viewers: -1 });
+
+        console.log(`👥 [FOLLOWING STREAMS] ${followingStreams.length} streams de usuários seguidos por ${userId}`);
+        
+        res.json(followingStreams);
+    } catch (error: any) {
+        console.error('Error fetching following streams:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// GET /api/live/new - Streams mais recentes
+router.get('/live/new', async (req, res) => {
+    try {
+        const { limit = 20 } = req.query;
+        
+        // Buscar streams mais recentes
+        const newStreams = await Streamer.find({
+            isLive: true,
+            streamStatus: 'active',
+            name: { $exists: true, $nin: ['', null] },
+            startTime: { $exists: true }
+        })
+        .sort({ startTime: -1 }) // Mais recentes primeiro
+        .limit(parseInt(limit as string));
+
+        console.log(`🆕 [NEW STREAMS] ${newStreams.length} streams mais recentes`);
+        
+        res.json(newStreams);
+    } catch (error: any) {
+        console.error('Error fetching new streams:', error);
+        res.status(500).json({ error: error.message });
+    }
 });
 
 export default router;

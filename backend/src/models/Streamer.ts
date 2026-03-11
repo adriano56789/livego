@@ -32,6 +32,7 @@ export interface IStreamer extends Document {
     giftsEnabled?: boolean;
     privateGiftId?: string; // ID do presente necessário para acessar sala privada
     isAutoPrivateInviteEnabled?: boolean; // Auto-convite para sala privada ativado
+    diamonds?: number; // Diamantes acumulados durante a live
 }
 
 const StreamerSchema = new Schema<IStreamer>({
@@ -66,6 +67,7 @@ const StreamerSchema = new Schema<IStreamer>({
     giftsEnabled: { type: Boolean, default: true },
     privateGiftId: { type: String }, // ID do presente necessário para acessar sala privada
     isAutoPrivateInviteEnabled: { type: Boolean, default: false }, // Auto-convite para sala privada ativado
+    diamonds: { type: Number, default: 0 }, // Diamantes acumulados durante a live
 }, {
     timestamps: true,
     toJSON: {

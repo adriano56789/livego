@@ -88,4 +88,30 @@ router.get('/nearby', async (req, res) => {
     }
 });
 
+// GET /location/user - Buscar localização do usuário atual
+router.get('/user', async (req, res) => {
+    try {
+        const userId = getUserIdFromToken(req);
+        if (!userId) {
+            return res.status(401).json({ error: 'Unauthorized' });
+        }
+
+        const user = await User.findOne({ id: userId }).select('geoLocation locationPermission showLocation');
+        
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        res.json({ 
+            success: true,
+            location: user.geoLocation,
+            permission: user.locationPermission,
+            showLocation: user.showLocation
+        });
+    } catch (error: any) {
+        console.error('Error fetching user location:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
 export default router;

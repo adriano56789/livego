@@ -255,6 +255,7 @@ export const api = {
     // --- Location ---
     updateLocation: (latitude: number, longitude: number) => callApi<{ success: boolean, user: User }>('POST', '/api/location/update', { latitude, longitude }),
     getNearbyUsers: (latitude: number, longitude: number) => callApi<User[]>('GET', `/api/location/nearby?latitude=${latitude}&longitude=${longitude}`),
+    getUserLocation: () => callApi<{ success: boolean; location: any; permission: string; showLocation: boolean }>('GET', '/api/location/user'),
 
     // --- Permissions ---
     getCameraPermission: (userId: string) => callApi<{ status: 'granted' | 'denied' | 'prompt' }>('GET', `/api/permissions/camera/${userId}`),

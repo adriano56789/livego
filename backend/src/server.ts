@@ -85,7 +85,7 @@ app.use('/api/accounts', authRoutes); // Alias for /api/accounts/google/connecte
 app.use('/api/users', userRoutes);
 app.use('/api/media', mediaRoutes);
 app.use('/api/perfil', profileRoutes);
-app.use('/api', walletRoutes); // handles /api/earnings, /api/purchases
+app.use('/api/wallet', walletRoutes); // handles /api/wallet/earnings, /api/wallet/purchases
 app.use('/api/checkout', checkoutRoutes);
 app.use('/api/payment', checkoutRoutes); // groups pix/credit-card
 app.use('/api/purchase', checkoutRoutes);

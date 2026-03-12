@@ -8,9 +8,9 @@ router.get('/live/:category', async (req, res) => {
     try {
         const { category } = req.params;
         const { country } = req.query;
-        
+
         console.log(`🔍 [DEBUG] API Route called - Category: ${category}, Country: ${country || 'none'}`);
-        
+
         // Base filter para streams ativos e válidas
         let baseFilter: any = {
             isLive: true,
@@ -30,27 +30,27 @@ router.get('/live/:category', async (req, res) => {
         // Se for "global" ou "popular", retorna todas as lives ativas E válidas
         if (category === 'global' || category === 'popular') {
             let filter = baseFilter;
-            
+
             // Se houver filtro por país, adicionar ao filter
             if (country && country !== 'ICON_GLOBE') {
                 filter.country = country;
                 console.log(`🌍 Filtering streams by country: ${country}`);
             }
-            
+
             console.log(`🔍 [DEBUG] Final filter for global/popular:`, JSON.stringify(filter, null, 2));
-            
+
             const streams = await Streamer.find(filter).sort({ viewers: -1 });
             console.log(`📺 Found ${streams.length} streams for category: ${category}, country: ${country || 'all'}`);
-            
+
             // Log country codes of returned streams for debugging
             if (streams.length > 0) {
                 const countryCodes = streams.map(s => s.country || 'undefined').join(', ');
                 console.log(`🌍 [DEBUG] Stream country codes: ${countryCodes}`);
             }
-            
+
             return res.json(streams);
         }
-        
+
         // Para categorias específicas, filtra por tag ou categoria E valida dados
         let categoryFilter: any = {
             ...baseFilter,
@@ -59,24 +59,24 @@ router.get('/live/:category', async (req, res) => {
                 { tags: { $in: [category.toLowerCase()] } }
             ]
         };
-        
+
         // Se houver filtro por país em categorias específicas
         if (country && country !== 'ICON_GLOBE') {
             categoryFilter.country = country;
             console.log(`🌍 Filtering ${category} streams by country: ${country}`);
         }
-        
+
         console.log(`🔍 [DEBUG] Final filter for category "${category}":`, JSON.stringify(categoryFilter, null, 2));
-        
+
         const categoryStreams = await Streamer.find(categoryFilter).sort({ viewers: -1 });
         console.log(`📺 Found ${categoryStreams.length} streams for category: ${category}, country: ${country || 'all'}`);
-        
+
         // Log country codes of returned streams for debugging
         if (categoryStreams.length > 0) {
             const countryCodes = categoryStreams.map(s => s.country || 'undefined').join(', ');
             console.log(`🌍 [DEBUG] Category stream country codes: ${countryCodes}`);
         }
-        
+
         res.json(categoryStreams);
     } catch (error: any) {
         console.error('Error fetching streams:', error);
@@ -89,7 +89,7 @@ router.get('/live/:category', async (req, res) => {
 router.get('/streams/live', async (req, res) => {
     try {
         console.log(`🔍 [STREAMS LIVE] Buscando lives ativas`);
-        
+
         // Buscar streams ativas com dados reais
         const activeStreams = await Streamer.find({
             isLive: true,
@@ -97,12 +97,12 @@ router.get('/streams/live', async (req, res) => {
             name: { $exists: true, $nin: ['', null] },
             hostId: { $exists: true, $nin: ['', null] }
         }).sort({ viewers: -1 });
-        
+
         // Enriquecer com dados dos hosts
         const streamsWithHostData = await Promise.all(
             activeStreams.map(async (stream) => {
                 const host = await User.findOne({ id: stream.hostId }).select('id name avatarUrl level country isOnline');
-                
+
                 return {
                     ...stream.toObject(),
                     host: host || {
@@ -116,9 +116,9 @@ router.get('/streams/live', async (req, res) => {
                 };
             })
         );
-        
+
         console.log(`✅ [STREAMS LIVE] Encontradas ${activeStreams.length} lives ativas`);
-        
+
         res.json({
             success: true,
             streams: streamsWithHostData,
@@ -133,21 +133,21 @@ router.get('/streams/live', async (req, res) => {
 router.get('/streams', async (req, res) => {
     try {
         const { region, country } = req.query;
-        
-        let filter: any = { 
+
+        let filter: any = {
             isLive: true,
             name: { $exists: true, $nin: ['', null] },
             hostId: { $exists: true, $nin: ['', null] },
             avatar: { $exists: true, $nin: ['', null] }
         };
-        
+
         // Filtrar por região/país se especificado
         if (region && region !== 'ICON_GLOBE') {
             filter.country = region;
         } else if (country && country !== 'ICON_GLOBE') {
             filter.country = country;
         }
-        
+
         const streams = await Streamer.find(filter).sort({ viewers: -1 });
         res.json(streams);
     } catch (error: any) {
@@ -163,29 +163,29 @@ router.post('/streams', async (req, res) => {
     try {
         const { name, country, location, category = 'general', ...otherData } = req.body;
         const hostId = getUserIdFromToken(req) || req.body.hostId;
-        
+
         console.log(`🎥 [STREAM CREATE] Iniciando criação de stream - Host: ${hostId}`);
-        
+
         if (!name || name.trim() === '') {
             return res.status(400).json({ error: 'Stream name is required' });
         }
-        
+
         if (!hostId) {
             return res.status(400).json({ error: 'Host ID is required (token or body)' });
         }
 
         // 🚀 VERIFICAÇÃO CRÍTICA: Verificar se host já tem stream existente (qualquer status)
         console.log(`🔍 [STREAM CREATE] Verificando streams existentes para host: ${hostId}`);
-        
+
         const existingStream = await Streamer.findOne({ hostId: hostId });
 
         if (existingStream) {
             console.log(`⚠️ [STREAM CREATE] Host ${hostId} já tem stream ${existingStream.id} (status: ${existingStream.streamStatus || 'N/A'}, isLive: ${existingStream.isLive})`);
-            
+
             // Se o stream existente estiver offline, reativá-lo em vez de criar novo
             if (!existingStream.isLive || existingStream.streamStatus !== 'active') {
                 console.log(`🔄 [STREAM CREATE] Reativando stream existente ${existingStream.id}`);
-                
+
                 // Atualizar stream existente para status ativo
                 const updatedStream = await Streamer.findOneAndUpdate(
                     { id: existingStream.id },
@@ -205,13 +205,13 @@ router.post('/streams', async (req, res) => {
                     },
                     { new: true }
                 );
-                
+
                 if (!updatedStream) {
                     return res.status(500).json({ error: 'Failed to reactivate stream' });
                 }
-                
+
                 console.log(`✅ [STREAM CREATE] Stream reativado: ${updatedStream.id}`);
-                
+
                 return res.json({
                     success: true,
                     stream: {
@@ -223,7 +223,7 @@ router.post('/streams', async (req, res) => {
                     reactivated: true
                 });
             }
-            
+
             // Se já estiver ativo, retornar existente
             console.log(`📊 [STREAM CREATE] Retornando stream ativo existente - sem duplicata`);
             return res.json({
@@ -240,7 +240,7 @@ router.post('/streams', async (req, res) => {
 
         // Gerar ID único para stream
         const streamId = `stream_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
-        
+
         // Buscar usuário para obter dados reais
         const user = await User.findOne({ id: hostId });
         if (!user) {
@@ -249,19 +249,19 @@ router.post('/streams', async (req, res) => {
 
         // Usar dados reais do usuário
         const userAvatar = user.avatarUrl || '';
-        const userCountry = user.country || 'br'; 
-        
+        const userCountry = user.country || 'br';
+
         // Configurar URLs reais para SRS
         const srsWebRtcUrl = process.env.SRS_WEBRTC_URL || 'http://localhost:9000';
         const srsRtmpUrl = process.env.SRS_RTMP_URL || 'rtmp://localhost:1935/live';
         const srsHttpUrl = process.env.SRS_HTTP_URL || 'http://localhost:8080';
-        
+
         // Prioridade: país enviado > país do usuário > Brasil como fallback
         const finalCountry = country || userCountry || 'br';
         const finalLocation = location || 'Brasil';
-        
+
         console.log(`🌍 [STREAM CREATE] País final: ${finalCountry} (enviado: ${country || 'none'}, usuário: ${userCountry})`);
-        
+
         // Criar stream com dados reais
         const stream = await Streamer.create({
             id: streamId,
@@ -307,19 +307,19 @@ router.post('/streams', async (req, res) => {
             createdAt: new Date(),
             updatedAt: new Date()
         });
-        
+
         // Atualizar status do usuário para live
         await User.findOneAndUpdate(
             { id: hostId },
-            { 
+            {
                 isLive: true,
                 currentStreamId: streamId,
                 lastSeen: new Date().toISOString()
             }
         );
-        
+
         console.log(`✅ [STREAM CREATE] Stream ${streamId} criada com sucesso para host ${hostId}`);
-        
+
         res.json({
             success: true,
             stream: {
@@ -347,15 +347,15 @@ router.patch('/streams/:id', async (req, res) => {
 router.post('/streams/:id/save', async (req, res) => {
     try {
         const stream = await Streamer.findOneAndUpdate(
-            { id: req.params.id }, 
-            req.body, 
+            { id: req.params.id },
+            req.body,
             { new: true }
         );
-        
+
         if (!stream) {
             return res.status(404).json({ success: false, error: 'Stream not found' });
         }
-        
+
         res.json({ success: true, stream });
     } catch (error: any) {
         console.error('Error saving stream:', error);
@@ -365,21 +365,21 @@ router.post('/streams/:id/save', async (req, res) => {
 router.post('/streams/:id/cover', async (req, res) => {
     try {
         const { coverUrl } = req.body;
-        
+
         if (!coverUrl) {
             return res.status(400).json({ error: 'Cover URL is required' });
         }
-        
+
         const stream = await Streamer.findOneAndUpdate(
             { id: req.params.id },
             { avatar: coverUrl },
             { new: true }
         );
-        
+
         if (!stream) {
             return res.status(404).json({ success: false, error: 'Stream not found' });
         }
-        
+
         res.json({ success: true, stream });
     } catch (error: any) {
         console.error('Error updating stream cover:', error);
@@ -393,11 +393,11 @@ const cleanupInactiveUsers = async () => {
     try {
         const models = await import('../models');
         const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
-        
+
         // Buscar streams ativas para não remover usuários que estão em streams
         const activeStreams = await models.Streamer.find({ isLive: true });
         const activeStreamIds = activeStreams.map(stream => stream.id);
-        
+
         // Marcar como offline apenas usuários que:
         // 1. Não têm lastSeen recente E não estão em nenhuma stream ativa
         // 2. OU têm lastSeen antigo E não estão em nenhuma stream ativa
@@ -421,7 +421,7 @@ const cleanupInactiveUsers = async () => {
             },
             { isOnline: false }
         );
-        
+
         if (result.modifiedCount > 0) {
             console.log(`🧹 Limpeza de usuários inativos: ${result.modifiedCount} usuários marcados como offline`);
         }
@@ -446,31 +446,31 @@ router.post('/streams/:streamId/join', async (req, res) => {
     try {
         const { userId } = req.body;
         const streamId = req.params.streamId;
-        
+
         console.log(`👤 [STREAM JOIN] Usuário ${userId} entrando na stream ${streamId}`);
-        
+
         if (!userId || !streamId) {
             return res.status(400).json({ success: false, error: 'UserId e StreamId são obrigatórios' });
         }
-        
+
         // Verificar se o usuário existe
         const user = await User.findOne({ id: userId });
         if (!user) {
             return res.status(404).json({ success: false, error: 'Usuário não encontrado' });
         }
-        
+
         // Verificar se a stream existe e está ativa
         const stream = await Streamer.findOne({ id: streamId, isLive: true });
         if (!stream) {
             return res.status(404).json({ success: false, error: 'Stream não encontrada ou inativa' });
         }
-        
+
         // Verificar se usuário já está na stream (evitar duplicatas)
         if (user.isOnline && user.currentStreamId === streamId) {
             console.log(`⚠️ [STREAM JOIN] Usuário ${userId} já está na stream ${streamId}`);
             return res.json({ success: true, message: 'Usuário já está na stream', user });
         }
-        
+
         // Atualizar status do usuário
         const updatedUser = await User.findOneAndUpdate(
             { id: userId },
@@ -481,13 +481,13 @@ router.post('/streams/:streamId/join', async (req, res) => {
             },
             { new: true }
         );
-        
+
         // Incrementar viewers da stream
         await Streamer.findOneAndUpdate(
             { id: streamId },
             { $inc: { viewers: 1 } }
         );
-        
+
         // Notificar via WebSocket
         const io = req.app.get('io');
         if (io) {
@@ -503,9 +503,9 @@ router.post('/streams/:streamId/join', async (req, res) => {
                 timestamp: new Date().toISOString()
             });
         }
-        
+
         console.log(`✅ [STREAM JOIN] Usuário ${userId} entrou na stream ${streamId}`);
-        
+
         res.json({
             success: true,
             user: updatedUser,
@@ -525,32 +525,32 @@ router.post('/streams/:streamId/leave', async (req, res) => {
     try {
         const { userId } = req.body;
         const streamId = req.params.streamId;
-        
+
         console.log(`👤 [STREAM LEAVE] Usuário ${userId} saindo da stream ${streamId}`);
-        
+
         if (!userId || !streamId) {
             return res.status(400).json({ success: false, error: 'UserId e StreamId são obrigatórios' });
         }
-        
+
         // Verificar se o usuário existe
         const user = await User.findOne({ id: userId });
         if (!user) {
             return res.status(404).json({ success: false, error: 'Usuário não encontrado' });
         }
-        
+
         // Verificar se usuário está realmente na stream
         if (!user.isOnline || user.currentStreamId !== streamId) {
             console.log(`⚠️ [STREAM LEAVE] Usuário ${userId} não está na stream ${streamId}`);
             return res.json({ success: true, message: 'Usuário não está na stream' });
         }
-        
+
         // Verificar se usuário é host de alguma stream ativa
         const activeHostStreams = await Streamer.find({
             hostId: userId,
             isLive: true,
             id: { $ne: streamId }
         });
-        
+
         // Se não for host de nenhuma outra stream, marcar como offline
         if (!activeHostStreams || activeHostStreams.length === 0) {
             await User.findOneAndUpdate(
@@ -571,7 +571,7 @@ router.post('/streams/:streamId/leave', async (req, res) => {
                 }
             );
         }
-        
+
         // Decrementar viewers da stream
         const stream = await Streamer.findOne({ id: streamId });
         if (stream && (stream.viewers || 0) > 0) {
@@ -580,7 +580,7 @@ router.post('/streams/:streamId/leave', async (req, res) => {
                 { $inc: { viewers: -1 } }
             );
         }
-        
+
         // Notificar via WebSocket
         const io = req.app.get('io');
         if (io) {
@@ -596,9 +596,9 @@ router.post('/streams/:streamId/leave', async (req, res) => {
                 timestamp: new Date().toISOString()
             });
         }
-        
+
         console.log(`✅ [STREAM LEAVE] Usuário ${userId} saiu da stream ${streamId}`);
-        
+
         res.json({
             success: true,
             user: {
@@ -622,28 +622,28 @@ router.post('/streams/:streamId/end', async (req, res) => {
     try {
         const { userId } = req.body; // Host que está encerrando
         const streamId = req.params.streamId;
-        
+
         console.log(`🔴 [STREAM END] Encerrando stream ${streamId} pelo usuário ${userId}`);
-        
+
         if (!userId || !streamId) {
             return res.status(400).json({ success: false, error: 'UserId e StreamId são obrigatórios' });
         }
-        
+
         // Verificar se a stream existe
         const stream = await Streamer.findOne({ id: streamId });
         if (!stream) {
             return res.status(404).json({ success: false, error: 'Stream não encontrada' });
         }
-        
+
         // Verificar se o usuário é o host
         if (stream.hostId !== userId) {
             return res.status(403).json({ success: false, error: 'Apenas o host pode encerrar a transmissão' });
         }
-        
+
         const endTime = new Date();
         const durationMs = endTime.getTime() - new Date(stream.startTime || endTime).getTime();
         const durationSeconds = Math.floor(durationMs / 1000);
-        
+
         // Salvar no histórico
         try {
             const { StreamHistory } = await import('../models');
@@ -670,7 +670,7 @@ router.post('/streams/:streamId/end', async (req, res) => {
         } catch (historyError: any) {
             console.warn(`⚠️ [STREAM END] Erro ao salvar histórico: ${historyError.message}`);
         }
-        
+
         // Atualizar status da stream
         await Streamer.findOneAndUpdate(
             { id: streamId },
@@ -681,48 +681,34 @@ router.post('/streams/:streamId/end', async (req, res) => {
                 viewers: 0
             }
         );
-        
+
         // Transferir diamantes da live para carteira de ganhos do host
+        // OBS: Agora os earnings são atualizados em tempo real quando o presente é enviado
+        // Este processo de encerramento apenas limpa os acumuladores da live
         try {
+            console.log(`🔄 [STREAM END] Processando encerramento da live ${streamId} do host ${userId}`);
+            
+            // Buscar stream atual
             const stream = await Streamer.findOne({ id: streamId });
-            if (stream && stream.diamonds && stream.diamonds > 0) {
-                const diamondsToTransfer = stream.diamonds;
+            const streamDiamonds = stream?.diamonds || 0;
+            
+            if (streamDiamonds > 0) {
+                console.log(`📊 [STREAM END] Limpando ${streamDiamonds} diamantes acumulados da live ${streamId}`);
                 
-                console.log(`💰 [STREAM END] Transferindo ${diamondsToTransfer} diamantes da live ${streamId} para carteira do host ${userId}`);
-                
-                // Adicionar diamantes à carteira de ganhos do usuário
-                await User.findOneAndUpdate(
-                    { id: userId },
-                    { 
-                        $inc: { earnings: diamondsToTransfer },
-                        lastSeen: endTime.toISOString()
-                    }
-                );
-                
-                // Zerar diamantes da live
+                // Zerar diamantes da live no model
                 await Streamer.findOneAndUpdate(
                     { id: streamId },
                     { diamonds: 0 }
                 );
                 
-                console.log(`✅ [STREAM END] ${diamondsToTransfer} diamantes transferidos com sucesso para carteira de ${userId}`);
-                
-                // Notificar via WebSocket sobre transferência
-                const io = req.app.get('io');
-                if (io) {
-                    io.emit('earnings_updated', {
-                        userId: userId,
-                        diamonds: diamondsToTransfer,
-                        timestamp: endTime.toISOString(),
-                        source: 'live_end',
-                        streamId: streamId
-                    });
-                }
+                console.log(`✅ [STREAM END] Live ${streamId} encerrada e acumuladores limpos`);
+            } else {
+                console.log(`ℹ️ [STREAM END] Sem diamantes acumulados para limpar na live ${streamId} (stream.diamonds: ${streamDiamonds})`);
             }
         } catch (transferError: any) {
             console.error(`❌ [STREAM END] Erro ao transferir diamantes: ${transferError.message}`);
         }
-        
+
         // Atualizar status do host
         await User.findOneAndUpdate(
             { id: userId },
@@ -732,7 +718,7 @@ router.post('/streams/:streamId/end', async (req, res) => {
                 lastSeen: endTime.toISOString()
             }
         );
-        
+
         // Remover todos os usuários da stream
         await User.updateMany(
             { currentStreamId: streamId },
@@ -742,7 +728,7 @@ router.post('/streams/:streamId/end', async (req, res) => {
                 lastSeen: endTime.toISOString()
             }
         );
-        
+
         // Notificar via WebSocket
         const io = req.app.get('io');
         if (io) {
@@ -751,16 +737,16 @@ router.post('/streams/:streamId/end', async (req, res) => {
                 hostId: userId,
                 timestamp: endTime.toISOString()
             });
-            
+
             io.to(streamId).emit('live_stream_ended', {
                 streamId: streamId,
                 message: 'Esta transmissão foi encerrada',
                 timestamp: endTime.toISOString()
             });
         }
-        
+
         console.log(`✅ [STREAM END] Stream ${streamId} encerrada com sucesso`);
-        
+
         res.json({
             success: true,
             stream: {
@@ -781,56 +767,56 @@ router.post('/streams/:id/join', async (req, res) => {
     try {
         const { userId } = req.body;
         const streamId = req.params.id;
-        
+
         console.log(`👤 Usuário ${userId} entrando na stream ${streamId} via HTTP`);
-        
+
         if (!userId || !streamId) {
             console.warn('⚠️ Dados inválidos:', { userId, streamId });
             return res.status(400).json({ success: false, error: 'Dados inválidos' });
         }
-        
+
         const models = await import('../models');
-        
+
         // Verificar se o usuário existe no banco
         const user = await models.User.findOne({ id: userId });
         if (!user) {
             console.warn(`⚠️ Usuário ${userId} não encontrado no banco`);
             return res.status(404).json({ success: false, error: 'Usuário não encontrado' });
         }
-        
+
         // Verificar se a stream existe e está ativa
         const stream = await models.Streamer.findOne({ id: streamId, isLive: true });
         if (!stream) {
             console.warn(`⚠️ Stream ${streamId} não encontrada ou não está ativa`);
             return res.status(404).json({ success: false, error: 'Stream não encontrada' });
         }
-        
+
         // VERIFICAÇÃO CRÍTICA: Se usuário já está online na mesma stream, não fazer nada
         if (user.isOnline && user.currentStreamId === streamId) {
             console.warn(`🛑 USUÁRIO ${userId} JÁ ESTÁ ONLINE NA STREAM ${streamId} - IGNORANDO CHAMADA DUPLICADA`);
             return res.json({ success: true, message: 'Usuário já está online nesta stream', user });
         }
-        
+
         // Marcar usuário como online e na stream atual
         const updatedUser = await models.User.findOneAndUpdate(
-            { id: userId }, 
-            { 
+            { id: userId },
+            {
                 isOnline: true,
                 currentStreamId: streamId,
                 lastSeen: new Date().toISOString()
             },
             { new: true }
         );
-        
+
         if (!updatedUser) {
             console.warn(`⚠️ Falha ao atualizar usuário ${userId}`);
             return res.status(500).json({ success: false, error: 'Falha ao atualizar usuário' });
         }
-        
+
         console.log(`✅ Usuário ${userId} (${updatedUser?.name || 'desconhecido'}) marcado como online na stream ${streamId}`);
-        
-        res.json({ 
-            success: true, 
+
+        res.json({
+            success: true,
             user: {
                 id: updatedUser?.id || userId,
                 name: updatedUser?.name || 'Usuário',
@@ -911,17 +897,17 @@ router.post('/streams/:id/end-session', async (req, res) => {
     try {
         const { session } = req.body;
         const streamId = req.params.id;
-        
+
         console.log(`🔴 Encerrando live ${streamId} e salvando no histórico`);
-        
+
         // 1. Buscar a stream antes de atualizar
         const stream = await Streamer.findOne({ id: streamId });
-        
+
         if (!stream) {
             console.warn(`⚠️ Stream ${streamId} não encontrada`);
             return res.status(404).json({ success: false, error: 'Stream not found' });
         }
-        
+
         // 2. Calcular duração
         const endTime = Date.now();
         const durationMs = endTime - (session?.startTime || endTime);
@@ -930,7 +916,7 @@ router.post('/streams/:id/end-session', async (req, res) => {
         const minutes = Math.floor((totalSeconds % 3600) / 60);
         const seconds = totalSeconds % 60;
         const durationStr = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-        
+
         // 3. Salvar no histórico
         const { StreamHistory } = await import('../models');
         let historyEntry = null;
@@ -954,20 +940,20 @@ router.post('/streams/:id/end-session', async (req, res) => {
                 tags: stream.tags || [],
                 country: stream.country
             };
-            
+
             await StreamHistory.create(historyEntry);
             console.log(`💾 Histórico salvo para stream ${streamId}`);
         } catch (historyError: any) {
             console.warn(`⚠️ Erro ao salvar histórico (mas continuando): ${historyError.message}`);
             // Continuar mesmo se o histórico falhar
         }
-        
+
         // 4. Atualizar status da stream para offline
         let updatedStream;
         try {
             updatedStream = await Streamer.findOneAndUpdate(
-                { id: streamId }, 
-                { 
+                { id: streamId },
+                {
                     isLive: false,
                     endTime: new Date(endTime).toISOString(),
                     streamStatus: 'ended',
@@ -981,14 +967,14 @@ router.post('/streams/:id/end-session', async (req, res) => {
         } catch (updateError: any) {
             console.warn(`⚠️ Erro ao atualizar stream (mas continuando): ${updateError.message}`);
         }
-        
+
         // 5. Atualizar status do host
         let updatedUser;
         try {
             const User = await import('../models').then(m => m.User);
             updatedUser = await User.findOneAndUpdate(
-                { id: stream.hostId }, 
-                { isLive: false }, 
+                { id: stream.hostId },
+                { isLive: false },
                 { new: true }
             );
             if (!updatedUser) {
@@ -997,13 +983,13 @@ router.post('/streams/:id/end-session', async (req, res) => {
         } catch (userError: any) {
             console.warn(`⚠️ Erro ao atualizar usuário (mas continuando): ${userError.message}`);
         }
-        
+
         // 6. Remover todos os usuários online desta stream
         try {
             const User = await import('../models').then(m => m.User);
             await User.updateMany(
                 { currentStreamId: streamId },
-                { 
+                {
                     isOnline: false,
                     currentStreamId: null,
                     lastSeen: new Date().toISOString()
@@ -1013,7 +999,7 @@ router.post('/streams/:id/end-session', async (req, res) => {
         } catch (removeError: any) {
             console.warn(`⚠️ Erro ao remover usuários da stream (mas continuando): ${removeError.message}`);
         }
-        
+
         // 7. Notificar via WebSocket
         const io = req.app.get('io');
         if (io) {
@@ -1022,20 +1008,20 @@ router.post('/streams/:id/end-session', async (req, res) => {
                 hostId: stream.hostId,
                 timestamp: new Date().toISOString()
             });
-            
+
             io.to(streamId).emit('live_stream_ended', {
                 streamId: streamId,
                 message: 'Esta transmissão foi encerrada',
                 timestamp: new Date().toISOString()
             });
-            
+
             console.log(`📢 Notificação WebSocket enviada: stream ${streamId} encerrada`);
         }
-        
+
         console.log(`✅ Live ${streamId} encerrada e histórico salvo com sucesso`);
-        
-        res.json({ 
-            success: true, 
+
+        res.json({
+            success: true,
             user: updatedUser || {},
             stream: {
                 id: streamId,
@@ -1044,7 +1030,7 @@ router.post('/streams/:id/end-session', async (req, res) => {
             },
             history: historyEntry
         });
-        
+
     } catch (error: any) {
         console.error('❌ Erro ao encerrar sessão da live:', error);
         res.status(500).json({ success: false, error: error.message });
@@ -1055,28 +1041,28 @@ router.post('/streams/:id/end-session', async (req, res) => {
 router.delete('/cards/:streamId', async (req, res) => {
     try {
         const { streamId } = req.params;
-        
+
         console.log(`🗑️ Removendo card da live ${streamId}`);
-        
+
         // 1. Buscar a stream
         const stream = await Streamer.findOne({ id: streamId });
-        
+
         if (!stream) {
             console.warn(`⚠️ Stream ${streamId} não encontrada`);
             return res.status(404).json({ success: false, error: 'Stream not found' });
         }
-        
+
         // 2. Remover o card (marcar como offline)
         await Streamer.findOneAndUpdate(
             { id: streamId },
-            { 
+            {
                 isLive: false,
                 streamStatus: 'ended',
                 endTime: new Date().toISOString(),
                 viewers: 0
             }
         );
-        
+
         // 3. Notificar via WebSocket para todos os clientes
         const io = req.app.get('io');
         if (io) {
@@ -1085,14 +1071,14 @@ router.delete('/cards/:streamId', async (req, res) => {
                 hostId: stream.hostId,
                 timestamp: new Date().toISOString()
             });
-            
+
             console.log(`📢 Notificação WebSocket enviada: card ${streamId} removido`);
         }
-        
+
         console.log(`✅ Card da live ${streamId} removido com sucesso`);
-        
+
         res.json({ success: true });
-        
+
     } catch (error: any) {
         console.error('❌ Erro ao remover card:', error);
         res.status(500).json({ success: false, error: error.message });
@@ -1104,16 +1090,16 @@ router.post('/streams/:id/gift', async (req, res) => {
         const { fromUserId, giftName, amount } = req.body;
         const U = await import('../models').then(m => m.User);
         const G = await import('../models').then(m => m.Gift);
-        
+
         const sender = await U.findOne({ id: fromUserId });
         if (!sender) return res.status(404).json({ error: 'Sender not found' });
 
         // Find stream to get receiver
         const stream = await Streamer.findOne({ id: req.params.id });
         if (!stream) return res.status(404).json({ error: 'Stream not found' });
-        
+
         const receiver = await U.findOne({ id: stream.hostId });
-        
+
         // Find gift details
         const gift = await G.findOne({ name: giftName });
         if (!gift) return res.status(404).json({ error: 'Gift not found' });
@@ -1130,10 +1116,36 @@ router.post('/streams/:id/gift', async (req, res) => {
         sender.enviados = (sender.enviados || 0) + totalValue;
         await sender.save();
 
+        // Update receiver diamonds count (receptores) AND earnings immediately
+        if (receiver) {
+            receiver.receptores = (receiver.receptores || 0) + totalValue;
+            receiver.earnings = (receiver.earnings || 0) + totalValue;
+            await receiver.save();
+            
+            console.log(`💰 [LIVE GIFT] ${sender.name} enviou ${totalValue} diamantes para ${receiver.name}`);
+            console.log(`📊 [LIVE GIFT] ${receiver.name} - Receptores: ${receiver.receptores}, Earnings: ${receiver.earnings}`);
+            
+            // Enviar WebSocket em tempo real com valor real
+            const io = req.app.get('io');
+            if (io) {
+                io.emit('earnings_updated', {
+                    userId: receiver.id,
+                    diamonds: totalValue,
+                    totalEarnings: receiver.earnings,
+                    timestamp: new Date().toISOString(),
+                    source: 'live_gift',
+                    streamId: req.params.id,
+                    fromUser: sender.name,
+                    giftName: giftName
+                });
+                console.log(`📡 [WEBSOCKET] Earnings atualizados em tempo real para ${receiver.name}: +${totalValue} diamantes (total: ${receiver.earnings})`);
+            }
+        }
+
         // Acumular diamantes na stream (não converter para BRL ainda)
         await Streamer.findOneAndUpdate(
             { id: req.params.id },
-            { 
+            {
                 $inc: { diamonds: totalValue }
             }
         );
@@ -1156,10 +1168,10 @@ router.post('/streams/:id/gift', async (req, res) => {
         }]);
 
         console.log(`💎 Gift sent: ${giftName} x${amount} from ${sender.name} to stream ${req.params.id} - ${totalValue} diamonds accumulated`);
-        
-        res.json({ 
-            success: true, 
-            updatedSender: sender, 
+
+        res.json({
+            success: true,
+            updatedSender: sender,
             updatedReceiver: receiver || {} as any,
             transaction: {
                 giftName,
@@ -1189,7 +1201,7 @@ router.post('/rtc/v1/publish', validateStreamKey, async (req, res) => {
     try {
         const { streamUrl, sdp } = req.body;
         const stream = req.stream; // Stream validada pelo middleware
-        
+
         console.log(`[PUBLISH] ${stream.hostId} publishing to ${streamUrl}`);
         console.log(`[PUBLISH DEBUG] Stream validated:`, {
             streamId: stream.id,
@@ -1204,7 +1216,7 @@ router.post('/rtc/v1/publish', validateStreamKey, async (req, res) => {
         });
 
         const data = await response.json();
-        
+
         // Debug SRS response
         console.log(`[PUBLISH] SRS Response:`, {
             code: data.code,
@@ -1212,7 +1224,7 @@ router.post('/rtc/v1/publish', validateStreamKey, async (req, res) => {
             candidates: data.sdp?.match(/a=candidate:.*/g)?.length || 0,
             success: data.code === 0
         });
-        
+
         res.json(data);
     } catch (err: any) {
         console.error('[PUBLISH Error]', err);
@@ -1260,46 +1272,46 @@ router.put('/streams/:id/quality', async (req, res) => {
     try {
         const { id: streamId } = req.params;
         const { quality, userId } = req.body;
-        
+
         console.log(`🎥 [STREAM_QUALITY] Stream: ${streamId}, Quality: ${quality}, User: ${userId}`);
-        
+
         // 1. Validar se o stream existe
         const streamer = await Streamer.findOne({ id: streamId });
         if (!streamer) {
             console.log(`❌ [STREAM_QUALITY] Stream não encontrado: ${streamId}`);
-            return res.status(404).json({ 
-                success: false, 
-                error: 'Stream não encontrado' 
+            return res.status(404).json({
+                success: false,
+                error: 'Stream não encontrado'
             });
         }
-        
+
         // 2. Validar se o usuário é o host do stream
         if (streamer.hostId !== userId) {
             console.log(`❌ [STREAM_QUALITY] Usuário não é host: ${userId} != ${streamer.hostId}`);
-            return res.status(403).json({ 
-                success: false, 
-                error: 'Apenas o host pode alterar a qualidade' 
+            return res.status(403).json({
+                success: false,
+                error: 'Apenas o host pode alterar a qualidade'
             });
         }
-        
+
         // 3. Validar se a qualidade é válida
         const validQualities = ['360p', '480p', '720p', '1080p'];
         if (!validQualities.includes(quality)) {
             console.log(`❌ [STREAM_QUALITY] Qualidade inválida: ${quality}`);
-            return res.status(400).json({ 
-                success: false, 
-                error: 'Qualidade inválida' 
+            return res.status(400).json({
+                success: false,
+                error: 'Qualidade inválida'
             });
         }
-        
+
         // 4. Atualizar qualidade no banco de dados
         await Streamer.updateOne(
             { id: streamId },
             { quality: quality }
         );
-        
+
         console.log(`✅ [STREAM_QUALITY] Qualidade atualizada: ${quality}`);
-        
+
         // 5. Enviar evento WebSocket para atualizar frontend
         const io = req.app.get('io');
         if (io) {
@@ -1310,9 +1322,9 @@ router.put('/streams/:id/quality', async (req, res) => {
             });
             console.log(`📡 [STREAM_QUALITY] Evento WebSocket emitido para stream_${streamId}`);
         }
-        
-        res.json({ 
-            success: true, 
+
+        res.json({
+            success: true,
             message: `Qualidade alterada para ${quality} com sucesso`,
             streamId,
             quality,
@@ -1321,12 +1333,12 @@ router.put('/streams/:id/quality', async (req, res) => {
                 quality
             }
         });
-        
+
     } catch (error) {
         console.error('❌ [STREAM_QUALITY] Erro:', error);
-        res.status(500).json({ 
-            success: false, 
-            error: 'Erro ao atualizar qualidade do stream' 
+        res.status(500).json({
+            success: false,
+            error: 'Erro ao atualizar qualidade do stream'
         });
     }
 });
@@ -1343,7 +1355,7 @@ router.post('/lives/:id/end', async (req, res) => {
 router.get('/live/nearby', async (req, res) => {
     try {
         const { latitude, longitude, maxDistance = 50000, limit = 20 } = req.query;
-        
+
         if (!latitude || !longitude) {
             return res.status(400).json({ error: 'Latitude and longitude are required' });
         }
@@ -1359,28 +1371,28 @@ router.get('/live/nearby', async (req, res) => {
             name: { $exists: true, $nin: ['', null] },
             hostId: { $exists: true, $ne: null }
         })
-        .populate({
-            path: 'hostId',
-            select: 'geoLocation name avatarUrl',
-            match: {
-                geoLocation: {
-                    $near: {
-                        $geometry: {
-                            type: 'Point',
-                            coordinates: [lng, lat]
-                        },
-                        $maxDistance: maxDist
+            .populate({
+                path: 'hostId',
+                select: 'geoLocation name avatarUrl',
+                match: {
+                    geoLocation: {
+                        $near: {
+                            $geometry: {
+                                type: 'Point',
+                                coordinates: [lng, lat]
+                            },
+                            $maxDistance: maxDist
+                        }
                     }
                 }
-            }
-        })
-        .limit(parseInt(limit as string));
+            })
+            .limit(parseInt(limit as string));
 
         // Filtrar streams que têm host com localização próxima
         const validStreams = nearbyStreams.filter(stream => stream.hostId);
 
         console.log(`📍 [NEARBY STREAMS] ${validStreams.length} streams encontradas próximas a (${lat}, ${lng})`);
-        
+
         res.json(validStreams);
     } catch (error: any) {
         console.error('Error fetching nearby streams:', error);
@@ -1392,7 +1404,7 @@ router.get('/live/nearby', async (req, res) => {
 router.get('/live/following', async (req, res) => {
     try {
         const userId = req.query.userId as string;
-        
+
         if (!userId) {
             return res.status(400).json({ error: 'User ID is required' });
         }
@@ -1400,14 +1412,14 @@ router.get('/live/following', async (req, res) => {
         // Buscar usuário e seus seguidos
         const User = await import('../models').then(m => m.User);
         const user = await User.findOne({ id: userId });
-        
+
         if (!user) {
             return res.status(404).json({ error: 'User not found' });
         }
 
         // Buscar IDs dos usuários que segue
         const followingIds = user.followingList || [];
-        
+
         if (followingIds.length === 0) {
             return res.json([]);
         }
@@ -1419,10 +1431,10 @@ router.get('/live/following', async (req, res) => {
             hostId: { $in: followingIds },
             name: { $exists: true, $nin: ['', null] }
         })
-        .sort({ viewers: -1 });
+            .sort({ viewers: -1 });
 
         console.log(`👥 [FOLLOWING STREAMS] ${followingStreams.length} streams de usuários seguidos por ${userId}`);
-        
+
         res.json(followingStreams);
     } catch (error: any) {
         console.error('Error fetching following streams:', error);
@@ -1434,7 +1446,7 @@ router.get('/live/following', async (req, res) => {
 router.get('/live/new', async (req, res) => {
     try {
         const { limit = 20 } = req.query;
-        
+
         // Buscar streams mais recentes
         const newStreams = await Streamer.find({
             isLive: true,
@@ -1442,11 +1454,11 @@ router.get('/live/new', async (req, res) => {
             name: { $exists: true, $nin: ['', null] },
             startTime: { $exists: true }
         })
-        .sort({ startTime: -1 }) // Mais recentes primeiro
-        .limit(parseInt(limit as string));
+            .sort({ startTime: -1 }) // Mais recentes primeiro
+            .limit(parseInt(limit as string));
 
         console.log(`🆕 [NEW STREAMS] ${newStreams.length} streams mais recentes`);
-        
+
         res.json(newStreams);
     } catch (error: any) {
         console.error('Error fetching new streams:', error);

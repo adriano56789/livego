@@ -39,8 +39,37 @@ router.post('/send', async (req, res) => {
         } else {
             // Se não for para stream, adicionar diretamente aos earnings do usuário
             toUser.earnings = (toUser.earnings || 0) + totalCost;
-            await toUser.save();
         }
+
+        // Atualizar perfil de envios e recebimentos (Enviados/Receptores) E earnings
+        fromUser.enviados = (fromUser.enviados || 0) + totalCost;
+        toUser.receptores = (toUser.receptores || 0) + totalCost;
+        
+        // Se não for para stream, adicionar diretamente aos earnings do usuário
+        if (!streamId || streamId === 'unknown') {
+            toUser.earnings = (toUser.earnings || 0) + totalCost;
+            
+            // Enviar WebSocket em tempo real
+            const io = req.app.get('io');
+            if (io) {
+                io.emit('earnings_updated', {
+                    userId: toUserId,
+                    diamonds: totalCost,
+                    totalEarnings: toUser.earnings,
+                    timestamp: new Date().toISOString(),
+                    source: 'direct_gift',
+                    fromUser: fromUser.name,
+                    giftName: gift.name
+                });
+                console.log(`📡 [WEBSOCKET] Earnings atualizados (direct gift) para ${toUser.name}: +${totalCost} diamantes (total: ${toUser.earnings})`);
+            }
+        }
+        
+        await fromUser.save();
+        await toUser.save();
+        
+        console.log(`💰 [GIFT] ${fromUser.name} enviou ${totalCost} diamantes para ${toUser.name}`);
+        console.log(`📊 [GIFT] ${toUser.name} - Receptores: ${toUser.receptores}, Earnings: ${toUser.earnings}`);
         
         // Registrar transação
         await GiftTransaction.create([{

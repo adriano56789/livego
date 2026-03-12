@@ -30,26 +30,25 @@ router.post('/send', async (req, res) => {
         fromUser.diamonds -= totalCost;
         await fromUser.save();
         
-        // Se for presente para stream, acumular diamantes na stream
+        // Se for presente para stream, acumular diamantes APENAS na stream (não na carteira agora)
         if (streamId && streamId !== 'unknown') {
             await Streamer.findOneAndUpdate(
                 { id: streamId },
                 { $inc: { diamonds: totalCost } }
             );
+            console.log(`💎 [LIVE GIFT] ${totalCost} diamantes adicionados à live ${streamId}.`);
         } else {
             // Se não for para stream, adicionar diretamente aos earnings do usuário
             toUser.earnings = (toUser.earnings || 0) + totalCost;
+            console.log(`💰 [DIRECT GIFT] ${totalCost} diamantes adicionados aos earnings de ${toUser.name}.`);
         }
 
         // Atualizar perfil de envios e recebimentos (Enviados/Receptores) E earnings
         fromUser.enviados = (fromUser.enviados || 0) + totalCost;
         toUser.receptores = (toUser.receptores || 0) + totalCost;
         
-        // Se não for para stream, adicionar diretamente aos earnings do usuário
+        // A atualização de earnings já foi tratada acima. Removendo duplicidade e garantindo que só atualize WebSocket se for direct gift.
         if (!streamId || streamId === 'unknown') {
-            toUser.earnings = (toUser.earnings || 0) + totalCost;
-            
-            // Enviar WebSocket em tempo real
             const io = req.app.get('io');
             if (io) {
                 io.emit('earnings_updated', {
@@ -61,7 +60,6 @@ router.post('/send', async (req, res) => {
                     fromUser: fromUser.name,
                     giftName: gift.name
                 });
-                console.log(`📡 [WEBSOCKET] Earnings atualizados (direct gift) para ${toUser.name}: +${totalCost} diamantes (total: ${toUser.earnings})`);
             }
         }
         

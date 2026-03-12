@@ -683,17 +683,43 @@ router.post('/streams/:streamId/end', async (req, res) => {
         );
 
         // Transferir diamantes da live para carteira de ganhos do host
-        // OBS: Agora os earnings são atualizados em tempo real quando o presente é enviado
-        // Este processo de encerramento apenas limpa os acumuladores da live
+        // Regra: Streamer recebe o valor proporcional dos diamantes recebidos na live.
         try {
             console.log(`🔄 [STREAM END] Processando encerramento da live ${streamId} do host ${userId}`);
             
             // Buscar stream atual
-            const stream = await Streamer.findOne({ id: streamId });
-            const streamDiamonds = stream?.diamonds || 0;
+            const streamData = await Streamer.findOne({ id: streamId });
+            const streamDiamonds = streamData?.diamonds || 0;
             
             if (streamDiamonds > 0) {
-                console.log(`📊 [STREAM END] Limpando ${streamDiamonds} diamantes acumulados da live ${streamId}`);
+                console.log(`📊 [STREAM END] Transferindo ${streamDiamonds} diamantes da live ${streamId} para o host ${userId}`);
+                
+                // Adicionar aos earnings do host
+                const host = await User.findOne({ id: userId });
+                if (host) {
+                    const oldEarnings = host.earnings || 0;
+                    const newEarnings = oldEarnings + streamDiamonds;
+                    
+                    await User.findOneAndUpdate(
+                        { id: userId },
+                        { $set: { earnings: newEarnings } }
+                    );
+                    
+                    console.log(`✅ [STREAM END] Ganhos do host ${host.name} atualizados: ${oldEarnings} → ${newEarnings} diamantes`);
+                    
+                    // Notificar via WebSocket
+                    const io = req.app.get('io');
+                    if (io) {
+                        io.emit('earnings_updated', {
+                            userId: userId,
+                            diamonds: streamDiamonds,
+                            totalEarnings: newEarnings,
+                            timestamp: endTime.toISOString(),
+                            source: 'live_end',
+                            streamId: streamId
+                        });
+                    }
+                }
                 
                 // Zerar diamantes da live no model
                 await Streamer.findOneAndUpdate(
@@ -703,7 +729,7 @@ router.post('/streams/:streamId/end', async (req, res) => {
                 
                 console.log(`✅ [STREAM END] Live ${streamId} encerrada e acumuladores limpos`);
             } else {
-                console.log(`ℹ️ [STREAM END] Sem diamantes acumulados para limpar na live ${streamId} (stream.diamonds: ${streamDiamonds})`);
+                console.log(`ℹ️ [STREAM END] Sem diamantes acumulados para transferir na live ${streamId}`);
             }
         } catch (transferError: any) {
             console.error(`❌ [STREAM END] Erro ao transferir diamantes: ${transferError.message}`);

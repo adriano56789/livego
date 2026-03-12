@@ -259,25 +259,53 @@ router.post('/withdraw/:userId', async (req, res) => {
         const newEarnings = currentEarnings - amount;
         await User.findOneAndUpdate(
             { id: userId },
-            { earnings: newEarnings }
+            { 
+                $set: { earnings: newEarnings },
+                $inc: { earnings_withdrawn: amount }
+            }
         );
         
         // Calcular valor em BRL
         const brl_amount = calculateBRLFromDiamonds(amount);
-        const platform_fee = brl_amount * 0.20;
-        const net_amount = brl_amount - platform_fee;
+        const platform_fee_brl = brl_amount * 0.20;
+        const net_amount_brl = brl_amount - platform_fee_brl;
         
-        console.log(`✅ [WITHDRAW] Saque realizado: ${amount} diamantes (R$ ${net_amount.toFixed(2)})`);
+        // Transferir taxa para a carteira da DM (Regra: A taxa vai para a carteira da DM)
+        const dmUser = await User.findOne({ email: 'adrianomdk5@gmail.com' });
+        if (dmUser) {
+            const oldPlatformEarnings = dmUser.platformEarnings || 0;
+            const newPlatformEarnings = oldPlatformEarnings + platform_fee_brl;
+            
+            await User.findOneAndUpdate(
+                { id: dmUser.id },
+                { $set: { platformEarnings: newPlatformEarnings } }
+            );
+            
+            console.log(`🏦 [WITHDRAW] Taxa de R$ ${platform_fee_brl.toFixed(2)} transferida para DM (${dmUser.name})`);
+            
+            // Atualização em tempo real para a DM
+            const io = req.app.get('io');
+            if (io) {
+                io.emit('platform_earnings_updated', {
+                    userId: dmUser.id,
+                    added_fee: platform_fee_brl,
+                    total_platform_earnings: newPlatformEarnings,
+                    timestamp: new Date().toISOString()
+                });
+            }
+        }
+        
+        console.log(`✅ [WITHDRAW] Saque realizado: ${amount} diamantes (Líquido: R$ ${net_amount_brl.toFixed(2)})`);
         console.log(`💳 [WITHDRAW] Saldo atualizado: ${currentEarnings} → ${newEarnings} diamantes`);
         
-        // Enviar WebSocket sobre saque
+        // Enviar WebSocket sobre saque para o usuário
         const io = req.app.get('io');
         if (io) {
             io.emit('earnings_withdrawn', {
                 userId,
                 amount,
                 newEarnings,
-                brl_amount: net_amount,
+                brl_amount: net_amount_brl,
                 timestamp: new Date().toISOString()
             });
         }
@@ -286,9 +314,9 @@ router.post('/withdraw/:userId', async (req, res) => {
             success: true,
             amount,
             newEarnings,
-            brl_amount: net_amount,
-            platform_fee,
-            message: `Saque de ${amount} diamantes (R$ ${net_amount.toFixed(2)}) realizado com sucesso`
+            brl_amount: net_amount_brl,
+            platform_fee: platform_fee_brl,
+            message: `Saque de ${amount} diamantes (R$ ${net_amount_brl.toFixed(2)}) realizado com sucesso`
         });
         
     } catch (error: any) {

@@ -541,14 +541,15 @@ const AppContent: React.FC = () => {
 
   const refreshStreamRoomData = useCallback(async (streamerId: string) => {
     try {
+      // Buscar dados atualizados do streamer
+      const streamerData = await api.getUser(streamerId);
+      
       // Atualizar ranking ao vivo
       const liveRanking = await api.getRankingForPeriod('live');
       setRankingData(liveRanking);
 
-      // DESABILITADO: getOnlineUsers causando polling repetitivo
-      // A atualização de usuários online agora é feita apenas via WebSocket no StreamRoom
-
       console.log('🔄 Dados da stream atualizados em tempo real');
+      console.log('� Streamer atualizado:', streamerData);
     } catch (error) {
       console.error('❌ Erro ao atualizar dados da stream:', error);
     }

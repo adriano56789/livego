@@ -235,7 +235,7 @@ export default function PKBattleScreen({
                     onFollowUser(streamerUser, streamer.id);
                 }
         
-                const coinsAdded = (gift.price || 0) * quantity;
+                const coinsAdded = gift.price || 0;
                 if (liveSession) {
                     updateLiveSession({ coins: (liveSession.coins || 0) + coinsAdded });
                     logLiveEvent('gift', { from: currentUser.id, to: streamer.hostId, gift: gift.name, coins: coinsAdded });

@@ -1130,8 +1130,8 @@ router.post('/streams/:id/gift', async (req, res) => {
         const gift = await G.findOne({ name: giftName });
         if (!gift) return res.status(404).json({ error: 'Gift not found' });
 
-        const price = gift.price || 100;
-        const totalValue = price * (amount || 1);
+        const price = gift.price || 0;
+        const totalValue = price;
 
         if (sender.diamonds < totalValue) {
             return res.status(400).json({ error: 'Insufficient diamonds' });
@@ -1144,28 +1144,34 @@ router.post('/streams/:id/gift', async (req, res) => {
 
         // Update receiver diamonds count (receptores) AND earnings immediately
         if (receiver) {
+            // Sempre atualiza receptores da live (mesmo que seja para si mesmo)
             receiver.receptores = (receiver.receptores || 0) + totalValue;
             receiver.earnings = (receiver.earnings || 0) + totalValue;
             await receiver.save();
             
-            console.log(`💰 [LIVE GIFT] ${sender.name} enviou ${totalValue} diamantes para ${receiver.name}`);
-            console.log(`📊 [LIVE GIFT] ${receiver.name} - Receptores: ${receiver.receptores}, Earnings: ${receiver.earnings}`);
-            
-            // Enviar WebSocket em tempo real com valor real
-            const io = req.app.get('io');
-            if (io) {
-                io.emit('earnings_updated', {
-                    userId: receiver.id,
-                    diamonds: totalValue,
-                    totalEarnings: receiver.earnings,
-                    timestamp: new Date().toISOString(),
-                    source: 'live_gift',
-                    streamId: req.params.id,
-                    fromUser: sender.name,
-                    giftName: giftName
-                });
-                console.log(`📡 [WEBSOCKET] Earnings atualizados em tempo real para ${receiver.name}: +${totalValue} diamantes (total: ${receiver.earnings})`);
+            if (receiver.id === sender.id) {
+                console.log(`💰 [LIVE GIFT] ${sender.name} enviou ${totalValue} diamantes para si mesmo (duas métricas do mesmo evento)`);
+            } else {
+                console.log(`💰 [LIVE GIFT] ${sender.name} enviou ${totalValue} diamantes para ${receiver.name}`);
             }
+            console.log(`📊 [LIVE GIFT] ${receiver.name} - Receptores: ${receiver.receptores}, Earnings: ${receiver.earnings}`);
+        }
+        
+        // Enviar WebSocket em tempo real com valor real
+        const io = req.app.get('io');
+        if (io && receiver) {
+            // Sempre envia WebSocket (mesmo que seja para si mesmo)
+            io.emit('earnings_updated', {
+                userId: receiver.id,
+                diamonds: totalValue,
+                totalEarnings: receiver.earnings,
+                timestamp: new Date().toISOString(),
+                source: 'live_gift',
+                streamId: req.params.id,
+                fromUser: sender.name,
+                giftName: giftName
+            });
+            console.log(`📡 [WEBSOCKET] Earnings atualizados em tempo real para ${receiver.name}: +${totalValue} diamantes (total: ${receiver.earnings})`);
         }
 
         // Acumular diamantes na stream (não converter para BRL ainda)

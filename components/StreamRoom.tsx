@@ -515,10 +515,9 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
             if (payload.fromUser.id === currentUser.id) return; // Ignore self-sent
 
             if (liveSession) {
-                updateLiveSession({ coins: (liveSession.coins || 0) + (payload.gift.price || 0) * payload.quantity });
+                updateLiveSession({ coins: (liveSession.coins || 0) + (payload.gift.price || 0) });
             }
 
-            refreshStreamRoomData(streamer.hostId);
             postGiftChatMessage(payload);
             setFullscreenGiftQueue(prev => [...prev, payload]);
         };
@@ -634,10 +633,10 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
             age: user.age || 18,
             location: 'Brasil',
             distance: 'desconhecida',
-            fans: Math.floor(Math.random() * 10000),
-            following: Math.floor(Math.random() * 500),
-            receptores: Math.floor(Math.random() * 100000),
-            enviados: Math.floor(Math.random() * 5000),
+            fans: 0,
+            following: 0,
+            receptores: streamerUser?.receptores || 0,
+            enviados: streamerUser?.enviados || 0,
             topFansAvatars: [],
             isLive: false,
             diamonds: 0,
@@ -659,7 +658,7 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
     };
 
     const handleSendGift = async (gift: Gift, quantity: number) => {
-        const totalCost = (gift.price || 0) * quantity;
+        const totalCost = gift.price || 0;
         if (currentUser.diamonds < totalCost) {
             handleRecharge();
             return;
@@ -691,11 +690,9 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
                 }
 
                 if (liveSession) {
-                    const coinsAdded = (gift.price || 0) * quantity;
+                    const coinsAdded = gift.price || 0;
                     updateLiveSession({ coins: (liveSession.coins || 0) + coinsAdded });
                 }
-
-                refreshStreamRoomData(streamer.hostId);
 
             } else {
                 throw new Error(error || "Failed to send gift on server");

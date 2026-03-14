@@ -323,7 +323,7 @@ router.get('/ranking/:period', async (req, res) => {
             }
             
             const contribution = userContributions.get(userId)!;
-            contribution.totalValue += transaction.totalValue;
+            contribution.totalValue += transaction.totalValue || 0;
             contribution.transactionCount += 1;
         });
         
@@ -352,7 +352,7 @@ router.get('/ranking/:period', async (req, res) => {
             const userObj = user.toObject ? user.toObject() : user;
             return {
                 ...userObj,
-                contribution: contribution.totalValue, // Valor real das contribuições
+                contribution: userObj.receptores || 0, // Usar valor atual de receptores
                 transactionCount: contribution.transactionCount, // Número de transações
                 rank: index + 1, // Posição no ranking
             };

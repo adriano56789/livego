@@ -127,7 +127,7 @@ const FullScreenGiftAnimation: React.FC<{ payload: GiftPayload | null; onEnd: ()
     return (
         <div 
             key={uniqueKey} 
-            className={`fixed inset-0 z-[9990] flex flex-col items-center justify-center pointer-events-none ${wrapperClass}`}
+            className={`fixed inset-0 z-[9990] flex flex-col items-center justify-start pt-32 pointer-events-none ${wrapperClass}`}
         >
             {/* 1. Canvas de Partículas (Sempre renderizado para brilho) */}
             <GiftEffectCanvas key={`canvas-${uniqueKey}`} gift={gift} />

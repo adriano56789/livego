@@ -352,7 +352,7 @@ router.get('/ranking/:period', async (req, res) => {
             const userObj = user.toObject ? user.toObject() : user;
             return {
                 ...userObj,
-                contribution: userObj.receptores || 0, // Usar valor atual de receptores
+                contribution: contribution.totalValue, // Usar o totalValue exato DESTA SESSÃO/DIÁRIA
                 transactionCount: contribution.transactionCount, // Número de transações
                 rank: index + 1, // Posição no ranking
             };

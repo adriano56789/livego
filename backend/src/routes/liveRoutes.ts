@@ -1131,47 +1131,62 @@ router.post('/streams/:id/gift', async (req, res) => {
         if (!gift) return res.status(404).json({ error: 'Gift not found' });
 
         const price = gift.price || 0;
-        const totalValue = price;
+        const totalValue = price * (amount || 1);
 
         if (sender.diamonds < totalValue) {
             return res.status(400).json({ error: 'Insufficient diamonds' });
         }
 
-        // Update sender diamonds
-        sender.diamonds -= totalValue;
-        sender.enviados = (sender.enviados || 0) + totalValue;
-        await sender.save();
+        let updatedSender;
+        let updatedReceiver;
 
-        // Update receiver diamonds count (receptores) AND earnings immediately
-        if (receiver) {
-            // Sempre atualiza receptores da live (mesmo que seja para si mesmo)
-            receiver.receptores = (receiver.receptores || 0) + totalValue;
-            receiver.earnings = (receiver.earnings || 0) + totalValue;
-            await receiver.save();
+        if (fromUserId === stream.hostId) {
+            // Quando a pessoa manda presente pra si mesma, fazemos as duas atualizações (- e +) EM UMA ÚNICA chamada no banco.
+            // O erro dos diamantes bugados acontecia porque o sender.save() e o receiver.save() sobrescreviam um ao outro.
+            updatedSender = await U.findOneAndUpdate(
+                { id: fromUserId },
+                { $inc: { diamonds: -totalValue, enviados: totalValue, receptores: totalValue, earnings: totalValue } },
+                { new: true }
+            );
+            updatedReceiver = updatedSender;
+            console.log(`💰 [LIVE GIFT] ${updatedSender.name} enviou ${totalValue} diamantes para si mesmo (duas métricas do mesmo evento)`);
+        } else {
+            // Se for para outra pessoa, atualiza cada um separado e corretamente
+            updatedSender = await U.findOneAndUpdate(
+                { id: fromUserId },
+                { $inc: { diamonds: -totalValue, enviados: totalValue } },
+                { new: true }
+            );
             
-            if (receiver.id === sender.id) {
-                console.log(`💰 [LIVE GIFT] ${sender.name} enviou ${totalValue} diamantes para si mesmo (duas métricas do mesmo evento)`);
-            } else {
-                console.log(`💰 [LIVE GIFT] ${sender.name} enviou ${totalValue} diamantes para ${receiver.name}`);
+            if (stream.hostId) {
+                updatedReceiver = await U.findOneAndUpdate(
+                    { id: stream.hostId },
+                    { $inc: { receptores: totalValue, earnings: totalValue } },
+                    { new: true }
+                );
+                console.log(`💰 [LIVE GIFT] ${updatedSender.name} enviou ${totalValue} diamantes para ${updatedReceiver?.name}`);
             }
-            console.log(`📊 [LIVE GIFT] ${receiver.name} - Receptores: ${receiver.receptores}, Earnings: ${receiver.earnings}`);
+        }
+        
+        if (updatedReceiver) {
+            console.log(`📊 [LIVE GIFT] ${updatedReceiver.name} - Receptores: ${updatedReceiver.receptores}, Earnings: ${updatedReceiver.earnings}`);
         }
         
         // Enviar WebSocket em tempo real com valor real
         const io = req.app.get('io');
-        if (io && receiver) {
+        if (io && updatedReceiver) {
             // Sempre envia WebSocket (mesmo que seja para si mesmo)
             io.emit('earnings_updated', {
-                userId: receiver.id,
+                userId: updatedReceiver.id,
                 diamonds: totalValue,
-                totalEarnings: receiver.earnings,
+                totalEarnings: updatedReceiver.earnings,
                 timestamp: new Date().toISOString(),
                 source: 'live_gift',
                 streamId: req.params.id,
-                fromUser: sender.name,
+                fromUser: updatedSender.name,
                 giftName: giftName
             });
-            console.log(`📡 [WEBSOCKET] Earnings atualizados em tempo real para ${receiver.name}: +${totalValue} diamantes (total: ${receiver.earnings})`);
+            console.log(`📡 [WEBSOCKET] Earnings atualizados em tempo real para ${updatedReceiver.name}: +${totalValue} diamantes (total: ${updatedReceiver.earnings})`);
         }
 
         // Acumular diamantes na stream (não converter para BRL ainda)
@@ -1186,10 +1201,10 @@ router.post('/streams/:id/gift', async (req, res) => {
         await GiftTransaction.create([{
             id: `gift_tx_${Date.now()}_${fromUserId}`,
             fromUserId,
-            fromUserName: sender.name,
-            fromUserAvatar: sender.avatarUrl || '',
+            fromUserName: updatedSender.name,
+            fromUserAvatar: updatedSender.avatarUrl || '',
             toUserId: stream.hostId,
-            toUserName: receiver?.name || 'Unknown',
+            toUserName: updatedReceiver?.name || 'Unknown',
             streamId: req.params.id,
             giftName,
             giftIcon: gift.icon || '🎁',
@@ -1199,12 +1214,12 @@ router.post('/streams/:id/gift', async (req, res) => {
             createdAt: new Date().toISOString()
         }]);
 
-        console.log(`💎 Gift sent: ${giftName} x${amount} from ${sender.name} to stream ${req.params.id} - ${totalValue} diamonds accumulated`);
+        console.log(`💎 Gift sent: ${giftName} x${amount} from ${updatedSender.name} to stream ${req.params.id} - ${totalValue} diamonds accumulated`);
 
         res.json({
             success: true,
-            updatedSender: sender,
-            updatedReceiver: receiver || {} as any,
+            updatedSender,
+            updatedReceiver: updatedReceiver || {} as any,
             transaction: {
                 giftName,
                 amount: amount || 1,

@@ -48,8 +48,15 @@ interface GanhosDisplayProps {
 
 const GanhosDisplay: React.FC<GanhosDisplayProps> = ({ earnings }) => {
     console.log(` [GanhosDisplay] Recebendo earnings: ${earnings}`);
-    const formattedEarnings = useCountUp(earnings || 0);
-    console.log(` [GanhosDisplay] Formatted earnings: ${formattedEarnings}`);
+    console.log(` [GanhosDisplay] Type of earnings: ${typeof earnings}`);
+    console.log(` [GanhosDisplay] Is NaN: ${isNaN(earnings)}`);
+    console.log(` [GanhosDisplay] Is null/undefined: ${earnings == null}`);
+    
+    // CORREÇÃO: Simplificar para remover animação temporariamente
+    const displayValue = earnings || 0;
+    
+    console.log(` [GanhosDisplay] Valor final exibido: ${displayValue}`);
+    
     const [isGlowing, setIsGlowing] = useState(false);
     const prevEarningsRef = useRef(earnings);
 
@@ -75,7 +82,7 @@ const GanhosDisplay: React.FC<GanhosDisplayProps> = ({ earnings }) => {
                 <div className="flex items-center space-x-3">
                     <GoldCoinWithGIcon className="w-10 h-10 drop-shadow-lg" />
                     <span className="text-5xl font-bold text-white tracking-tighter">
-                        {formattedEarnings.toLocaleString('pt-BR')}
+                        {displayValue.toLocaleString('pt-BR')}
                     </span>
                 </div>
                 <p className="text-right text-gray-400 font-semibold mt-1">ganhos</p>

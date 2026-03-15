@@ -15,7 +15,7 @@ interface GanhosTabProps {
 
 const GanhosTab: React.FC<GanhosTabProps> = ({ onConfigure, currentUser, updateUser, addToast }) => {
     const { t } = useTranslation();
-    const [earningsInfo, setEarningsInfo] = useState<{ available_diamonds: number; gross_brl: number; platform_fee_brl: number; net_brl: number } | null>(null);
+    const [earningsInfo, setEarningsInfo] = useState<{ available_diamonds: number; brl_value: number; conversion_rate: string } | null>(null);
     const [withdrawAmount, setWithdrawAmount] = useState<string>('');
     const [calculation, setCalculation] = useState<{ gross_value: number; platform_fee: number; net_value: number } | null>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -28,6 +28,7 @@ const GanhosTab: React.FC<GanhosTabProps> = ({ onConfigure, currentUser, updateU
             console.log(`🔍 [FRONTEND] Buscando earnings para usuário: ${currentUser.id}`);
             const data = await api.getEarningsInfo(currentUser.id);
             console.log(`✅ [FRONTEND] Earnings recebidos:`, data);
+            console.log(`✅ [FRONTEND] Available diamonds: ${data.available_diamonds}`);
             setEarningsInfo(data);
         } catch (err) {
             console.error(`❌ [FRONTEND] Erro ao buscar earnings:`, err);
@@ -100,9 +101,9 @@ const GanhosTab: React.FC<GanhosTabProps> = ({ onConfigure, currentUser, updateU
     const formatCurrency = (value: number | undefined) => `R$ ${(value || 0).toFixed(2).replace('.', ',')}`;
 
     const displayData = calculation || {
-        gross_value: earningsInfo?.gross_brl || 0,
-        platform_fee: earningsInfo?.platform_fee_brl || 0,
-        net_value: earningsInfo?.net_brl || 0
+        gross_value: earningsInfo?.brl_value || 0,
+        platform_fee: 0, // Será calculado pela API
+        net_value: earningsInfo?.brl_value || 0 // Temporário, será calculado pela API
     };
     
     const isWithdrawButtonDisabled = isWithdrawing || isCalculating || !calculation || calculation.net_value <= 0;
@@ -117,7 +118,13 @@ const GanhosTab: React.FC<GanhosTabProps> = ({ onConfigure, currentUser, updateU
 
     return (
         <div className="space-y-6">
-            <GanhosDisplay earnings={earningsInfo?.available_diamonds || currentUser?.earnings || 0} />
+            {(() => {
+                const earningsValue = earningsInfo?.available_diamonds || currentUser?.earnings || 0;
+                console.log(`🔍 [GanhosTab] Valor passado para GanhosDisplay: ${earningsValue}`);
+                console.log(`🔍 [GanhosTab] earningsInfo.available_diamonds: ${earningsInfo?.available_diamonds}`);
+                console.log(`🔍 [GanhosTab] currentUser.earnings: ${currentUser?.earnings}`);
+                return <GanhosDisplay earnings={earningsValue} />;
+            })()}
             
             <div className="space-y-3">
                 <label htmlFor="withdraw-amount" className="text-sm text-gray-300">{t('wallet.withdrawValue')}</label>

@@ -884,7 +884,11 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
                             <div className="flex items-center space-x-2 pl-1">
                                 <button onClick={(e) => { e.stopPropagation(); setIsRankingOpen(true); }} className="flex items-center bg-black/40 rounded-full px-2 py-1 space-x-1 text-xs cursor-pointer">
                                     <GoldCoinWithGIcon className="w-4 h-4" />
-                                    <span className="text-white font-semibold">{liveSession?.coins.toLocaleString() || '0'}</span>
+                                    <span className="text-white font-semibold">{(() => {
+                                        const coins = liveSession?.coins || 0;
+                                        console.log(`🔍 [StreamRoom] Renderizando contador: ${coins.toLocaleString()}`);
+                                        return coins.toLocaleString();
+                                    })()}</span>
                                 </button>
                                 <div className="flex items-center bg-black/40 rounded-full px-2 py-1 space-x-1 text-xs">
                                     <HeartIcon className="w-4 h-4 text-white" />

@@ -461,6 +461,12 @@ const AppContent: React.FC = () => {
         if (data.userId === currentUser.id) {
           const updatedUser = { ...currentUser, diamonds: data.diamonds };
           updateUserEverywhere(updatedUser);
+          
+          // 🔧 CORREÇÃO: Atualizar contador da live se estiver em transmissão
+          if (liveSession && activeStream && activeStream.id === data.userId) {
+            console.log(`🔍 [LiveSession] Atualizando contador da live via WebSocket: ${liveSession.coins} -> ${data.diamonds}`);
+            updateLiveSession({ coins: data.diamonds });
+          }
         }
       });
 
@@ -719,8 +725,10 @@ const AppContent: React.FC = () => {
   const startLiveSession = async (streamer: Streamer) => {
     // 🔧 CORREÇÃO: Buscar dados atualizados do streamer para obter diamonds persistidos
     try {
+      console.log(`🔍 [LiveSession] Iniciando sessão para streamer: ${streamer.id}`);
       const updatedStreamer = await api.getLiveDetails(streamer.id);
       console.log(`🔍 [LiveSession] Streamer atualizado: diamonds=${updatedStreamer.diamonds}`);
+      console.log(`🔍 [LiveSession] Dados completos:`, JSON.stringify(updatedStreamer, null, 2));
       
       const newSession = {
         startTime: Date.now(),
@@ -736,6 +744,7 @@ const AppContent: React.FC = () => {
         isAutoFollowEnabled: false,
         isAutoPrivateInviteEnabled: false,
       };
+      console.log(`🔍 [LiveSession] Nova sessão criada com coins: ${newSession.coins}`);
       setLiveSession(newSession);
     } catch (error) {
       console.error('❌ [LiveSession] Erro ao buscar dados do streamer:', error);
@@ -754,6 +763,7 @@ const AppContent: React.FC = () => {
         isAutoFollowEnabled: false,
         isAutoPrivateInviteEnabled: false,
       };
+      console.log(`🔍 [LiveSession] Fallback com coins: ${newSession.coins}`);
       setLiveSession(newSession);
     }
   };

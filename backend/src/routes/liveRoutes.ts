@@ -1391,7 +1391,42 @@ router.put('/streams/:id/quality', async (req, res) => {
 });
 
 router.post('/lives/start', async (req, res) => res.json({ success: true }));
-router.get('/lives/:id', async (req, res) => res.json({}));
+router.get('/lives/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        console.log(`🔍 [DEBUG] Getting live details for streamer: ${id}`);
+        
+        // Buscar streamer pelo ID
+        const streamer = await Streamer.findOne({ id });
+        
+        if (!streamer) {
+            console.log(`❌ Streamer not found: ${id}`);
+            return res.status(404).json({ error: 'Streamer not found' });
+        }
+        
+        console.log(`✅ Streamer found: ${streamer.name}, diamonds: ${streamer.diamonds || 0}`);
+        
+        // Retornar dados do streamer incluindo diamonds
+        res.json({
+            id: streamer.id,
+            name: streamer.name,
+            avatar: streamer.avatar,
+            viewers: streamer.viewers,
+            diamonds: streamer.diamonds || 0, // 🔧 GARANTIR QUE DIAMONDS SEJA RETORNADO
+            isLive: streamer.isLive,
+            country: streamer.country,
+            location: streamer.location,
+            message: streamer.message,
+            tags: streamer.tags,
+            isPrivate: streamer.isPrivate,
+            quality: streamer.quality,
+            playbackUrl: streamer.playbackUrl
+        });
+    } catch (error) {
+        console.error('❌ Error getting live details:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
 router.post('/lives/:id/end', async (req, res) => {
     await Streamer.deleteOne({ id: req.params.id });
 

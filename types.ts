@@ -17,6 +17,7 @@ export interface Streamer {
   isPrivate?: boolean;
   quality?: string;
   demoVideoUrl?: string;
+  diamonds?: number; // 🔧 CORREÇÃO: Adicionar diamonds para o contador da live
   // Ingest & Playback fields
   rtmpIngestUrl?: string;
   srtIngestUrl?: string;

@@ -4,9 +4,10 @@ import { User, Gift, GiftTransaction, Streamer, Followers } from '../models';
 const router = express.Router();
 
 // Enviar presente
-router.post('/send', async (req, res) => {
+router.post('/send', async (req: any, res) => {
     try {
-        const { fromUserId, toUserId, giftId, streamId, quantity = 1 } = req.body;
+        const { fromUserId, toUserId, giftId, quantity = 1, streamId } = req.body;
+        const io = req.app.get('io');
         
         // Buscar usuários
         const fromUser = await User.findOne({ id: fromUserId });
@@ -28,49 +29,59 @@ router.post('/send', async (req, res) => {
         
         // Atualizar saldos
         fromUser.diamonds -= totalCost;
-        await fromUser.save();
         
-        // Se for presente para stream, acumular diamantes APENAS na stream (não na carteira agora)
+        // Se for presente para stream, acumular diamantes na stream E no widget da streamer
         if (streamId && streamId !== 'unknown') {
+            // Atualizar diamonds da stream (para contadores internos)
             await Streamer.findOneAndUpdate(
                 { id: streamId },
                 { $inc: { diamonds: totalCost } }
             );
-            console.log(`💎 [LIVE GIFT] ${totalCost} diamantes adicionados à live ${streamId}.`);
+            
+            // Atualizar widget da streamer (para persistir o contador)
+            await Streamer.findOneAndUpdate(
+                { id: toUserId }, // Usar toUserId em vez de streamId
+                { $inc: { diamonds: totalCost } },
+                { upsert: true } // Criar se não existir
+            );
+            
+            console.log(`💎 [LIVE GIFT] ${totalCost} diamantes adicionados à live ${streamId} e widget da streamer ${toUserId}.`);
         }
 
         // Atualizar perfil de envios e recebimentos (Enviados/Receptores) E earnings
         fromUser.enviados = (fromUser.enviados || 0) + totalCost;
         
         // 🔧 CORREÇÃO: receptores deve ser igual a earnings (valor disponível para saque)
-        // Se for presente para stream, não adiciona aos earnings/receptores
+        // Presentes para stream TAMBÉM adicionam aos earnings/receptores
+        toUser.earnings = (toUser.earnings || 0) + totalCost;
+        toUser.receptores = toUser.earnings; // Manter receptores = earnings
+        
         if (!streamId || streamId === 'unknown') {
-            toUser.earnings = (toUser.earnings || 0) + totalCost;
-            toUser.receptores = toUser.earnings; // Manter receptores = earnings
             console.log(`💰 [DIRECT GIFT] ${totalCost} diamantes adicionados aos earnings/receptores de ${toUser.name}.`);
         } else {
-            // Presente para stream: não adiciona aos earnings/receptores (apenas para a live)
-            console.log(`💎 [LIVE GIFT] ${totalCost} diamantes para live - não afeta earnings/receptores.`);
+            console.log(`💎 [LIVE GIFT] ${totalCost} diamantes adicionados aos earnings/receptores de ${toUser.name} (stream: ${streamId}).`);
         }
         
-        // A atualização de earnings já foi tratada acima. Removendo duplicidade e garantindo que só atualize WebSocket se for direct gift.
-        if (!streamId || streamId === 'unknown') {
-            const io = req.app.get('io');
-            if (io) {
-                io.emit('earnings_updated', {
-                    userId: toUserId,
-                    diamonds: totalCost,
-                    totalEarnings: toUser.earnings,
-                    timestamp: new Date().toISOString(),
-                    source: 'direct_gift',
-                    fromUser: fromUser.name,
-                    giftName: gift.name
-                });
-            }
+        // Emitir WebSocket para atualizar earnings em tempo real (para direct e live gifts)
+        if (io) {
+            io.emit('earnings_updated', {
+                userId: toUserId,
+                diamonds: totalCost,
+                totalEarnings: toUser.earnings,
+                timestamp: new Date().toISOString(),
+                source: (!streamId || streamId === 'unknown') ? 'direct_gift' : 'live_gift',
+                fromUser: fromUser.name,
+                giftName: gift.name,
+                streamId: streamId
+            });
         }
         
         console.log(`💰 [GIFT] ${fromUser.name} enviou ${totalCost} diamantes para ${toUser.name}`);
         console.log(`📊 [GIFT] ${toUser.name} - Receptores: ${toUser.receptores}, Earnings: ${toUser.earnings}`);
+        
+        // Salvar ambos os usuários no banco
+        await fromUser.save();
+        await toUser.save();
         
         // Registrar transação
         await GiftTransaction.create([{
@@ -90,8 +101,6 @@ router.post('/send', async (req, res) => {
         }]);
         
         // Enviar notificações via WebSocket
-        const io = req.app.get('io');
-        
         // 🚀 VERIFICAR SE O PRESENTE LIBERA ACESSO À SALA PRIVADA
         if (streamId && streamId !== 'unknown') {
             const streamer = await Streamer.findOne({ id: streamId });
@@ -214,13 +223,6 @@ router.post('/send', async (req, res) => {
                 userId: fromUserId,
                 diamonds: fromUser.diamonds,
                 change: -totalCost,
-                timestamp: new Date().toISOString()
-            });
-            
-            // Atualizar earnings em tempo real
-            io.emit('earnings_updated', {
-                userId: toUserId,
-                diamonds: totalCost,
                 timestamp: new Date().toISOString()
             });
         }

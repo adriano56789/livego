@@ -465,18 +465,19 @@ const AppContent: React.FC = () => {
       });
 
       // Escutar atualizações de earnings em tempo real
-      socketService.on('earnings_updated', (data: { userId: string; earnings: number; change: number; timestamp: string }) => {
-        console.log(`💰 [WebSocket] Earnings atualizados: ${data.userId} -> R$${data.earnings.toFixed(2)} (${data.change > 0 ? '+' : ''}R$${data.change.toFixed(2)})`);
+      socketService.on('earnings_updated', (data: { userId: string; diamonds: number; totalEarnings: number; timestamp: string; source: string }) => {
+        console.log(`💰 [WebSocket] Earnings atualizados: ${data.userId} -> ${data.diamonds} diamantes (total: ${data.totalEarnings}) - Source: ${data.source}`);
         
         if (data.userId === currentUser.id) {
-          // 🔧 CORREÇÃO: Manter currentUser.earnings em DIAMANTES, não em reais
-          // data.earnings vem em reais, mas currentUser.earnings deve permanecer em diamantes
-          // Não atualizar currentUser.earnings via WebSocket para evitar conflito com API
-          console.log(`⚠️ [WebSocket] Ignorando atualização de earnings em reais para manter consistência com API (diamantes)`);
+          // 🔧 CORREÇÃO: Atualizar earnings em tempo real quando receber presentes
+          const updatedUser = { 
+            ...currentUser, 
+            earnings: data.totalEarnings,
+            receptores: data.totalEarnings // Manter consistência
+          };
           
-          // Se precisar atualizar, buscar da API para manter em diamantes
-          // const updatedUser = { ...currentUser };
-          // updateUserEverywhere(updatedUser);
+          console.log(`✅ [WebSocket] Atualizando currentUser.earnings: ${currentUser.earnings} → ${data.totalEarnings}`);
+          updateUserEverywhere(updatedUser);
         }
       });
 
@@ -715,7 +716,49 @@ const AppContent: React.FC = () => {
     };
   }, [currentUser, updateUserEverywhere, activeStream, updateLiveSession, addToast, chattingWith]);
 
-  // ... (Keeping rest of the logic: handleSelectRegion, startLiveSession, logLiveEvent, handleLogin, etc.) ...
+  const startLiveSession = async (streamer: Streamer) => {
+    // 🔧 CORREÇÃO: Buscar dados atualizados do streamer para obter diamonds persistidos
+    try {
+      const updatedStreamer = await api.getLiveDetails(streamer.id);
+      console.log(`🔍 [LiveSession] Streamer atualizado: diamonds=${updatedStreamer.diamonds}`);
+      
+      const newSession = {
+        startTime: Date.now(),
+        viewers: updatedStreamer.viewers || 1,
+        peakViewers: updatedStreamer.viewers || 1,
+        coins: updatedStreamer.diamonds || 0, // Usar diamonds persistidos
+        followers: 0,
+        members: 0,
+        fans: 0,
+        events: [],
+        isMicrophoneMuted: false,
+        isStreamMuted: false,
+        isAutoFollowEnabled: false,
+        isAutoPrivateInviteEnabled: false,
+      };
+      setLiveSession(newSession);
+    } catch (error) {
+      console.error('❌ [LiveSession] Erro ao buscar dados do streamer:', error);
+      // Fallback: usar dados originais
+      const newSession = {
+        startTime: Date.now(),
+        viewers: streamer.viewers || 1,
+        peakViewers: streamer.viewers || 1,
+        coins: streamer.diamonds || 0,
+        followers: 0,
+        members: 0,
+        fans: 0,
+        events: [],
+        isMicrophoneMuted: false,
+        isStreamMuted: false,
+        isAutoFollowEnabled: false,
+        isAutoPrivateInviteEnabled: false,
+      };
+      setLiveSession(newSession);
+    }
+  };
+
+  // ... (Keeping rest of the logic: handleSelectRegion, logLiveEvent, handleLogin, etc.) ...
 
   const handleSelectRegion = async (countryCode: string) => {
     console.log('🔥 Region selected:', countryCode); // DEBUG
@@ -767,30 +810,11 @@ const AppContent: React.FC = () => {
     }
   };
 
-  const startLiveSession = (streamer: Streamer) => {
-    const newSession = {
-      startTime: Date.now(),
-      viewers: streamer.viewers || 1,
-      peakViewers: streamer.viewers || 1,
-      coins: 0,
-      followers: 0,
-      members: 0,
-      fans: 0,
-      events: [],
-      isMicrophoneMuted: false,
-      isStreamMuted: false,
-      isAutoFollowEnabled: false,
-      isAutoPrivateInviteEnabled: false,
-    };
-    setLiveSession(newSession);
-    setActiveStream(streamer);
-  };
-
-  const logLiveEvent = (type: string, data: any) => {
-    if (!liveSession || !activeStream) return;
-    const event = { type, timestamp: new Date().toISOString(), ...data };
-    updateLiveSession({ events: [...(liveSession.events || []), event] });
-  };
+const logLiveEvent = (type: string, data: any) => {
+  if (!liveSession || !activeStream) return;
+  const event = { type, timestamp: new Date().toISOString(), ...data };
+  updateLiveSession({ events: [...(liveSession.events || []), event] });
+};
 
   const handleLogin = async () => {
     setIsLoadingCurrentUser(true);

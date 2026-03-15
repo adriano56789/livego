@@ -25,9 +25,12 @@ const GanhosTab: React.FC<GanhosTabProps> = ({ onConfigure, currentUser, updateU
     const fetchEarningsInfo = useCallback(async () => {
         setIsLoading(true);
         try {
+            console.log(`🔍 [FRONTEND] Buscando earnings para usuário: ${currentUser.id}`);
             const data = await api.getEarningsInfo(currentUser.id);
+            console.log(`✅ [FRONTEND] Earnings recebidos:`, data);
             setEarningsInfo(data);
         } catch (err) {
+            console.error(`❌ [FRONTEND] Erro ao buscar earnings:`, err);
             addToast(ToastType.Error, (err as Error).message || "Falha ao carregar informações de ganhos.");
         } finally {
             setIsLoading(false);
@@ -35,9 +38,10 @@ const GanhosTab: React.FC<GanhosTabProps> = ({ onConfigure, currentUser, updateU
     }, [currentUser.id, addToast]);
 
     // Fetch on mount and when user's earnings change (e.g., received a gift)
+    // 🔧 CORREÇÃO: Removido currentUser.earnings para evitar loop infinito
     useEffect(() => {
         fetchEarningsInfo();
-    }, [fetchEarningsInfo, currentUser.earnings]);
+    }, [fetchEarningsInfo]);
 
     // Calculate withdrawal value in real-time as user types
     useEffect(() => {

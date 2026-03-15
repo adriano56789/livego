@@ -47,7 +47,9 @@ interface GanhosDisplayProps {
 }
 
 const GanhosDisplay: React.FC<GanhosDisplayProps> = ({ earnings }) => {
+    console.log(` [GanhosDisplay] Recebendo earnings: ${earnings}`);
     const formattedEarnings = useCountUp(earnings || 0);
+    console.log(` [GanhosDisplay] Formatted earnings: ${formattedEarnings}`);
     const [isGlowing, setIsGlowing] = useState(false);
     const prevEarningsRef = useRef(earnings);
 

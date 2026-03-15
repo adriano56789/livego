@@ -1149,7 +1149,7 @@ router.post('/streams/:id/gift', async (req, res) => {
                 { new: true }
             );
             updatedReceiver = updatedSender;
-            console.log(`💰 [LIVE GIFT] ${updatedSender.name} enviou ${totalValue} diamantes para si mesmo (duas métricas do mesmo evento)`);
+            console.log(`💰 [LIVE GIFT] ${updatedSender?.name} enviou ${totalValue} diamantes para si mesmo (duas métricas do mesmo evento)`);
         } else {
             // Se for para outra pessoa, atualiza cada um separado e corretamente
             updatedSender = await U.findOneAndUpdate(
@@ -1164,7 +1164,7 @@ router.post('/streams/:id/gift', async (req, res) => {
                     { $inc: { receptores: totalValue, earnings: totalValue } },
                     { new: true }
                 );
-                console.log(`💰 [LIVE GIFT] ${updatedSender.name} enviou ${totalValue} diamantes para ${updatedReceiver?.name}`);
+                console.log(`💰 [LIVE GIFT] ${updatedSender?.name} enviou ${totalValue} diamantes para ${updatedReceiver?.name}`);
             }
         }
         
@@ -1183,7 +1183,7 @@ router.post('/streams/:id/gift', async (req, res) => {
                 timestamp: new Date().toISOString(),
                 source: 'live_gift',
                 streamId: req.params.id,
-                fromUser: updatedSender.name,
+                fromUser: updatedSender?.name || 'Unknown',
                 giftName: giftName
             });
             console.log(`📡 [WEBSOCKET] Earnings atualizados em tempo real para ${updatedReceiver.name}: +${totalValue} diamantes (total: ${updatedReceiver.earnings})`);
@@ -1201,8 +1201,8 @@ router.post('/streams/:id/gift', async (req, res) => {
         await GiftTransaction.create([{
             id: `gift_tx_${Date.now()}_${fromUserId}`,
             fromUserId,
-            fromUserName: updatedSender.name,
-            fromUserAvatar: updatedSender.avatarUrl || '',
+            fromUserName: updatedSender?.name || 'Unknown',
+            fromUserAvatar: updatedSender?.avatarUrl || '',
             toUserId: stream.hostId,
             toUserName: updatedReceiver?.name || 'Unknown',
             streamId: req.params.id,
@@ -1214,7 +1214,7 @@ router.post('/streams/:id/gift', async (req, res) => {
             createdAt: new Date().toISOString()
         }]);
 
-        console.log(`💎 Gift sent: ${giftName} x${amount} from ${updatedSender.name} to stream ${req.params.id} - ${totalValue} diamonds accumulated`);
+        console.log(`💎 Gift sent: ${giftName} x${amount} from ${updatedSender?.name || 'Unknown'} to stream ${req.params.id} - ${totalValue} diamonds accumulated`);
 
         res.json({
             success: true,

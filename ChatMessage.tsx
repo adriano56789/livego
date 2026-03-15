@@ -1,7 +1,7 @@
 import React from 'react';
-import { PlusIcon, SettingsIcon, IdBadgeIcon } from './icons';
-import { avatarFrames, getRemainingDays, getFrameGlowClass } from '../../services/database';
-import { User } from '../../types';
+import { PlusIcon, SettingsIcon, IdBadgeIcon } from './components/icons';
+import { avatarFrames, getRemainingDays, getFrameGlowClass } from './utils/chatUtils';
+import { User } from './types';
 
 interface ChatMessageProps {
     userObject: User;
@@ -22,16 +22,24 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ userObject, message, onAvatar
     const activeFrame = (activeFrameId && activeOwnedFrame && remainingDays && remainingDays > 0)
         ? avatarFrames.find(f => f.id === activeFrameId)
         : null;
-    const ActiveFrameComponent = activeFrame ? activeFrame.component : null;
     const frameGlowClass = getFrameGlowClass(activeFrameId);
 
     return (
     <div className="flex items-start space-x-2 text-xs">
         <button onClick={onAvatarClick} className="relative w-8 h-8 flex-shrink-0">
-            <img src={userObject.avatarUrl} alt={userObject.name} className="w-full h-full rounded-full object-cover"/>
-            {ActiveFrameComponent && (
+            <img 
+                src={userObject.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(userObject.name || 'User')}&background=random`} 
+                alt={userObject.name} 
+                className="w-full h-full rounded-full object-cover"
+                onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(userObject.name || 'User')}&background=random`;
+                }}
+            />
+            {activeFrame && (
                 <div className={`absolute -top-1 -left-1 w-10 h-10 pointer-events-none ${frameGlowClass}`}>
-                    <ActiveFrameComponent />
+                    {/* Frame visual placeholder - AvatarFrame não tem componente no momento */}
+                    <div className="w-full h-full rounded-full border-2 border-yellow-400 opacity-50"></div>
                 </div>
             )}
         </button>

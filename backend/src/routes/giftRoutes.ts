@@ -128,6 +128,25 @@ router.post('/send', async (req, res) => {
         
         // Enviar notificações via WebSocket
         if (io) {
+            // 🔄 ATUALIZAÇÃO DO MODAL DE CONVITE
+            if (streamId && streamId !== 'unknown') {
+                io.emit('gift_sent_to_stream', {
+                    streamId,
+                    gift: {
+                        fromUserId,
+                        fromUserName: fromUser.name,
+                        fromUserAvatar: fromUser.avatarUrl,
+                        giftName: gift.name,
+                        giftIcon: gift.icon,
+                        giftPrice: giftPrice,
+                        quantity,
+                        totalValue: totalCost
+                    },
+                    timestamp: new Date().toISOString()
+                });
+                console.log(`📡 [WEBSOCKET] Modal de convite atualizado para stream ${streamId}`);
+            }
+            
             io.to(`user_${toUserId}`).emit('gift_received', {
                 from: {
                     id: fromUser.id,

@@ -3,6 +3,7 @@ import { CloseIcon, PlusIcon, GiftIcon } from './icons';
 import { User, ToastType, EligibleUser, Gift } from '../types';
 import { api } from '../services/api';
 import { LoadingSpinner } from './Loading';
+import { io } from 'socket.io-client';
 
 interface PrivateInviteModalProps {
   isOpen: boolean;
@@ -41,15 +42,15 @@ const PrivateInviteModal: React.FC<PrivateInviteModalProps> = ({ isOpen, onClose
           console.log(` [DEBUG] ${data.gifts.length} usuários com presentes encontrados`);
           
           // Converter novo formato da API para o formato esperado pelo componente
-          const convertedData = data.gifts.map((user: any) => ({
+          const convertedData = (data.gifts || []).map((user: any) => ({
             id: user.userId,
-            name: user.userName,
-            avatarUrl: user.userAvatar,
-            giftsSent: user.gifts.map((gift: any) => ({
-              name: gift.giftName,
-              icon: gift.giftIcon,
-              quantity: gift.quantity,
-              price: gift.giftPrice
+            name: user.userName || 'Usuário',
+            avatarUrl: user.userAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.userName || 'User')}&background=random`,
+            giftsSent: (user.gifts || []).map((gift: any) => ({
+              name: gift.giftName || 'Presente',
+              icon: gift.giftIcon || '🎁',
+              quantity: gift.quantity || 1,
+              price: gift.giftPrice || 0
             }))
           }));
           
@@ -70,6 +71,47 @@ const PrivateInviteModal: React.FC<PrivateInviteModalProps> = ({ isOpen, onClose
       setIsFollowingAll(false);
     }
   }, [isOpen, streamId, addToast]);
+
+  // WebSocket para atualização em tempo real de presentes
+  useEffect(() => {
+    if (!isOpen || !streamId) return;
+
+    const socket = io();
+    
+    const handleGiftUpdate = (data: any) => {
+      if (data.streamId === streamId) {
+        console.log('📡 [WEBSOCKET] Novo presente recebido, recarregando modal...');
+        // Recarregar lista de elegíveis
+        api.getGiftSendersForStream(streamId)
+          .then(response => {
+            if (response && response.gifts) {
+              const convertedData = (response.gifts || []).map((user: any) => ({
+                id: user.userId,
+                name: user.userName || 'Usuário',
+                avatarUrl: user.userAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.userName || 'User')}&background=random`,
+                giftsSent: (user.gifts || []).map((gift: any) => ({
+                  name: gift.giftName || 'Presente',
+                  icon: gift.giftIcon || '🎁',
+                  quantity: gift.quantity || 1,
+                  price: gift.giftPrice || 0
+                }))
+              }));
+              setEligibleUsers(convertedData);
+            }
+          })
+          .catch(err => {
+            console.error('Erro ao recarregar presentes:', err);
+          });
+      }
+    };
+
+    socket.on('gift_sent_to_stream', handleGiftUpdate);
+    
+    return () => {
+      socket.off('gift_sent_to_stream', handleGiftUpdate);
+      socket.disconnect();
+    };
+  }, [isOpen, streamId]);
   
   const hasUnfollowedUsers = useMemo(() => {
     if (isLoading) return false;
@@ -200,7 +242,15 @@ const PrivateInviteModal: React.FC<PrivateInviteModalProps> = ({ isOpen, onClose
               return (
                 <div key={user.id} className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-800/50">
                   <div className="flex items-center space-x-3 flex-1 min-w-0">
-                    <img src={user.avatarUrl} alt={user.name} className="w-12 h-12 rounded-full object-cover" />
+                    <img 
+                      src={user.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || 'User')}&background=random`} 
+                      alt={user.name} 
+                      className="w-12 h-12 rounded-full object-cover"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || 'User')}&background=random`;
+                      }}
+                    />
                     <div className="flex-1 min-w-0">
                       <p className="text-white font-semibold truncate">{user.name}</p>
                       <div className="flex items-center flex-wrap gap-x-2 gap-y-1 mt-1">

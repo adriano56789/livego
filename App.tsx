@@ -469,8 +469,14 @@ const AppContent: React.FC = () => {
         console.log(`💰 [WebSocket] Earnings atualizados: ${data.userId} -> R$${data.earnings.toFixed(2)} (${data.change > 0 ? '+' : ''}R$${data.change.toFixed(2)})`);
         
         if (data.userId === currentUser.id) {
-          const updatedUser = { ...currentUser, earnings: data.earnings };
-          updateUserEverywhere(updatedUser);
+          // 🔧 CORREÇÃO: Manter currentUser.earnings em DIAMANTES, não em reais
+          // data.earnings vem em reais, mas currentUser.earnings deve permanecer em diamantes
+          // Não atualizar currentUser.earnings via WebSocket para evitar conflito com API
+          console.log(`⚠️ [WebSocket] Ignorando atualização de earnings em reais para manter consistência com API (diamantes)`);
+          
+          // Se precisar atualizar, buscar da API para manter em diamantes
+          // const updatedUser = { ...currentUser };
+          // updateUserEverywhere(updatedUser);
         }
       });
 
@@ -1060,7 +1066,7 @@ const AppContent: React.FC = () => {
   const handleViewProfile = async (user: User) => {
     setChattingWith(null);
     const fullUserFromState = allUsers.find(u => u.id === user.id);
-    const userToView = fullUserFromState || user;
+    const userToView = user.id === currentUser?.id ? currentUser : (fullUserFromState || user);
     setViewingProfile(userToView);
   };
 

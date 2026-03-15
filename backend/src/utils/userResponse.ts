@@ -27,6 +27,11 @@ export function standardizeUserResponse(user: any): any {
             
             fans: 0,
             following: 0,
+            diamonds: 0,
+            earnings: 0,
+            earnings_withdrawn: 0,
+            enviados: 0,
+            receptores: 0,
             
             messages: [],
             notifications: [],
@@ -61,6 +66,9 @@ export function standardizeUserResponse(user: any): any {
         diamonds: user.diamonds || 0,
         earnings: user.earnings || 0,
         earnings_withdrawn: user.earnings_withdrawn || 0,
+        enviados: user.enviados || 0,
+        enviadosRecentes: user.enviadosRecentes || 0,
+        receptores: user.receptores || 0,
         
         // Campos de frames
         ownedFrames: Array.isArray(user.ownedFrames) ? user.ownedFrames : [],
@@ -77,6 +85,7 @@ export function standardizeUserResponse(user: any): any {
                 'id', 'name', 'identification', 'avatarUrl', 'coverUrl', 'age', 'gender', 
                 'level', 'xp', 'rank', 'photos', 'followersList', 'followingList',
                 'friendsList', 'blockedUsers', 'fans', 'following', 'diamonds', 'earnings', 'earnings_withdrawn',
+                'enviados', 'enviadosRecentes', 'receptores',
                 'messages', 'notifications', 'visitors', 'ownedFrames', 'activeFrameId'
             ].includes(key)) {
                 acc[key] = user[key];

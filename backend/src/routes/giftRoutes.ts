@@ -37,15 +37,21 @@ router.post('/send', async (req, res) => {
                 { $inc: { diamonds: totalCost } }
             );
             console.log(`💎 [LIVE GIFT] ${totalCost} diamantes adicionados à live ${streamId}.`);
-        } else {
-            // Se não for para stream, adicionar diretamente aos earnings do usuário
-            toUser.earnings = (toUser.earnings || 0) + totalCost;
-            console.log(`💰 [DIRECT GIFT] ${totalCost} diamantes adicionados aos earnings de ${toUser.name}.`);
         }
 
         // Atualizar perfil de envios e recebimentos (Enviados/Receptores) E earnings
         fromUser.enviados = (fromUser.enviados || 0) + totalCost;
-        toUser.receptores = (toUser.receptores || 0) + totalCost;
+        
+        // 🔧 CORREÇÃO: receptores deve ser igual a earnings (valor disponível para saque)
+        // Se for presente para stream, não adiciona aos earnings/receptores
+        if (!streamId || streamId === 'unknown') {
+            toUser.earnings = (toUser.earnings || 0) + totalCost;
+            toUser.receptores = toUser.earnings; // Manter receptores = earnings
+            console.log(`💰 [DIRECT GIFT] ${totalCost} diamantes adicionados aos earnings/receptores de ${toUser.name}.`);
+        } else {
+            // Presente para stream: não adiciona aos earnings/receptores (apenas para a live)
+            console.log(`💎 [LIVE GIFT] ${totalCost} diamantes para live - não afeta earnings/receptores.`);
+        }
         
         // A atualização de earnings já foi tratada acima. Removendo duplicidade e garantindo que só atualize WebSocket se for direct gift.
         if (!streamId || streamId === 'unknown') {
@@ -62,9 +68,6 @@ router.post('/send', async (req, res) => {
                 });
             }
         }
-        
-        await fromUser.save();
-        await toUser.save();
         
         console.log(`💰 [GIFT] ${fromUser.name} enviou ${totalCost} diamantes para ${toUser.name}`);
         console.log(`📊 [GIFT] ${toUser.name} - Receptores: ${toUser.receptores}, Earnings: ${toUser.earnings}`);

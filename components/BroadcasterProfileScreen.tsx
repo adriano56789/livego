@@ -301,7 +301,7 @@ const UserProfileScreen: React.FC<UserProfileScreenProps> = ({ user, isCurrentUs
                         <StatItem value={formatNumber(user.fans)} label={t('profile.fans')} onClick={onOpenFans} />
                         <StatItem value={formatNumber(user.following)} label={t('profile.following')} onClick={onOpenFollowing} />
                         <StatItem value={formatNumber(user.receptores)} label={t('profile.receivers')} />
-                        <StatItem value={formatNumber(user.enviados)} label={t('profile.senders')} />
+                        <StatItem value={formatNumber(user.enviadosRecentes || user.enviados)} label={t('profile.senders')} />
                     </div>
 
                     <button onClick={onOpenTopFans} className="bg-[#1c1c1e] p-3 rounded-lg flex items-center justify-between w-full text-left hover:bg-gray-800/50 transition-colors">

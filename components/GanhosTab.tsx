@@ -77,10 +77,10 @@ const GanhosTab: React.FC<GanhosTabProps> = ({ onConfigure, currentUser, updateU
 
         setIsWithdrawing(true);
         try {
-            const { success, user } = await api.confirmWithdrawal(currentUser.id, amount);
-            if (success && user) {
+            const response = await api.confirmWithdrawal(currentUser.id, amount);
+            if (response.success) {
                 addToast(ToastType.Info, "Solicitação de saque enviada e está sendo processada.");
-                updateUser(user); // Optimistically update user if needed, though WebSocket is preferred
+                updateUser(currentUser); // Update current user state
                 setWithdrawAmount('');
                 setCalculation(null);
             } else {
@@ -113,7 +113,7 @@ const GanhosTab: React.FC<GanhosTabProps> = ({ onConfigure, currentUser, updateU
 
     return (
         <div className="space-y-6">
-            <GanhosDisplay earnings={earningsInfo?.available_diamonds || 0} />
+            <GanhosDisplay earnings={earningsInfo?.available_diamonds || currentUser?.earnings || 0} />
             
             <div className="space-y-3">
                 <label htmlFor="withdraw-amount" className="text-sm text-gray-300">{t('wallet.withdrawValue')}</label>

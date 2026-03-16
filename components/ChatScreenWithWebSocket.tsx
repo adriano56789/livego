@@ -27,14 +27,12 @@ const ChatScreenWithWebSocket: React.FC<ChatScreenWithWebSocketProps> = (props) 
     
     // Listener para novas mensagens
     const handleNewMessage = (event: CustomEvent) => {
-      console.log('💬 Nova mensagem via WebSocket:', event.detail);
       // Adicionar mensagem ao estado em vez de recarregar a página
       setMessages(prev => [...prev, event.detail]);
     };
     
     // Listener para status de usuários
     const handleStatusChanged = (event: CustomEvent) => {
-      console.log('🔔 Status mudou via WebSocket:', event.detail);
       // Aqui você pode atualizar o status online/offline
     };
     

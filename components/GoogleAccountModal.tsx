@@ -23,7 +23,6 @@ const GoogleAccountModal: React.FC<GoogleAccountModalProps> = ({ isOpen, onClose
         setAccounts(data || []);
         setIsLoading(false);
       }).catch(err => {
-        console.error("Failed to load Google accounts:", err);
         setIsLoading(false);
       });
     }

@@ -23,7 +23,6 @@ const ConnectedAccountsScreen: React.FC<ConnectedAccountsScreenProps> = ({ onBac
         api.getConnectedGoogleAccounts()
             .then(data => setAccounts(data || []))
             .catch(err => {
-                console.error(err);
                 addToast(ToastType.Error, "Falha ao carregar contas conectadas.");
             })
             .finally(() => setIsLoading(false));

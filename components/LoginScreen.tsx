@@ -73,7 +73,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
             
             <input 
                 type="email" 
-                placeholder={isRegistering ? "seu@email.com" : "adrianomdk5@gmail.com"} 
+                placeholder={isRegistering ? "seu@email.com" : "seu@email.com"} 
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full bg-white/10 border border-white/10 rounded-2xl px-5 py-4 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500/50 backdrop-blur-md transition-all"
@@ -117,7 +117,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
 
       {/* Versão no Rodapé */}
       <div className="absolute bottom-8 z-10 text-white/20 text-[10px] font-bold tracking-[0.2em] uppercase">
-        SERVIDOR REAL LIVEGO ONLINE V1.0
+        LIVEGO
       </div>
     </div>
   );

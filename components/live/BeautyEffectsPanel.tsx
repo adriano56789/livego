@@ -31,7 +31,7 @@ const BeautyEffectsPanel: React.FC<BeautyEffectsPanelProps> = ({ onClose, curren
 
     // Fetch static effects definitions
     useEffect(() => {
-        api.getBeautyEffects().then(data => setEffectsData(data || { filters: [], effects: [] })).catch(err => console.error("Failed to fetch beauty effects:", err));
+        api.getBeautyEffects().then(data => setEffectsData(data || { filters: [], effects: [] })).catch(() => {});
     }, []);
 
     // Fetch user's saved settings
@@ -43,7 +43,6 @@ const BeautyEffectsPanel: React.FC<BeautyEffectsPanelProps> = ({ onClose, curren
                     setSettings(data || {});
                 })
                 .catch(err => {
-                    console.error("Failed to fetch beauty settings:", err);
                     addToast(ToastType.Error, "Não foi possível carregar os efeitos de beleza.");
                 })
                 .finally(() => setIsLoading(false));

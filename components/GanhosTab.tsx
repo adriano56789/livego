@@ -25,13 +25,9 @@ const GanhosTab: React.FC<GanhosTabProps> = ({ onConfigure, currentUser, updateU
     const fetchEarningsInfo = useCallback(async () => {
         setIsLoading(true);
         try {
-            console.log(`🔍 [FRONTEND] Buscando earnings para usuário: ${currentUser.id}`);
             const data = await api.getEarningsInfo(currentUser.id);
-            console.log(`✅ [FRONTEND] Earnings recebidos:`, data);
-            console.log(`✅ [FRONTEND] Available diamonds: ${data.available_diamonds}`);
             setEarningsInfo(data);
         } catch (err) {
-            console.error(`❌ [FRONTEND] Erro ao buscar earnings:`, err);
             addToast(ToastType.Error, (err as Error).message || "Falha ao carregar informações de ganhos.");
         } finally {
             setIsLoading(false);
@@ -47,26 +43,21 @@ const GanhosTab: React.FC<GanhosTabProps> = ({ onConfigure, currentUser, updateU
     // Calculate withdrawal value in real-time as user types
     useEffect(() => {
         const amount = parseInt(withdrawAmount);
-        console.log(`🔍 [CALCULO] Valor digitado: ${amount}`);
         
         if (!isNaN(amount) && amount > 0) {
             setIsCalculating(true);
             const timer = setTimeout(() => {
-                console.log(`🔍 [CALCULO] Chamando API para calcular: ${amount} diamantes`);
                 api.calculateWithdrawal(amount)
                     .then((result) => {
-                        console.log(`✅ [CALCULO] Resultado da API:`, result);
                         setCalculation(result);
                     })
                     .catch((error) => {
-                        console.error(`❌ [CALCULO] Erro na API:`, error);
                         setCalculation(null);
                     })
                     .finally(() => setIsCalculating(false));
             }, 300); // Debounce
             return () => clearTimeout(timer);
         } else {
-            console.log(`🔍 [CALCULO] Valor inválido, limpando cálculo`);
             setCalculation(null);
         }
     }, [withdrawAmount]);
@@ -136,9 +127,6 @@ const GanhosTab: React.FC<GanhosTabProps> = ({ onConfigure, currentUser, updateU
         <div className="space-y-6">
             {(() => {
                 const earningsValue = earningsInfo?.available_diamonds || currentUser?.earnings || 0;
-                console.log(`🔍 [GanhosTab] Valor passado para GanhosDisplay: ${earningsValue}`);
-                console.log(`🔍 [GanhosTab] earningsInfo.available_diamonds: ${earningsInfo?.available_diamonds}`);
-                console.log(`🔍 [GanhosTab] currentUser.earnings: ${currentUser?.earnings}`);
                 return <GanhosDisplay earnings={earningsValue} />;
             })()}
             

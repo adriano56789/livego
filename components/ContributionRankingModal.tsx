@@ -60,12 +60,10 @@ const ContributionRankingModal: React.FC<ContributionRankingModalProps> = ({ onC
             setError(null);
             
             try {
-                console.log(`🏆 Buscando ranking para período: ${currentPeriod}`);
                 
                 if (currentPeriod === 'live') {
                     // Validar liveRanking
                     if (!liveRanking || !Array.isArray(liveRanking)) {
-                        console.warn('⚠️ liveRanking inválido, usando array vazio');
                         setData([]);
                         return;
                     }
@@ -80,7 +78,6 @@ const ContributionRankingModal: React.FC<ContributionRankingModalProps> = ({ onC
                             level: u.level || 1,
                         } as RankedUser));
                     
-                    console.log(`✅ ${mappedData.length} usuários no ranking live`);
                     setData(mappedData);
                 } else {
                     // Validar período
@@ -92,10 +89,8 @@ const ContributionRankingModal: React.FC<ContributionRankingModalProps> = ({ onC
                     
                     // Validar resposta da API
                     if (!rankingData) {
-                        console.warn('⚠️ API retornou null/undefined');
                         setData([]);
                     } else if (!Array.isArray(rankingData)) {
-                        console.warn('⚠️ API não retornou array:', rankingData);
                         setData([]);
                     } else {
                         // Validar e formatar dados
@@ -112,14 +107,12 @@ const ContributionRankingModal: React.FC<ContributionRankingModalProps> = ({ onC
                             level: user.level || 1,
                         }));
                         
-                        console.log(`✅ ${validData.length} usuários no ranking ${currentPeriod}`);
                         setData(validData);
                     }
                 }
                 
                 setError(null);
             } catch (err) {
-                console.error(`❌ Erro ao buscar ranking ${currentPeriod}:`, err);
                 setError('Não foi possível carregar o ranking');
                 setData([]); // Garantir array vazio em caso de erro
             } finally {

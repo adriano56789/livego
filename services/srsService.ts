@@ -8,7 +8,6 @@ class SRSService {
   private readonly SRS_API_BASE = 'http://72.60.249.175:1985';
 
   constructor() {
-    console.log('[SRSService] Initialized Real SRS Service');
   }
 
   /**
@@ -37,7 +36,6 @@ class SRSService {
    * Handle Publish (Client sending video to SRS Server)
    */
   public async publish(streamUrl: string, offerSdp: string): Promise<{ code: number, sdp: string, sessionid: string }> {
-    console.log(`[SRSService] PUBLISH Request for ${streamUrl}`);
     
     try {
       const response = await fetch(`${this.SRS_API_BASE}/rtc/v1/publish`, {
@@ -56,7 +54,6 @@ class SRSService {
       }
 
       const data = await response.json();
-      console.log(`[SRSService] PUBLISH Response:`, data);
 
       if (data.code === 0) {
         return {
@@ -69,7 +66,6 @@ class SRSService {
       }
 
     } catch (error) {
-      console.error('[SRSService] Publish Failed:', error);
       return { code: -1, sdp: '', sessionid: '' };
     }
   }
@@ -78,7 +74,6 @@ class SRSService {
    * Handle Play (Client requesting video from SRS Server)
    */
   public async play(streamUrl: string, offerSdp: string): Promise<{ code: number, sdp: string, sessionid: string }> {
-    console.log(`[SRSService] PLAY Request for ${streamUrl}`);
     
     try {
       const response = await fetch(`${this.SRS_API_BASE}/rtc/v1/play`, {
@@ -97,7 +92,6 @@ class SRSService {
       }
 
       const data = await response.json();
-      console.log(`[SRSService] PLAY Response:`, data);
 
       if (data.code === 0) {
         return {
@@ -110,7 +104,6 @@ class SRSService {
       }
 
     } catch (error) {
-      console.error('[SRSService] Play Failed:', error);
       return { code: -1, sdp: '', sessionid: '' };
     }
   }
@@ -119,7 +112,6 @@ class SRSService {
    * Stop a session by ID
    */
   public async stop(sessionId: string): Promise<{ code: number, desc: string }> {
-    console.log(`[SRSService] Stopping session ${sessionId}`);
     
     try {
       const response = await fetch(`${this.SRS_API_BASE}/rtc/v1/stop`, {
@@ -143,7 +135,6 @@ class SRSService {
       };
 
     } catch (error) {
-      console.error('[SRSService] Stop Failed:', error);
       return { code: -1, desc: "Failed to stop session" };
     }
   }
@@ -163,7 +154,6 @@ class SRSService {
       return data;
 
     } catch (error) {
-      console.error('[SRSService] Get Stats Failed:', error);
       return {
         id: streamId,
         clients: 0,

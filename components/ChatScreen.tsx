@@ -166,7 +166,6 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ user, onBack, isModal, currentU
             setMessages(fetchedMessages || []);
             setUserStatus(status);
         } catch (error) {
-            console.error("Failed to fetch initial chat data:", error);
         } finally {
             setIsLoading(false);
         }
@@ -316,7 +315,6 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ user, onBack, isModal, currentU
                 );
             }
         } catch (error) {
-            console.error("Failed to send message:", error);
             // Revert optimistic update on failure, or show failed status
             setMessages(prev =>
                 prev.map(msg =>
@@ -338,12 +336,10 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ user, onBack, isModal, currentU
                     : msg
             ));
         } catch (error) {
-            console.error('❌ Erro ao apagar mensagem:', error);
         }
     };
 
     const handleDeleteAllMessages = async () => {
-        console.log('🗑️ Apagando mensagens diretamente');
         
         try {
             // Apagar todas as mensagens do usuário atual
@@ -362,12 +358,10 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ user, onBack, isModal, currentU
             
             setIsActionsModalOpen(false);
         } catch (error) {
-            console.error('❌ Erro ao apagar mensagens:', error);
         }
     };
 
     const handleViewImage = (clickedUrl: string) => {
-        console.log('🖼️ Clique na imagem - Abrindo imediatamente:', clickedUrl);
         
         // Criar photoFeed apenas com a imagem clicada para performance
         const photoFeed: FeedPhoto[] = [{
@@ -378,13 +372,10 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ user, onBack, isModal, currentU
             isLiked: false,
         }];
 
-        console.log('🚀 Abrindo visualização imediata');
 
         try {
             onOpenPhotoViewer(photoFeed, 0);
-            console.log('✅ Visualização aberta com sucesso');
         } catch (error) {
-            console.error('❌ Erro ao abrir visualização:', error);
         }
     };
 

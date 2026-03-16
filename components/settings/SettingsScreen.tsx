@@ -56,7 +56,6 @@ const MainSettingsPage: React.FC<{ navigateTo: (page: string) => void; onLogout:
     // Simplificado - sem database ou websocket para navegação isolada
     const simulateLiveNotification = () => {
         // Função desabilitada para navegação isolada
-        console.log('Live notification simulation disabled');
     };
 
     const menuItems = [

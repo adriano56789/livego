@@ -22,7 +22,7 @@ const VideoScreen: React.FC<VideoScreenProps> = ({ onViewProfile, onOpenPhotoVie
       .then(data => {
         setFeed(data || []);
       })
-      .catch(console.error)
+      .catch(() => {})
       .finally(() => setIsLoading(false));
   }, []);
 

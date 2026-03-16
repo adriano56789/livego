@@ -20,7 +20,7 @@ const MyLevelScreen: React.FC<MyLevelScreenProps> = ({ onClose, currentUser }) =
       setIsLoading(true);
       api.getLevelInfo(currentUser.id)
         .then(setLevelInfo)
-        .catch(err => console.error("Failed to load level info:", err))
+        .catch(() => {})
         .finally(() => setIsLoading(false));
     }
   }, [currentUser]);

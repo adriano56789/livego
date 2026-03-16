@@ -78,11 +78,9 @@ const FullScreenGiftAnimation: React.FC<{ payload: GiftPayload | null; onEnd: ()
             audio.volume = 0.5;
             audio.play().catch(e => {
                 // Silenciosamente ignorar erro de áudio sem afetar animação
-                console.warn("Áudio não disponível para presente:", gift.name);
             });
         } catch (error) {
             // Ignorar completamente erros de áudio
-            console.warn("Erro ao carregar áudio:", error);
         }
 
         // Determinar duração

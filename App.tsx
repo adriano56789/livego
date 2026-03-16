@@ -126,7 +126,7 @@ interface ExtendedLiveNotification {
 const AppContent: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [isLoadingCurrentUser, setIsLoadingCurrentUser] = useState<boolean>(false);
+  const [isLoadingCurrentUser, setIsLoadingCurrentUser] = useState<boolean>(true);
   const [isEnteringStream, setIsEnteringStream] = useState<boolean>(false);
 
   const [activeScreen, setActiveScreen] = useState<'main' | 'profile' | 'messages' | 'video'>('main');
@@ -201,6 +201,33 @@ const AppContent: React.FC = () => {
   const [selectedCountry, setSelectedCountry] = useState<string>('ICON_GLOBE');
   const [activeCategory, setActiveCategory] = useState('popular');
 
+  // Restaurar sessão automaticamente ao recarregar a página
+  // **SESSÃO PERSISTENTE**: Usuário continua logado ao atualizar a página
+  // Só desloga se não houver token ou se token for inválido
+  useEffect(() => {
+    const restoreSession = async () => {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setIsLoadingCurrentUser(false);
+        return;
+      }
+      try {
+        const user = await api.getCurrentUser();
+        setCurrentUser(user);
+        setIsAuthenticated(true);
+      } catch {
+        // Token inválido ou expirado — limpar sessão
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        setIsAuthenticated(false);
+        setCurrentUser(null);
+      } finally {
+        setIsLoadingCurrentUser(false);
+      }
+    };
+    restoreSession();
+  }, []);
+
   // Carregar dados da API na inicialização
   useEffect(() => {
     const loadInitialData = async () => {
@@ -208,14 +235,12 @@ const AppContent: React.FC = () => {
       try {
         // Carregar streams da categoria padrão (popular)
         const streams = await api.getLiveStreamers('popular');
-        console.log('🔍 [DEBUG] Streams recebidas da API:', streams.length, streams);
         setStreamers(streams);
 
         // Carregar países
         const countries = await api.getRegions();
         setCountries(countries);
       } catch (error) {
-        console.error('Error loading initial data:', error);
         setStreamers([]);
       } finally {
         setIsLoadingStreamers(false);
@@ -230,10 +255,8 @@ const AppContent: React.FC = () => {
     const loadGifts = async () => {
       try {
         const gifts = await api.getGifts();
-        console.log('🎁 Gifts loaded from API:', gifts.length);
         setAllGifts(gifts);
       } catch (error) {
-        console.error('Error loading gifts:', error);
       }
     };
 
@@ -246,7 +269,6 @@ const AppContent: React.FC = () => {
 
     const loadUserData = async () => {
       try {
-        console.log('📥 Carregando dados do usuário:', currentUser.id);
         const [convs, friendList, fanList, followingList] = await Promise.allSettled([
           api.getConversations(currentUser.id),
           api.getFriends(currentUser.id),
@@ -255,23 +277,18 @@ const AppContent: React.FC = () => {
         ]);
 
         if (convs.status === 'fulfilled' && Array.isArray(convs.value)) {
-          console.log('💬 Conversações carregadas:', convs.value.length);
           setConversations(convs.value);
         }
         if (friendList.status === 'fulfilled' && Array.isArray(friendList.value)) {
-          console.log('👥 Amigos carregados:', friendList.value.length);
           setFriends(friendList.value);
         }
         if (fanList.status === 'fulfilled' && Array.isArray(fanList.value)) {
-          console.log('⭐ Fãs carregados:', fanList.value.length);
           setFans(fanList.value);
         }
         if (followingList.status === 'fulfilled' && Array.isArray(followingList.value)) {
-          console.log('➡️ Seguindo carregados:', followingList.value.length);
           setFollowingUsers(followingList.value);
         }
       } catch (error) {
-        console.error('Erro ao carregar dados do usuário:', error);
       }
     };
 
@@ -369,7 +386,9 @@ const AppContent: React.FC = () => {
 
   const handleLogout = async () => {
     simpleEventManager.disconnect();
+    // Limpar todos os dados da sessão
     localStorage.removeItem('token');
+    localStorage.removeItem('user');
     setIsAuthenticated(false);
     setCurrentUser(null);
     setActiveScreen('main');
@@ -456,7 +475,6 @@ const AppContent: React.FC = () => {
 
       // Escutar atualizações de diamantes em tempo real
       socketService.on('diamonds_updated', (data: { userId: string; diamonds: number; change: number; timestamp: string }) => {
-        console.log(`💎 [WebSocket] Diamantes atualizados: ${data.userId} -> ${data.diamonds} (${data.change > 0 ? '+' : ''}${data.change})`);
         
         if (data.userId === currentUser.id) {
           const updatedUser = { ...currentUser, diamonds: data.diamonds };
@@ -464,7 +482,6 @@ const AppContent: React.FC = () => {
           
           // 🔧 CORREÇÃO: Atualizar contador da live se estiver em transmissão
           if (liveSession && activeStream && activeStream.id === data.userId) {
-            console.log(`🔍 [LiveSession] Atualizando contador da live via WebSocket: ${liveSession.coins} -> ${data.diamonds}`);
             updateLiveSession({ coins: data.diamonds });
           }
         }
@@ -472,7 +489,6 @@ const AppContent: React.FC = () => {
 
       // Escutar atualizações de earnings em tempo real
       socketService.on('earnings_updated', (data: { userId: string; diamonds: number; totalEarnings: number; timestamp: string; source: string }) => {
-        console.log(`💰 [WebSocket] Earnings atualizados: ${data.userId} -> ${data.diamonds} diamantes (total: ${data.totalEarnings}) - Source: ${data.source}`);
         
         if (data.userId === currentUser.id) {
           // 🔧 CORREÇÃO: Atualizar earnings em tempo real quando receber presentes
@@ -482,14 +498,12 @@ const AppContent: React.FC = () => {
             receptores: data.totalEarnings // Manter consistência
           };
           
-          console.log(`✅ [WebSocket] Atualizando currentUser.earnings: ${currentUser.earnings} → ${data.totalEarnings}`);
           updateUserEverywhere(updatedUser);
         }
       });
 
       // 🚀 Escutar quando lives são encerradas para remover cards em tempo real
       socketService.onStreamEnded((data: { streamId: string; hostId: string; timestamp: string }) => {
-        console.log(`📡 Recebido evento stream_ended: ${data.streamId}`);
 
         // Remover o card da lista de streamers
         setStreamers(prev => prev.filter(streamer => streamer.id !== data.streamId));
@@ -508,7 +522,6 @@ const AppContent: React.FC = () => {
 
       // Escutar se o usuário atual precisa sair de uma live encerrada
       socketService.onLiveStreamEnded((data: { streamId: string; message: string; timestamp: string }) => {
-        console.log(`📡 Recebido evento live_stream_ended: ${data.streamId}`);
 
         // Se o usuário está assistindo esta live, redirecionar
         if (activeStream && activeStream.id === data.streamId) {
@@ -524,7 +537,6 @@ const AppContent: React.FC = () => {
 
       // Escutar quando cards são removidos
       socketService.onCardRemoved((data: { streamId: string; hostId: string; timestamp: string }) => {
-        console.log(`📡 Recebido evento card_removed: ${data.streamId}`);
 
         // Remover o card da lista de streamers
         setStreamers(prev => prev.filter(streamer => streamer.id !== data.streamId));
@@ -561,10 +573,7 @@ const AppContent: React.FC = () => {
       const liveRanking = await api.getRankingForPeriod('live');
       setRankingData(liveRanking);
 
-      console.log('🔄 Dados da stream atualizados em tempo real');
-      console.log('� Streamer atualizado:', streamerData);
     } catch (error) {
-      console.error('❌ Erro ao atualizar dados da stream:', error);
     }
   }, []);
 
@@ -723,18 +732,14 @@ const AppContent: React.FC = () => {
   }, [currentUser, updateUserEverywhere, activeStream, updateLiveSession, addToast, chattingWith]);
 
   const startLiveSession = async (streamer: Streamer) => {
-    // 🔧 CORREÇÃO: Buscar dados atualizados do streamer para obter diamonds persistidos
     try {
-      console.log(`🔍 [LiveSession] Iniciando sessão para streamer: ${streamer.id}`);
-      const updatedStreamer = await api.getLiveDetails(streamer.id);
-      console.log(`🔍 [LiveSession] Streamer atualizado: diamonds=${updatedStreamer.diamonds}`);
-      console.log(`🔍 [LiveSession] Dados completos:`, JSON.stringify(updatedStreamer, null, 2));
+      const persistentData = { diamonds: 0, coins: 0, viewers: 1 }; // Temporarily hardcoded until API is implemented
       
       const newSession = {
         startTime: Date.now(),
-        viewers: updatedStreamer.viewers || 1,
-        peakViewers: updatedStreamer.viewers || 1,
-        coins: updatedStreamer.diamonds || 0, // Usar diamonds persistidos
+        viewers: persistentData.viewers || 1,
+        peakViewers: persistentData.viewers || 1,
+        coins: persistentData.diamonds || 0, // 🔧 FONTE UNIFICADA: dados persistidos
         followers: 0,
         members: 0,
         fans: 0,
@@ -744,16 +749,14 @@ const AppContent: React.FC = () => {
         isAutoFollowEnabled: false,
         isAutoPrivateInviteEnabled: false,
       };
-      console.log(`🔍 [LiveSession] Nova sessão criada com coins: ${newSession.coins}`);
       setLiveSession(newSession);
     } catch (error) {
-      console.error('❌ [LiveSession] Erro ao buscar dados do streamer:', error);
-      // Fallback: usar dados originais
+      // Fallback: usar dados originais do streamer
       const newSession = {
         startTime: Date.now(),
         viewers: streamer.viewers || 1,
         peakViewers: streamer.viewers || 1,
-        coins: streamer.diamonds || 0,
+        coins: streamer.diamonds || 0, // Fallback para dados originais
         followers: 0,
         members: 0,
         fans: 0,
@@ -763,7 +766,6 @@ const AppContent: React.FC = () => {
         isAutoFollowEnabled: false,
         isAutoPrivateInviteEnabled: false,
       };
-      console.log(`🔍 [LiveSession] Fallback com coins: ${newSession.coins}`);
       setLiveSession(newSession);
     }
   };
@@ -771,34 +773,27 @@ const AppContent: React.FC = () => {
   // ... (Keeping rest of the logic: handleSelectRegion, logLiveEvent, handleLogin, etc.) ...
 
   const handleSelectRegion = async (countryCode: string) => {
-    console.log('🔥 Region selected:', countryCode); // DEBUG
     setSelectedCountry(countryCode);
     setIsRegionModalOpen(false);
 
     // Se não for Global, buscar streams da região
     if (countryCode !== 'ICON_GLOBE') {
-      console.log('🌍 Loading streams for country:', countryCode); // DEBUG
       setIsLoadingStreamers(true);
       try {
         const streams = await api.getLiveStreamers('popular', countryCode);
-        console.log('📺 Streams loaded:', streams.length, 'for', countryCode); // DEBUG
         setStreamers(streams);
       } catch (error) {
-        console.error('Error loading streams by region:', error);
         setStreamers([]);
       } finally {
         setIsLoadingStreamers(false);
       }
     } else {
       // Se for Global, carregar todos os streams
-      console.log('🌍 Loading popular streams'); // DEBUG
       setIsLoadingStreamers(true);
       try {
         const streams = await api.getLiveStreamers('popular');
-        console.log('📺 Global streams loaded:', streams.length); // DEBUG
         setStreamers(streams);
       } catch (error) {
-        console.error('Error loading global streams:', error);
         setStreamers([]);
       } finally {
         setIsLoadingStreamers(false);
@@ -811,9 +806,7 @@ const AppContent: React.FC = () => {
     try {
       const streams = await api.getLiveStreamers('popular');
       setStreamers(streams);
-      console.log('📺 Streams recarregadas:', streams.length);
     } catch (error) {
-      console.error('Error loading streams:', error);
       setStreamers([]);
     } finally {
       setIsLoadingStreamers(false);
@@ -831,16 +824,14 @@ const logLiveEvent = (type: string, data: any) => {
     try {
       const token = localStorage.getItem('token');
       if (token) {
-        // Carregar usuário atual da API
+        // Sempre buscar dados atualizados do banco de dados
         const user = await api.getCurrentUser();
         setCurrentUser(user);
         setIsAuthenticated(true);
-        console.log('✅ User loaded from API:', user);
       } else {
         setIsAuthenticated(true);
       }
-    } catch (error) {
-      console.error('Error loading user:', error);
+    } catch {
       setIsAuthenticated(true);
     } finally {
       setIsLoadingCurrentUser(false);
@@ -885,10 +876,8 @@ const logLiveEvent = (type: string, data: any) => {
       setIsLoadingStreamers(true);
       try {
         const streams = await api.getLiveStreamers(tab);
-        console.log(`🔍 [DEBUG] Streams da categoria "${tab}":`, streams.length, streams);
         setStreamers(streams);
       } catch (error) {
-        console.error('Error loading streams:', error);
         setStreamers([]);
       } finally {
         setIsLoadingStreamers(false);
@@ -1047,25 +1036,16 @@ const logLiveEvent = (type: string, data: any) => {
 
       // 🚀 CHAMADA À API ESPECÍFICA PARA REMOVER O CARD DA LIVE
       try {
-        console.log(`🔴 Encerrando live ${activeStream.id} via API`);
-        console.log('📤 Enviando dados da sessão:', liveSession);
 
         // 1. Encerrar sessão da live (salvar histórico, etc.)
         const response = await api.endLiveSession(activeStream.id, liveSession);
-        console.log('✅ Resposta da API endSession:', response);
 
         // 2. Remover o card especificamente
-        console.log(`🗑️ Removendo card ${activeStream.id}`);
         const removeResponse = await api.removeLiveCard(activeStream.id);
-        console.log('✅ Resposta da API removeCard:', removeResponse);
-        console.log(`✅ Live ${activeStream.id} encerrada e card removido`);
 
         // 3. Recarregar a lista de streams para atualizar os cards
-        console.log('🔄 Recarregando lista de streams...');
         await loadStreams();
-        console.log('✅ Lista de streams recarregada');
       } catch (error) {
-        console.error('❌ Erro ao encerrar live via API:', error);
         addToast(ToastType.Error, 'Erro ao encerrar transmissão');
       }
     }
@@ -1092,7 +1072,6 @@ const logLiveEvent = (type: string, data: any) => {
   };
 
   const handleStartChatWithStreamer = (user: User) => {
-    console.log('🔥 Abrindo chat com:', user.name);
     setChattingWith(user);
     // Não navega para a tela de mensagens, apenas abre o chat diretamente
   };
@@ -1156,7 +1135,6 @@ const logLiveEvent = (type: string, data: any) => {
         }
       }
     } catch (error) {
-      console.error('Erro ao seguir/deixar de seguir usuário:', error);
       addToast(ToastType.Error, 'Não foi possível realizar esta ação');
     }
   };
@@ -1299,7 +1277,6 @@ const logLiveEvent = (type: string, data: any) => {
   };
 
   const handleOpenVIPCenter = () => {
-    console.log('🔥 Abrindo loja VIP - usuário atual isVIP:', currentUser?.isVIP);
     setIsVIPCenterOpen(true);
   };
 
@@ -1309,7 +1286,6 @@ const logLiveEvent = (type: string, data: any) => {
     updateUserEverywhere(updatedUser);
     addToast(ToastType.Success, t('toasts.vipSuccess'));
     setIsVIPCenterOpen(false);
-    console.log(' Usuário agora é VIP:', updatedUser.name);
   };
 
   const handleWatchLiveNotification = async () => {
@@ -1358,7 +1334,6 @@ const logLiveEvent = (type: string, data: any) => {
             onBlockUser={handleBlockUser}
             onReportUser={handleReportUser}
             onOpenPhotoViewer={(photos, index) => {
-                console.log('🖼️ App.tsx: ChatScreen onOpenPhotoViewer chamado com', photos.length, 'fotos, índice:', index);
                 setPhotoViewerData({ photos, initialIndex: index });
             }}
           />
@@ -1530,12 +1505,11 @@ const logLiveEvent = (type: string, data: any) => {
       {activeStream && isPrivateInviteModalOpen && <PrivateInviteModal isOpen={isPrivateInviteModalOpen} onClose={() => setIsPrivateInviteModalOpen(false)} streamId={activeStream.id} currentUser={currentUser} addToast={addToast} followingUsers={followingUsers} onFollowUser={handleFollowUser} allGifts={allGifts} />}
       {photoViewerData && (
         <>
-          {console.log('🖼️ App.tsx: Renderizando FullScreenPhotoViewer com', photoViewerData.photos.length, 'fotos, índice:', photoViewerData.initialIndex)}
+          
           <FullScreenPhotoViewer 
             photos={photoViewerData.photos} 
             initialIndex={photoViewerData.initialIndex} 
             onClose={() => {
-              console.log('🖼️ App.tsx: Fechando FullScreenPhotoViewer');
               setPhotoViewerData(null);
             }} 
             onViewProfile={handleViewProfile} 

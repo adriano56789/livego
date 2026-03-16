@@ -22,7 +22,6 @@ const LiveStreamManualModal: React.FC<LiveStreamManualModalProps> = ({ onClose }
         const data = await api.getStreamManual();
         setManualContent(data || []);
       } catch (error) {
-        console.error("Failed to fetch live stream manual:", error);
       }
     };
     fetchManual();

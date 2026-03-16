@@ -31,15 +31,12 @@ const PrivateInviteModal: React.FC<PrivateInviteModalProps> = ({ isOpen, onClose
       setIsLoading(true);
       api.getGiftSendersForStream(streamId)
         .then(data => {
-          console.log(' [DEBUG] API retornou:', data);
           
           if (!data || !data.gifts) {
-            console.log(' [DEBUG] API não retornou dados válidos');
             setEligibleUsers([]);
             return;
           }
           
-          console.log(` [DEBUG] ${data.gifts.length} usuários com presentes encontrados`);
           
           // Converter novo formato da API para o formato esperado pelo componente
           const convertedData = (data.gifts || []).map((user: any) => ({
@@ -54,12 +51,10 @@ const PrivateInviteModal: React.FC<PrivateInviteModalProps> = ({ isOpen, onClose
             }))
           }));
           
-          console.log(' [DEBUG] Dados convertidos:', convertedData);
           setEligibleUsers(convertedData);
         })
         .catch(err => {
           addToast(ToastType.Error, "Falha ao carregar usuários elegíveis.");
-          console.error(err);
         })
         .finally(() => setIsLoading(false));
     } else {
@@ -80,7 +75,6 @@ const PrivateInviteModal: React.FC<PrivateInviteModalProps> = ({ isOpen, onClose
     
     const handleGiftUpdate = (data: any) => {
       if (data.streamId === streamId) {
-        console.log('📡 [WEBSOCKET] Novo presente recebido, recarregando modal...');
         // Recarregar lista de elegíveis
         api.getGiftSendersForStream(streamId)
           .then(response => {
@@ -100,7 +94,6 @@ const PrivateInviteModal: React.FC<PrivateInviteModalProps> = ({ isOpen, onClose
             }
           })
           .catch(err => {
-            console.error('Erro ao recarregar presentes:', err);
           });
       }
     };

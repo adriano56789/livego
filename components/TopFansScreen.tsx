@@ -57,7 +57,6 @@ const TopFansScreen: React.FC<{ onBack: () => void; onViewProfile: (user: User) 
                 setIsLoading(false);
             })
             .catch(err => {
-                console.error(err);
                 setIsLoading(false);
             });
     }, []);

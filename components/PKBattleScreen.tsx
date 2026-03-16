@@ -351,7 +351,6 @@ export default function PKBattleScreen({
         };
 
         const handleNewGift = (payload: GiftPayload) => {
-            console.log('[PK BATTLE] New gift received via WS:', payload);
             if (payload.roomId !== streamer.id) return;
         
             // 1. Add to Chat

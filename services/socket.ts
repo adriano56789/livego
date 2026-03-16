@@ -10,7 +10,6 @@ class SocketService {
     connect() {
         if (this.socket?.connected) return;
 
-        console.log(`[WebSocket] Connecting to ${WS_URL}...`);
 
         this.socket = io(WS_URL, {
             transports: ['websocket', 'polling'], // Fallback to polling if necessary
@@ -20,18 +19,15 @@ class SocketService {
         });
 
         this.socket.on('connect', () => {
-            console.log(`✅ [WebSocket] Connected globally with ID: ${this.socket?.id}`);
             
             // Iniciar heartbeat
             this.startHeartbeat();
         });
 
         this.socket.on('connect_error', (err) => {
-            console.error('❌ [WebSocket] Connection Error:', err.message);
         });
 
         this.socket.on('disconnect', (reason) => {
-            console.warn(`⚠️ [WebSocket] Disconnected: ${reason}`);
             this.stopHeartbeat();
         });
 
@@ -66,7 +62,6 @@ class SocketService {
         if (this.socket) {
             this.socket.disconnect();
             this.socket = null;
-            console.log('[WebSocket] Disconnected manually');
         }
     }
 

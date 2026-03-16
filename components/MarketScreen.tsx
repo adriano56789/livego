@@ -71,7 +71,6 @@ const MarketScreen: React.FC<MarketScreenProps> = ({ onClose, user, updateUser, 
         addToast(ToastType.Success, 'Quadro comprado com sucesso!');
       }
     } catch (error: any) {
-      console.error('Erro ao comprar frame:', error);
       addToast(ToastType.Error, error.message || 'Erro ao comprar quadro');
     } finally {
       setIsActionLoading(false);

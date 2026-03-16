@@ -47,15 +47,10 @@ interface GanhosDisplayProps {
 }
 
 const GanhosDisplay: React.FC<GanhosDisplayProps> = ({ earnings }) => {
-    console.log(` [GanhosDisplay] Recebendo earnings: ${earnings}`);
-    console.log(` [GanhosDisplay] Type of earnings: ${typeof earnings}`);
-    console.log(` [GanhosDisplay] Is NaN: ${isNaN(earnings)}`);
-    console.log(` [GanhosDisplay] Is null/undefined: ${earnings == null}`);
     
     // CORREÇÃO: Simplificar para remover animação temporariamente
     const displayValue = earnings || 0;
     
-    console.log(` [GanhosDisplay] Valor final exibido: ${displayValue}`);
     
     const [isGlowing, setIsGlowing] = useState(false);
     const prevEarningsRef = useRef(earnings);

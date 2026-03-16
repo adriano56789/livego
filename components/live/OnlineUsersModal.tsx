@@ -77,16 +77,13 @@ const OnlineUsersModal: React.FC<OnlineUsersModalProps> = ({ onClose, streamId }
                     throw new Error('ID da stream inválido');
                 }
 
-                console.log('🔔 Buscando usuários online para stream:', streamId);
                 
                 const data = await api.getOnlineUsers(streamId);
                 
                 // Validar resposta da API
                 if (!data) {
-                    console.warn('⚠️ API retornou null/undefined, usando array vazio');
                     setUsers([]);
                 } else if (!Array.isArray(data)) {
-                    console.warn('⚠️ API não retornou array, dados:', data);
                     setUsers([]);
                 } else {
                     // Validar cada usuário
@@ -98,16 +95,13 @@ const OnlineUsersModal: React.FC<OnlineUsersModalProps> = ({ onClose, streamId }
                     );
                     
                     if (validUsers.length !== data.length) {
-                        console.warn(`⚠️ ${data.length - validUsers.length} usuários inválidos removidos`);
                     }
                     
                     setUsers(validUsers);
-                    console.log(`✅ ${validUsers.length} usuários carregados com sucesso`);
                 }
                 
                 setError(null);
             } catch (err) {
-                console.error('❌ Erro ao buscar usuários online:', err);
                 setError('Não foi possível carregar os usuários');
                 setUsers([]); // Garantir array vazio em caso de erro
             } finally {

@@ -49,7 +49,6 @@ export const GiftNotificationSettingsScreen: React.FC<{ onBack: () => void; user
                   }
               })
               .catch(err => {
-                  console.error("Failed to load gift notification settings:", err);
                   // Fallback to all enabled on error
                   const initialSettings = gifts.reduce((acc, gift) => ({ ...acc, [gift.name]: true }), {});
                   setEnabledGifts(initialSettings);

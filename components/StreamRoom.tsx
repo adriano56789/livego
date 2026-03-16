@@ -97,7 +97,6 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
     
     // Early validation for required props
     if (!streamer || !currentUser) {
-        console.error('[StreamRoom] Missing required props:', { streamer: !!streamer, currentUser: !!currentUser });
         return (
             <div className="absolute inset-0 bg-gray-900 text-white font-sans z-10 flex items-center justify-center">
                 <div className="text-center">
@@ -152,7 +151,6 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
                 const user = await api.getUser(streamer.hostId);
                 setStreamerUser(user);
             } catch (error) {
-                console.error("Failed to fetch streamer data:", error);
             }
         };
         fetchStreamerData();
@@ -218,11 +216,9 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
             videoEl.load();
 
             const onVideoReady = () => {
-                console.log("[StreamRoom] Video data loaded, playing...");
                 setIsVideoPlaying(true);
                 videoEl.play().catch(e => {
                     if (e.name !== 'AbortError') {
-                        console.warn("Autoplay prevented or failed:", e);
                     }
                 });
             };
@@ -232,14 +228,12 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
                 // Get the local stream we initialized in GoLiveScreen via WebRTCService
                 const localStream = webRTCService.getLocalStream();
                 if (localStream) {
-                    console.log("[StreamRoom] Attaching local stream to video element.");
                     videoEl.srcObject = localStream;
                     // Important: Broadcasters must mute their own video element to prevent echo/feedback
                     videoEl.muted = true;
                     videoEl.volume = 0;
                     videoEl.onloadeddata = onVideoReady;
                 } else {
-                    console.warn("[StreamRoom] Local stream not found in WebRTC service. Trying to recover...");
                     try {
                         // Emergency fallback: request camera again if lost
                         const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
@@ -247,12 +241,10 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
                         videoEl.muted = true;
                         videoEl.onloadeddata = onVideoReady;
                     } catch (e) {
-                        console.error("[StreamRoom] Failed to recover camera:", e);
                     }
                 }
             } else {
                 // Scenario 2: I am a Viewer
-                console.log("[StreamRoom] Starting WebRTC playback for viewer...");
                 
                 try {
                     // Construct the WebRTC URL for SRS
@@ -265,7 +257,6 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
                     const srsHost = 'livego.store'; // Should be env or from config
                     const webrtcUrl = `webrtc://${srsHost}/live/${streamer.id}`;
                     
-                    console.log(`[StreamRoom] Connecting to WebRTC: ${webrtcUrl}`);
                     
                     const remoteStream = await webRTCService.startPlay(webrtcUrl);
                     
@@ -277,52 +268,37 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
                          
                          // ✅ DEBUG: Verificar video element
                          videoEl.onloadedmetadata = () => {
-                             console.log('[VIDEO ELEMENT]', {
-                                 videoWidth: videoEl.videoWidth,
-                                 videoHeight: videoEl.videoHeight,
-                                 readyState: videoEl.readyState,
-                                 streamTracks: videoEl.srcObject?.getTracks().length,
-                                 isPlaying: !videoEl.paused
-                             });
                              
                              if (videoEl.videoWidth === 0) {
-                                 console.error('[VIDEO ERROR] Vídeo não carregado (width = 0)');
                              }
                          };
                          
                          videoEl.onerror = (e) => {
-                             console.error('[VIDEO ERROR]', e);
                          };
                          
                          // Auto-play might be blocked, ensure we try
                          try {
                              await videoEl.play();
                          } catch (e) {
-                             console.warn("Autoplay blocked, waiting for user interaction");
                          }
                     } else {
                          throw new Error("No remote stream returned");
                     }
                 } catch (e) {
-                    console.error("[StreamRoom] WebRTC Playback failed:", e);
                     // Continue with fallback without throwing to prevent breaking render
                     try {
                         if (streamer.demoVideoUrl) {
-                            console.log("[StreamRoom] Falling back to demo video.");
                             videoEl.src = streamer.demoVideoUrl;
                             videoEl.loop = true;
                             videoEl.muted = false;
                             videoEl.onloadeddata = onVideoReady;
                         } else if (streamer.playbackUrl && streamer.playbackUrl.includes('.flv')) {
                              // Implement flv.js player here if needed, or just log
-                             console.warn("[StreamRoom] FLV playback not implemented in this view yet.");
                         } else {
                             // Final fallback: show cover image
-                            console.log("[StreamRoom] No video source available, showing cover");
                             setIsVideoPlaying(false);
                         }
                     } catch (fallbackError) {
-                        console.error("[StreamRoom] Fallback also failed:", fallbackError);
                         setIsVideoPlaying(false);
                     }
                 }
@@ -350,12 +326,9 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
         const joinStreamOnce = async () => {
             if (!hasJoined) {
                 hasJoined = true;
-                console.log(`🎯 Executando joinStream uma vez para ${currentUser.id} na stream ${streamer.id}`);
                 const success = await api.joinStream(streamer.id, currentUser.id);
                 if (success) {
-                    console.log('✅ Usuário marcado como online');
                 } else {
-                    console.warn('⚠️ Falha ao marcar usuário como online');
                 }
             }
         };
@@ -367,7 +340,6 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
             if (!hasFetchedInitialUsers && !globalFetchControl.get(controlKey)) {
                 hasFetchedInitialUsers = true;
                 globalFetchControl.set(controlKey, true);
-                console.log(`🎯 Buscando usuários online uma vez para ${streamer.id}`);
                 
                 try {
                     const users = await api.getOnlineUsers(streamer.id);
@@ -398,7 +370,6 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
         
         // Escutar usuários entrando na stream
         socketService.onUserJoined((data) => {
-            console.log('👤 Usuário entrou na stream via WebSocket:', data.userName);
             // Adicionar usuário à lista de online users
             setOnlineUsers(prev => {
                 const exists = prev.find(u => u.id === data.userId);
@@ -421,7 +392,6 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
         
         // Escutar usuários saindo da stream
         socketService.onUserLeft((data) => {
-            console.log('👤 Usuário saiu da stream via WebSocket:', data.userName);
             // Remover usuário da lista de online users
             setOnlineUsers(prev => {
                 const updated = prev.filter(u => u.id !== data.userId);
@@ -432,7 +402,6 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
         
         // Escutar atualizações de contagem de viewers
         socketService.onViewersCountUpdated((data) => {
-            console.log('📊 Contagem de viewers atualizada via WebSocket:', data.count);
             updateLiveSession({ viewers: data.count });
         });
 
@@ -447,12 +416,9 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
             
             // Marcar usuário como offline ao sair da stream (apenas uma vez)
             if (hasJoined && !hasLeft) {
-                console.log(`🎯 Executando leaveStream uma vez para ${currentUser.id} da stream ${streamer.id}`);
                 api.leaveStream(streamer.id, currentUser.id).then(success => {
                     if (success) {
-                        console.log('✅ Usuário marcado como offline');
                     } else {
-                        console.warn('⚠️ Falha ao marcar usuário como offline');
                     }
                 });
             }
@@ -556,7 +522,6 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
             await api.updateStream(streamer.id, { isPrivate: newPrivacy });
             onStreamUpdate({ isPrivate: newPrivacy });
         } catch (error) {
-            console.error("Failed to update privacy:", error);
         }
     };
 
@@ -698,7 +663,6 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
                 throw new Error(error || "Failed to send gift on server");
             }
         } catch (error) {
-            console.error("Failed to send gift to server:", error);
             addToast(ToastType.Error, (error as Error).message || "Falha ao enviar o presente.");
             // Fetch the latest user data to revert diamond count on failure
             api.getCurrentUser().then(user => {
@@ -886,7 +850,6 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
                                     <GoldCoinWithGIcon className="w-4 h-4" />
                                     <span className="text-white font-semibold">{(() => {
                                         const coins = liveSession?.coins || 0;
-                                        console.log(`🔍 [StreamRoom] Renderizando contador: ${coins.toLocaleString()}`);
                                         return coins.toLocaleString();
                                     })()}</span>
                                 </button>
@@ -1010,7 +973,6 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
                         ) : (
                             <button onClick={(e) => { 
                                 e.stopPropagation(); 
-                                console.log('🔥 Clique no ícone de chat para:', streamerUser?.name || streamer.name);
                                 if (streamerUser) {
                                     onStartChatWithStreamer(streamerUser); 
                                 }

@@ -53,7 +53,6 @@ export class WebRTCService {
     const webrtcUrl = import.meta.env?.VITE_SRS_WEBRTC_URL || 'webrtc://localhost/live';
     this.currentStreamUrl = `${webrtcUrl}/${streamId}`;
     this.state = 'connecting';
-    console.log(`[WebRTC Service] Iniciando publicação para stream ${streamId} via ${webrtcUrl} (Retries: ${retryCount})`);
     
     try {
       // 1. Capturar mídia local
@@ -63,9 +62,7 @@ export class WebRTCService {
                 video: { width: 1280, height: 720, frameRate: 30 },
                 audio: true
               });
-              console.log('[WebRTC Service] Mídia local capturada com sucesso');
           } catch (e) {
-              console.error('[WebRTC Service] Falha ao capturar mídia local', e);
               throw new Error('Falha na captura de mídia');
           }
       }
@@ -81,7 +78,6 @@ export class WebRTCService {
 
       // Debug ICE State
       this.pc.oniceconnectionstatechange = () => {
-          console.log(`[WebRTC Service] Estado ICE: ${this.pc?.iceConnectionState}`);
       };
 
       // 3. Adicionar tracks
@@ -112,7 +108,6 @@ export class WebRTCService {
       const finalOfferSdp = this.pc.localDescription?.sdp;
       if (!finalOfferSdp) throw new Error('Falha ao gerar SDP offer');
 
-      console.log('[WebRTC Service] Offer gerado com ICE candidates');
 
       // 5. Enviar para nosso backend SRS
       const response = await api.publishWebRTC(this.currentStreamUrl, finalOfferSdp, streamKey);
@@ -129,7 +124,6 @@ export class WebRTCService {
           
           this.state = 'connected';
           this.startStatsMonitoring();
-          console.log('[WebRTC Service] Conexão de publish estabelecida');
       } else {
           throw new Error('Falha no handshake SRS');
       }
@@ -137,7 +131,6 @@ export class WebRTCService {
       return this.localStream;
 
     } catch (error) {
-      console.error('[WebRTC Service] Erro ao iniciar publish:', error);
       if (retryCount > 0) {
           await new Promise(r => setTimeout(r, 2000));
           return this.startPublish(streamId, streamKey, retryCount - 1);
@@ -155,7 +148,6 @@ export class WebRTCService {
      const webrtcUrl = import.meta.env?.VITE_SRS_WEBRTC_URL || 'webrtc://localhost/live';
      this.currentStreamUrl = `${webrtcUrl}/${streamId}`;
      this.state = 'connecting';
-     console.log(`[WebRTC Service] Iniciando playback da stream ${streamId} via ${webrtcUrl} (Retries: ${retryCount})`);
      
      try {
         this.cleanupPeerConnection();
@@ -170,7 +162,6 @@ export class WebRTCService {
 
         this.remoteStream = new MediaStream();
         this.pc.ontrack = (event) => {
-            console.log(`[WebRTC Service] Track recebido: ${event.track.kind}`);
             if (this.remoteStream) this.remoteStream.addTrack(event.track);
         };
 
@@ -208,7 +199,6 @@ export class WebRTCService {
              
              this.state = 'connected';
              this.startStatsMonitoring();
-             console.log('[WebRTC Service] Conexão de playback estabelecida');
         } else {
              throw new Error('Falha no handshake SRS para playback');
         }
@@ -216,7 +206,6 @@ export class WebRTCService {
         return this.remoteStream!;
 
      } catch (error) {
-        console.error('[WebRTC Service] Erro ao iniciar playback:', error);
         if (retryCount > 0) {
             await new Promise(r => setTimeout(r, 2000));
             return this.startPlay(streamId, retryCount - 1);
@@ -233,7 +222,6 @@ export class WebRTCService {
       if (!this.pc) return;
       this.pc.onconnectionstatechange = () => {
           const state = this.pc?.connectionState;
-          console.log(`[WebRTC Service] Connection State: ${state}`);
           if (state === "failed" || state === "closed") this.stopStatsMonitoring();
       };
   }

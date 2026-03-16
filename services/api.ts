@@ -22,7 +22,6 @@ const getCurrentUserId = () => {
             return userStorage?.state?.user?.id || userStorage?.id;
         }
     } catch (e) {
-        console.warn('Error reading user from storage', e);
     }
     return null;
 };
@@ -37,11 +36,9 @@ const callApi = async <T>(method: string, path: string, body?: any): Promise<T> 
     const requestKey = `${method}:${path}:${JSON.stringify(body || {})}`;
 
     if (method === 'GET' && inFlightRequests.has(requestKey)) {
-        console.log(`[API] Deduplicated request: ${method} ${path}`);
         return inFlightRequests.get(requestKey) as Promise<T>;
     }
 
-    console.log(`[API ${method}] ${path}`, body ? body : '');
 
     const requestPromise = (async () => {
         try {
@@ -79,18 +76,14 @@ const callApi = async <T>(method: string, path: string, body?: any): Promise<T> 
 
             // Tratar status 304 Not Modified - dados não modificados
             if (response.status === 304) {
-                console.log(`[API] 304 Not Modified for ${path} - data not modified`);
                 return response.data as T;
             }
 
-            console.log(`[API Response] ${path}:`, response.data);
             return response.data as T;
         } catch (error: any) {
-            console.error(`[API Fetch Failed] ${method} ${path}:`, error.response?.data || error.message);
 
             // Tratar status 304 Not Modified mesmo no bloco catch
             if (error.response?.status === 304) {
-                console.log(`[API] 304 Not Modified for ${path} - data not modified`);
                 return error.response?.data as T;
             }
 
@@ -200,10 +193,8 @@ export const api = {
     // --- Metadata & Catalog ---
     getRankingForPeriod: async (period: string): Promise<RankedUser[]> => {
         try {
-            console.log('🏆 API: Buscando ranking para período:', period);
 
             if (!period) {
-                console.warn('⚠️ API: período inválido');
                 return [];
             }
 
@@ -211,12 +202,10 @@ export const api = {
 
             // Garantir que sempre retorne um array válido
             if (!response) {
-                console.warn('⚠️ API: Resposta null/undefined');
                 return [];
             }
 
             if (!Array.isArray(response)) {
-                console.warn('⚠️ API: Resposta não é array', response);
                 return [];
             }
 
@@ -228,11 +217,9 @@ export const api = {
                 user.name
             );
 
-            console.log(`✅ API: ${validUsers.length} usuários válidos retornados`);
             return validUsers;
 
         } catch (error) {
-            console.error('❌ API: Erro em getRankingForPeriod:', error);
             return []; // Sempre retornar array vazio em caso de erro
         }
     },
@@ -275,22 +262,18 @@ export const api = {
     // --- Live Stream & Online Users ---
     joinStream: async (streamId: string, userId: string) => {
         try {
-            console.log(`👤 API: Usuário ${userId} entrando na stream ${streamId}`);
             const response = await callApi<{ success: boolean }>('POST', `/api/streams/${streamId}/join`, { userId });
             return response?.success || false;
         } catch (error) {
-            console.error('❌ API: Erro ao entrar na stream:', error);
             return false;
         }
     },
 
     leaveStream: async (streamId: string, userId: string) => {
         try {
-            console.log(`👤 API: Usuário ${userId} saindo da stream ${streamId}`);
             const response = await callApi<{ success: boolean }>('POST', `/api/streams/${streamId}/leave`, { userId });
             return response?.success || false;
         } catch (error) {
-            console.error('❌ API: Erro ao sair da stream:', error);
             return false;
         }
     },
@@ -308,10 +291,7 @@ export const api = {
     uploadStreamCover: (streamId: string, coverData: any) => callApi<{ success: boolean, stream: Streamer }>('POST', `/api/streams/${streamId}/cover`, coverData),
     getStreamManual: () => callApi<any[]>('GET', '/api/streams/manual'),
     getBeautyEffects: () => callApi<any>('GET', '/api/streams/effects'),
-    getOnlineUsers: async (streamId: string): Promise<(User & { value: number })[]> => {
-        console.warn('🚫 getOnlineUsers DESABILITADO - use WebSocket para atualizações');
-        return [];
-    },
+    getOnlineUsers: (streamId: string) => callApi<(User & { value: number })[]>('GET', `/api/streams/${streamId}/online-users`),
     endLiveSession: (streamId: string, sessionData: LiveSessionState) => callApi<{ success: boolean, user: User }>('POST', `/api/streams/${streamId}/end-session`, { session: sessionData }),
     removeLiveCard: (streamId: string) => callApi<{ success: boolean }>('DELETE', `/api/cards/${streamId}`),
     sendGift: (fromUserId: string, streamId: string, giftName: string, amount: number) => callApi<{ success: boolean; error?: string; updatedSender: User; updatedReceiver: User; }>('POST', `/api/streams/${streamId}/gift`, { fromUserId, giftName, amount }),

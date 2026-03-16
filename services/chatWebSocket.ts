@@ -8,14 +8,12 @@ class ChatWebSocket {
   private setupEventListeners() {
     // Status online/offline
     socketService.on('user_status_changed', (data: any) => {
-      console.log('🔔 Status do usuário mudou:', data);
       // Disparar evento customizado para componentes ouvirem
       window.dispatchEvent(new CustomEvent('userStatusChanged', { detail: data }));
     });
 
     // Novas mensagens de chat
     socketService.on('new_chat_message', (message: any) => {
-      console.log('💬 Nova mensagem recebida:', message);
       // Disparar evento customizado para componentes ouvirem
       window.dispatchEvent(new CustomEvent('newChatMessage', { detail: message }));
     });

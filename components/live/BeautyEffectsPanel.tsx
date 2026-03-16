@@ -43,7 +43,6 @@ const BeautyEffectsPanel: React.FC<BeautyEffectsPanelProps> = ({ onClose, curren
                     setSettings(data || {});
                 })
                 .catch(err => {
-                    console.error("Failed to fetch beauty settings:", err);
                     addToast(ToastType.Error, "Não foi possível carregar os efeitos de beleza.");
                 })
                 .finally(() => setIsLoading(false));

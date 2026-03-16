@@ -434,11 +434,39 @@ const cleanupInactiveUsers = async () => {
 // setInterval(cleanupInactiveUsers, 5 * 60 * 1000);
 console.log('🔧 Cleanup automático desabilitado para testes');
 
-// ROTA DESABILITADA - Parar polling repetitivo de usuários online
-// Usar apenas WebSocket para atualizações em tempo real
+// Rota para buscar usuários online em uma stream específica
 router.get('/streams/:id/online-users', async (req, res) => {
-    console.warn('🚫 Rota /streams/:id/online-users DESABILITADA - use WebSocket');
-    return res.json([]);
+    try {
+        const streamId = req.params.id;
+        if (!streamId) {
+            return res.status(400).json({ error: 'Stream ID inválido' });
+        }
+
+        // Buscar usuários marcados como online nesta stream no banco de dados
+        const onlineUsersInStream = await User.find({
+            isOnline: true,
+            currentStreamId: streamId
+        }).select('id name avatarUrl identification level activeFrameId frameExpiration enviados receptores');
+
+        // Enriquecer com valor de presentes enviados (valor = total de gifts enviados = enviados)
+        const usersWithValue = onlineUsersInStream.map(u => ({
+            id: u.id,
+            name: u.name,
+            avatarUrl: u.avatarUrl,
+            identification: u.identification,
+            level: u.level || 1,
+            activeFrameId: u.activeFrameId || null,
+            frameExpiration: u.frameExpiration || null,
+            value: u.enviados || 0
+        }));
+
+        // Ordenar por valor (quem mais enviou presentes aparece primeiro)
+        usersWithValue.sort((a, b) => b.value - a.value);
+
+        return res.json(usersWithValue);
+    } catch (error: any) {
+        return res.status(500).json({ error: error.message });
+    }
 });
 // Rota para atualizar status online do usuário
 // API para usuário entrar na live

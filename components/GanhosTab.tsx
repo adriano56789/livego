@@ -17,7 +17,7 @@ const GanhosTab: React.FC<GanhosTabProps> = ({ onConfigure, currentUser, updateU
     const { t } = useTranslation();
     const [earningsInfo, setEarningsInfo] = useState<{ available_diamonds: number; brl_value: number; conversion_rate: string } | null>(null);
     const [withdrawAmount, setWithdrawAmount] = useState<string>('');
-    const [calculation, setCalculation] = useState<{ gross_value: number; platform_fee: number; net_value: number } | null>(null);
+    const [calculation, setCalculation] = useState<{ diamonds: number; gross_brl: number; platform_fee_brl: number; net_brl: number; breakdown: { conversion: string; fee: string; final: string; } } | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isCalculating, setIsCalculating] = useState(false);
     const [isWithdrawing, setIsWithdrawing] = useState(false);
@@ -47,16 +47,26 @@ const GanhosTab: React.FC<GanhosTabProps> = ({ onConfigure, currentUser, updateU
     // Calculate withdrawal value in real-time as user types
     useEffect(() => {
         const amount = parseInt(withdrawAmount);
+        console.log(`🔍 [CALCULO] Valor digitado: ${amount}`);
+        
         if (!isNaN(amount) && amount > 0) {
             setIsCalculating(true);
             const timer = setTimeout(() => {
+                console.log(`🔍 [CALCULO] Chamando API para calcular: ${amount} diamantes`);
                 api.calculateWithdrawal(amount)
-                    .then(setCalculation)
-                    .catch(() => setCalculation(null))
+                    .then((result) => {
+                        console.log(`✅ [CALCULO] Resultado da API:`, result);
+                        setCalculation(result);
+                    })
+                    .catch((error) => {
+                        console.error(`❌ [CALCULO] Erro na API:`, error);
+                        setCalculation(null);
+                    })
                     .finally(() => setIsCalculating(false));
             }, 300); // Debounce
             return () => clearTimeout(timer);
         } else {
+            console.log(`🔍 [CALCULO] Valor inválido, limpando cálculo`);
             setCalculation(null);
         }
     }, [withdrawAmount]);
@@ -101,12 +111,18 @@ const GanhosTab: React.FC<GanhosTabProps> = ({ onConfigure, currentUser, updateU
     const formatCurrency = (value: number | undefined) => `R$ ${(value || 0).toFixed(2).replace('.', ',')}`;
 
     const displayData = calculation || {
-        gross_value: earningsInfo?.brl_value || 0,
-        platform_fee: 0, // Será calculado pela API
-        net_value: earningsInfo?.brl_value || 0 // Temporário, será calculado pela API
+        diamonds: earningsInfo?.available_diamonds || 0,
+        gross_brl: earningsInfo?.brl_value || 0,
+        platform_fee_brl: 0,
+        net_brl: earningsInfo?.brl_value || 0,
+        breakdown: {
+            conversion: `${earningsInfo?.available_diamonds || 0} diamantes = R$${(earningsInfo?.brl_value || 0).toFixed(2)}`,
+            fee: 'Taxa da plataforma (20%): R$0.00',
+            final: 'Valor a receber: R$0.00'
+        }
     };
     
-    const isWithdrawButtonDisabled = isWithdrawing || isCalculating || !calculation || calculation.net_value <= 0;
+    const isWithdrawButtonDisabled = isWithdrawing || isCalculating || !calculation || calculation.net_brl <= 0;
 
     if (isLoading) {
         return (
@@ -146,15 +162,15 @@ const GanhosTab: React.FC<GanhosTabProps> = ({ onConfigure, currentUser, updateU
             <div className="space-y-3 text-sm">
                 <div className="flex justify-between items-center">
                     <span className="text-gray-400">{t('wallet.grossValue')}</span>
-                    <span className="text-white">{isCalculating && withdrawAmount ? '...' : formatCurrency(displayData.gross_value)}</span>
+                    <span className="text-white">{isCalculating && withdrawAmount ? '...' : formatCurrency(displayData.gross_brl)}</span>
                 </div>
                 <div className="flex justify-between items-center">
                     <span className="text-gray-400">{t('wallet.platformFee')}</span>
-                    <span className="text-gray-400">- {isCalculating && withdrawAmount ? '...' : formatCurrency(displayData.platform_fee)}</span>
+                    <span className="text-gray-400">- {isCalculating && withdrawAmount ? '...' : formatCurrency(displayData.platform_fee_brl)}</span>
                 </div>
                 <div className="flex justify-between items-center font-bold text-base">
                     <span className="text-white">{t('wallet.netValue')}</span>
-                    <span className="text-green-500">{isCalculating && withdrawAmount ? '...' : formatCurrency(displayData.net_value)}</span>
+                    <span className="text-green-500">{isCalculating && withdrawAmount ? '...' : formatCurrency(displayData.net_brl)}</span>
                 </div>
             </div>
 

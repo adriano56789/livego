@@ -124,7 +124,6 @@ const ConfirmPurchaseScreen: React.FC<ConfirmPurchaseScreenProps> = ({ onClose, 
                   setIsLoadingPix(false);
               }
           } catch (error) {
-              console.error("Failed to initialize order:", error);
               addToast(ToastType.Error, "Erro ao iniciar pedido.");
               setIsLoadingPix(false);
           }
@@ -154,7 +153,6 @@ const ConfirmPurchaseScreen: React.FC<ConfirmPurchaseScreenProps> = ({ onClose, 
                     addToast(ToastType.Success, "Pagamento via Pix identificado!");
                     setTimeout(() => onConfirmPurchase(packageDetails), 1500);
                 } catch (e) {
-                    console.error("Auto-confirmation failed", e);
                 }
             }
         }, 10000);
@@ -210,7 +208,6 @@ const ConfirmPurchaseScreen: React.FC<ConfirmPurchaseScreenProps> = ({ onClose, 
                 throw new Error("Payment declined");
             }
         } catch (error) {
-            console.error("Payment failed", error);
             addToast(ToastType.Error, "Pagamento falhou.");
         } finally {
             setIsProcessing(false);

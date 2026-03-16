@@ -67,7 +67,6 @@ const EditProfileScreen: React.FC<EditProfileScreenProps> = ({ user, onBack, onS
               const images = await api.profile.getImages();
               if (images) setFormData(prev => ({ ...prev, obras: images }));
           } catch(e) {
-              console.error("Failed to fetch images", e);
           }
       };
       fetchImages();
@@ -86,7 +85,6 @@ const EditProfileScreen: React.FC<EditProfileScreenProps> = ({ user, onBack, onS
           setFormData(prev => ({ ...prev, name: value }));
           setEditingField(null);
       } catch (error) {
-          console.error("Failed to update nickname", error);
       }
   };
 
@@ -97,7 +95,6 @@ const EditProfileScreen: React.FC<EditProfileScreenProps> = ({ user, onBack, onS
           setFormData(prev => ({ ...prev, gender: value }));
           setEditingField(null);
       } catch (error) {
-          console.error("Failed to update gender", error);
       }
   };
 
@@ -108,7 +105,6 @@ const EditProfileScreen: React.FC<EditProfileScreenProps> = ({ user, onBack, onS
           setFormData(prev => ({ ...prev, birthday: value, age: newAge }));
           setEditingField(null);
       } catch (error) {
-           console.error("Failed to update birthday", error);
       }
   };
 
@@ -118,7 +114,6 @@ const EditProfileScreen: React.FC<EditProfileScreenProps> = ({ user, onBack, onS
           setFormData(prev => ({ ...prev, bio: value }));
           setEditingField(null);
       } catch (error) {
-          console.error("Failed to update bio", error);
       }
   };
 
@@ -128,7 +123,6 @@ const EditProfileScreen: React.FC<EditProfileScreenProps> = ({ user, onBack, onS
           setFormData(prev => ({ ...prev, residence: value }));
           setEditingField(null);
       } catch (error) {
-          console.error("Failed to update residence", error);
       }
   };
 
@@ -138,7 +132,6 @@ const EditProfileScreen: React.FC<EditProfileScreenProps> = ({ user, onBack, onS
           setFormData(prev => ({ ...prev, emotional_status: value }));
           setEditingField(null);
       } catch (error) {
-          console.error("Failed to update emotional status", error);
       }
   };
 
@@ -148,7 +141,6 @@ const EditProfileScreen: React.FC<EditProfileScreenProps> = ({ user, onBack, onS
           setFormData(prev => ({ ...prev, tags: value }));
           setEditingField(null);
       } catch (error) {
-          console.error("Failed to update tags", error);
       }
   };
 
@@ -158,7 +150,6 @@ const EditProfileScreen: React.FC<EditProfileScreenProps> = ({ user, onBack, onS
           setFormData(prev => ({ ...prev, profession: value }));
           setEditingField(null);
       } catch (error) {
-          console.error("Failed to update profession", error);
       }
   };
 
@@ -218,7 +209,6 @@ const EditProfileScreen: React.FC<EditProfileScreenProps> = ({ user, onBack, onS
                       setFormData(prev => ({ ...prev, obras: newObras, avatarUrl: newAvatarUrl }));
                   }
               } catch(e) {
-                  console.error("Upload failed", e);
               }
           }
       };
@@ -247,7 +237,6 @@ const EditProfileScreen: React.FC<EditProfileScreenProps> = ({ user, onBack, onS
                setFormData(prev => ({ ...prev, obras: newObras }));
           }
       } catch (error) {
-          console.error("Failed to delete image", error);
       }
   };
 
@@ -278,7 +267,6 @@ const EditProfileScreen: React.FC<EditProfileScreenProps> = ({ user, onBack, onS
             await api.updateProfile(user.id, { avatarUrl: newAvatarUrl });
         }
     } catch (error) {
-        console.error("Failed to reorder images", error);
     }
   };
 

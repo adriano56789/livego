@@ -55,9 +55,6 @@ export const ProtectionAgent = {
     logBlock: (method: string, path: string, reason: string) => {
         const timestamp = new Date().toLocaleTimeString();
         console.group(`%c⛔ [AGENTE DE PROTEÇÃO] AÇÃO BLOQUEADA - ${timestamp}`, 'background: #7f1d1d; color: #fff; padding: 4px; border-radius: 4px; font-weight: bold; font-size: 12px;');
-        console.error(`%cRota Alvo: ${method} ${path}`, 'font-weight: bold;');
-        console.warn(`%cMotivo: ${reason}`, 'color: #fca5a5;');
-        console.log(`%cO agente impediu que esta operação afetasse o banco de dados.`, 'color: #e5e7eb;');
         console.groupEnd();
     }
 };

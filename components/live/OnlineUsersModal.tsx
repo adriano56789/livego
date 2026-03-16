@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { CloseIcon, ActionIcon, YellowDiamondIcon, CrownIcon, UserIcon } from '../icons';
 import { User } from '../../types';
 import { api } from '../../services/api';
+import { socketService } from '../../services/socket';
 import { LoadingSpinner } from '../Loading';
 
 interface OnlineUsersModalProps {
@@ -16,20 +17,19 @@ const UserItem: React.FC<{ user: User & { value: number }; rank: number }> = ({ 
         if (rank === 3) return <div className="w-6 h-6 flex items-center justify-center font-bold text-yellow-700 bg-yellow-900/50 rounded-full text-sm">3</div>;
         return <span className="w-6 text-center text-lg font-semibold text-gray-400">{rank}</span>;
     };
-    
-    // Proteção contra dados inválidos
+
     if (!user || !user.id) {
         return null;
     }
-    
+
     return (
         <div className="flex items-center justify-between p-3">
             <div className="flex items-center space-x-3">
                 <div className="w-8 flex justify-center">{getRankIcon()}</div>
                 <div className="relative">
-                    <img 
-                        src={user.avatarUrl || 'https://picsum.photos/seed/default-avatar/200/200.jpg'} 
-                        alt={user.name || 'Usuário'} 
+                    <img
+                        src={user.avatarUrl || 'https://picsum.photos/seed/default-avatar/200/200.jpg'}
+                        alt={user.name || 'Usuário'}
                         className="w-12 h-12 rounded-full object-cover"
                         onError={(e) => {
                             e.currentTarget.src = 'https://picsum.photos/seed/fallback-avatar/200/200.jpg';
@@ -55,77 +55,60 @@ const OnlineUsersModal: React.FC<OnlineUsersModalProps> = ({ onClose, streamId }
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    useEffect(() => {
-        const handleUpdate = (data: { roomId: string; users: (User & { value: number })[] }) => {
-            if (data.roomId === streamId) {
-                setUsers(data.users || []);
-                setError(null);
+    const loadUsers = useCallback(async () => {
+        if (!streamId || typeof streamId !== 'string') {
+            setError('ID da stream inválido');
+            setIsLoading(false);
+            return;
+        }
+
+        try {
+            const data = await api.getOnlineUsers(streamId);
+
+            if (!data || !Array.isArray(data)) {
+                setUsers([]);
+            } else {
+                const validUsers = data.filter(user =>
+                    user &&
+                    typeof user === 'object' &&
+                    user.id &&
+                    user.name
+                );
+                setUsers(validUsers);
             }
-        };
+            setError(null);
+        } catch {
+            setError('Não foi possível carregar os usuários');
+            setUsers([]);
+        } finally {
+            setIsLoading(false);
+        }
+    }, [streamId]);
 
-        // Simplificado - sem WebSocket para navegação isolada
-        // webSocketManager.on('onlineUsersUpdate', handleUpdate);
-
-        // Initial fetch com tratamento de erro robusto
+    useEffect(() => {
         setIsLoading(true);
         setError(null);
-        
-        const fetchUsers = async () => {
-            try {
-                // Validar streamId
-                if (!streamId || typeof streamId !== 'string') {
-                    throw new Error('ID da stream inválido');
-                }
+        loadUsers();
 
-                console.log('🔔 Buscando usuários online para stream:', streamId);
-                
-                const data = await api.getOnlineUsers(streamId);
-                
-                // Validar resposta da API
-                if (!data) {
-                    console.warn('⚠️ API retornou null/undefined, usando array vazio');
-                    setUsers([]);
-                } else if (!Array.isArray(data)) {
-                    console.warn('⚠️ API não retornou array, dados:', data);
-                    setUsers([]);
-                } else {
-                    // Validar cada usuário
-                    const validUsers = data.filter(user => 
-                        user && 
-                        typeof user === 'object' && 
-                        user.id && 
-                        user.name
-                    );
-                    
-                    if (validUsers.length !== data.length) {
-                        console.warn(`⚠️ ${data.length - validUsers.length} usuários inválidos removidos`);
-                    }
-                    
-                    setUsers(validUsers);
-                    console.log(`✅ ${validUsers.length} usuários carregados com sucesso`);
-                }
-                
-                setError(null);
-            } catch (err) {
-                console.error('❌ Erro ao buscar usuários online:', err);
-                setError('Não foi possível carregar os usuários');
-                setUsers([]); // Garantir array vazio em caso de erro
-            } finally {
-                setIsLoading(false);
+        // Atualizar lista em tempo real via WebSocket quando usuário entrar/sair
+        const handleOnlineUsersUpdate = (data: { roomId?: string; streamId?: string; users?: any[]; count?: number }) => {
+            const room = data.roomId || data.streamId;
+            if (room === streamId) {
+                // Recarregar lista do banco para garantir dados completos
+                loadUsers();
             }
         };
 
-        fetchUsers();
-        
+        socketService.on('online_users_updated', handleOnlineUsersUpdate);
+
         return () => {
-            // Simplificado - sem WebSocket para navegação isolada
-            // webSocketManager.off('onlineUsersUpdate', handleUpdate);
+            socketService.off('online_users_updated', handleOnlineUsersUpdate);
         };
-    }, [streamId]);
+    }, [streamId, loadUsers]);
 
     return (
         <div className="absolute inset-0 z-50 flex items-end" onClick={onClose}>
-            <div 
+            <div
                 className="bg-gradient-to-b from-[#3a2558] to-[#2c1d43] w-full max-w-md h-2/3 rounded-t-2xl flex flex-col"
                 onClick={e => e.stopPropagation()}
             >
@@ -148,8 +131,8 @@ const OnlineUsersModal: React.FC<OnlineUsersModalProps> = ({ onClose, streamId }
                             <UserIcon className="w-16 h-16 mb-4" />
                             <p className="font-semibold text-red-400">Erro ao carregar</p>
                             <p className="text-sm">{error}</p>
-                            <button 
-                                onClick={() => window.location.reload()}
+                            <button
+                                onClick={loadUsers}
                                 className="mt-4 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
                             >
                                 Tentar novamente

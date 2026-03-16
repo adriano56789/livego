@@ -31,7 +31,7 @@ const CoHostModal: React.FC<CoHostModalProps> = ({ isOpen, onClose, onInvite, on
       setIsLoading(true);
       api.getFriends(currentUser.id)
         .then(data => setFriends(data || []))
-        .catch(console.error)
+        .catch(() => {})
         .finally(() => setIsLoading(false));
     } else if (!isOpen) {
       // Reset state when modal closes

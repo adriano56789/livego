@@ -39,7 +39,7 @@ const BlockListScreen: React.FC<BlockListScreenProps> = ({ onClose, onUnblockUse
   useEffect(() => {
     api.getBlockedUsers().then(data => {
         setUsers(data || []);
-    }).catch(console.error).finally(() => {
+    }).catch(() => {}).finally(() => {
         setIsLoading(false);
     });
   }, []);

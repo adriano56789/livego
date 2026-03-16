@@ -27,7 +27,6 @@ const UserItem: React.FC<{ user: User; onViewProfile: (user: User) => void; onFo
                     alt={user.name} 
                     className="w-14 h-14 rounded-full object-cover"
                     onError={(e) => {
-                        console.error('❌ UserItem: Erro ao carregar avatar:', user.avatarUrl);
                         (e.target as HTMLImageElement).src = 'https://via.placeholder.com/56x56/333/fff?text=?';
                     }}
                 />
@@ -80,7 +79,6 @@ const SearchScreen: React.FC<SearchScreenProps> = ({ onClose, onViewProfile, all
                 const response = await api.searchUsers(query.trim(), 20);
                 setResults(response.users || []);
             } catch (err) {
-                console.error('❌ SearchScreen: Erro ao buscar usuários:', err);
                 setError('Não foi possível buscar usuários');
                 setResults([]);
             } finally {

@@ -72,7 +72,6 @@ const MediaItem: React.FC<{
 
                 }).catch(error => {
 
-                    console.log("Auto-play prevented:", error);
 
                     setIsPlaying(false);
 
@@ -234,7 +233,6 @@ const FullScreenPhotoViewer: React.FC<FullScreenPhotoViewerProps> = ({ photos, i
         setPhotoStates(new Map(photoStates.set(photoId, currentState)));
       }
     } catch (error) {
-      console.error("Failed to like photo:", error);
       // Revert UI on failure
       setPhotoStates(new Map(photoStates.set(photoId, currentState)));
     }

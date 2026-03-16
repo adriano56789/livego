@@ -31,7 +31,6 @@ const NotificationSettingsScreen: React.FC<NotificationSettingsScreenProps> = ({
             api.getNotificationSettings(currentUser.id)
                 .then(setToggles)
                 .catch(err => {
-                    console.error("Failed to load notification settings:", err);
                     // Set to default values on error to prevent UI from being stuck in loading
                     setToggles({
                         newMessages: false,

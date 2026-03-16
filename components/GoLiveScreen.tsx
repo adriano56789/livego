@@ -113,14 +113,11 @@ const GoLiveScreen: React.FC<GoLiveScreenProps> = ({ isOpen, onClose, onStartStr
                         
                         // ACESSAR O STREAM DA RESPOSTA CORRETAMENTE
                         const streamData = (newDraft as any).success ? (newDraft as any).stream : newDraft;
-                        console.log(' [DEBUG] streamData:', streamData);
-                        console.log(' [DEBUG] streamData.id:', streamData.id);
                         
                         setDraftStream(streamData);
                         setStreamTitle(streamData.name);
                         setStreamDescription(streamData.message);
                     } catch (error) {
-                        console.error("Error setting up stream:", error);
                         addToast(ToastType.Error, "Falha ao criar rascunho da live.");
                         onClose();
                     }
@@ -139,11 +136,9 @@ const GoLiveScreen: React.FC<GoLiveScreenProps> = ({ isOpen, onClose, onStartStr
                             }
                         })
                         .catch(err => {
-                            console.error('Erro ao acessar câmera:', err);
                             // Não bloquear o uso se a câmera não estiver disponível
                         });
                 } else {
-                    console.warn('navigator.mediaDevices não disponível neste navegador');
                 }
             } else {
                 // Cleanup when component closes
@@ -225,8 +220,6 @@ const GoLiveScreen: React.FC<GoLiveScreenProps> = ({ isOpen, onClose, onStartStr
             // ✅ Obter streamKey real do draft
             const streamKey = draftStream?.streamKey || streamId;
             
-            console.log(`[GoLive] Publicando com streamKey real: ${streamKey}`);
-            console.log(`[GoLiveScreen] Iniciando transmissão WebRTC para: ${streamUrl}`);
             
             const mediaStream = await webRTCService.startPublish(streamUrl, streamKey);
 
@@ -238,7 +231,6 @@ const GoLiveScreen: React.FC<GoLiveScreenProps> = ({ isOpen, onClose, onStartStr
             isStartingStream.current = true;
             return mediaStream;
         } catch (rtcError) {
-            console.error("WebRTC Publish Error:", rtcError);
             addToast(ToastType.Error, "Erro ao iniciar transmissão WebRTC. Verifique sua conexão.");
             return null;
         }

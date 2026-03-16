@@ -64,7 +64,6 @@ const ShopScreen: React.FC<ShopScreenProps> = ({
       setUserInventory(inventory);
       
     } catch (error) {
-      console.error('Erro ao carregar dados da loja:', error);
       addToast('error', 'Erro ao carregar itens da loja');
     } finally {
       setLoading(false);
@@ -113,7 +112,6 @@ const ShopScreen: React.FC<ShopScreenProps> = ({
       }
       
     } catch (error: any) {
-      console.error('Erro na compra:', error);
       addToast('error', error.message || 'Erro ao comprar item');
     }
   };
@@ -129,7 +127,6 @@ const ShopScreen: React.FC<ShopScreenProps> = ({
         addToast('success', 'Avatar equipado com sucesso!');
       }
     } catch (error: any) {
-      console.error('Erro ao equipar avatar:', error);
       addToast('error', error.message || 'Erro ao equipar avatar');
     }
   };

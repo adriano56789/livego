@@ -37,12 +37,9 @@ const GiftModal: React.FC<GiftModalProps> = ({ isOpen, onClose, userDiamonds, on
             try {
                 // Usar o ID do usuário atual real
                 const userId = currentUser.id;
-                console.log('🔍 Buscando presentes recebidos para usuário:', userId);
                 const receivedGifts = await api.getReceivedGifts(userId);
-                console.log('Presentes recebidos (galeria):', receivedGifts);
                 setReceivedGiftsData(receivedGifts);
             } catch (error) {
-                console.error('Erro ao buscar presentes recebidos:', error);
             } finally {
                 setLoadingCategories(prev => {
                     const newSet = new Set(prev);
@@ -56,13 +53,11 @@ const GiftModal: React.FC<GiftModalProps> = ({ isOpen, onClose, userDiamonds, on
         setLoadingCategories(prev => new Set(prev).add(category));
         try {
             const categoryGifts = await api.getGiftsByCategory(category);
-            console.log(`Presentes da categoria ${category}:`, categoryGifts);
             setGiftsByTab(prev => ({
                 ...prev,
                 [category]: categoryGifts
             }));
         } catch (error) {
-            console.error(`Erro ao buscar presentes da categoria ${category}:`, error);
             // Fallback para gifts originais se a API falhar
             const fallbackGifts = gifts.filter(gift => gift.category === category);
             setGiftsByTab(prev => ({
@@ -80,7 +75,6 @@ const GiftModal: React.FC<GiftModalProps> = ({ isOpen, onClose, userDiamonds, on
 
     // Função chamada quando uma aba é clicada
     const handleTabChange = (tab: string) => {
-        console.log(`🔄 Clicando na aba: ${tab}`);
         setActiveTab(tab);
         fetchGiftsByCategory(tab); // Chamar para todas as abas, incluindo Galeria
     };

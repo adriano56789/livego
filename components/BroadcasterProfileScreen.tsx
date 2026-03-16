@@ -97,7 +97,6 @@ const UserProfileScreen: React.FC<UserProfileScreenProps> = ({ user, isCurrentUs
                     setIsLoadingObras(false);
                 }
             }).catch(err => {
-                console.error("Failed to load user photos:", err);
                 if (isMounted) setIsLoadingObras(false);
             });
         }
@@ -114,7 +113,6 @@ const UserProfileScreen: React.FC<UserProfileScreenProps> = ({ user, isCurrentUs
                     setIsLoadingLikes(false);
                 }
             }).catch(err => {
-                console.error(err);
                 if (isMounted) setIsLoadingLikes(false);
             });
         }
@@ -164,7 +162,6 @@ const UserProfileScreen: React.FC<UserProfileScreenProps> = ({ user, isCurrentUs
                 listSetter(originalList);
             }
         } catch (error) {
-            console.error("Failed to toggle like:", error);
             listSetter(originalList);
         }
     };

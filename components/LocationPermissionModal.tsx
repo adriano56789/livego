@@ -38,7 +38,6 @@ const LocationPermissionModal: React.FC<LocationPermissionModalProps> = ({ isOpe
         });
       }
     } catch (error) {
-      console.error('Error loading location data:', error);
     } finally {
       setIsLoading(false);
     }

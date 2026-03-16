@@ -47,7 +47,6 @@ const FrameScreen: React.FC<FrameScreenProps> = ({
       setCurrentFrame(currentFrameData);
       
     } catch (error) {
-      console.error('Erro ao carregar frames:', error);
       addToast('error', 'Erro ao carregar frames');
     } finally {
       setLoading(false);
@@ -75,7 +74,6 @@ const FrameScreen: React.FC<FrameScreenProps> = ({
       }
       
     } catch (error: any) {
-      console.error('Erro na compra:', error);
       addToast('error', error.message || 'Erro ao comprar frame');
     }
   };
@@ -90,7 +88,6 @@ const FrameScreen: React.FC<FrameScreenProps> = ({
         addToast('success', 'Frame equipado com sucesso!');
       }
     } catch (error: any) {
-      console.error('Erro ao equipar frame:', error);
       addToast('error', error.message || 'Erro ao equipar frame');
     }
   };

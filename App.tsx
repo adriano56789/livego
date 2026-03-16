@@ -558,8 +558,10 @@ const AppContent: React.FC = () => {
       socketService.off('user_status_updated');
       socketService.off('diamonds_updated');
       socketService.off('earnings_updated');
+      socketService.off('live_coins_updated');
       socketService.off('stream_ended');
       socketService.off('live_stream_ended');
+      socketService.off('stream_ended');
       socketService.off('card_removed');
     };
   }, [currentUser, activeStream]);

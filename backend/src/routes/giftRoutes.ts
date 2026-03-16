@@ -74,6 +74,18 @@ router.post('/send', async (req: any, res) => {
                 giftName: gift.name,
                 streamId: streamId
             });
+            
+            // 🔧 CORREÇÃO: Atualizar contador da live em tempo real
+            if (streamId && streamId !== 'unknown') {
+                io.emit('live_coins_updated', {
+                    streamId: streamId,
+                    coins: totalCost,
+                    totalCoins: (await Streamer.findOne({ id: streamId }))?.diamonds || 0,
+                    timestamp: new Date().toISOString(),
+                    fromUser: fromUser.name,
+                    giftName: gift.name
+                });
+            }
         }
         
         console.log(`💰 [GIFT] ${fromUser.name} enviou ${totalCost} diamantes para ${toUser.name}`);

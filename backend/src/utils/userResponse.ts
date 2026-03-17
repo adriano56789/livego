@@ -60,15 +60,15 @@ export function standardizeUserResponse(user: any): any {
         friendsList: Array.isArray(user.friendsList) ? user.friendsList : [],
         blockedUsers: Array.isArray(user.blockedUsers) ? user.blockedUsers : [],
         
-        // Campos numéricos com valor padrão 0
-        fans: user.fans || 0,
-        following: user.following || 0,
-        diamonds: user.diamonds || 0,
-        earnings: user.earnings || 0,
-        earnings_withdrawn: user.earnings_withdrawn || 0,
-        enviados: user.enviados || 0,
-        enviadosRecentes: user.enviadosRecentes || 0,
-        receptores: user.receptores || 0,
+        // Campos numéricos - MANTER VALOR REAL do banco, não substituir por 0
+        fans: user.fans ?? 0,
+        following: user.following ?? 0,
+        diamonds: user.diamonds ?? 0,
+        earnings: user.earnings ?? 0,
+        earnings_withdrawn: user.earnings_withdrawn ?? 0,
+        enviados: user.enviados ?? 0,
+        enviadosRecentes: user.enviadosRecentes ?? 0,
+        receptores: user.receptores ?? 0,
         
         // Campos de frames
         ownedFrames: Array.isArray(user.ownedFrames) ? user.ownedFrames : [],

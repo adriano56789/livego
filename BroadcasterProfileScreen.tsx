@@ -5,7 +5,7 @@ import BlockReportModal from './BlockReportModal';
 import { useTranslation } from '../i18n';
 import { api } from '../services/api';
 import { LoadingSpinner } from './Loading';
-import { avatarFrames, getRemainingDays, getFrameGlowClass } from '../services/database';
+import { avatarFrames, getRemainingDays, getFrameGlowClass } from './utils/chatUtils';
 
 interface UserProfileScreenProps {
   user: User;
@@ -61,7 +61,7 @@ const ProfileTab: React.FC<{ label: string; icon: React.ReactNode; isActive: boo
     </button>
 );
 
-const UserProfileScreen: React.FC<UserProfileScreenProps> = ({ user, isCurrentUser, onBack, onEdit, onOpenTopFans, onOpenFollowing, onOpenFans, onFollow, onStartChat, onBlockUser, onReportUser, onOpenPhotoViewer, lastPhotoLikeUpdate, onPhotoLiked }) => {
+const BroadcasterProfileScreen: React.FC<UserProfileScreenProps> = ({ user, isCurrentUser, onBack, onEdit, onOpenTopFans, onOpenFollowing, onOpenFans, onFollow, onStartChat, onBlockUser, onReportUser, onOpenPhotoViewer, lastPhotoLikeUpdate, onPhotoLiked }) => {
     const { t } = useTranslation();
     const [activeTab, setActiveTab] = useState('Obras');
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -430,4 +430,4 @@ const UserProfileScreen: React.FC<UserProfileScreenProps> = ({ user, isCurrentUs
     );
 };
 
-export default UserProfileScreen;
+export default BroadcasterProfileScreen;

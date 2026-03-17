@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
     BrazilFlagIcon,
     MaleIcon,
@@ -24,6 +24,7 @@ import {
 } from './icons';
 import { User } from '../types';
 import { useTranslation } from '../i18n';
+import { api } from '../services/api';
 import AvatarWithFrame from './ui/AvatarWithFrame';
 
 interface ProfileScreenProps {
@@ -80,9 +81,43 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({
     visitors
 }) => {
     const { t } = useTranslation();
+    const [freshUserData, setFreshUserData] = useState<User | null>(null);
     
-    const avatarAction = currentUser.isLive ? onEnterMyStream : onOpenProfile;
-    const avatarAriaLabel = currentUser.isLive ? "Entrar na sua transmissão ao vivo" : "Ver perfil detalhado";
+    // Buscar dados frescos do usuário da API ao montar o componente
+    useEffect(() => {
+        let isMounted = true;
+        
+        const fetchFreshUserData = async () => {
+            try {
+                const userData = await api.getUser(currentUser.id);
+                if (isMounted && userData) {
+                    setFreshUserData(userData);
+                    console.log('✅ ProfileScreen: Dados frescos carregados da API', {
+                        userId: currentUser.id,
+                        receptores: userData.receptores,
+                        enviados: userData.enviados,
+                        diamonds: userData.diamonds,
+                        earnings: userData.earnings
+                    });
+                }
+            } catch (error) {
+                console.error('❌ ProfileScreen: Erro ao buscar dados frescos do usuário', error);
+                if (isMounted) {
+                    setFreshUserData(currentUser); // Fallback para dados existentes
+                }
+            }
+        };
+        
+        fetchFreshUserData();
+        
+        return () => { isMounted = false; };
+    }, [currentUser.id]);
+    
+    // Usar dados frescos se disponíveis, senão usar currentUser
+    const displayUser = freshUserData || currentUser;
+    
+    const avatarAction = displayUser.isLive ? onEnterMyStream : onOpenProfile;
+    const avatarAriaLabel = displayUser.isLive ? "Entrar na sua transmissão ao vivo" : "Ver perfil detalhado";
 
     const menuItems = [
         { icon: <MarketIcon className="h-6 w-6 text-blue-400" />, label: t('profile.menu.market'), action: onOpenMarket },
@@ -108,26 +143,26 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({
           <button onClick={avatarAction} className="relative mb-4 group" aria-label={avatarAriaLabel}>
             <div className="relative">
               <AvatarWithFrame 
-                user={currentUser} 
+                user={displayUser} 
                 size="xl" 
                 onClick={avatarAction}
                 className="mb-4"
               />
                 
-              {currentUser.isAvatarProtected && (
+              {displayUser.isAvatarProtected && (
                 <div className="absolute top-0 right-0 bg-black/50 rounded-full p-1 z-20">
                   <ShieldIcon className="w-5 h-5 text-blue-400" />
                 </div>
               )}
                 
-              {currentUser.isLive ? (
+              {displayUser.isLive ? (
                   <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-black/60 rounded-md px-2 py-1 flex items-center space-x-1.5 backdrop-blur-sm z-20">
                     <LiveIndicatorIcon className="w-4 h-4 text-green-400" />
                     <span className="text-xs font-bold text-white uppercase tracking-wider">{t('footer.live')}</span>
                   </div>
               ) : (
                   <>
-                      {currentUser.isOnline && (
+                      {displayUser.isOnline && (
                         <div className="absolute bottom-1 right-1 w-4 h-4 bg-green-400 rounded-full border-2 border-black z-20" title="Online"></div>
                       )}
                       <div className="absolute -bottom-1 -right-1 bg-gray-800 rounded-full p-0.5 z-20">
@@ -140,28 +175,28 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({
             </div>
         </button>
           <div className="flex items-center space-x-2 text-center">
-              <h1 className="text-2xl font-bold">{currentUser.name}</h1>
-              {currentUser.isVIP && (
+              <h1 className="text-2xl font-bold">{displayUser.name}</h1>
+              {displayUser.isVIP && (
                   <VIPBadgeIcon className="w-6 h-6" />
               )}
           </div>
 
           <div className="flex items-center space-x-2 my-2">
-              {currentUser.age && (
-                <span className={`text-white text-xs font-semibold px-2 py-1 rounded-full flex items-center space-x-1 ${currentUser.gender === 'male' ? 'bg-blue-500' : 'bg-pink-500'}`}>
-                    {currentUser.gender === 'male' ? <MaleIcon className="h-3 w-3" /> : <FemaleIcon className="h-3 w-3" />}
-                    <span>{currentUser.age}</span>
+              {displayUser.age && (
+                <span className={`text-white text-xs font-semibold px-2 py-1 rounded-full flex items-center space-x-1 ${displayUser.gender === 'male' ? 'bg-blue-500' : 'bg-pink-500'}`}>
+                    {displayUser.gender === 'male' ? <MaleIcon className="h-3 w-3" /> : <FemaleIcon className="h-3 w-3" />}
+                    <span>{displayUser.age}</span>
                 </span>
               )}
                <span className="bg-purple-600 text-white text-xs font-semibold px-2 py-1 rounded-full flex items-center space-x-1">
                   <RankIcon className="h-3 w-3" />
-                  <span>{currentUser.level}</span>
+                  <span>{displayUser.level}</span>
               </span>
           </div>
 
           <div className="text-center text-gray-400 text-sm">
               <div className="flex items-center justify-center space-x-2">
-                  <span>{t('profile.id')}: {currentUser.identification}</span>
+                  <span>{t('profile.id')}: {displayUser.identification}</span>
                   <button className="text-gray-500 hover:text-white"><CopyIcon className="h-4 w-4" /></button>
               </div>
               <p>Brasil | desconhecido</p>
@@ -169,11 +204,11 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
           <div className="flex justify-around w-full mt-6">
               <button onClick={onOpenFollowing} className="text-center p-2 rounded-lg hover:bg-gray-800/50 transition-colors focus:outline-none">
-                  <p className="text-xl font-bold">{formatNumber(currentUser.following)}</p>
+                  <p className="text-xl font-bold">{formatNumber(displayUser.following)}</p>
                   <p className="text-sm text-gray-400">{t('profile.following')}</p>
               </button>
               <button onClick={onOpenFans} className="text-center p-2 rounded-lg hover:bg-gray-800/50 transition-colors focus:outline-none">
-                  <p className="text-xl font-bold">{formatNumber(currentUser.fans)}</p>
+                  <p className="text-xl font-bold">{formatNumber(displayUser.fans)}</p>
                   <p className="text-sm text-gray-400">{t('profile.fans')}</p>
               </button>
               <button onClick={onOpenVisitors} className="text-center p-2 rounded-lg hover:bg-gray-800/50 transition-colors focus:outline-none">
@@ -194,11 +229,11 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({
               <div className="flex items-center space-x-4">
                   <button onClick={() => onOpenWallet('Diamante')} className="flex items-center space-x-1 hover:opacity-80 transition-opacity">
                       <YellowDiamondIcon className="h-4 w-4" />
-                      <span className="text-sm text-yellow-500 font-bold">{currentUser.diamonds?.toLocaleString('pt-BR')}</span>
+                      <span className="text-sm text-yellow-500 font-bold">{displayUser.diamonds?.toLocaleString('pt-BR')}</span>
                   </button>
                   <button onClick={() => onOpenWallet('Ganhos')} className="flex items-center space-x-1 hover:opacity-80 transition-opacity">
                       <GoldCoinIcon className="h-4 w-4 text-orange-400" />
-                          <span className="text-sm text-orange-400 font-bold">{currentUser.earnings?.toLocaleString('pt-BR')}</span>
+                          <span className="text-sm text-orange-400 font-bold">{displayUser.earnings?.toLocaleString('pt-BR')}</span>
                   </button>
                   <button onClick={() => onOpenWallet()} className="hover:opacity-80 transition-opacity">
                       <ChevronRightIcon className="h-5 w-5 text-gray-500" />
@@ -210,7 +245,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({
           <div className="bg-[#111111] rounded-lg overflow-hidden">
               {menuItems.map((item, index) => {
                   // 🚀 MOSTRAR CARTEIRA ADM SEMPRE (remover condição escondida)
-                  // if ((item as any).isAdminOnly && currentUser.platformEarnings === undefined) {
+                  // if ((item as any).isAdminOnly && displayUser.platformEarnings === undefined) {
                   //     return null;
                   // }
                   return (

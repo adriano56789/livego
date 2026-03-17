@@ -735,13 +735,19 @@ const AppContent: React.FC = () => {
 
   const startLiveSession = async (streamer: Streamer) => {
     try {
-      const persistentData = { diamonds: 0, coins: 0, viewers: 1 }; // Temporarily hardcoded until API is implemented
+      // 🔧 CORREÇÃO: Buscar dados reais do streamer da API em vez de usar valores hardcoded
+      const streamerData = await api.getLiveDetails(streamer.id);
+      console.log('✅ startLiveSession: Dados do streamer carregados da API', {
+        streamerId: streamer.id,
+        diamonds: streamerData.diamonds,
+        viewers: streamerData.viewers
+      });
       
       const newSession = {
         startTime: Date.now(),
-        viewers: persistentData.viewers || 1,
-        peakViewers: persistentData.viewers || 1,
-        coins: persistentData.diamonds || 0, // 🔧 FONTE UNIFICADA: dados persistidos
+        viewers: streamerData.viewers || 1,
+        peakViewers: streamerData.viewers || 1,
+        coins: streamerData.diamonds || 0, // 🔧 FONTE UNIFICADA: dados reais da API
         followers: 0,
         members: 0,
         fans: 0,

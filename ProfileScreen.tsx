@@ -24,7 +24,7 @@ import {
 } from './icons';
 import { User } from '../types';
 import { useTranslation } from '../i18n';
-import { avatarFrames, getRemainingDays, getFrameGlowClass } from '../services/database';
+import { avatarFrames, getRemainingDays, getFrameGlowClass } from '../utils/chatUtils';
 
 interface ProfileScreenProps {
     currentUser: User;

@@ -1,6 +1,6 @@
 import React from 'react';
 import { PlusIcon, SettingsIcon, IdBadgeIcon } from './icons';
-import { avatarFrames, getRemainingDays, getFrameGlowClass } from '../../services/database';
+import { avatarFrames, getRemainingDays, getFrameGlowClass } from '../utils/chatUtils';
 import { User } from '../../types';
 
 interface ChatMessageProps {

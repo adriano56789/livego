@@ -69,7 +69,7 @@ interface StreamRoomProps {
     streamers: Streamer[];
     onSelectStream: (streamer: Streamer) => void;
     onOpenVIPCenter: () => void;
-    rankingData: RankedUser[];
+    rankingData: Record<string, RankedUser[]>;
 }
 
 const FollowChatMessage: React.FC<{ follower: string; followed: string; level?: number }> = ({ follower, followed, level }) => {
@@ -252,10 +252,12 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
                     // But our service expects the full stream URL like: webrtc://<server>/live/<streamId>
                     // Let's use the one from streamer object or construct it
                     
-                    // Fallback to construction if playbackUrl is missing or http-flv
-                    // SRS WebRTC url format: webrtc://hostname/app/stream
-                    const srsHost = 'livego.store'; // Should be env or from config
-                    const webrtcUrl = `webrtc://${srsHost}/live/${streamer.id}`;
+                    // 🔧 SINCRONIZAÇÃO: Usar variável de ambiente para URL do SRS (não hardcoded)
+                    // Prioridade: playbackUrl da stream > variável de ambiente > fallback
+                    const srsWebrtcBase = import.meta.env?.VITE_SRS_WEBRTC_URL || 'webrtc://72.60.249.175/live';
+                    const webrtcUrl = (streamer.playbackUrl && streamer.playbackUrl.startsWith('webrtc://'))
+                        ? streamer.playbackUrl
+                        : `${srsWebrtcBase}/${streamer.id}`;
                     
                     
                     const remoteStream = await webRTCService.startPlay(webrtcUrl);
@@ -645,19 +647,63 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
 
         // Now, call the API in the background
         try {
-            const { success, error, updatedSender } = await api.sendGift(currentUser.id, streamer.id, gift.name, quantity);
+            const { success, error, updatedSender, updatedReceiver } = await api.sendGift(currentUser.id, streamer.id, gift.name, quantity);
 
             if (success && updatedSender) {
+                // 🔧 SINCRONIZAÇÃO: Usar dados reais da API (banco de dados) para atualizar o remetente
                 updateUser(updatedSender);
+                console.log('✅ StreamRoom: Remetente atualizado com dados da API', {
+                    userId: updatedSender.id,
+                    diamonds: updatedSender.diamonds,
+                    enviados: updatedSender.enviados,
+                    earnings: updatedSender.earnings
+                });
+
+                // 🔧 SINCRONIZAÇÃO: Atualizar streamer/destinatário se disponível
+                if (updatedReceiver) {
+                    // Atualizar streamerUser se for o mesmo usuário
+                    if (streamerUser && streamerUser.id === updatedReceiver.id) {
+                        // Atualizar o streamerUser com dados frescos
+                        setStreamerUser(updatedReceiver);
+                        console.log('✅ StreamRoom: Streamer atualizado com dados da API', {
+                            streamerId: updatedReceiver.id,
+                            diamonds: updatedReceiver.diamonds,
+                            receptores: updatedReceiver.receptores,
+                            earnings: updatedReceiver.earnings
+                        });
+                    }
+                    
+                    // Atualizar liveSession coins com diamonds do streamer
+                    if (liveSession) {
+                        updateLiveSession({ coins: updatedReceiver.diamonds || 0 });
+                        console.log('✅ StreamRoom: Contador da live atualizado', {
+                            coins: updatedReceiver.diamonds || 0
+                        });
+                    }
+                }
 
                 if (gift.triggersAutoFollow && !isFollowed && streamerUser) {
                     onFollowUser(streamerUser, streamer.id);
                 }
 
-                if (liveSession) {
-                    const coinsAdded = gift.price || 0;
-                    updateLiveSession({ coins: (liveSession.coins || 0) + coinsAdded });
-                }
+                // 🔧 SINCRONIZAÇÃO: Atualizar ranking de online users com contribuição do remetente
+                // O ranking deve refletir os dados reais do banco de dados
+                setOnlineUsers(prev => {
+                    const existing = prev.find(u => u.id === currentUser.id);
+                    const totalValue = gift.price * quantity;
+                    if (existing) {
+                        return prev.map(u => u.id === currentUser.id
+                            ? { ...u, value: (u.value || 0) + totalValue }
+                            : u
+                        ).sort((a, b) => (b.value || 0) - (a.value || 0));
+                    } else {
+                        const newEntry = { ...currentUser, value: totalValue } as User & { value: number };
+                        return [...prev, newEntry].sort((a, b) => (b.value || 0) - (a.value || 0));
+                    }
+                });
+
+                // Atualizar contador de moedas via refreshStreamRoomData (busca dados reais)
+                refreshStreamRoomData(streamer.id);
 
             } else {
                 throw new Error(error || "Failed to send gift on server");

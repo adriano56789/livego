@@ -1,5 +1,6 @@
 // Front-end utilities - NO database operations
 // All data should come from API
+import React from 'react';
 
 export const createChatKey = (userId1: string, userId2: string): string => {
     // Create a consistent chat key for UI purposes only
@@ -12,6 +13,7 @@ export interface AvatarFrame {
     name: string;
     price: number;
     duration: number;
+    component?: React.ComponentType<any>; // React component for the frame
 }
 
 export interface OwnedFrame {

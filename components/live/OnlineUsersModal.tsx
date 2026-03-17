@@ -80,6 +80,12 @@ const OnlineUsersModal: React.FC<OnlineUsersModalProps> = ({ onClose, streamId }
                 
                 const data = await api.getOnlineUsers(streamId);
                 
+                console.log('✅ OnlineUsersModal: Dados frescos carregados da API', {
+                    streamId,
+                    usersCount: data?.length || 0,
+                    users: data?.map(u => ({ id: u.id, name: u.name, value: u.value }))
+                });
+                
                 // Validar resposta da API
                 if (!data) {
                     setUsers([]);

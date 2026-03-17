@@ -5,30 +5,7 @@ import { User, ToastType } from '../types';
 import { shopAPI, ShopItem, UserInventory, UserAvatar } from '../services/shopAPI';
 import { api } from '../services/api';
 // Importar os frames novos
-import * as FrameIcons from './icons/frames';
-
-// Frames novos do aplicativo
-const avatarFrames = [
-  { id: 'FrameBlueCrystal', name: 'Blue Crystal', price: 500, duration: 7, component: FrameIcons.FrameBlueCrystal },
-  { id: 'FrameRoseGarden', name: 'Rose Garden', price: 750, duration: 7, component: FrameIcons.FrameRoseGarden },
-  { id: 'FrameCopperPearls', name: 'Copper Pearls', price: 1000, duration: 14, component: FrameIcons.FrameCopperPearls },
-  { id: 'FrameOrnateMagenta', name: 'Ornate Magenta', price: 1250, duration: 14, component: FrameIcons.FrameOrnateMagenta },
-  { id: 'FrameNeonFeathers', name: 'Neon Feathers', price: 1500, duration: 30, component: FrameIcons.FrameNeonFeathers },
-  { id: 'FrameBaroqueElegance', name: 'Baroque Elegance', price: 2000, duration: 30, component: FrameIcons.FrameBaroqueElegance },
-  { id: 'FrameMysticalWings', name: 'Mystical Wings', price: 1800, duration: 30, component: FrameIcons.FrameMysticalWings },
-  { id: 'FrameCosmicFire', name: 'Cosmic Fire', price: 2200, duration: 30, component: FrameIcons.FrameCosmicFire },
-  { id: 'FrameCelestialCrown', name: 'Celestial Crown', price: 2500, duration: 30, component: FrameIcons.FrameCelestialCrown }
-];
-
-// Mock function para getRemainingDays
-const getRemainingDays = (expirationDate?: string) => {
-  if (!expirationDate) return 0;
-  const exp = new Date(expirationDate);
-  const now = new Date();
-  const diffTime = exp.getTime() - now.getTime();
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  return Math.max(0, diffDays);
-};
+import { avatarFrames, getRemainingDays } from '../utils/chatUtils';
 
 // FIX: Add missing props to interface
 interface MarketScreenProps {
@@ -45,6 +22,31 @@ const tabs = ['Quadro de avatar', 'Carro', 'Bolha', 'Anel'];
 const MarketScreen: React.FC<MarketScreenProps> = ({ onClose, user, updateUser, onOpenWallet, onPurchaseFrame, addToast }) => {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState(tabs[0]);
+  const [avatarFrames, setAvatarFrames] = useState<any[]>([]);
+  const [isLoadingFrames, setIsLoadingFrames] = useState(true);
+
+  // Fetch avatar frames from API
+  useEffect(() => {
+    const fetchFrames = async () => {
+      setIsLoadingFrames(true);
+      try {
+        const frames = await api.getAvatarFrames();
+        // Import frame components and map them
+        const frameIcons = await import('./icons/frames');
+        const framesWithComponents = frames.map(frame => ({
+          ...frame,
+          component: frameIcons[frame.id as keyof typeof frameIcons] || null
+        }));
+        setAvatarFrames(framesWithComponents);
+      } catch (error) {
+        console.error('Failed to fetch avatar frames:', error);
+        setAvatarFrames([]);
+      } finally {
+        setIsLoadingFrames(false);
+      }
+    };
+    fetchFrames();
+  }, []);
 
   const initialSelectedItem = avatarFrames.find(f => f.id === (user as any).activeFrameId && getRemainingDays(((user as any).ownedFrames || []).find((owned: any) => owned.frameId === f.id)?.expirationDate) > 0) || avatarFrames[0];
 
@@ -177,32 +179,48 @@ const MarketScreen: React.FC<MarketScreenProps> = ({ onClose, user, updateUser, 
             </div>
 
             {/* Item Grid */}
-            <div className="grid grid-cols-3 gap-3">
-              {avatarFrames.map(frame => {
-                const isOwned = ((user as any).ownedFrames || []).some((f: any) => f.frameId === frame.id && getRemainingDays(f.expirationDate) > 0);
-                const isEquipped = isOwned && (user as any).activeFrameId === frame.id;
-                return (
-                  <button
-                    key={frame.id}
-                    onClick={() => setSelectedItem(frame as any)}
-                    className={`relative aspect-square bg-black/20 rounded-lg flex items-center justify-center p-1 transition-all duration-200 ${selectedItem.id === frame.id ? 'ring-2 ring-purple-400' : 'ring-2 ring-transparent'}`}
-                  >
-                    <div className="w-full h-full">
-                      <frame.component className="w-full h-full" />
-                    </div>
-                    {isEquipped ? (
-                      <div className="absolute top-1 right-1 bg-purple-600 text-white text-[9px] font-bold px-1.5 rounded-full">Equipado</div>
-                    ) : isOwned && (
-                      <div className="absolute top-1 right-1 bg-blue-600 text-white text-[9px] font-bold px-1.5 rounded-full">Adquirido</div>
-                    )}
-                    <div className="absolute bottom-1 right-1 flex items-center space-x-1 bg-black/50 rounded-full px-1.5 py-0.5">
-                      <YellowDiamondIcon className="w-3 h-3 text-yellow-400" />
-                      <span className="text-white text-[10px] font-semibold">{frame.price}</span>
-                    </div>
-                  </button>
-                )
-              })}
-            </div>
+            {isLoadingFrames ? (
+              <div className="flex items-center justify-center h-40">
+                <div className="text-gray-400">Carregando...</div>
+              </div>
+            ) : avatarFrames.length === 0 ? (
+              <div className="flex items-center justify-center h-40">
+                <div className="text-gray-500">Nenhum frame disponível no momento.</div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-3 gap-3">
+                {avatarFrames.map(frame => {
+                  const isOwned = ((user as any).ownedFrames || []).some((f: any) => f.frameId === frame.id && getRemainingDays(f.expirationDate) > 0);
+                  const isEquipped = isOwned && (user as any).activeFrameId === frame.id;
+                  return (
+                    <button
+                      key={frame.id}
+                      onClick={() => setSelectedItem(frame as any)}
+                      className={`relative aspect-square bg-black/20 rounded-lg flex items-center justify-center p-1 transition-all duration-200 ${selectedItem.id === frame.id ? 'ring-2 ring-purple-400' : 'ring-2 ring-transparent'}`}
+                    >
+                      <div className="w-full h-full">
+                        {frame.component ? (
+                          <frame.component className="w-full h-full" />
+                        ) : (
+                          <div className="w-full h-full bg-gray-600 rounded flex items-center justify-center text-gray-400 text-xs">
+                            Frame
+                          </div>
+                        )}
+                      </div>
+                      {isEquipped ? (
+                        <div className="absolute top-1 right-1 bg-purple-600 text-white text-[9px] font-bold px-1.5 rounded-full">Equipado</div>
+                      ) : isOwned && (
+                        <div className="absolute top-1 right-1 bg-blue-600 text-white text-[9px] font-bold px-1.5 rounded-full">Adquirido</div>
+                      )}
+                      <div className="absolute bottom-1 right-1 flex items-center space-x-1 bg-black/50 rounded-full px-1.5 py-0.5">
+                        <YellowDiamondIcon className="w-3 h-3 text-yellow-400" />
+                        <span className="text-white text-[10px] font-semibold">{frame.price}</span>
+                      </div>
+                    </button>
+                  )
+                })}
+              </div>
+            )}
           </>
         ) : (
           <div className="flex-grow flex items-center justify-center h-full">

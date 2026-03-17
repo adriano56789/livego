@@ -172,7 +172,7 @@ export const api = {
     getFreshUserData: (userId: string) => callApi<User>('GET', `/api/users/${userId}`),
     calculateWithdrawal: (amount: number) => callApi<{ diamonds: number; gross_brl: number; platform_fee_brl: number; net_brl: number; breakdown: { conversion: string; fee: string; final: string; } }>('POST', '/api/wallet/earnings/calculate', { amount }),
     confirmWithdrawal: (userId: string, amount: number) => callApi<{ success: boolean, amount: number, newEarnings: number, brl_amount: number, platform_fee: number, message: string }>('POST', `/api/wallet/withdraw/${userId}`, { amount }),
-    setWithdrawalMethod: (method: string, details: any, userId?: string) => callApi<{ success: boolean, user: User }>('POST', `/api/wallet/earnings/method/set/${userId || getCurrentUserId()}`, { method, details }),
+    setWithdrawalMethod: (method: string, details: any) => callApi<{ success: boolean, user: User }>('POST', `/api/wallet/earnings/method/set/${getCurrentUserId()}`, { method, details }),
     
     // --- Gift Counters ---
     validateGiftCounters: (userId: string) => callApi<{ userId: any; current: any; real: any; differences: any; needsUpdate: boolean; transactions: any; details: any; }>('GET', `/api/wallet/gifts/validate/${userId}`),

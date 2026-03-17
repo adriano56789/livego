@@ -24,12 +24,17 @@ const ConfigureWithdrawalMethodScreen: React.FC<ConfigureWithdrawalMethodScreenP
   useEffect(() => {
     if (currentUser.withdrawal_method) {
         const { method, details } = currentUser.withdrawal_method;
+        console.log('🔍 DEBUG: withdrawal_method carregado:', { method, details });
         setSelectedMethod(method as PaymentMethod);
         if (method === 'pix' && details.pixKey) {
+            console.log('🔍 DEBUG: Setando PIX key:', details.pixKey);
             setPixKey(details.pixKey);
         } else if (method === 'mercado_pago' && details.email) {
+            console.log('🔍 DEBUG: Setando Mercado Pago email:', details.email);
             setMercadoPagoEmail(details.email);
         }
+    } else {
+        console.log('🔍 DEBUG: Nenhum withdrawal_method encontrado');
     }
   }, [currentUser]);
 

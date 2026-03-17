@@ -99,13 +99,13 @@ const GanhosTab: React.FC<GanhosTabProps> = ({ onConfigure, currentUser, updateU
                     setEarningsInfo(freshEarnings);
                 }
                 
-                // Obter e-mail Pix do método de saque configurado
-                const pixEmail = currentUser.withdrawal_method?.details?.email ||
-                    (currentUser.withdrawal_method?.details ? Object.values(currentUser.withdrawal_method.details)[0] : '') ||
-                    '';
+                // Obter e-mail/chave do método de saque configurado
+                const destination = currentUser.withdrawal_method?.method === 'mercado_pago' 
+                    ? currentUser.withdrawal_method.details.email 
+                    : currentUser.withdrawal_method?.details.pixKey || '';
                 const netBrl = response.brl_amount || 0;
                 const feeMsg = `Taxa de 20% (R$ ${(response.platform_fee || 0).toFixed(2)}) destinada à carteira ADM.`;
-                const destMsg = pixEmail ? ` Valor enviado para: ${pixEmail}` : '';
+                const destMsg = destination ? ` Valor enviado para: ${destination}` : '';
                 
                 addToast(ToastType.Info, `Saque de R$ ${netBrl.toFixed(2)} realizado com sucesso! ${feeMsg}${destMsg}`);
                 setWithdrawAmount('');
@@ -187,7 +187,7 @@ const GanhosTab: React.FC<GanhosTabProps> = ({ onConfigure, currentUser, updateU
                 <h3 className="text-sm text-gray-300">{t('wallet.withdrawMethod')}</h3>
                 <button onClick={onConfigure} className="w-full flex justify-between items-center bg-[#2C2C2E] p-4 rounded-lg hover:bg-gray-700/50 transition-colors">
                     <span className="text-white">
-                        {currentUser.withdrawal_method ? `${currentUser.withdrawal_method.method.toUpperCase()}: ${Object.values(currentUser.withdrawal_method.details)[0]}` : t('wallet.configureMethod')}
+                        {currentUser.withdrawal_method ? `${currentUser.withdrawal_method.method.toUpperCase()}: ${currentUser.withdrawal_method.method === 'mercado_pago' ? currentUser.withdrawal_method.details.email : currentUser.withdrawal_method.details.pixKey}` : t('wallet.configureMethod')}
                     </span>
                     <ChevronRightIcon className="w-5 h-5 text-gray-500" />
                 </button>

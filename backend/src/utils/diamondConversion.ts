@@ -13,21 +13,36 @@ export const PLATFORM_FEE_RATE = 0.20;
 
 /**
  * Calcular valor em BRL baseado nos diamantes usando a tabela de pacotes
- * Usa o pacote com melhor custo-benefício (menor valor por diamante)
+ * Calcula baseado em pacotes completos + proporção do pacote parcial
  */
 export const calculateBRLFromDiamonds = (diamonds: number): number => {
     if (diamonds <= 0) return 0;
     
-    // Encontrar o pacote com melhor custo-benefício (menor valor por diamante)
-    const bestPackage = DIAMOND_PACKAGES.reduce((best, current) => {
-        const currentValuePerDiamond = current.brl / current.diamonds;
-        const bestValuePerDiamond = best.brl / best.diamonds;
-        return currentValuePerDiamond < bestValuePerDiamond ? current : best;
-    });
+    // Encontrar pacotes em ordem crescente para cálculo correto
+    const sortedPackages = [...DIAMOND_PACKAGES].sort((a, b) => a.diamonds - b.diamonds);
     
-    // Usar a taxa do melhor pacote para converter
-    const ratePerDiamond = bestPackage.brl / bestPackage.diamonds;
-    return diamonds * ratePerDiamond;
+    let remainingDiamonds = diamonds;
+    let totalBRL = 0;
+    
+    for (const package_ of sortedPackages) {
+        if (remainingDiamonds <= 0) break;
+        
+        const packagesCount = Math.floor(remainingDiamonds / package_.diamonds);
+        
+        if (packagesCount > 0) {
+            totalBRL += packagesCount * package_.brl;
+            remainingDiamonds -= packagesCount * package_.diamonds;
+        }
+    }
+    
+    // Se ainda restarem diamantes, usar o menor pacote para o restante
+    if (remainingDiamonds > 0 && sortedPackages.length > 0) {
+        const smallestPackage = sortedPackages[0];
+        const ratePerDiamond = smallestPackage.brl / smallestPackage.diamonds;
+        totalBRL += remainingDiamonds * ratePerDiamond;
+    }
+    
+    return totalBRL;
 };
 
 /**

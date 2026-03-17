@@ -86,6 +86,7 @@ const UserProfileScreen: React.FC<UserProfileScreenProps> = ({ user, isCurrentUs
     const [isLoadingLikes, setIsLoadingLikes] = useState(false);
     const [obras, setObras] = useState<FeedPhoto[]>([]);
     const [isLoadingObras, setIsLoadingObras] = useState(false);
+<<<<<<< HEAD
     const [freshUserData, setFreshUserData] = useState<User | null>(null);
     
     // Buscar dados frescos do usuário da API ao montar o componente
@@ -120,6 +121,18 @@ const UserProfileScreen: React.FC<UserProfileScreenProps> = ({ user, isCurrentUs
     
     // Usar dados frescos se disponíveis, senão usar user
     const displayUser = freshUserData || user;
+=======
+    // 🔧 SINCRONIZAÇÃO: Buscar dados frescos do usuário da API ao montar
+    // Garante que enviados, receptores e diamonds reflitam o banco de dados real
+    const [freshUser, setFreshUser] = useState<User>(user);
+    useEffect(() => {
+        let isMounted = true;
+        api.getUser(user.id).then(data => {
+            if (isMounted && data) setFreshUser(data);
+        }).catch(() => { /* fallback: usar dados originais */ });
+        return () => { isMounted = false; };
+    }, [user.id]);
+>>>>>>> c25a657b7b8d341fae49fd0ec5839fb39cb1e8a0
 
     useEffect(() => {
         let isMounted = true;
@@ -329,10 +342,18 @@ const UserProfileScreen: React.FC<UserProfileScreenProps> = ({ user, isCurrentUs
                     
 
                     <div className="grid grid-cols-4 gap-2 my-4 text-center">
+<<<<<<< HEAD
                         <StatItem value={formatNumber(displayUser.fans)} label={t('profile.fans')} onClick={onOpenFans} />
                         <StatItem value={formatNumber(displayUser.following)} label={t('profile.following')} onClick={onOpenFollowing} />
                         <StatItem value={formatNumber(displayUser.receptores)} label={t('profile.receivers')} />
                         <StatItem value={formatNumber(displayUser.enviadosRecentes || displayUser.enviados)} label={t('profile.senders')} />
+=======
+                        <StatItem value={formatNumber(freshUser.fans)} label={t('profile.fans')} onClick={onOpenFans} />
+                        <StatItem value={formatNumber(freshUser.following)} label={t('profile.following')} onClick={onOpenFollowing} />
+                        {/* 🔧 SINCRONIZAÇÃO: receptores e enviados vêm da API (banco de dados real) */}
+                        <StatItem value={formatNumber(freshUser.receptores)} label={t('profile.receivers')} />
+                        <StatItem value={formatNumber(freshUser.enviados)} label={t('profile.senders')} />
+>>>>>>> c25a657b7b8d341fae49fd0ec5839fb39cb1e8a0
                     </div>
 
                     <button onClick={onOpenTopFans} className="bg-[#1c1c1e] p-3 rounded-lg flex items-center justify-between w-full text-left hover:bg-gray-800/50 transition-colors">

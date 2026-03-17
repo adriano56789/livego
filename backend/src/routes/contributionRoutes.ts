@@ -62,54 +62,93 @@ router.get('/contribution/:period', async (req, res) => {
             return res.json(liveRanking);
         }
         
-        // 🔧 CORREÇÃO: Para outros períodos, buscar dados frescos e sincronizar se necessário
-        // Diário, Semanal, Mensal = baseado no contador enviados (acumulado total)
+        // 🔧 CORREÇÃO: Para outros períodos, filtrar por data corretamente
+        // Daily: últimas 24 horas, Weekly: últimos 7 dias, Monthly: últimos 30 dias
         
-        console.log('📊 [RANKING] Buscando dados frescos para ranking:', period);
+        console.log('📊 [RANKING] Buscando dados por período:', period);
         
-        // Buscar todos os usuários ordenados por enviados
-        const users = await User.find({})
-            .sort({ enviados: -1 })
-            .limit(100); // Limitar para performance
+        // Calcular filtro de data baseado no período
+        const now = new Date();
+        let startDate = new Date();
         
-        console.log(`📊 Encontrados ${users.length} usuários para análise`);
+        switch (period) {
+            case 'daily':
+                startDate.setDate(now.getDate() - 1); // 24 horas atrás
+                break;
+            case 'weekly':
+                startDate.setDate(now.getDate() - 7); // 7 dias atrás
+                break;
+            case 'monthly':
+                startDate.setDate(now.getDate() - 30); // 30 dias atrás
+                break;
+            default:
+                startDate.setDate(now.getDate() - 1); // Default para daily
+        }
         
-        // Verificar e sincronizar contadores se necessário
+        console.log(`📅 [RANKING] Filtrando transações de ${startDate.toISOString()} até ${now.toISOString()}`);
+        
+        // Buscar transações do período
+        const periodTransactions = await GiftTransaction.find({
+            createdAt: { $gte: startDate, $lte: now }
+        });
+        
+        console.log(`🎁 [RANKING] Encontradas ${periodTransactions.length} transações no período`);
+        
+        // Calcular ranking baseado nas transações do período
+        const periodRanking = new Map();
+        
+        periodTransactions.forEach(tx => {
+            const fromUserId = tx.fromUserId;
+            const value = (tx.giftPrice || 0) * (tx.quantity || 0);
+            
+            if (!periodRanking.has(fromUserId)) {
+                periodRanking.set(fromUserId, 0);
+            }
+            periodRanking.set(fromUserId, periodRanking.get(fromUserId) + value);
+        });
+        
+        // Buscar dados dos usuários que enviaram presentes
+        const userIds = Array.from(periodRanking.keys());
+        const users = await User.find({ id: { $in: userIds } });
+        
+        // Montar ranking final
         const validUsers = [];
         
-        for (const user of users) {
-            if (user.enviados <= 0) continue;
+        for (const [userId, contribution] of periodRanking.entries()) {
+            if (contribution <= 0) continue;
             
-            // Opcional: Verificar se os contadores estão sincronizados
-            const sentTransactions = await GiftTransaction.find({ fromUserId: user.id });
-            const realEnviados = sentTransactions.reduce((sum, t) => sum + (t.giftPrice * t.quantity), 0);
-            
-            // Se houver diferença, usar o valor real das transações
-            const contribution = Math.max(user.enviados, realEnviados);
+            const user = users.find(u => u.id === userId);
+            if (!user) continue;
             
             const userObj = user.toObject ? user.toObject() : user;
             validUsers.push({
                 ...userObj,
                 contribution: contribution,
-                rank: validUsers.length + 1,
+                rank: 0, // Será atribuído após ordenação
                 period: period,
                 debug: {
                     enviados: user.enviados || 0,
-                    realEnviados: realEnviados,
-                    diamonds: user.diamonds || 0
+                    periodContribution: contribution,
+                    diamonds: user.diamonds || 0,
+                    transactionCount: periodTransactions.filter(tx => tx.fromUserId === userId).length
                 }
             });
         }
         
-        // Ordenar novamente por contribution (pode ter mudado após sincronização)
+        // Ordenar por contribution (maior para menor)
         validUsers.sort((a, b) => b.contribution - a.contribution);
         
-        // Re-atribuir ranks após ordenação final
+        // Atribuir ranks
         validUsers.forEach((user, index) => {
             user.rank = index + 1;
         });
         
-        console.log(`✅ ${validUsers.length} usuários no ranking ${period} (dados frescos sincronizados)`);
+        console.log(`✅ ${validUsers.length} usuários no ranking ${period} (filtrado por data)`);
+        console.log(`📊 [RANKING] Top 3 do período:`);
+        validUsers.slice(0, 3).forEach((user, index) => {
+            console.log(`   ${index + 1}. ${user.name}: ${user.contribution} diamantes`);
+        });
+        
         res.json(validUsers);
         
     } catch (error: any) {

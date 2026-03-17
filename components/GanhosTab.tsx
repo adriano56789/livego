@@ -85,8 +85,29 @@ const GanhosTab: React.FC<GanhosTabProps> = ({ onConfigure, currentUser, updateU
         try {
             const response = await api.confirmWithdrawal(currentUser.id, amount);
             if (response.success) {
-                addToast(ToastType.Info, "Solicitação de saque enviada e está sendo processada.");
-                updateUser(currentUser); // Update current user state
+                // 🔧 SINCRONIZAÇÃO: Após o saque, buscar dados reais do banco de dados
+                // Não usar estado local - sempre buscar da API
+                const [freshUser, freshEarnings] = await Promise.all([
+                    api.getCurrentUser(),
+                    api.getEarningsInfo(currentUser.id)
+                ]);
+                
+                if (freshUser) {
+                    updateUser(freshUser);
+                }
+                if (freshEarnings) {
+                    setEarningsInfo(freshEarnings);
+                }
+                
+                // Obter e-mail Pix do método de saque configurado
+                const pixEmail = currentUser.withdrawal_method?.details?.email ||
+                    (currentUser.withdrawal_method?.details ? Object.values(currentUser.withdrawal_method.details)[0] : '') ||
+                    '';
+                const netBrl = response.brl_amount || 0;
+                const feeMsg = `Taxa de 20% (R$ ${(response.platform_fee || 0).toFixed(2)}) destinada à carteira ADM.`;
+                const destMsg = pixEmail ? ` Valor enviado para: ${pixEmail}` : '';
+                
+                addToast(ToastType.Info, `Saque de R$ ${netBrl.toFixed(2)} realizado com sucesso! ${feeMsg}${destMsg}`);
                 setWithdrawAmount('');
                 setCalculation(null);
             } else {

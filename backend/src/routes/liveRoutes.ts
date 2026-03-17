@@ -1203,18 +1203,32 @@ router.post('/streams/:id/gift', async (req, res) => {
         // Enviar WebSocket em tempo real com valor real
         const io = req.app.get('io');
         if (io && updatedReceiver) {
-            // Sempre envia WebSocket (mesmo que seja para si mesmo)
+            // Notificar o RECEPTOR: atualiza earnings e receptores em tempo real
             io.emit('earnings_updated', {
                 userId: updatedReceiver.id,
                 diamonds: totalValue,
                 totalEarnings: updatedReceiver.earnings,
+                totalReceptores: updatedReceiver.receptores,
                 timestamp: new Date().toISOString(),
                 source: 'live_gift',
                 streamId: req.params.id,
                 fromUser: updatedSender?.name || 'Unknown',
                 giftName: giftName
             });
-            console.log(`📡 [WEBSOCKET] Earnings atualizados em tempo real para ${updatedReceiver.name}: +${totalValue} diamantes (total: ${updatedReceiver.earnings})`);
+            console.log(`📡 [WEBSOCKET] Earnings atualizados em tempo real para ${updatedReceiver.name}: +${totalValue} diamantes (total earnings: ${updatedReceiver.earnings}, receptores: ${updatedReceiver.receptores})`);
+        }
+        // Notificar o REMETENTE: atualiza diamonds e enviados em tempo real
+        if (io && updatedSender) {
+            io.emit('diamonds_updated', {
+                userId: updatedSender.id,
+                diamonds: updatedSender.diamonds,
+                enviados: updatedSender.enviados,
+                change: -totalValue,
+                timestamp: new Date().toISOString(),
+                source: 'gift_sent',
+                giftName: giftName
+            });
+            console.log(`📡 [WEBSOCKET] Diamonds atualizados em tempo real para ${updatedSender.name}: ${updatedSender.diamonds} (enviados: ${updatedSender.enviados})`);
         }
 
         // Acumular diamantes na stream (não converter para BRL ainda)

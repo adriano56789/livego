@@ -473,32 +473,58 @@ const AppContent: React.FC = () => {
         }
       });
 
-      // Escutar atualizações de diamantes em tempo real
-      socketService.on('diamonds_updated', (data: { userId: string; diamonds: number; change: number; timestamp: string }) => {
+      // Escutar atualizações de diamantes em tempo real (remetente de presente)
+      socketService.on('diamonds_updated', (data: { userId: string; diamonds: number; enviados?: number; change: number; timestamp: string; source?: string }) => {
         
         if (data.userId === currentUser.id) {
-          const updatedUser = { ...currentUser, diamonds: data.diamonds };
+          // 🔧 SINCRONIZAÇÃO: Atualiza diamonds E enviados do remetente com dados reais da API
+          const updatedUser: any = { ...currentUser, diamonds: data.diamonds };
+          if (data.enviados !== undefined) {
+            updatedUser.enviados = data.enviados;
+          }
           updateUserEverywhere(updatedUser);
           
-          // 🔧 CORREÇÃO: Atualizar contador da live se estiver em transmissão
-          if (liveSession && activeStream && activeStream.id === data.userId) {
+          // Atualizar contador da live se estiver em transmissão como host
+          if (liveSession && activeStream && activeStream.hostId === data.userId) {
             updateLiveSession({ coins: data.diamonds });
           }
         }
       });
 
-      // Escutar atualizações de earnings em tempo real
-      socketService.on('earnings_updated', (data: { userId: string; diamonds: number; totalEarnings: number; timestamp: string; source: string }) => {
+      // Escutar atualizações de earnings em tempo real (receptor de presente)
+      socketService.on('earnings_updated', (data: { userId: string; diamonds: number; totalEarnings: number; totalReceptores?: number; timestamp: string; source: string }) => {
         
         if (data.userId === currentUser.id) {
-          // 🔧 CORREÇÃO: Atualizar earnings em tempo real quando receber presentes
-          const updatedUser = { 
+          // 🔧 SINCRONIZAÇÃO: Atualiza earnings e receptores com dados reais do banco de dados
+          const updatedUser: any = { 
             ...currentUser, 
-            earnings: data.totalEarnings,
-            receptores: data.totalEarnings // Manter consistência
+            earnings: data.totalEarnings
           };
+          // totalReceptores vem do banco de dados real (campo receptores do usuário)
+          if (data.totalReceptores !== undefined) {
+            updatedUser.receptores = data.totalReceptores;
+          }
           
           updateUserEverywhere(updatedUser);
+        }
+      });
+
+      // 🔧 SINCRONIZAÇÃO: Escutar atualizações da carteira ADM em tempo real
+      // Quando um saque é feito, a taxa de 20% vai para a carteira ADM
+      socketService.on('platform_earnings_updated', (data: { userId: string; added_fee: number; total_platform_earnings: number; from_user?: string; timestamp: string }) => {
+        if (data.userId === currentUser.id) {
+          // Atualizar platformEarnings do usuário ADM com dados reais do banco
+          const updatedUser = { ...currentUser, platformEarnings: data.total_platform_earnings };
+          updateUserEverywhere(updatedUser);
+        }
+      });
+
+      // 🔧 SINCRONIZAÇÃO: Escutar atualizações de moedas da live em tempo real
+      // O contador de moedas deve refletir o banco de dados real (Streamer.diamonds)
+      socketService.on('live_coins_updated', (data: { streamId: string; coins: number; totalCoins: number; timestamp: string; fromUser?: string; giftName?: string }) => {
+        if (activeStream && activeStream.id === data.streamId && liveSession) {
+          // Usar totalCoins (valor real do banco) para garantir sincronização
+          updateLiveSession({ coins: data.totalCoins });
         }
       });
 
@@ -558,6 +584,7 @@ const AppContent: React.FC = () => {
       socketService.off('user_status_updated');
       socketService.off('diamonds_updated');
       socketService.off('earnings_updated');
+      socketService.off('platform_earnings_updated');
       socketService.off('live_coins_updated');
       socketService.off('stream_ended');
       socketService.off('live_stream_ended');
@@ -568,14 +595,20 @@ const AppContent: React.FC = () => {
 
   const refreshStreamRoomData = useCallback(async (streamerId: string) => {
     try {
-      // Buscar dados atualizados do streamer
-      const streamerData = await api.getUser(streamerId);
-      
-      // Atualizar ranking ao vivo
+      // 🔧 SINCRONIZAÇÃO: Buscar dados reais da live (diamonds acumulados no banco)
+      const liveDetails = await api.getLiveDetails(streamerId);
+      if (liveDetails) {
+        const realDiamonds = (liveDetails as any).diamonds || 0;
+        // Atualizar via setLiveSession para evitar dependência circular
+        setLiveSession(prev => prev ? { ...prev, coins: realDiamonds } : prev);
+      }
+
+      // Atualizar ranking ao vivo com dados reais da API
       const liveRanking = await api.getRankingForPeriod('live');
       setRankingData(liveRanking);
 
     } catch (error) {
+      // Falha silenciosa - não interrompe a experiência do usuário
     }
   }, []);
 
@@ -735,13 +768,25 @@ const AppContent: React.FC = () => {
 
   const startLiveSession = async (streamer: Streamer) => {
     try {
-      const persistentData = { diamonds: 0, coins: 0, viewers: 1 }; // Temporarily hardcoded until API is implemented
+      // 🔧 SINCRONIZAÇÃO: Buscar dados reais da stream da API (diamonds acumulados)
+      // O contador de moedas deve refletir o banco de dados, nunca estado temporário
+      let streamDiamonds = streamer.diamonds || 0;
+      let streamViewers = streamer.viewers || 1;
+      try {
+        const streamDetails = await api.getLiveDetails(streamer.id);
+        if (streamDetails) {
+          streamDiamonds = (streamDetails as any).diamonds || 0;
+          streamViewers = (streamDetails as any).viewers || 1;
+        }
+      } catch {
+        // Fallback: usar dados do objeto streamer passado
+      }
       
       const newSession = {
         startTime: Date.now(),
-        viewers: persistentData.viewers || 1,
-        peakViewers: persistentData.viewers || 1,
-        coins: persistentData.diamonds || 0, // 🔧 FONTE UNIFICADA: dados persistidos
+        viewers: streamViewers,
+        peakViewers: streamViewers,
+        coins: streamDiamonds, // 🔧 FONTE UNIFICADA: dados reais da API
         followers: 0,
         members: 0,
         fans: 0,

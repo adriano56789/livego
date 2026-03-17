@@ -270,30 +270,55 @@ router.post('/withdraw/:userId', async (req, res) => {
         const platform_fee_brl = brl_amount * 0.20;
         const net_amount_brl = brl_amount - platform_fee_brl;
         
-        // Transferir taxa para a carteira da DM (Regra: A taxa vai para a carteira da DM)
-        const dmUser = await User.findOne({ email: 'adrianomdk5@gmail.com' });
-        if (dmUser) {
-            const oldPlatformEarnings = dmUser.platformEarnings || 0;
-            const newPlatformEarnings = oldPlatformEarnings + platform_fee_brl;
+        // 🔧 SINCRONIZAÇÃO: Transferir taxa para a carteira ADM usando $inc atômico
+        // Regra: 20% de toda taxa vai para a carteira ADM (identificada por email do admin)
+        const ADM_EMAIL = process.env.ADM_EMAIL || 'adrianomdk5@gmail.com';
+        const admUser = await User.findOneAndUpdate(
+            { email: ADM_EMAIL },
+            { $inc: { platformEarnings: platform_fee_brl } },
+            { new: true }
+        );
+        
+        if (admUser) {
+            console.log(`🏦 [WITHDRAW] Taxa de R$ ${platform_fee_brl.toFixed(2)} transferida para carteira ADM (${admUser.name})`);
+            console.log(`💰 [WITHDRAW] Carteira ADM atualizada: R$ ${(admUser.platformEarnings || 0).toFixed(2)}`);
             
-            await User.findOneAndUpdate(
-                { id: dmUser.id },
-                { $set: { platformEarnings: newPlatformEarnings } }
-            );
+            // Registrar entrada na carteira ADM no histórico
+            await PurchaseRecord.create({
+                id: `fee_${Date.now()}_${userId}`,
+                userId: admUser.id,
+                type: 'platform_fee_income',
+                description: `Taxa de saque (20%) de ${user.name}: R$ ${platform_fee_brl.toFixed(2)}`,
+                amountBRL: platform_fee_brl,
+                amountCoins: 0,
+                status: 'Concluído'
+            });
             
-            console.log(`🏦 [WITHDRAW] Taxa de R$ ${platform_fee_brl.toFixed(2)} transferida para DM (${dmUser.name})`);
-            
-            // Atualização em tempo real para a DM
+            // Atualização em tempo real para a carteira ADM
             const io = req.app.get('io');
             if (io) {
                 io.emit('platform_earnings_updated', {
-                    userId: dmUser.id,
+                    userId: admUser.id,
                     added_fee: platform_fee_brl,
-                    total_platform_earnings: newPlatformEarnings,
+                    total_platform_earnings: admUser.platformEarnings || 0,
+                    from_user: user.name,
                     timestamp: new Date().toISOString()
                 });
             }
+        } else {
+            console.warn(`⚠️ [WITHDRAW] Carteira ADM não encontrada para email: ${ADM_EMAIL}`);
         }
+        
+        // Registrar saque no histórico do usuário
+        await PurchaseRecord.create({
+            id: `withdraw_${Date.now()}_${userId}`,
+            userId,
+            type: 'withdraw_earnings',
+            description: `Saque via Pix: ${amount} diamantes = R$ ${brl_amount.toFixed(2)} - 20% taxa = R$ ${net_amount_brl.toFixed(2)}`,
+            amountBRL: net_amount_brl,
+            amountCoins: amount,
+            status: 'Concluído'
+        });
         
         console.log(`✅ [WITHDRAW] Saque realizado: ${amount} diamantes (Líquido: R$ ${net_amount_brl.toFixed(2)})`);
         console.log(`💳 [WITHDRAW] Saldo atualizado: ${currentEarnings} → ${newEarnings} diamantes`);

@@ -12,14 +12,24 @@ export class WebRTCService {
   private currentStreamId: string | null = null;
 
   // Configuração ICE com STUN/TURN do nosso servidor
+  // 🔧 SINCRONIZAÇÃO: Usar variáveis de ambiente corretas do .env.production
   private readonly iceConfig: RTCIceServer[] = [
     {
-      urls: import.meta.env?.VITE_STUN_SERVER_URL || 'stun:localhost:3478',
+      // STUN: Ajuda a descobrir o IP público do usuário
+      urls: [
+        import.meta.env?.VITE_STUN_URL || 'stun:72.60.249.175:3478',
+        'stun:stun.l.google.com:19302',  // Fallback STUN público do Google
+        'stun:stun1.l.google.com:19302'
+      ]
     },
     {
-      urls: import.meta.env?.VITE_TURN_SERVER_URL || 'turn:localhost:3478',
-      username: import.meta.env?.VITE_TURN_USERNAME || 'livego',
-      credential: import.meta.env?.VITE_TURN_PASSWORD || 'livego123'
+      // TURN: Relay para contornar NAT/firewall (essencial para celulares)
+      urls: [
+        import.meta.env?.VITE_TURN_URL || 'turn:72.60.249.175:3478',
+        `turns:${(import.meta.env?.VITE_TURN_URL || 'turn:72.60.249.175:3478').replace('turn:', '')}?transport=tcp`
+      ],
+      username: import.meta.env?.VITE_TURN_USER || 'livego',
+      credential: import.meta.env?.VITE_TURN_PASS || 'livego123'
     }
   ];
 
@@ -50,8 +60,14 @@ export class WebRTCService {
 
   public async startPublish(streamId: string, streamKey: string, retryCount = 3): Promise<MediaStream> {
     this.currentStreamId = streamId;
-    const webrtcUrl = import.meta.env?.VITE_SRS_WEBRTC_URL || 'webrtc://localhost/live';
-    this.currentStreamUrl = `${webrtcUrl}/${streamId}`;
+    // 🔧 SINCRONIZAÇÃO: Se streamId já é uma URL completa (webrtc://...), usá-la diretamente
+    // Caso contrário, construir a URL com a variável de ambiente
+    if (streamId.startsWith('webrtc://')) {
+      this.currentStreamUrl = streamId;
+    } else {
+      const webrtcBase = import.meta.env?.VITE_SRS_WEBRTC_URL || 'webrtc://72.60.249.175/live';
+      this.currentStreamUrl = `${webrtcBase}/${streamId}`;
+    }
     this.state = 'connecting';
     
     try {
@@ -145,8 +161,13 @@ export class WebRTCService {
 
   public async startPlay(streamId: string, retryCount = 3): Promise<MediaStream> {
      this.currentStreamId = streamId;
-     const webrtcUrl = import.meta.env?.VITE_SRS_WEBRTC_URL || 'webrtc://localhost/live';
-     this.currentStreamUrl = `${webrtcUrl}/${streamId}`;
+     // 🔧 SINCRONIZAÇÃO: Se streamId já é uma URL completa (webrtc://...), usá-la diretamente
+     if (streamId.startsWith('webrtc://')) {
+       this.currentStreamUrl = streamId;
+     } else {
+       const webrtcBase = import.meta.env?.VITE_SRS_WEBRTC_URL || 'webrtc://72.60.249.175/live';
+       this.currentStreamUrl = `${webrtcBase}/${streamId}`;
+     }
      this.state = 'connecting';
      
      try {

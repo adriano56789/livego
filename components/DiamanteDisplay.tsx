@@ -47,7 +47,7 @@ interface DiamanteDisplayProps {
 }
 
 const DiamanteDisplay: React.FC<DiamanteDisplayProps> = ({ diamonds }) => {
-    const formattedDiamonds = useCountUp(diamonds || 0);
+    const formattedDiamonds = useCountUp(diamonds ?? 0);
     const [isGlowing, setIsGlowing] = useState(false);
     const prevDiamondsRef = useRef(diamonds);
 

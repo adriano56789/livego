@@ -77,14 +77,19 @@ router.post('/send', async (req: any, res) => {
             
             // 🔧 CORREÇÃO: Atualizar contador da live em tempo real
             if (streamId && streamId !== 'unknown') {
+                const updatedStream = await Streamer.findOne({ id: streamId });
+                const totalStreamDiamonds = updatedStream?.diamonds || 0;
+                
                 io.emit('live_coins_updated', {
                     streamId: streamId,
                     coins: totalCost,
-                    totalCoins: (await Streamer.findOne({ id: streamId }))?.diamonds || 0,
+                    totalCoins: totalStreamDiamonds,
                     timestamp: new Date().toISOString(),
                     fromUser: fromUser.name,
                     giftName: gift.name
                 });
+                
+                console.log(`🪙 [LIVE COINS] Live ${streamId} atualizada: +${totalCost} = ${totalStreamDiamonds} total`);
             }
         }
         

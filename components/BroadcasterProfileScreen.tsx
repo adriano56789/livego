@@ -86,42 +86,6 @@ const UserProfileScreen: React.FC<UserProfileScreenProps> = ({ user, isCurrentUs
     const [isLoadingLikes, setIsLoadingLikes] = useState(false);
     const [obras, setObras] = useState<FeedPhoto[]>([]);
     const [isLoadingObras, setIsLoadingObras] = useState(false);
-<<<<<<< HEAD
-    const [freshUserData, setFreshUserData] = useState<User | null>(null);
-    
-    // Buscar dados frescos do usuário da API ao montar o componente
-    useEffect(() => {
-        let isMounted = true;
-        
-        const fetchFreshUserData = async () => {
-            try {
-                const userData = await api.getUser(user.id);
-                if (isMounted && userData) {
-                    setFreshUserData(userData);
-                    console.log('✅ BroadcasterProfileScreen: Dados frescos carregados da API', {
-                        userId: user.id,
-                        receptores: userData.receptores,
-                        enviados: userData.enviados,
-                        diamonds: userData.diamonds,
-                        earnings: userData.earnings
-                    });
-                }
-            } catch (error) {
-                console.error('❌ BroadcasterProfileScreen: Erro ao buscar dados frescos do usuário', error);
-                if (isMounted) {
-                    setFreshUserData(user); // Fallback para dados existentes
-                }
-            }
-        };
-        
-        fetchFreshUserData();
-        
-        return () => { isMounted = false; };
-    }, [user.id]);
-    
-    // Usar dados frescos se disponíveis, senão usar user
-    const displayUser = freshUserData || user;
-=======
     // 🔧 SINCRONIZAÇÃO: Buscar dados frescos do usuário da API ao montar
     // Garante que enviados, receptores e diamonds reflitam o banco de dados real
     const [freshUser, setFreshUser] = useState<User>(user);
@@ -132,13 +96,12 @@ const UserProfileScreen: React.FC<UserProfileScreenProps> = ({ user, isCurrentUs
         }).catch(() => { /* fallback: usar dados originais */ });
         return () => { isMounted = false; };
     }, [user.id]);
->>>>>>> c25a657b7b8d341fae49fd0ec5839fb39cb1e8a0
 
     useEffect(() => {
         let isMounted = true;
         if (activeTab === 'Obras') {
             setIsLoadingObras(true);
-            api.getUserPhotos(displayUser.id).then(data => {
+            api.getUserPhotos(user.id).then(data => {
                 if (isMounted) {
                     setObras(data || []);
                     setIsLoadingObras(false);
@@ -148,13 +111,13 @@ const UserProfileScreen: React.FC<UserProfileScreenProps> = ({ user, isCurrentUs
             });
         }
         return () => { isMounted = false; };
-    }, [activeTab, displayUser.id, lastPhotoLikeUpdate]);
+    }, [activeTab, user.id, lastPhotoLikeUpdate]);
 
     useEffect(() => {
         let isMounted = true;
         if (activeTab === 'Curtidas') {
             setIsLoadingLikes(true);
-            api.getLikedPhotos(displayUser.id).then(data => {
+            api.getLikedPhotos(user.id).then(data => {
                 if (isMounted) {
                     setLikedPhotos(data || []);
                     setIsLoadingLikes(false);
@@ -164,7 +127,7 @@ const UserProfileScreen: React.FC<UserProfileScreenProps> = ({ user, isCurrentUs
             });
         }
         return () => { isMounted = false; };
-      }, [activeTab, displayUser.id, lastPhotoLikeUpdate]);
+      }, [activeTab, user.id, lastPhotoLikeUpdate]);
 
     const handleToggleLike = async (photoId: string, tab: 'obras' | 'curtidas') => {
         const list = tab === 'obras' ? obras : likedPhotos;
@@ -241,14 +204,14 @@ const UserProfileScreen: React.FC<UserProfileScreenProps> = ({ user, isCurrentUs
     };
     
     const detailItems = [
-        { label: t('editProfile.nickname'), value: displayUser.name, show: !!displayUser.name },
-        { label: t('editProfile.gender'), value: getGender(displayUser.gender), show: !!displayUser.gender && displayUser.gender !== 'not_specified' },
-        { label: t('editProfile.birthday'), value: displayUser.birthday, show: !!displayUser.birthday },
-        { label: t('editProfile.bio'), value: displayUser.bio, show: !!displayUser.bio },
-        { label: t('editProfile.residence'), value: displayUser.residence, show: !!displayUser.residence },
-        { label: t('editProfile.emotionalStatus'), value: displayUser.emotional_status, show: !!displayUser.emotional_status },
-        { label: t('editProfile.tags'), value: displayUser.tags, show: !!displayUser.tags },
-        { label: t('editProfile.profession'), value: displayUser.profession, show: !!displayUser.profession },
+        { label: t('editProfile.nickname'), value: user.name, show: !!user.name },
+        { label: t('editProfile.gender'), value: getGender(user.gender), show: !!user.gender && user.gender !== 'not_specified' },
+        { label: t('editProfile.birthday'), value: user.birthday, show: !!user.birthday },
+        { label: t('editProfile.bio'), value: user.bio, show: !!user.bio },
+        { label: t('editProfile.residence'), value: user.residence, show: !!user.residence },
+        { label: t('editProfile.emotionalStatus'), value: user.emotional_status, show: !!user.emotional_status },
+        { label: t('editProfile.tags'), value: user.tags, show: !!user.tags },
+        { label: t('editProfile.profession'), value: user.profession, show: !!user.profession },
     ].filter(item => item.show);
 
     const hasDetails = detailItems.length > 0;
@@ -282,29 +245,29 @@ const UserProfileScreen: React.FC<UserProfileScreenProps> = ({ user, isCurrentUs
                      <div className="absolute -bottom-12 left-1/2 -translate-x-1/2">
                         <div className="relative w-24 h-24">
                             <AvatarWithFrame 
-                                user={displayUser} 
+                                user={user} 
                                 size="lg" 
                                 className="w-24 h-24"
                             />
 
-                            {displayUser.isLive ? (
+                            {user.isLive ? (
                                 <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-black/60 rounded-md px-2 py-1 flex items-center space-x-1.5 backdrop-blur-sm z-10">
                                   <LiveIndicatorIcon className="w-4 h-4 text-green-400" />
                                   <span className="text-xs font-bold text-white uppercase tracking-wider">{t('footer.live')}</span>
                                 </div>
                             ) : (
                                 <>
-                                    {displayUser.isOnline && (
+                                    {user.isOnline && (
                                         <div className="absolute bottom-1 right-1 w-5 h-5 bg-green-400 rounded-full border-2 border-black" title="Online"></div>
                                     )}
-                                    {displayUser.isAvatarProtected && (
+                                    {user.isAvatarProtected && (
                                         <div className="absolute -top-1 -right-1 bg-gray-900 rounded-full p-1">
                                             <ShieldIcon className="w-6 h-6 text-blue-400" />
                                         </div>
                                     )}
                                     <div className="absolute -bottom-1 -right-1 bg-gray-800 rounded-full p-0.5">
                                         <div className="w-6 h-6 rounded-full overflow-hidden flex items-center justify-center">
-                                            {displayUser.country === 'br' && <BrazilFlagIcon />}
+                                            {user.country === 'br' && <BrazilFlagIcon />}
                                         </div>
                                     </div>
                                 </>
@@ -316,51 +279,44 @@ const UserProfileScreen: React.FC<UserProfileScreenProps> = ({ user, isCurrentUs
                 <main className="px-4 pt-14">
                     <div className="flex flex-col items-center">
                         <h1 className="text-2xl font-bold mt-2 flex items-center space-x-2">
-                        <span>{displayUser.name}</span>
-                        {displayUser.isVIP && <VIPBadgeIcon className="w-6 h-6" />}
+                        <span>{user.name}</span>
+                        {user.isVIP && <VIPBadgeIcon className="w-6 h-6" />}
                         </h1>
                         <div className="flex items-center space-x-2 text-sm text-gray-400">
-                        <span>{t('profile.id')}: {displayUser.identification}</span>
+                        <span>{t('profile.id')}: {user.identification}</span>
                         <button className="text-gray-500 hover:text-white"><CopyIcon className="h-4 w-4" /></button>
                         </div>
 
                         <div className="flex items-center space-x-2 my-2">
-                            {displayUser.age && (
-                                <span className={`text-white text-xs font-semibold px-2 py-1 rounded-full flex items-center space-x-1 ${displayUser.gender === 'male' ? 'bg-blue-500' : 'bg-pink-500'}`}>
-                                    {displayUser.gender === 'male' ? <MaleIcon className="h-3 w-3" /> : <FemaleIcon className="h-3 w-3" />}
-                                    <span>{displayUser.age}</span>
+                            {user.age && (
+                                <span className={`text-white text-xs font-semibold px-2 py-1 rounded-full flex items-center space-x-1 ${user.gender === 'male' ? 'bg-blue-500' : 'bg-pink-500'}`}>
+                                    {user.gender === 'male' ? <MaleIcon className="h-3 w-3" /> : <FemaleIcon className="h-3 w-3" />}
+                                    <span>{user.age}</span>
                                 </span>
                             )}
                             <span className="bg-purple-600 text-white text-xs font-semibold px-2 py-1 rounded-full flex items-center space-x-1">
                                 <RankIcon className="h-3 w-3" />
-                                <span>{displayUser.level}</span>
+                                <span>{user.level}</span>
                             </span>
                         </div>
 
-                        <p className="text-sm text-gray-400">{displayUser.location} | {displayUser.distance}</p>
+                        <p className="text-sm text-gray-400">{user.location} | {user.distance}</p>
                     </div>
                     
 
                     <div className="grid grid-cols-4 gap-2 my-4 text-center">
-<<<<<<< HEAD
-                        <StatItem value={formatNumber(displayUser.fans)} label={t('profile.fans')} onClick={onOpenFans} />
-                        <StatItem value={formatNumber(displayUser.following)} label={t('profile.following')} onClick={onOpenFollowing} />
-                        <StatItem value={formatNumber(displayUser.receptores)} label={t('profile.receivers')} />
-                        <StatItem value={formatNumber(displayUser.enviadosRecentes || displayUser.enviados)} label={t('profile.senders')} />
-=======
                         <StatItem value={formatNumber(freshUser.fans)} label={t('profile.fans')} onClick={onOpenFans} />
                         <StatItem value={formatNumber(freshUser.following)} label={t('profile.following')} onClick={onOpenFollowing} />
                         {/* 🔧 SINCRONIZAÇÃO: receptores e enviados vêm da API (banco de dados real) */}
                         <StatItem value={formatNumber(freshUser.receptores)} label={t('profile.receivers')} />
                         <StatItem value={formatNumber(freshUser.enviados)} label={t('profile.senders')} />
->>>>>>> c25a657b7b8d341fae49fd0ec5839fb39cb1e8a0
                     </div>
 
                     <button onClick={onOpenTopFans} className="bg-[#1c1c1e] p-3 rounded-lg flex items-center justify-between w-full text-left hover:bg-gray-800/50 transition-colors">
                         <div className="flex items-center">
                              <span className="font-semibold mr-4">{t('profile.topFans')}</span>
                              <div className="flex -space-x-2">
-                                {displayUser.topFansAvatars?.slice(0, 3).map((avatar, index) => (
+                                {user.topFansAvatars?.slice(0, 3).map((avatar, index) => (
                                     <img key={index} src={avatar} alt={`Fan ${index + 1}`} className="w-8 h-8 rounded-full ring-2 ring-[#1c1c1e]" />
                                 ))}
                              </div>
@@ -492,8 +448,8 @@ const UserProfileScreen: React.FC<UserProfileScreenProps> = ({ user, isCurrentUs
             {!isCurrentUser && (
                 <footer className="absolute bottom-0 left-0 right-0 bg-black p-3 flex-shrink-0 z-10 border-t border-gray-800/50">
                     <div className="flex items-center space-x-3">
-                        <button onClick={handleFollowClick} className={`flex-1 font-bold py-3 rounded-full transition-colors ${displayUser.isFollowed ? 'bg-gray-700 text-gray-300' : 'bg-purple-600 text-white'}`}>
-                            {displayUser.isFollowed ? t('common.following') : t('common.follow')}
+                        <button onClick={handleFollowClick} className={`flex-1 font-bold py-3 rounded-full transition-colors ${user.isFollowed ? 'bg-gray-700 text-gray-300' : 'bg-purple-600 text-white'}`}>
+                            {user.isFollowed ? t('common.following') : t('common.follow')}
                         </button>
                         <button onClick={() => onStartChat(user)} className="flex-1 bg-purple-600 text-white font-bold py-3 rounded-full transition-colors">
                             {t('common.chat')}
@@ -507,7 +463,7 @@ const UserProfileScreen: React.FC<UserProfileScreenProps> = ({ user, isCurrentUs
                 onClose={() => setIsModalOpen(false)} 
                 onBlock={handleBlock}
                 onReport={handleReport} 
-                onUnfriend={displayUser.isFollowed ? handleUnfriend : undefined} 
+                onUnfriend={user.isFollowed ? handleUnfriend : undefined} 
             />
         </div>
     );

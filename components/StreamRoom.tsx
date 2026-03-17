@@ -675,9 +675,10 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
                     
                     // Atualizar liveSession coins com diamonds do streamer
                     if (liveSession) {
-                        updateLiveSession({ coins: updatedReceiver.diamonds || 0 });
+                        const diamonds = updatedReceiver.diamonds ?? 0;
+                        updateLiveSession({ coins: diamonds });
                         console.log('✅ StreamRoom: Contador da live atualizado', {
-                            coins: updatedReceiver.diamonds || 0
+                            coins: diamonds
                         });
                     }
                 }
@@ -1060,7 +1061,7 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
             <GiftModal
                 isOpen={isGiftModalOpen}
                 onClose={() => setGiftModalOpen(false)}
-                userDiamonds={currentUser.diamonds || 0}
+                userDiamonds={currentUser.diamonds ?? 0}
                 onSendGift={handleSendGift}
                 onRecharge={handleRecharge}
                 gifts={gifts}

@@ -120,15 +120,15 @@ const GanhosTab: React.FC<GanhosTabProps> = ({ onConfigure, currentUser, updateU
         }
     };
 
-    const formatCurrency = (value: number | undefined) => `R$ ${(value || 0).toFixed(2).replace('.', ',')}`;
+    const formatCurrency = (value: number | undefined) => `R$ ${(value ?? 0).toFixed(2).replace('.', ',')}`;
 
     const displayData = calculation || {
-        diamonds: earningsInfo?.available_diamonds || 0,
-        gross_brl: earningsInfo?.brl_value || 0,
+        diamonds: earningsInfo?.available_diamonds ?? 0,
+        gross_brl: earningsInfo?.brl_value ?? 0,
         platform_fee_brl: 0,
-        net_brl: earningsInfo?.brl_value || 0,
+        net_brl: earningsInfo?.brl_value ?? 0,
         breakdown: {
-            conversion: `${earningsInfo?.available_diamonds || 0} diamantes = R$${(earningsInfo?.brl_value || 0).toFixed(2)}`,
+            conversion: `${earningsInfo?.available_diamonds ?? 0} diamantes = R$${(earningsInfo?.brl_value ?? 0).toFixed(2)}`,
             fee: 'Taxa da plataforma (20%): R$0.00',
             final: 'Valor a receber: R$0.00'
         }
@@ -147,7 +147,7 @@ const GanhosTab: React.FC<GanhosTabProps> = ({ onConfigure, currentUser, updateU
     return (
         <div className="space-y-6">
             {(() => {
-                const earningsValue = earningsInfo?.available_diamonds || currentUser?.earnings || 0;
+                const earningsValue = earningsInfo?.available_diamonds ?? currentUser?.earnings ?? 0;
                 return <GanhosDisplay earnings={earningsValue} />;
             })()}
             

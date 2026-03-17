@@ -101,7 +101,7 @@ const ContributionRankingModal: React.FC<ContributionRankingModalProps> = ({ onC
                             user.name
                         ).map(user => ({
                             ...user,
-                            contribution: user.contribution || user.diamonds || 0,
+                            contribution: user.contribution ?? user.diamonds ?? 0,
                             gender: user.gender || 'not_specified',
                             age: user.age || 0,
                             level: user.level || 1,

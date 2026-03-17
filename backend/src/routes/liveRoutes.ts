@@ -746,16 +746,25 @@ router.post('/streams/:streamId/end', async (req, res) => {
                             source: 'live_end',
                             streamId: streamId
                         });
+                        
+                        // 🔧 CORREÇÃO: Notificar também que os diamantes da live foram mantidos
+                        io.emit('live_coins_updated', {
+                            streamId: streamId,
+                            coins: 0,
+                            totalCoins: streamDiamonds, // Mantém o valor acumulado
+                            timestamp: endTime.toISOString(),
+                            fromUser: 'System',
+                            giftName: 'Live End - Values Preserved'
+                        });
+                        
+                        console.log(`🪙 [STREAM END] Diamantes da live ${streamId} preservados: ${streamDiamonds}`);
                     }
                 }
                 
-                // Zerar diamantes da live no model
-                await Streamer.findOneAndUpdate(
-                    { id: streamId },
-                    { diamonds: 0 }
-                );
-                
-                console.log(`✅ [STREAM END] Live ${streamId} encerrada e acumuladores limpos`);
+                // 🔧 CORREÇÃO CRÍTICA: NÃO zerar diamantes do streamer ao encerrar live
+                // Os diamantes acumulados devem permanecer para exibição no perfil
+                // Apenas transferimos para earnings, mas mantemos o contador visual
+                console.log(`✅ [STREAM END] Live ${streamId} encerrada. Diamantes mantidos: ${streamDiamonds}`);
             } else {
                 console.log(`ℹ️ [STREAM END] Sem diamantes acumulados para transferir na live ${streamId}`);
             }

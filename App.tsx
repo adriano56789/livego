@@ -768,21 +768,6 @@ const AppContent: React.FC = () => {
 
   const startLiveSession = async (streamer: Streamer) => {
     try {
-<<<<<<< HEAD
-      // 🔧 CORREÇÃO: Buscar dados reais do streamer da API em vez de usar valores hardcoded
-      const streamerData = await api.getLiveDetails(streamer.id);
-      console.log('✅ startLiveSession: Dados do streamer carregados da API', {
-        streamerId: streamer.id,
-        diamonds: streamerData.diamonds,
-        viewers: streamerData.viewers
-      });
-      
-      const newSession = {
-        startTime: Date.now(),
-        viewers: streamerData.viewers || 1,
-        peakViewers: streamerData.viewers || 1,
-        coins: streamerData.diamonds || 0, // 🔧 FONTE UNIFICADA: dados reais da API
-=======
       // 🔧 SINCRONIZAÇÃO: Buscar dados reais da stream da API (diamonds acumulados)
       // O contador de moedas deve refletir o banco de dados, nunca estado temporário
       let streamDiamonds = streamer.diamonds || 0;
@@ -802,7 +787,6 @@ const AppContent: React.FC = () => {
         viewers: streamViewers,
         peakViewers: streamViewers,
         coins: streamDiamonds, // 🔧 FONTE UNIFICADA: dados reais da API
->>>>>>> c25a657b7b8d341fae49fd0ec5839fb39cb1e8a0
         followers: 0,
         members: 0,
         fans: 0,

@@ -169,6 +169,7 @@ export const api = {
     buyDiamonds: (userId: string, amount: number, price: number) => callApi<{ success: boolean, user: User }>('POST', `/api/users/${userId}/buy-diamonds`, { amount, price }),
     getPurchaseHistory: (userId: string) => callApi<PurchaseRecord[]>('GET', `/api/purchases/history/${userId}`),
     getEarningsInfo: (userId: string) => callApi<{ available_diamonds: number; brl_value: number; conversion_rate: string; }>('GET', `/api/wallet/earnings/get/${userId}`),
+    getFreshUserData: (userId: string) => callApi<User>('GET', `/api/users/${userId}`),
     calculateWithdrawal: (amount: number) => callApi<{ diamonds: number; gross_brl: number; platform_fee_brl: number; net_brl: number; breakdown: { conversion: string; fee: string; final: string; } }>('POST', '/api/wallet/earnings/calculate', { amount }),
     confirmWithdrawal: (userId: string, amount: number) => callApi<{ success: boolean, amount: number, newEarnings: number, brl_amount: number, platform_fee: number, message: string }>('POST', `/api/wallet/withdraw/${userId}`, { amount }),
     setWithdrawalMethod: (method: string, details: any, userId?: string) => callApi<{ success: boolean, user: User }>('POST', `/api/wallet/earnings/method/set/${userId || getCurrentUserId()}`, { method, details }),
@@ -193,33 +194,58 @@ export const api = {
     // --- Metadata & Catalog ---
     getRankingForPeriod: async (period: string): Promise<RankedUser[]> => {
         try {
+            console.log(`🔄 [API] Buscando ranking para período: ${period}`);
 
             if (!period) {
+                console.warn('⚠️ [API] Período não fornecido');
                 return [];
             }
 
-            const response = await callApi<RankedUser[]>('GET', `/api/ranking/${period}`);
+            // Forçar cache-busting adicionando timestamp
+            const timestamp = Date.now();
+            const response = await callApi<RankedUser[]>(`GET`, `/api/ranking/${period}?_t=${timestamp}`);
 
             // Garantir que sempre retorne um array válido
             if (!response) {
+                console.warn('⚠️ [API] Resposta vazia da API de ranking');
                 return [];
             }
 
             if (!Array.isArray(response)) {
+                console.warn('⚠️ [API] Resposta não é array:', response);
                 return [];
             }
 
             // Validar e filtrar usuários
-            const validUsers = response.filter(user =>
-                user &&
-                typeof user === 'object' &&
-                user.id &&
-                user.name
-            );
+            const validUsers = response.filter(user => {
+                const isValid = user &&
+                    typeof user === 'object' &&
+                    user.id &&
+                    user.name &&
+                    typeof user.contribution === 'number' &&
+                    user.contribution >= 0;
+                
+                if (!isValid) {
+                    console.warn('⚠️ [API] Usuário inválido no ranking:', user);
+                }
+                
+                return isValid;
+            });
+
+            console.log(`✅ [API] Ranking carregado: ${validUsers.length} usuários válidos`);
+            
+            // Log dos top 5 para debug
+            if (validUsers.length > 0) {
+                console.log('🏆 [API] Top 5:');
+                validUsers.slice(0, 5).forEach((user, index) => {
+                    console.log(`  ${index + 1}. ${user.name}: ${user.contribution} diamantes`);
+                });
+            }
 
             return validUsers;
 
         } catch (error) {
+            console.error('❌ [API] Erro ao buscar ranking:', error);
             return []; // Sempre retornar array vazio em caso de erro
         }
     },

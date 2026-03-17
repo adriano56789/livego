@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BackIcon, MenuIcon, GoldCoinWithGIcon } from './icons';
 import GanhosTab from './GanhosTab';
 import PurchaseHistoryScreen from './PurchaseHistoryScreen';
@@ -6,6 +6,7 @@ import ConfigureWithdrawalMethodScreen from './ConfigureWithdrawalMethodScreen';
 import { useTranslation } from '../i18n';
 import { User, ToastType, PurchaseRecord } from '../types';
 import DiamanteDisplay from './DiamanteDisplay';
+import { api } from '../services/api';
 
 interface WalletScreenProps {
   onClose: () => void;
@@ -28,27 +29,74 @@ const diamondPackages = [
 ];
 
 const DiamanteTab: React.FC<{ onPurchase: (pkg: { diamonds: number; price: number }) => void; currentUser: User; }> = ({ onPurchase, currentUser }) => {
-    const { t } = useTranslation();
-    return (
+  const { t } = useTranslation();
+  const [freshDiamonds, setFreshDiamonds] = useState<number | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    const fetchFreshData = async () => {
+      if (!currentUser?.id) return;
+
+      setIsLoading(true);
+      try {
+        console.log(`💎 [WALLET] Buscando dados frescos para usuário ${currentUser.id}`);
+        const freshUser = await api.getFreshUserData(currentUser.id);
+        
+        if (freshUser && typeof freshUser.diamonds === 'number') {
+          setFreshDiamonds(freshUser.diamonds);
+          console.log(`✅ [WALLET] Dados frescos carregados: ${freshUser.diamonds} diamantes`);
+        } else {
+          console.warn('⚠️ [WALLET] Resposta inválida da API:', freshUser);
+          // Se API falhar, usar o valor do currentUser sem forçar 0
+          if (currentUser.diamonds !== undefined && currentUser.diamonds !== null) {
+            setFreshDiamonds(currentUser.diamonds);
+          }
+        }
+      } catch (error) {
+        console.error('❌ [WALLET] Erro ao buscar dados frescos:', error);
+        // Se der erro, usar o valor do currentUser sem forçar 0
+        if (currentUser.diamonds !== undefined && currentUser.diamonds !== null) {
+          setFreshDiamonds(currentUser.diamonds);
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchFreshData();
+  }, [currentUser?.id]);
+
+  // NÃO USAR || 0 - isso zera o contador!
+  const displayDiamonds = freshDiamonds !== null ? freshDiamonds : (currentUser.diamonds ?? 0);
+  
+  // Debug para mostrar o valor sendo exibido
+  console.log(`🔢 [WALLET] Exibindo diamantes: ${displayDiamonds} (fresh: ${freshDiamonds}, cache: ${currentUser.diamonds})`);
+
+  return (
     <>
-        <DiamanteDisplay diamonds={currentUser.diamonds || 0} />
-        <div className="grid grid-cols-2 gap-3">
-          {diamondPackages.map((pkg) => (
-            <div key={pkg.diamonds} onClick={() => onPurchase(pkg)} className="bg-[#2C2C2E] rounded-lg p-4 flex flex-col items-center justify-center space-y-3 cursor-pointer hover:bg-gray-700 transition-colors">
-              <div className="flex items-center space-x-2">
-                <GoldCoinWithGIcon className="w-5 h-5" />
-                <span className="text-white font-bold text-lg">
-                  {pkg.diamonds.toLocaleString('pt-BR')}
-                </span>
-              </div>
-              <div className="bg-[#444444] rounded-md px-4 py-1.5 text-sm text-gray-200">
-                R$ {pkg.price.toFixed(2).replace('.', ',')}
-              </div>
-            </div>
-          ))}
+      <DiamanteDisplay diamonds={displayDiamonds} />
+      {isLoading && (
+        <div className="text-center text-gray-400 text-sm mb-2">
+          Atualizando dados...
         </div>
+      )}
+      <div className="grid grid-cols-2 gap-3">
+        {diamondPackages.map((pkg) => (
+          <div key={pkg.diamonds} onClick={() => onPurchase(pkg)} className="bg-[#2C2C2E] rounded-lg p-4 flex flex-col items-center justify-center space-y-3 cursor-pointer hover:bg-gray-700 transition-colors">
+            <div className="flex items-center space-x-2">
+              <GoldCoinWithGIcon className="w-5 h-5" />
+              <span className="text-white font-bold text-lg">
+                {pkg.diamonds.toLocaleString('pt-BR')}
+              </span>
+            </div>
+            <div className="bg-[#444444] rounded-md px-4 py-1.5 text-sm text-gray-200">
+              R$ {pkg.price.toFixed(2).replace('.', ',')}
+            </div>
+          </div>
+        ))}
+      </div>
     </>
-    );
+  );
 };
 
 type WalletView = 'main' | 'history' | 'configure_withdrawal';

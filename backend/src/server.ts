@@ -29,6 +29,7 @@ import blockRoutes from './routes/blockRoutes';
 import locationRoutes from './routes/locationRoutes';
 import shopRoutes from './routes/shopRoutes';
 import frameRoutes from './routes/frameRoutes';
+import contributionRoutes from './routes/contributionRoutes';
 
 dotenv.config();
 
@@ -102,6 +103,7 @@ app.use('/api/blocks', blockRoutes); // Rotas de bloqueios
 app.use('/api/location', locationRoutes); // Rotas de localização
 app.use('/api/shop', shopRoutes); // Rotas da loja
 app.use('/api', frameRoutes); // Rotas de frames (quadros de avatar)
+app.use('/api', contributionRoutes); // Rotas de ranking de contribuição
 // Disponibilizar io para as rotas
 app.set('io', io);
 

@@ -1,5 +1,5 @@
 import express from 'express';
-import { User, Streamer, StreamSession, GiftTransaction } from '../models';
+import { User, Streamer } from '../models';
 
 const router = express.Router();
 
@@ -29,8 +29,8 @@ router.get('/contribution/:period', async (req, res) => {
                 const streamer = streamers.find(s => s.id === stream.hostId);
                 if (!streamer) return null;  
                 
-                // 🔧 USAR DADOS FRESCOS: Verificar se receptores está correto
-                const contribution = streamer.receptores || 0;
+                // 🔧 USAR DADOS DA STREAM: Diamantes da transmissão atual
+                const contribution = stream.diamonds || 0;
                 
                 return {
                     ...streamer.toObject(),
@@ -41,6 +41,7 @@ router.get('/contribution/:period', async (req, res) => {
                     isLive: true,
                     // Adicionar dados de verificação
                     debug: {
+                        streamDiamonds: stream.diamonds || 0,
                         receptores: streamer.receptores || 0,
                         diamonds: streamer.diamonds || 0,
                         earnings: streamer.earnings || 0
@@ -62,78 +63,40 @@ router.get('/contribution/:period', async (req, res) => {
             return res.json(liveRanking);
         }
         
-        // 🔧 CORREÇÃO: Para outros períodos, filtrar por data corretamente
-        // Daily: últimas 24 horas, Weekly: últimos 7 dias, Monthly: últimos 30 dias
+        // 🔧 CORREÇÃO: Para outros períodos, usar contadores de diamantes (não transações)
+        // Diamantes são apenas números, não transações complexas
         
-        console.log('📊 [RANKING] Buscando dados por período:', period);
+        console.log('📊 [RANKING] Buscando ranking por período:', period);
         
-        // Calcular filtro de data baseado no período
-        const now = new Date();
-        let startDate = new Date();
-        
-        switch (period) {
-            case 'daily':
-                startDate.setDate(now.getDate() - 1); // 24 horas atrás
-                break;
-            case 'weekly':
-                startDate.setDate(now.getDate() - 7); // 7 dias atrás
-                break;
-            case 'monthly':
-                startDate.setDate(now.getDate() - 30); // 30 dias atrás
-                break;
-            default:
-                startDate.setDate(now.getDate() - 1); // Default para daily
-        }
-        
-        console.log(`📅 [RANKING] Filtrando transações de ${startDate.toISOString()} até ${now.toISOString()}`);
-        
-        // Buscar transações do período
-        const periodTransactions = await GiftTransaction.find({
-            createdAt: { $gte: startDate, $lte: now }
+        // Buscar todos os usuários que têm diamantes
+        const users = await User.find({
+            $or: [
+                { diamonds: { $gt: 0 } },
+                { receptores: { $gt: 0 } }
+            ]
         });
         
-        console.log(`🎁 [RANKING] Encontradas ${periodTransactions.length} transações no período`);
+        console.log(`👤 [RANKING] Encontrados ${users.length} usuários com diamantes`);
         
-        // Calcular ranking baseado nas transações do período
-        const periodRanking = new Map();
-        
-        periodTransactions.forEach(tx => {
-            const fromUserId = tx.fromUserId;
-            const value = (tx.giftPrice || 0) * (tx.quantity || 0);
-            
-            if (!periodRanking.has(fromUserId)) {
-                periodRanking.set(fromUserId, 0);
-            }
-            periodRanking.set(fromUserId, periodRanking.get(fromUserId) + value);
-        });
-        
-        // Buscar dados dos usuários que enviaram presentes
-        const userIds = Array.from(periodRanking.keys());
-        const users = await User.find({ id: { $in: userIds } });
-        
-        // Montar ranking final
-        const validUsers = [];
-        
-        for (const [userId, contribution] of periodRanking.entries()) {
-            if (contribution <= 0) continue;
-            
-            const user = users.find(u => u.id === userId);
-            if (!user) continue;
-            
+        // Montar ranking baseado em contadores de diamantes
+        const validUsers = users.map(user => {
             const userObj = user.toObject ? user.toObject() : user;
-            validUsers.push({
+            
+            // Usar receptores para ranking (diamantes recebidos)
+            const contribution = user.receptores || 0;
+            
+            return {
                 ...userObj,
                 contribution: contribution,
                 rank: 0, // Será atribuído após ordenação
                 period: period,
                 debug: {
-                    enviados: user.enviados || 0,
-                    periodContribution: contribution,
                     diamonds: user.diamonds || 0,
-                    transactionCount: periodTransactions.filter(tx => tx.fromUserId === userId).length
+                    receptores: user.receptores || 0,
+                    enviados: user.enviados || 0
                 }
-            });
-        }
+            };
+        }).filter(user => user.contribution > 0);
         
         // Ordenar por contribution (maior para menor)
         validUsers.sort((a, b) => b.contribution - a.contribution);
@@ -143,7 +106,7 @@ router.get('/contribution/:period', async (req, res) => {
             user.rank = index + 1;
         });
         
-        console.log(`✅ ${validUsers.length} usuários no ranking ${period} (filtrado por data)`);
+        console.log(`✅ ${validUsers.length} usuários no ranking ${period} (contadores de diamantes)`);
         console.log(`📊 [RANKING] Top 3 do período:`);
         validUsers.slice(0, 3).forEach((user, index) => {
             console.log(`   ${index + 1}. ${user.name}: ${user.contribution} diamantes`);
@@ -153,56 +116,6 @@ router.get('/contribution/:period', async (req, res) => {
         
     } catch (error: any) {
         console.error('❌ [CONTRIBUTION RANKING] Erro:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// 🔄 ROTA para sincronizar contadores (se necessário)
-router.post('/sync-counters/:userId', async (req, res) => {
-    try {
-        const { userId } = req.params;
-        
-        console.log(`🔄 [SYNC] Sincronizando contadores do usuário ${userId}`);
-        
-        // Buscar usuário
-        const user = await User.findOne({ id: userId });
-        if (!user) {
-            return res.status(404).json({ error: 'Usuário não encontrado' });
-        }
-        
-        // Calcular valores reais baseados em transações
-        const sentTransactions = await GiftTransaction.find({ fromUserId: userId });
-        const receivedTransactions = await GiftTransaction.find({ toUserId: userId });
-        
-        const realEnviados = sentTransactions.reduce((sum, t) => sum + (t.giftPrice * t.quantity), 0);
-        const realReceptores = receivedTransactions.reduce((sum, t) => sum + (t.giftPrice * t.quantity), 0);
-        
-        // Atualizar contadores se estiverem incorretos
-        const needsUpdate = user.enviados !== realEnviados || user.receptores !== realReceptores;
-        
-        if (needsUpdate) {
-            user.enviados = realEnviados;
-            user.receptores = realReceptores;
-            user.earnings = realReceptores; // Manter earnings = receptores
-            await user.save();
-            
-            console.log(`✅ [SYNC] Contadores atualizados: enviados=${realEnviados}, receptores=${realReceptores}`);
-        } else {
-            console.log(`ℹ️ [SYNC] Contadores já estão corretos`);
-        }
-        
-        res.json({
-            success: true,
-            updated: needsUpdate,
-            counters: {
-                enviados: user.enviados,
-                receptores: user.receptores,
-                earnings: user.earnings
-            }
-        });
-        
-    } catch (error: any) {
-        console.error('❌ [SYNC] Erro ao sincronizar contadores:', error);
         res.status(500).json({ error: error.message });
     }
 });

@@ -464,6 +464,11 @@ const AppContent: React.FC = () => {
   useEffect(() => {
     if (currentUser) {
       socketService.connect();
+      
+      // Entrar na sala específica do usuário para receber eventos personalizados
+      if (currentUser?.id) {
+        socketService.joinRoom(currentUser.id);
+      }
 
       // Escutar atualizações de presença
       socketService.on('user_status_updated', (data: { userId: string; isOnline: boolean }) => {
@@ -505,6 +510,22 @@ const AppContent: React.FC = () => {
             updatedUser.receptores = data.totalReceptores;
           }
           
+          updateUserEverywhere(updatedUser);
+        }
+      });
+
+      // 🔧 SINCRONIZAÇÃO: Escutar atualizações de saque em tempo real
+      // Quando um saque é realizado, diamonds e receptores devem ser zerados
+      socketService.on('earnings_withdrawn', (data: { userId: string; amount: number; newEarnings: number; diamonds?: number; receptores?: number; timestamp: string }) => {
+        
+        if (data.userId === currentUser.id) {
+          // Atualizar usuário com dados completos do saque
+          const updatedUser = { 
+            ...currentUser, 
+            earnings: data.newEarnings,
+            diamonds: data.diamonds || 0, // Zerar carteira
+            receptores: data.receptores || 0 // Zerar receptores
+          };
           updateUserEverywhere(updatedUser);
         }
       });

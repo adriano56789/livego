@@ -258,10 +258,12 @@ router.post('/withdraw/:userId', async (req, res) => {
         
         // Realizar saque
         const newEarnings = currentEarnings - amount;
+        
+        // Zerar diamonds e receptores também após saque
         await User.findOneAndUpdate(
             { id: userId },
             { 
-                $set: { earnings: newEarnings },
+                $set: { earnings: newEarnings, diamonds: 0, receptores: 0 },
                 $inc: { earnings_withdrawn: amount }
             }
         );
@@ -324,13 +326,15 @@ router.post('/withdraw/:userId', async (req, res) => {
         console.log(`✅ [WITHDRAW] Saque realizado: ${amount} diamantes (Líquido: R$ ${net_amount_brl.toFixed(2)})`);
         console.log(`💳 [WITHDRAW] Saldo atualizado: ${currentEarnings} → ${newEarnings} diamantes`);
         
-        // Enviar WebSocket sobre saque para o usuário
+        // Enviar WebSocket sobre saque para o usuário específico (com dados completos)
         const io = req.app.get('io');
         if (io) {
-            io.emit('earnings_withdrawn', {
+            io.to(userId).emit('earnings_withdrawn', {
                 userId,
                 amount,
                 newEarnings,
+                diamonds: 0, // Carteira zerada
+                receptores: 0, // Receptores zerados
                 brl_amount: net_amount_brl,
                 timestamp: new Date().toISOString()
             });
@@ -389,6 +393,8 @@ router.post('/earnings/withdraw/:id', async (req, res) => {
         const net_amount = brl_amount - platform_fee;
 
         user.earnings -= amount;
+        user.diamonds = 0; // Zerar carteira também
+        user.receptores = 0; // Zerar receptores também
         user.earnings_withdrawn = (user.earnings_withdrawn || 0) + net_amount;
 
         await user.save();

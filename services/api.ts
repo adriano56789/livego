@@ -168,7 +168,9 @@ export const api = {
     // --- Wallet & Transactions ---
     buyDiamonds: (userId: string, amount: number, price: number) => callApi<{ success: boolean, user: User }>('POST', `/api/users/${userId}/buy-diamonds`, { amount, price }),
     getPurchaseHistory: (userId: string) => callApi<PurchaseRecord[]>('GET', `/api/purchases/history/${userId}`),
-    getEarningsInfo: (userId: string) => callApi<{ available_diamonds: number; brl_value: number; conversion_rate: string; }>('GET', `/api/wallet/earnings/get/${userId}`),
+    getEarningsInfo: (userId: string) => callApi<{
+        withdrawal_method: boolean; available_diamonds: number; brl_value: number; conversion_rate: string; 
+}>('GET', `/api/wallet/earnings/get/${userId}`),
     getFreshUserData: (userId: string) => callApi<User>('GET', `/api/users/${userId}`),
     calculateWithdrawal: (amount: number) => callApi<{ diamonds: number; gross_brl: number; platform_fee_brl: number; net_brl: number; breakdown: { conversion: string; fee: string; final: string; } }>('POST', '/api/wallet/earnings/calculate', { amount }),
     confirmWithdrawal: (userId: string, amount: number) => callApi<{ success: boolean, amount: number, newEarnings: number, brl_amount: number, platform_fee: number, message: string }>('POST', `/api/wallet/withdraw/${userId}`, { amount }),
@@ -392,7 +394,7 @@ export const api = {
     getUserFrames: async (userId: string) => {
       return callApi<{ ownedFrames: any[]; activeFrameId: string; diamonds: number }>('GET', `/api/users/${userId}/frames`);
     },
-    getAvatarFrames: () => callApi<Array<{ id: string, name: string, price: number, duration: number }>>('GET', '/api/effects/frames'),
+    getAvatarFrames: () => callApi<Array<{ id: string, name: string, price: number, duration: number }>>('GET', '/api/interactions/effects/frames'),
     subscribeToVIP: (userId: string) => callApi<{ success: boolean, user: User }>('POST', `/api/vip/subscribe/${userId}`),
     purchaseEffect: (userId: string, gift: Gift) => callApi<{ success: boolean, user: User }>('POST', `/api/effects/purchase/${userId}`, { giftId: gift.name }),
     getAvatarProtectionStatus: (userId: string) => callApi<{ isEnabled: boolean }>('GET', `/api/users/${userId}/avatar-protection`),

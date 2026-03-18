@@ -25,9 +25,20 @@ const MarketScreen: React.FC<MarketScreenProps> = ({ onClose, user, updateUser, 
   const [avatarFrames, setAvatarFrames] = useState<any[]>([]);
   const [isLoadingFrames, setIsLoadingFrames] = useState(true);
 
+  // Early return if user is not available
+  if (!user) {
+    return (
+      <div className="absolute inset-0 bg-[#212134] z-[70] flex items-center justify-center text-white">
+        <div className="text-gray-400">Carregando dados do usuário...</div>
+      </div>
+    );
+  }
+
   // Fetch avatar frames from API
   useEffect(() => {
     const fetchFrames = async () => {
+      if (!user) return;
+      
       setIsLoadingFrames(true);
       try {
         const frames = await api.getAvatarFrames();
@@ -46,12 +57,21 @@ const MarketScreen: React.FC<MarketScreenProps> = ({ onClose, user, updateUser, 
       }
     };
     fetchFrames();
-  }, []);
+  }, [user]);
 
-  const initialSelectedItem = avatarFrames.find(f => f.id === (user as any).activeFrameId && getRemainingDays(((user as any).ownedFrames || []).find((owned: any) => owned.frameId === f.id)?.expirationDate) > 0) || avatarFrames[0];
-
-  const [selectedItem, setSelectedItem] = useState(initialSelectedItem);
+  const [selectedItem, setSelectedItem] = useState<any>(null);
   const [isActionLoading, setIsActionLoading] = useState(false);
+
+  // Set initial selected item after frames are loaded
+  useEffect(() => {
+    if (avatarFrames.length > 0) {
+      const activeFrame = avatarFrames.find(f => 
+        f.id === (user as any).activeFrameId && 
+        getRemainingDays(((user as any).ownedFrames || []).find((owned: any) => owned.frameId === f.id)?.expirationDate) > 0
+      );
+      setSelectedItem(activeFrame || avatarFrames[0]);
+    }
+  }, [avatarFrames, user]);
 
   const handlePurchase = async () => {
     if (!selectedItem || isActionLoading) return;
@@ -69,8 +89,10 @@ const MarketScreen: React.FC<MarketScreenProps> = ({ onClose, user, updateUser, 
       if (response.success) {
         // Atualizar dados do usuário com os frames
         const updatedUser = { ...user, ...response.user };
-        updateUser(updatedUser);
-        addToast(ToastType.Success, 'Quadro comprado com sucesso!');
+        if (updatedUser) {
+          updateUser(updatedUser);
+          addToast(ToastType.Success, 'Quadro comprado com sucesso!');
+        }
       }
     } catch (error: any) {
       addToast(ToastType.Error, error.message || 'Erro ao comprar quadro');
@@ -93,9 +115,9 @@ const MarketScreen: React.FC<MarketScreenProps> = ({ onClose, user, updateUser, 
   };
 
   const SelectedFrameComponent = selectedItem ? (selectedItem as any).component : null;
-  const isFrameOwned = ((user as any).ownedFrames || []).some((f: any) => f.frameId === selectedItem.id && getRemainingDays(f.expirationDate) > 0);
-  const isSelectedFrameEquipped = isFrameOwned && (user as any).activeFrameId === selectedItem.id;
-  const selectedOwnedFrame = ((user as any).ownedFrames || []).find((f: any) => f.frameId === selectedItem.id);
+  const isFrameOwned = selectedItem && ((user as any).ownedFrames || []).some((f: any) => f.frameId === selectedItem.id && getRemainingDays(f.expirationDate) > 0);
+  const isSelectedFrameEquipped = isFrameOwned && selectedItem && (user as any).activeFrameId === selectedItem.id;
+  const selectedOwnedFrame = selectedItem && ((user as any).ownedFrames || []).find((f: any) => f.frameId === selectedItem.id);
   const remainingDays = getRemainingDays(selectedOwnedFrame?.expirationDate);
 
   let buttonText: string = '';
@@ -110,16 +132,16 @@ const MarketScreen: React.FC<MarketScreenProps> = ({ onClose, user, updateUser, 
       buttonClass = 'bg-gray-600 hover:bg-gray-700';
     } else if (isFrameOwned) {
       buttonText = 'Equipar';
-      buttonAction = () => handleEquipFrame(selectedItem.id);
+      buttonAction = () => handleEquipFrame(selectedItem?.id);
       buttonClass = 'bg-blue-500 hover:bg-blue-700';
     } else { // Not owned
-      if (user.diamonds < selectedItem.price) {
+      if (selectedItem && user.diamonds < selectedItem.price) {
         buttonText = 'Recarregar';
         buttonAction = () => onOpenWallet('Diamante');
         buttonClass = 'bg-yellow-500 hover:bg-yellow-600';
         buttonDisabled = false;
       } else {
-        buttonText = `Comprar (${selectedItem.price})`;
+        buttonText = `Comprar (${selectedItem?.price || 0})`;
         buttonAction = handlePurchase;
       }
     }
@@ -160,7 +182,7 @@ const MarketScreen: React.FC<MarketScreenProps> = ({ onClose, user, updateUser, 
             {/* Preview Section */}
             <div className="flex-shrink-0 mb-4 flex flex-col items-center justify-center h-40">
               <div className="relative w-24 h-24">
-                <img src={user.avatarUrl} alt="User Avatar" className="w-full h-full object-cover rounded-full" />
+                <img src={user.avatarUrl || ''} alt="User Avatar" className="w-full h-full object-cover rounded-full" onError={(e) => { e.currentTarget.src = ''; }} />
                 {SelectedFrameComponent && (
                   <div className="absolute -top-4 -left-4 w-32 h-32 pointer-events-none avatar-frame-glow-effect">
                     <SelectedFrameComponent className="w-full h-full" />
@@ -171,7 +193,7 @@ const MarketScreen: React.FC<MarketScreenProps> = ({ onClose, user, updateUser, 
                 <div className="mt-4 text-sm text-purple-300 bg-purple-500/20 px-3 py-1 rounded-full">
                   Válido por {remainingDays} dia(s)
                 </div>
-              ) : (selectedItem as any).duration ? (
+              ) : selectedItem && (selectedItem as any).duration ? (
                 <div className="mt-4 text-sm text-gray-400 bg-gray-700/50 px-3 py-1 rounded-full">
                   Válido por {(selectedItem as any).duration} dia(s)
                 </div>
@@ -187,6 +209,10 @@ const MarketScreen: React.FC<MarketScreenProps> = ({ onClose, user, updateUser, 
               <div className="flex items-center justify-center h-40">
                 <div className="text-gray-500">Nenhum frame disponível no momento.</div>
               </div>
+            ) : !selectedItem ? (
+              <div className="flex items-center justify-center h-40">
+                <div className="text-gray-500">Selecione um frame para continuar.</div>
+              </div>
             ) : (
               <div className="grid grid-cols-3 gap-3">
                 {avatarFrames.map(frame => {
@@ -196,7 +222,7 @@ const MarketScreen: React.FC<MarketScreenProps> = ({ onClose, user, updateUser, 
                     <button
                       key={frame.id}
                       onClick={() => setSelectedItem(frame as any)}
-                      className={`relative aspect-square bg-black/20 rounded-lg flex items-center justify-center p-1 transition-all duration-200 ${selectedItem.id === frame.id ? 'ring-2 ring-purple-400' : 'ring-2 ring-transparent'}`}
+                      className={`relative aspect-square bg-black/20 rounded-lg flex items-center justify-center p-1 transition-all duration-200 ${selectedItem?.id === frame.id ? 'ring-2 ring-purple-400' : 'ring-2 ring-transparent'}`}
                     >
                       <div className="w-full h-full">
                         {frame.component ? (

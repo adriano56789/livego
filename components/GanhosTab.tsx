@@ -13,9 +13,16 @@ interface GanhosTabProps {
     addToast: (type: ToastType, message: string) => void;
 }
 
+interface EarningsInfo {
+    available_diamonds: number;
+    brl_value: number;
+    conversion_rate: string;
+    withdrawal_method?: any;
+}
+
 const GanhosTab: React.FC<GanhosTabProps> = ({ onConfigure, currentUser, updateUser, addToast }) => {
     const { t } = useTranslation();
-    const [earningsInfo, setEarningsInfo] = useState<{ available_diamonds: number; brl_value: number; conversion_rate: string } | null>(null);
+    const [earningsInfo, setEarningsInfo] = useState<EarningsInfo | null>(null);
     const [withdrawAmount, setWithdrawAmount] = useState<string>('');
     const [calculation, setCalculation] = useState<{ diamonds: number; gross_brl: number; platform_fee_brl: number; net_brl: number; breakdown: { conversion: string; fee: string; final: string; } } | null>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -27,12 +34,17 @@ const GanhosTab: React.FC<GanhosTabProps> = ({ onConfigure, currentUser, updateU
         try {
             const data = await api.getEarningsInfo(currentUser.id);
             setEarningsInfo(data);
+            
+            // Se a API retornar withdrawal_method, atualizar o usuário
+            if (data.withdrawal_method && !currentUser.withdrawal_method) {
+                updateUser({ ...currentUser, withdrawal_method: data.withdrawal_method });
+            }
         } catch (err) {
             addToast(ToastType.Error, (err as Error).message || "Falha ao carregar informações de ganhos.");
         } finally {
             setIsLoading(false);
         }
-    }, [currentUser.id, addToast]);
+    }, [currentUser.id, currentUser, updateUser, addToast]);
 
     // Fetch on mount and when user's earnings change (e.g., received a gift)
     // 🔧 CORREÇÃO: Removido currentUser.earnings para evitar loop infinito

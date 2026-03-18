@@ -87,7 +87,7 @@ const GanhosTab: React.FC<GanhosTabProps> = ({ onConfigure, currentUser, updateU
             return;
         }
 
-        if (!currentUser.withdrawal_method) {
+        if (!(earningsInfo?.withdrawal_method || currentUser.withdrawal_method)) {
             addToast(ToastType.Error, "Configure um método de saque primeiro.");
             onConfigure();
             return;
@@ -199,7 +199,10 @@ const GanhosTab: React.FC<GanhosTabProps> = ({ onConfigure, currentUser, updateU
                 <h3 className="text-sm text-gray-300">{t('wallet.withdrawMethod')}</h3>
                 <button onClick={onConfigure} className="w-full flex justify-between items-center bg-[#2C2C2E] p-4 rounded-lg hover:bg-gray-700/50 transition-colors">
                     <span className="text-white">
-                        {currentUser.withdrawal_method ? `${currentUser.withdrawal_method.method.toUpperCase()}: ${currentUser.withdrawal_method.method === 'mercado_pago' ? currentUser.withdrawal_method.details.email : currentUser.withdrawal_method.details.pixKey}` : t('wallet.configureMethod')}
+                        {(earningsInfo?.withdrawal_method || currentUser.withdrawal_method) ? 
+                            `${(earningsInfo?.withdrawal_method || currentUser.withdrawal_method).method.toUpperCase()}: ${(earningsInfo?.withdrawal_method || currentUser.withdrawal_method).method === 'mercado_pago' ? (earningsInfo?.withdrawal_method || currentUser.withdrawal_method).details.email : (earningsInfo?.withdrawal_method || currentUser.withdrawal_method).details.pixKey}` 
+                            : t('wallet.configureMethod')
+                        }
                     </span>
                     <ChevronRightIcon className="w-5 h-5 text-gray-500" />
                 </button>

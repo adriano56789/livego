@@ -24,7 +24,8 @@ router.get('/earnings/get/:id', async (req, res) => {
         res.json({ 
             available_diamonds, 
             brl_value,
-            conversion_rate: 'Tabela de pacotes'
+            conversion_rate: 'Tabela de pacotes',
+            withdrawal_method: user.withdrawal_method || null
         });
     } catch (error: any) {
         console.error('❌ [EARNINGS] Erro ao buscar earnings:', error);

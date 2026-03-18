@@ -1,5 +1,5 @@
 import express from 'express';
-   import { PurchaseRecord, GiftTransaction, User } from '../models';
+   import { PurchaseRecord, GiftTransaction, User, Streamer } from '../models';
 import { standardizeUserResponse } from '../utils/userResponse';
 import { calculateBRLFromDiamonds } from '../utils/diamondConversion';
 
@@ -268,6 +268,12 @@ router.post('/withdraw/:userId', async (req, res) => {
             }
         );
         
+        // 🔧 CORREÇÃO: Zerar também o contador da live ativa (Streamer.diamonds)
+        await Streamer.findOneAndUpdate(
+            { hostId: userId, isLive: true },
+            { $set: { diamonds: 0 } }
+        );
+        
         // Calcular valor em BRL
         const brl_amount = calculateBRLFromDiamonds(amount);
         const platform_fee_brl = brl_amount * 0.20;
@@ -326,6 +332,12 @@ router.post('/withdraw/:userId', async (req, res) => {
         console.log(`✅ [WITHDRAW] Saque realizado: ${amount} diamantes (Líquido: R$ ${net_amount_brl.toFixed(2)})`);
         console.log(`💳 [WITHDRAW] Saldo atualizado: ${currentEarnings} → ${newEarnings} diamantes`);
         
+        // 🔧 CORREÇÃO: Zerar também o contador da live ativa (Streamer.diamonds)
+        await Streamer.findOneAndUpdate(
+            { hostId: userId, isLive: true },
+            { $set: { diamonds: 0 } }
+        );
+        
         // Enviar WebSocket sobre saque para o usuário específico (com dados completos)
         const io = req.app.get('io');
         if (io) {
@@ -335,6 +347,7 @@ router.post('/withdraw/:userId', async (req, res) => {
                 newEarnings,
                 diamonds: 0, // Carteira zerada
                 receptores: 0, // Receptores zerados
+                streamDiamonds: 0, // Contador da live zerado
                 brl_amount: net_amount_brl,
                 timestamp: new Date().toISOString()
             });

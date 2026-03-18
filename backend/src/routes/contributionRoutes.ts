@@ -1,5 +1,5 @@
 import express from 'express';
-import { User, Streamer } from '../models';
+import { User, Streamer, GiftTransaction } from '../models';
 
 const router = express.Router();
 
@@ -10,57 +10,106 @@ router.get('/contribution/:period', async (req, res) => {
         const period = req.params.period;
         console.log('🏆 [CONTRIBUTION RANKING] Buscando ranking com dados frescos do banco:', period);
         
-        // Para ranking "Live", usar dados da sessão atual + dados frescos do usuário
+        // 🔧 CORREÇÃO: Para ranking "Live", usar transações de presentes em tempo real
+        // Mostra quem está enviando presentes durante a live atual
         if (period === 'live' || period === 'Ao vivo') {
-            // Buscar streams ativos
-            const activeStreams = await Streamer.find({ isLive: true });
+            // Buscar transações de presentes das últimas horas (tempo real)
+            const now = new Date();
+            const liveStartTime = new Date(now.getTime() - (2 * 60 * 60 * 1000)); // Últimas 2 horas
             
-            if (!activeStreams || activeStreams.length === 0) {
-                console.log('ℹ️ Nenhuma stream ativa encontrada');
+            // Buscar transações recentes de presentes
+            const recentGifts = await GiftTransaction.find({
+                createdAt: { $gte: liveStartTime.toISOString() }
+            }).sort({ createdAt: -1 }).limit(100);
+            
+            console.log(`🎁 [LIVE RANKING] Encontradas ${recentGifts.length} transações recentes`);
+            
+            if (!recentGifts || recentGifts.length === 0) {
+                console.log('ℹ️ Nenhuma transação recente encontrada para ranking ao vivo');
                 return res.json([]);
             }
             
-            // Buscar dados completos e frescos dos streamers
-            const streamerIds = activeStreams.map(s => s.hostId);
-            const streamers = await User.find({ id: { $in: streamerIds } });
+            // Agrupar por usuário que recebeu presentes (streamers)
+            const streamerContributions = new Map<string, {
+                totalValue: number;
+                giftCount: number;
+                streamerId: string;
+                streamerName: string;
+                lastGiftTime: Date;
+                gifts: any[];
+            }>();
             
-            // Montar ranking ao vivo com dados verificados
-            const liveRanking = activeStreams.map(stream => {
-                const streamer = streamers.find(s => s.id === stream.hostId);
-                if (!streamer) return null;  
+            recentGifts.forEach((gift: any) => {
+                const toUserId = gift.toUserId;
                 
-                // 🔧 USAR DADOS DA STREAM: Diamantes da transmissão atual
-                const contribution = stream.diamonds || 0;
-                
-                return {
-                    ...streamer.toObject(),
-                    contribution: contribution,
-                    streamId: stream.id,
-                    streamTitle: stream.message || 'Live',
-                    viewers: stream.viewers || 0,
-                    isLive: true,
-                    // Adicionar dados de verificação
-                    debug: {
-                        streamDiamonds: stream.diamonds || 0,
-                        receptores: streamer.receptores || 0,
-                        diamonds: streamer.diamonds || 0,
-                        earnings: streamer.earnings || 0
-                    }
-                };
-            }).filter(item => item !== null && item.contribution > 0);
-            
-            // Ordenar por maior contribuição
-            liveRanking.sort((a, b) => (b?.contribution || 0) - (a?.contribution || 0));
-            
-            // Adicionar posição no ranking
-            liveRanking.forEach((user, index) => {
-                if (user) {
-                    user.rank = index + 1;
+                if (!streamerContributions.has(toUserId)) {
+                    streamerContributions.set(toUserId, {
+                        totalValue: 0,
+                        giftCount: 0,
+                        streamerId: toUserId,
+                        streamerName: gift.toUserName || 'Unknown',
+                        lastGiftTime: gift.createdAt,
+                        gifts: []
+                    });
                 }
+                
+                const contribution = streamerContributions.get(toUserId)!;
+                contribution.totalValue += gift.totalValue || 0;
+                contribution.giftCount += 1;
+                contribution.lastGiftTime = new Date(gift.createdAt);
+                contribution.gifts.push({
+                    fromUser: gift.fromUserName,
+                    giftName: gift.giftName,
+                    giftPrice: gift.giftPrice,
+                    quantity: gift.quantity,
+                    totalValue: gift.totalValue,
+                    timestamp: gift.createdAt
+                });
             });
             
-            console.log(`✅ ${liveRanking.length} streamers no ranking Ao vivo (dados frescos do banco)`);
-            return res.json(liveRanking);
+            // Converter para array e ordenar por maior contribuição
+            const liveRanking = Array.from(streamerContributions.values())
+                .sort((a, b) => b.totalValue - a.totalValue)
+                .slice(0, 20); // Top 20
+            
+            // Buscar dados completos dos streamers
+            const streamerIds = liveRanking.map(c => c.streamerId);
+            const streamers = await User.find({ id: { $in: streamerIds } });
+            
+            // Verificar quais streamers estão ao vivo
+            const activeStreams = await Streamer.find({ 
+                hostId: { $in: streamerIds }, 
+                isLive: true 
+            });
+            const liveStreamIds = new Set(activeStreams.map(s => s.hostId));
+            
+            // Montar ranking final
+            const finalRanking = liveRanking.map((contrib, index) => {
+                const streamer = streamers.find(s => s.id === contrib.streamerId);
+                const isLive = liveStreamIds.has(contrib.streamerId);
+                
+                return {
+                    id: contrib.streamerId,
+                    name: contrib.streamerName,
+                    avatarUrl: streamer?.avatarUrl || '',
+                    contribution: contrib.totalValue,
+                    rank: index + 1,
+                    isLive: isLive,
+                    giftCount: contrib.giftCount,
+                    lastGiftTime: contrib.lastGiftTime,
+                    recentGifts: contrib.gifts.slice(0, 5), // Últimos 5 presentes
+                    debug: {
+                        totalGifts: contrib.giftCount,
+                        isCurrentlyLive: isLive,
+                        lastActivity: contrib.lastGiftTime
+                    }
+                };
+            });
+            
+            console.log(`✅ ${finalRanking.length} streamers no ranking Ao vivo (tempo real)`);
+            console.log(`🔥 Streamers ativos: ${finalRanking.filter(r => r.isLive).length}`);
+            
+            return res.json(finalRanking);
         }
         
         // 🔧 CORREÇÃO: Para outros períodos, usar contadores de diamantes (não transações)

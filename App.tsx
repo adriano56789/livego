@@ -515,8 +515,8 @@ const AppContent: React.FC = () => {
       });
 
       // 🔧 SINCRONIZAÇÃO: Escutar atualizações de saque em tempo real
-      // Quando um saque é realizado, diamonds e receptores devem ser zerados
-      socketService.on('earnings_withdrawn', (data: { userId: string; amount: number; newEarnings: number; diamonds?: number; receptores?: number; timestamp: string }) => {
+      // Quando um saque é realizado, diamonds, receptores e streamDiamonds devem ser zerados
+      socketService.on('earnings_withdrawn', (data: { userId: string; amount: number; newEarnings: number; diamonds?: number; receptores?: number; streamDiamonds?: number; timestamp: string }) => {
         
         if (data.userId === currentUser.id) {
           // Atualizar usuário com dados completos do saque
@@ -527,6 +527,11 @@ const AppContent: React.FC = () => {
             receptores: data.receptores || 0 // Zerar receptores
           };
           updateUserEverywhere(updatedUser);
+          
+          // Atualizar contador da live se estiver em transmissão como host
+          if (liveSession && activeStream && activeStream.hostId === data.userId) {
+            updateLiveSession({ coins: data.streamDiamonds || 0 });
+          }
         }
       });
 

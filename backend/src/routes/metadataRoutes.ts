@@ -260,105 +260,71 @@ router.get('/ranking/:period', async (req, res) => {
             return res.json(liveRanking);
         }
         
-        // Para outros períodos, usar transações de presentes
-        const now = new Date();
-        let startDate: Date;
-        let endDate: Date = now;
+        // 🔧 CORREÇÃO: Para outros períodos, usar contadores atuais em vez de transações
+        // Após saque, os contadores devem estar zerados
         
-        switch(period) {
-            case 'daily':
-            case 'Diária':
-                // Hoje (meia-noite até agora)
-                startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-                break;
-            case 'weekly':
-            case 'Semanal':
-                // Esta semana (domingo até agora)
-                const dayOfWeek = now.getDay();
-                startDate = new Date(now.getTime() - (dayOfWeek * 24 * 60 * 60 * 1000));
-                startDate.setHours(0, 0, 0, 0);
-                break;
-            case 'monthly':
-            case 'Mensal':
-                // Este mês (dia 1 até agora)
-                startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-                break;
-            default:
-                console.warn('⚠️ Período não reconhecido:', period);
-                startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        }
+        console.log('📊 [RANKING] Buscando ranking por períodos usando contadores atuais:', period);
         
-        // Buscar transações de presentes reais no período
-        const giftTransactions = await GiftTransaction.find({
-            createdAt: {
-                $gte: startDate.toISOString(),
-                $lte: endDate.toISOString()
-            }
-        }).sort({ totalValue: -1 });
-        
-        console.log(`📊 Encontradas ${giftTransactions.length} transações de presentes`);
-        
-        // Se não houver transações, retornar array vazio
-        if (!giftTransactions || giftTransactions.length === 0) {
-            console.log('ℹ️ Nenhuma transação encontrada para este período');
-            return res.json([]);
-        }
-        
-        // Agrupar transações por usuário e calcular contribuições
-        const userContributions = new Map<string, {
-            totalValue: number;
-            transactionCount: number;
-            userId: string;
-        }>();
-        
-        giftTransactions.forEach((transaction: any) => {
-            const userId = transaction.toUserId; // Quem recebeu o presente
-            
-            if (!userContributions.has(userId)) {
-                userContributions.set(userId, {
-                    totalValue: 0,
-                    transactionCount: 0,
-                    userId: userId
-                });
-            }
-            
-            const contribution = userContributions.get(userId)!;
-            contribution.totalValue += transaction.totalValue || 0;
-            contribution.transactionCount += 1;
+        // Buscar todos os usuários que têm contadores > 0
+        const users = await User.find({
+            $or: [
+                { receptores: { $gt: 0 } },
+                { diamonds: { $gt: 0 } }
+            ]
         });
         
-        // Converter para array e ordenar por maior contribuição
-        const rankingArray = Array.from(userContributions.values())
-            .sort((a, b) => b.totalValue - a.totalValue);
+        console.log(`👤 [RANKING] Encontrados ${users.length} usuários com contadores`);
         
-        // Buscar dados completos dos usuários do ranking
-        const userIds = rankingArray.map(c => c.userId);
-        const users = await User.find({ id: { $in: userIds } });
-        
-        // Mapear usuários para lookup rápido
-        const userMap = new Map();
-        users.forEach((user: any) => {
-            userMap.set(user.id, user);
-        });
-        
-        // Montar ranking final com dados reais dos usuários
-        const validUsers = rankingArray.map((contribution, index) => {
-            const user = userMap.get(contribution.userId);
-            if (!user) {
-                console.warn(`⚠️ Usuário ${contribution.userId} não encontrado no banco`);
+        // Para cada usuário, verificar se tem contadores > 0
+        const validUsers = users.map(user => {
+            const userObj = user.toObject ? user.toObject() : user;
+            
+            // Usar receptores para ranking (diamantes recebidos) - contador principal
+            let contribution = user.receptores || 0;
+            
+            // Se for ranking diário/semanal/mensal, verificar se tem contadores recentes
+            // Se os contadores estiverem zerados (pós-saque), contribution será 0
+            if (contribution === 0) {
+                // Se receptores está zerado, não aparece no ranking
                 return null;
             }
             
-            const userObj = user.toObject ? user.toObject() : user;
             return {
                 ...userObj,
-                contribution: contribution.totalValue, // Usar o totalValue exato DESTA SESSÃO/DIÁRIA
-                transactionCount: contribution.transactionCount, // Número de transações
-                rank: index + 1, // Posição no ranking
+                contribution: contribution,
+                rank: 0, // Será atribuído após ordenação
+                period: period,
+                debug: {
+                    diamonds: user.diamonds || 0,
+                    receptores: user.receptores || 0,
+                    enviados: user.enviados || 0,
+                    source: 'counters' // Indica que usa contadores, não transações
+                }
             };
-        }).filter(user => user !== null); // Remover usuários não encontrados
+        }).filter(user => user !== null && user.contribution > 0);
         
-        console.log(`✅ ${validUsers.length} usuários no ranking real ${period}`);
+        // Ordenar por contribution (maior para menor)
+        validUsers.sort((a, b) => (b?.contribution || 0) - (a?.contribution || 0));
+        
+        // Atribuir ranks
+        validUsers.forEach((user, index) => {
+            if (user) {
+                user.rank = index + 1;
+            }
+        });
+        
+        console.log(`✅ ${validUsers.length} usuários no ranking ${period} (contadores atuais)`);
+        if (validUsers.length > 0) {
+            console.log(`📊 [RANKING] Top 3 do período:`);
+            validUsers.slice(0, 3).forEach((user, index) => {
+                if (user) {
+                    console.log(`   ${index + 1}. ${user.name}: ${user.contribution} diamantes`);
+                }
+            });
+        } else {
+            console.log(`📊 [RANKING] Nenhum usuário com contadores > 0 no período ${period}`);
+        }
+        
         res.json(validUsers);
     } catch (error: any) {
         console.error('❌ Erro ao buscar ranking real:', error);

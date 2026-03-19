@@ -1,9 +1,9 @@
 
 
 import React, { useState } from 'react';
-import { Streamer } from '../types';
-import { BackIcon, ClockIcon, PlayIcon, PlusIcon } from './icons';
-import { useTranslation } from '../i18n';
+import { Streamer } from './types';
+import { BackIcon, ClockIcon, PlayIcon, PlusIcon } from './components/icons';
+import { useTranslation } from './i18n';
 
 interface ReminderModalProps {
   isOpen: boolean;

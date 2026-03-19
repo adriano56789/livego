@@ -38,7 +38,7 @@ const UserItem: React.FC<{ user: User & { value: number }; rank: number }> = ({ 
                 </div>
                 <div>
                     <p className="font-semibold text-white">{user.name || 'Usuário'}</p>
-                    <span className="bg-purple-600 text-white text-xs font-semibold px-2 py-1 rounded-full flex items-center space-x-1">
+                    <span className="bg-purple-600 text-white text-xs font-semibold px-2 py-1 rounded-full flex items-center space-x-1 ml-2">
                         <RankIcon className="h-3 w-3" />
                         <span>{user.level || 1}</span>
                     </span>

@@ -30,6 +30,7 @@ import locationRoutes from './routes/locationRoutes';
 import shopRoutes from './routes/shopRoutes';
 import frameRoutes from './routes/frameRoutes';
 import contributionRoutes from './routes/contributionRoutes';
+import purchaseRoutes from './routes/purchaseRoutes';
 
 dotenv.config();
 
@@ -89,7 +90,7 @@ app.use('/api/perfil', profileRoutes);
 app.use('/api/wallet', walletRoutes); // handles /api/wallet/earnings, /api/wallet/purchases
 app.use('/api/checkout', checkoutRoutes);
 app.use('/api/payment', checkoutRoutes); // groups pix/credit-card
-app.use('/api/purchase', checkoutRoutes);
+app.use('/api/purchase', purchaseRoutes); // dedicated purchase routes
 app.use('/api/admin', adminRoutes);
 app.use('/api/chats', chatRoutes); // Rotas de chat
 app.use('/api/users', profilePhotoRoutes); // Rotas de fotos de perfil

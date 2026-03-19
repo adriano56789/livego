@@ -12,6 +12,7 @@ interface ConfirmPurchaseScreenProps {
   };
   onConfirmPurchase: (pkg: { diamonds: number; price: number }) => void;
   addToast: (type: ToastType, message: string) => void;
+  currentUser: { id: string };
 }
 
 const InputField: React.FC<{
@@ -89,7 +90,7 @@ const generatePixCode = (amount: number, transactionId: string, merchantKey: str
 };
 
 
-const ConfirmPurchaseScreen: React.FC<ConfirmPurchaseScreenProps> = ({ onClose, packageDetails, onConfirmPurchase, addToast }) => {
+const ConfirmPurchaseScreen: React.FC<ConfirmPurchaseScreenProps> = ({ onClose, packageDetails, onConfirmPurchase, addToast, currentUser }) => {
   const { t } = useTranslation();
   const [paymentMethod, setPaymentMethod] = useState<'credit_card' | 'pix'>('pix');
   
@@ -112,8 +113,8 @@ const ConfirmPurchaseScreen: React.FC<ConfirmPurchaseScreenProps> = ({ onClose, 
   useEffect(() => {
       const initOrder = async () => {
           try {
-              // 1. Create Order on Backend
-              const order = await api.createOrder('10755083', 'pkg_custom', packageDetails.price, packageDetails.diamonds);
+              // 1. Create Order on Backend with correct user ID
+              const order = await api.createOrder(currentUser.id, 'pkg_custom', packageDetails.price, packageDetails.diamonds);
               setOrderId(order.id);
 
               if (paymentMethod === 'pix') {
@@ -130,7 +131,7 @@ const ConfirmPurchaseScreen: React.FC<ConfirmPurchaseScreenProps> = ({ onClose, 
       };
       
       initOrder();
-  }, [packageDetails, paymentMethod, addToast]); // Re-run if payment method switches back and forth logic could be refined
+  }, [packageDetails, paymentMethod, addToast, currentUser.id]); // Re-run if payment method switches back and forth logic could be refined
 
   // Timer Effect
   useEffect(() => {

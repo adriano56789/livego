@@ -196,10 +196,7 @@ export const api = {
     // --- Metadata & Catalog ---
     getRankingForPeriod: async (period: string): Promise<RankedUser[]> => {
         try {
-            console.log(`🔄 [API] Buscando ranking para período: ${period}`);
-
             if (!period) {
-                console.warn('⚠️ [API] Período não fornecido');
                 return [];
             }
 
@@ -209,12 +206,10 @@ export const api = {
 
             // Garantir que sempre retorne um array válido
             if (!response) {
-                console.warn('⚠️ [API] Resposta vazia da API de ranking');
                 return [];
             }
 
             if (!Array.isArray(response)) {
-                console.warn('⚠️ [API] Resposta não é array:', response);
                 return [];
             }
 
@@ -227,27 +222,12 @@ export const api = {
                     typeof user.contribution === 'number' &&
                     user.contribution >= 0;
                 
-                if (!isValid) {
-                    console.warn('⚠️ [API] Usuário inválido no ranking:', user);
-                }
-                
                 return isValid;
             });
-
-            console.log(`✅ [API] Ranking carregado: ${validUsers.length} usuários válidos`);
-            
-            // Log dos top 5 para debug
-            if (validUsers.length > 0) {
-                console.log('🏆 [API] Top 5:');
-                validUsers.slice(0, 5).forEach((user, index) => {
-                    console.log(`  ${index + 1}. ${user.name}: ${user.contribution} diamantes`);
-                });
-            }
 
             return validUsers;
 
         } catch (error) {
-            console.error('❌ [API] Erro ao buscar ranking:', error);
             return []; // Sempre retornar array vazio em caso de erro
         }
     },

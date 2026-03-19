@@ -14,19 +14,72 @@ const diamondPackages = [
 
 router.get('/pack', async (req, res) => res.json(diamondPackages));
 router.post('/order', async (req, res) => {
-    const order = await Order.create({ ...req.body, id: Date.now().toString(), status: 'pending' });
-    res.json(order);
+    try {
+        console.log(`[ORDER CREATE] Criando order:`, req.body);
+        
+        const order = await Order.create({ 
+            ...req.body, 
+            id: Date.now().toString(), 
+            status: 'pending',
+            timestamp: new Date()
+        });
+        
+        console.log(`[ORDER SUCCESS] Order criada: ${order.id} para usuário ${order.userId}`);
+        res.json(order);
+    } catch (err: any) {
+        console.error(`[ORDER ERROR] Erro ao criar order:`, err);
+        res.status(500).json({ error: err.message });
+    }
 });
 router.post('/pix', async (req, res) => {
-    res.json({ success: true, pixCode: 'test-pix-12345', expiration: new Date().toISOString(), orderId: req.body.orderId });
+    try {
+        const { orderId } = req.body;
+        console.log(`[PIX PAYMENT] Gerando PIX para order: ${orderId}`);
+        
+        // Verificar se a order existe
+        const order = await Order.findOne({ id: orderId });
+        if (!order) {
+            console.log(`[PIX ERROR] Order não encontrada: ${orderId}`);
+            return res.status(404).json({ error: 'Order not found' });
+        }
+
+        const pixResponse = {
+            success: true,
+            pixCode: `test-pix-${orderId}-${Date.now()}`,
+            expiration: new Date(Date.now() + 30 * 60 * 1000).toISOString(), // 30 minutos
+            orderId: orderId,
+            amount: order.amount,
+            diamonds: order.diamonds
+        };
+
+        console.log(`[PIX SUCCESS] PIX gerado para order ${orderId}: R$${order.amount} (${order.diamonds} diamantes)`);
+        
+        res.json(pixResponse);
+    } catch (err: any) {
+        console.error(`[PIX ERROR] Erro ao gerar PIX:`, err);
+        res.status(500).json({ error: err.message });
+    }
 });
 router.post('/credit-card', async (req, res) => {
     res.json({ success: true, message: 'Pago', orderId: req.body.orderId });
 });
 router.post('/confirm', async (req, res) => {
     try {
-        const order = await Order.findOneAndUpdate({ id: req.body.orderId }, { status: 'paid' }, { new: true });
-        if (!order) return res.status(404).json({ error: 'Order not found' });
+        const { orderId } = req.body;
+        console.log(`[PURCHASE CONFIRM] Confirmando compra: ${orderId}`);
+        
+        const order = await Order.findOneAndUpdate({ id: orderId }, { status: 'paid' }, { new: true });
+        if (!order) {
+            console.log(`[PURCHASE ERROR] Order não encontrada: ${orderId}`);
+            return res.status(404).json({ error: 'Order not found' });
+        }
+
+        console.log(`[PURCHASE CONFIRM] Order encontrada:`, {
+            orderId: order.id,
+            userId: order.userId,
+            diamonds: order.diamonds,
+            amount: order.amount
+        });
 
         const user = await import('../models').then(m => m.User).then(U => U.findOneAndUpdate(
             { id: order.userId },
@@ -34,8 +87,29 @@ router.post('/confirm', async (req, res) => {
             { new: true }
         ));
 
-        res.json({ success: !!user, user: user || {} as any, order });
+        if (!user) {
+            console.log(`[PURCHASE ERROR] Usuário não encontrado: ${order.userId}`);
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        console.log(`[PURCHASE SUCCESS] Usuário ${user.name} recebeu ${order.diamonds} diamantes. Saldo atual: ${user.diamonds}`);
+
+        // Registrar compra no histórico
+        const PurchaseRecord = (await import('../models')).PurchaseRecord;
+        await PurchaseRecord.create({
+            id: `purchase_${orderId}_${Date.now()}`,
+            userId: order.userId,
+            type: 'diamond_purchase',
+            description: `Compra de ${order.diamonds} diamantes`,
+            amountBRL: order.amount,
+            amountCoins: order.diamonds,
+            status: 'Concluído',
+            timestamp: new Date()
+        });
+
+        res.json({ success: true, user, order });
     } catch (err: any) {
+        console.error(`[PURCHASE ERROR] Erro ao confirmar compra:`, err);
         res.status(500).json({ error: err.message });
     }
 });

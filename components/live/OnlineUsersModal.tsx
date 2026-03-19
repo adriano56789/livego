@@ -100,9 +100,6 @@ const OnlineUsersModal: React.FC<OnlineUsersModalProps> = ({ onClose, streamId }
                         user.name
                     );
                     
-                    if (validUsers.length !== data.length) {
-                    }
-                    
                     setUsers(validUsers);
                 }
                 

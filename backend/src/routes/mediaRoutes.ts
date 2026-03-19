@@ -27,6 +27,14 @@ router.post('/users/:userId/photos', async (req, res) => {
         
         // Atualizar avatar do usuário se for a primeira foto ou se marcado como avatar
         if (!user.avatarUrl || req.body.isAvatar) {
+            // VALIDAÇÃO: Bloquear URLs Base64 - apenas permitir URLs normais
+            if (photoUrl && photoUrl.startsWith('data:image')) {
+                return res.status(400).json({ 
+                    success: false, 
+                    error: 'URLs Base64 não são permitidas. Use o upload de arquivos.' 
+                });
+            }
+
             await User.findOneAndUpdate(
                 { id: userId },
                 { avatarUrl: photoUrl }
@@ -179,6 +187,14 @@ router.put('/users/:userId/profile', async (req, res) => {
         }
         
         if (avatarUrl && avatarUrl !== user.avatarUrl) {
+            // VALIDAÇÃO: Bloquear URLs Base64 - apenas permitir URLs normais
+            if (avatarUrl && avatarUrl.startsWith('data:image')) {
+                return res.status(400).json({ 
+                    success: false, 
+                    error: 'URLs Base64 não são permitidas. Use o upload de arquivos.' 
+                });
+            }
+
             updateData.avatarUrl = avatarUrl;
             updates.push({
                 id: `profile_update_${userId}_${Date.now()}_2`,

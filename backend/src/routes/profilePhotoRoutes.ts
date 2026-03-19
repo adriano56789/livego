@@ -256,6 +256,14 @@ router.put('/:userId/photos/:id/set-main', async (req, res) => {
         );
 
         if (updatedPhoto) {
+            // VALIDAÇÃO: Bloquear URLs Base64 - apenas permitir URLs normais
+            if (updatedPhoto.photoUrl && updatedPhoto.photoUrl.startsWith('data:image')) {
+                return res.status(400).json({ 
+                    success: false, 
+                    error: 'URLs Base64 não são permitidas. Use o upload de arquivos.' 
+                });
+            }
+
             await User.findOneAndUpdate(
                 { id: userId },
                 { avatarUrl: updatedPhoto.photoUrl, updatedAt: new Date() }

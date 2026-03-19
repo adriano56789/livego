@@ -29,12 +29,12 @@ const UserItem: React.FC<{ user: User & { value: number }; rank: number }> = ({ 
                 <div className="w-8 flex justify-center">{getRankIcon()}</div>
                 <div className="relative">
                     <img 
-                        src={user.avatarUrl || `https://picsum.photos/seed/${user.id}/100/100.jpg`} 
+                        src={user.avatarUrl} 
                         alt={user.name || 'Usuário'} 
                         className="w-12 h-12 rounded-full object-cover"
                         onError={(e) => {
-                            // Fallback para imagem padrão se falhar
-                            e.currentTarget.src = `https://picsum.photos/seed/fallback-${user.id}/100/100.jpg`;
+                            // Se falhar, mostrar placeholder fixo baseado no ID
+                            e.currentTarget.src = `https://picsum.photos/seed/user-${user.id}/100/100.jpg`;
                         }}
                     />
                     {/* Diamantes descendo ao lado do avatar - igual Bingo Live */}

@@ -536,6 +536,14 @@ router.post('/avatars/:avatarId/equip', async (req, res) => {
         avatar.isCurrent = true;
         await avatar.save();
 
+        // VALIDAÇÃO: Bloquear URLs Base64 - apenas permitir URLs normais
+        if (avatar.imageUrl && avatar.imageUrl.startsWith('data:image')) {
+            return res.status(400).json({ 
+                success: false, 
+                error: 'URLs Base64 não são permitidas. Use o upload de arquivos.' 
+            });
+        }
+
         // Atualizar avatarUrl do usuário
         await User.findOneAndUpdate(
             { id: userId },

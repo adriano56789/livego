@@ -31,6 +31,8 @@ import shopRoutes from './routes/shopRoutes';
 import frameRoutes from './routes/frameRoutes';
 import contributionRoutes from './routes/contributionRoutes';
 import purchaseRoutes from './routes/purchaseRoutes';
+import uploadRoutes from './routes/uploadRoutes';
+import { blockBase64Middleware } from './middleware/blockBase64';
 
 dotenv.config();
 
@@ -81,6 +83,9 @@ app.use((req, res, next) => {
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
+// Middleware global para bloquear URLs Base64
+app.use('/api', blockBase64Middleware);
+
 // Rotas da API PRIMEIRO (antes dos arquivos estáticos)
 app.use('/api/auth', authRoutes);
 app.use('/api/accounts', authRoutes); // Alias for /api/accounts/google/connected etc.
@@ -105,6 +110,7 @@ app.use('/api/location', locationRoutes); // Rotas de localização
 app.use('/api/shop', shopRoutes); // Rotas da loja
 app.use('/api', frameRoutes); // Rotas de frames (quadros de avatar)
 app.use('/api', contributionRoutes); // Rotas de ranking de contribuição
+app.use('/api/upload', uploadRoutes); // Rotas de upload de arquivos
 // Disponibilizar io para as rotas
 app.set('io', io);
 

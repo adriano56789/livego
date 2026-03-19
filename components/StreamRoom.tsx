@@ -813,14 +813,14 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
                 {/* Fallback Image - Visible only if video is NOT playing */}
                 {!isVideoPlaying && (
                     <img
-                        src={streamerUser?.coverUrl || streamerUser?.avatarUrl || `https://picsum.photos/seed/${streamer.id}/800/600.jpg`}
-                        key={streamerUser?.coverUrl || streamerUser?.avatarUrl || streamer.id}
+                        src={streamerUser?.coverUrl || streamerUser?.avatarUrl || streamer.avatar}
+                        key={streamerUser?.coverUrl || streamerUser?.avatarUrl || streamer.avatar}
                         className="absolute inset-0 w-full h-full object-cover z-10"
                         alt="Stream background"
                         onError={(e) => {
                             // Fallback to placeholder image if main image fails
                             const target = e.target as HTMLImageElement;
-                            target.src = `https://picsum.photos/seed/fallback-${streamer.id}/800/600.jpg`;
+                            target.src = `https://picsum.photos/seed/streamer-${streamer.id}/800/600.jpg`;
                         }}
                     />
                 )}

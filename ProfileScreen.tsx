@@ -116,11 +116,11 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({
           <button onClick={avatarAction} className="relative mb-4 group" aria-label={avatarAriaLabel}>
             <div className="relative w-24 h-24">
                 <img
-                  src={currentUser.avatarUrl || `https://picsum.photos/seed/${currentUser.id}/200/200.jpg`}
+                  src={currentUser.avatarUrl}
                   alt="User Avatar"
                   className="w-full h-full rounded-full object-cover p-1 group-hover:opacity-80 transition-opacity"
                   onError={(e) => {
-                      e.currentTarget.src = `https://picsum.photos/seed/fallback-${currentUser.id}/200/200.jpg`;
+                      e.currentTarget.src = `https://picsum.photos/seed/user-${currentUser.id}/200/200.jpg`;
                   }}
                 />
                 

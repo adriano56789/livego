@@ -13,11 +13,11 @@ const BroadcasterProfileModal: React.FC<BroadcasterProfileModalProps> = ({ user,
     <div className="absolute inset-0 bg-black/50 z-50 flex items-center justify-center" onClick={onClose}>
         <div className="bg-[#1C1C1E] p-4 rounded-lg max-w-sm w-full" onClick={e => e.stopPropagation()}>
             <img 
-                src={user.avatarUrl || `https://picsum.photos/seed/${user.id}/200/200.jpg`} 
+                src={user.avatarUrl} 
                 alt={user.name} 
                 className="w-20 h-20 rounded-full mx-auto object-cover"
                 onError={(e) => {
-                    e.currentTarget.src = `https://picsum.photos/seed/fallback-${user.id}/200/200.jpg`;
+                    e.currentTarget.src = `https://picsum.photos/seed/user-${user.id}/200/200.jpg`;
                 }}
             />
             <h2 className="text-center text-white font-bold text-xl mt-2">{user.name}</h2>

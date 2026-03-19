@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { CloseIcon, ActionIcon, YellowDiamondIcon, CrownIcon, UserIcon } from '../icons';
+import { CloseIcon, ActionIcon, YellowDiamondIcon, CrownIcon, UserIcon, RankIcon } from '../icons';
 import { User } from '../../types';
 import { api } from '../../services/api';
 import { LoadingSpinner } from '../Loading';
@@ -38,7 +38,10 @@ const UserItem: React.FC<{ user: User & { value: number }; rank: number }> = ({ 
                 </div>
                 <div>
                     <p className="font-semibold text-white">{user.name || 'Usuário'}</p>
-                    <p className="text-sm text-gray-400">Nível {user.level || 1}</p>
+                    <span className="bg-purple-600 text-white text-xs font-semibold px-2 py-1 rounded-full flex items-center space-x-1">
+                        <RankIcon className="h-3 w-3" />
+                        <span>{user.level || 1}</span>
+                    </span>
                 </div>
             </div>
             {/* Removida exibição de diamantes - mostra apenas ranking por posição */}

@@ -450,6 +450,13 @@ router.get('/streams/:id/online-users', async (req, res) => {
             id: { $exists: true, $nin: ['', null] } // Apenas usuários com ID válido
         }).select('id name avatarUrl identification level activeFrameId frameExpiration');
 
+        console.log(`🔍 [ONLINE USERS] Usuários encontrados na stream ${streamId}:`, onlineUsersInStream.map(u => ({
+            id: u.id,
+            name: u.name,
+            avatarUrl: u.avatarUrl,
+            hasAvatar: !!u.avatarUrl
+        })));
+
         // Buscar transações de presentes desta live para calcular valores enviados APENAS nesta live
         const { GiftTransaction } = await import('../models');
         const liveGiftTransactions = await GiftTransaction.find({

@@ -1111,10 +1111,10 @@ const logLiveEvent = (type: string, data: any) => {
       try {
 
         // 1. Encerrar sessão da live (salvar histórico, etc.)
-        const response = await api.endLiveSession(activeStream.id, liveSession);
+        const response = await api.endLiveSession(currentUser.id, activeStream.id, liveSession);
 
         // 2. Remover o card especificamente
-        const removeResponse = await api.removeLiveCard(activeStream.id);
+        const removeResponse = await api.removeLiveCard(currentUser.id, activeStream.id);
 
         // 3. Recarregar a lista de streams para atualizar os cards
         await loadStreams();
@@ -1565,7 +1565,7 @@ const logLiveEvent = (type: string, data: any) => {
       {isFansScreenOpen && <FansScreen onBack={() => setIsFansScreenOpen(false)} onViewProfile={handleViewProfile} users={listScreenUsers} onFollowUser={handleFollowUser} />}
       {isFriendRequestsScreenOpen && <FriendRequestsScreen onBack={() => setIsFriendRequestsScreenOpen(false)} onViewProfile={handleViewProfile} users={(followingUsers || []).filter(followed => followed && (fans || []).some(fan => fan && fan.id === followed.id))} onFollowUser={handleFollowUser} />}
       {isVisitorsScreenOpen && <VisitorsScreen onBack={() => setIsVisitorsScreenOpen(false)} onViewProfile={handleViewProfile} currentUser={currentUser} addToast={addToast} />}
-      {isTopFansScreenOpen && <TopFansScreen onBack={() => setIsTopFansScreenOpen(false)} onViewProfile={handleViewProfile} currentUser={currentUser} />}}
+      {isTopFansScreenOpen && <TopFansScreen onBack={() => setIsTopFansScreenOpen(false)} onViewProfile={handleViewProfile} currentUser={currentUser} />}
       {isMyLevelScreenOpen && <MyLevelScreen onClose={() => setIsMyLevelScreenOpen(false)} currentUser={currentUser} />}
       {isBlockListScreenOpen && <BlockListScreen onClose={() => setIsBlockListScreenOpen(false)} onUnblockUser={handleUnblockUser} onViewProfile={handleViewProfile} />}
       {isAvatarProtectionScreenOpen && <AvatarProtectionScreen onClose={() => setIsAvatarProtectionScreenOpen(false)} currentUser={currentUser} updateUser={updateUserEverywhere} addToast={addToast} />}

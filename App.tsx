@@ -1109,12 +1109,16 @@ const logLiveEvent = (type: string, data: any) => {
 
       // 🚀 CHAMADA À API ESPECÍFICA PARA REMOVER O CARD DA LIVE
       try {
-
         // 1. Encerrar sessão da live (salvar histórico, etc.)
-        const response = await api.endLiveSession(currentUser.id, activeStream.id, liveSession);
+        const response = await api.endLiveSession(activeStream.id, liveSession);
 
         // 2. Remover o card especificamente
-        const removeResponse = await api.removeLiveCard(currentUser.id, activeStream.id);
+        const removeResponse = await api.removeLiveCard(activeStream.id);
+        
+        // Verificar se o card foi removido com sucesso
+        if (!removeResponse.success) {
+          console.warn('Card da live não foi removido:', removeResponse);
+        }
 
         // 3. Recarregar a lista de streams para atualizar os cards
         await loadStreams();

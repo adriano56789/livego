@@ -37,9 +37,10 @@ const LevelBadge: React.FC<{ user: RankedUser }> = ({ user }) => (
 interface ContributionRankingModalProps {
     onClose: () => void;
     liveRanking?: (User & { value: number })[];
+    currentUser?: User | null;
 }
 
-const ContributionRankingModal: React.FC<ContributionRankingModalProps> = ({ onClose, liveRanking }) => {
+const ContributionRankingModal: React.FC<ContributionRankingModalProps> = ({ onClose, liveRanking, currentUser }) => {
     const [activeTab, setActiveTab] = useState<Period>('Live');
     const [data, setData] = useState<RankedUser[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -85,7 +86,7 @@ const ContributionRankingModal: React.FC<ContributionRankingModalProps> = ({ onC
                         throw new Error('Período inválido');
                     }
                     
-                    const rankingData = await api.getRankingForPeriod(currentPeriod as PeriodKey);
+                    const rankingData = await api.getRankingForPeriod(currentPeriod as PeriodKey, currentUser?.id);
                     
                     // Validar resposta da API
                     if (!rankingData) {

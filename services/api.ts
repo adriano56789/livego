@@ -133,11 +133,12 @@ export const api = {
     getLevelInfo: (userId: string) => callApi<LevelInfo>('GET', `/api/users/${userId}/level-info`),
     recordVisit: (profileId: string, visitorId: string) => callApi<void>('POST', `/api/users/${profileId}/visit`, { userId: visitorId }),
 
-    // --- Profile Management (Specific Routes) ---
+    // --- Profile Management (Correct Routes) ---
     profile: {
-        getImages: () => callApi<Obra[]>('GET', '/api/perfil/imagens'),
-        deleteImage: (id: string) => callApi<{ success: boolean }>('DELETE', `/api/perfil/imagens/${id}`),
-        reorderImages: (orderedIds: string[]) => callApi<{ success: boolean, images: Obra[] }>('PUT', '/api/perfil/imagens/ordenar', { orderedIds }),
+        getImages: (userId?: string) => callApi<FeedPhoto[]>('GET', userId ? `/api/users/${userId}/photos` : '/api/users/me/photos'),
+        deleteImage: (id: string, userId?: string) => callApi<{ success: boolean }>('DELETE', userId ? `/api/users/${userId}/photos/${id}` : `/api/users/me/photos/${id}`),
+        setMainImage: (id: string, userId?: string) => callApi<{ success: boolean }>('PUT', userId ? `/api/users/${userId}/photos/${id}/set-main` : `/api/users/me/photos/${id}/set-main`),
+        reorderImages: (orderedIds: string[], userId?: string) => callApi<{ success: boolean, images: FeedPhoto[] }>('PUT', userId ? `/api/users/${userId}/photos/reorder` : `/api/users/me/photos/reorder`, { orderedIds }),
 
         getNickname: () => callApi<{ value: string }>('GET', '/api/perfil/apelido'),
         updateNickname: (value: string) => callApi<{ success: boolean }>('PUT', '/api/perfil/apelido', { value }),
@@ -194,7 +195,7 @@ export const api = {
     getAdminWithdrawalHistory: (status: string) => callApi<PurchaseRecord[]>('GET', `/api/admin/history?status=${status}`),
 
     // --- Metadata & Catalog ---
-    getRankingForPeriod: async (period: string): Promise<RankedUser[]> => {
+    getRankingForPeriod: async (period: string, userId?: string): Promise<RankedUser[]> => {
         try {
             if (!period) {
                 return [];
@@ -202,7 +203,10 @@ export const api = {
 
             // Forçar cache-busting adicionando timestamp
             const timestamp = Date.now();
-            const response = await callApi<RankedUser[]>(`GET`, `/api/ranking/${period}?_t=${timestamp}`);
+            const url = userId 
+                ? `/api/ranking/${period}?userId=${userId}&_t=${timestamp}`
+                : `/api/ranking/${period}?_t=${timestamp}`;
+            const response = await callApi<RankedUser[]>(`GET`, url);
 
             // Garantir que sempre retorne um array válido
             if (!response) {
@@ -375,6 +379,9 @@ export const api = {
       return callApi<{ ownedFrames: any[]; activeFrameId: string; diamonds: number }>('GET', `/api/users/${userId}/frames`);
     },
     getAvatarFrames: () => callApi<Array<{ id: string, name: string, price: number, duration: number }>>('GET', '/api/interactions/effects/frames'),
+    // --- Avatar & Profile APIs ---
+    getUserAvatar: (userId: string) => callApi<{ photoUrl: string }>('GET', `/api/users/${userId}/photos/avatar`),
+    getUserStream: (userId: string) => callApi<{ streamId: string, isLive: boolean, streamUrl?: string }>('GET', `/api/lives/${userId}/stream`),
     subscribeToVIP: (userId: string) => callApi<{ success: boolean, user: User }>('POST', `/api/vip/subscribe/${userId}`),
     purchaseEffect: (userId: string, gift: Gift) => callApi<{ success: boolean, user: User }>('POST', `/api/effects/purchase/${userId}`, { giftId: gift.name }),
     getAvatarProtectionStatus: (userId: string) => callApi<{ isEnabled: boolean }>('GET', `/api/users/${userId}/avatar-protection`),

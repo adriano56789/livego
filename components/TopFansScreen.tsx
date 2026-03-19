@@ -45,13 +45,13 @@ const FanItem: React.FC<{ user: RankedUser; rank: number; onClick: () => void }>
     );
 };
 
-const TopFansScreen: React.FC<{ onBack: () => void; onViewProfile: (user: User) => void; }> = ({ onBack, onViewProfile }) => {
+const TopFansScreen: React.FC<{ onBack: () => void; onViewProfile: (user: User) => void; currentUser?: User | null }> = ({ onBack, onViewProfile, currentUser }) => {
     const { t } = useTranslation();
     const [fans, setFans] = useState<RankedUser[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        api.getRankingForPeriod('monthly')
+        api.getRankingForPeriod('monthly', currentUser?.id)
             .then(data => {
                 setFans(data || []);
                 setIsLoading(false);

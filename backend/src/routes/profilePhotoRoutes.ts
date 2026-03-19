@@ -1,7 +1,13 @@
 import express from 'express';
 import { ProfilePhoto, User, Streamer } from '../models/index';
+import { protect, AuthRequest } from '../middleware/auth';
 
 const router = express.Router();
+
+// Middleware para obter userId do token autenticado
+const getCurrentUserId = (req: AuthRequest) => {
+    return req.user?.id || req.user?._id;
+};
 
 // GET /api/users/:userId/photos/avatar - Buscar avatar principal
 router.get('/:userId/photos/avatar', async (req, res) => {
@@ -378,6 +384,193 @@ router.delete('/:userId/photos/:id', async (req, res) => {
         res.status(500).json({ 
             success: false,
             error: 'Erro ao remover foto',
+            details: error instanceof Error ? error.message : 'Erro desconhecido'
+        });
+    }
+});
+
+// === ROTAS PARA USUÁRIO AUTENTICADO (me) ===
+
+// GET /api/users/me/photos - Buscar todas as fotos do usuário atual
+router.get('/me/photos', protect, async (req: AuthRequest, res) => {
+    try {
+        const userId = getCurrentUserId(req);
+
+        if (!userId) {
+            return res.status(401).json({ 
+                success: false,
+                error: 'Usuário não autenticado' 
+            });
+        }
+
+        console.log(`🔍 Buscando fotos do usuário autenticado: ${userId}`);
+
+        const photos = await ProfilePhoto.find({ 
+            userId, 
+            isActive: true 
+        }).sort({ createdAt: -1 });
+
+        // Organizar por tipo
+        const avatar = photos.find(p => p.photoType === 'avatar' && p.isMain);
+        const cover = photos.find(p => p.photoType === 'cover');
+        const gallery = photos.filter(p => p.photoType === 'gallery');
+
+        res.json({
+            success: true,
+            data: {
+                avatar: avatar ? {
+                    id: avatar.id,
+                    photoUrl: avatar.photoUrl,
+                    isMain: avatar.isMain,
+                    metadata: avatar.metadata
+                } : null,
+                cover: cover ? {
+                    id: cover.id,
+                    photoUrl: cover.photoUrl,
+                    metadata: cover.metadata
+                } : null,
+                gallery: gallery.map(photo => ({
+                    id: photo.id,
+                    photoUrl: photo.photoUrl,
+                    order: photo.order,
+                    metadata: photo.metadata
+                }))
+            }
+        });
+
+    } catch (error) {
+        console.error('❌ Erro ao buscar fotos do usuário:', error);
+        res.status(500).json({ 
+            success: false,
+            error: 'Erro ao buscar fotos',
+            details: error instanceof Error ? error.message : 'Erro desconhecido'
+        });
+    }
+});
+
+// DELETE /api/users/me/photos/:id - Remover foto do usuário atual
+router.delete('/me/photos/:id', protect, async (req: AuthRequest, res) => {
+    try {
+        const userId = getCurrentUserId(req);
+        const { id } = req.params;
+
+        if (!userId) {
+            return res.status(401).json({ 
+                success: false,
+                error: 'Usuário não autenticado' 
+            });
+        }
+
+        console.log(`🗑️ Removendo foto ${id} do usuário ${userId}`);
+
+        const photo = await ProfilePhoto.findOne({ id, userId });
+
+        if (!photo) {
+            return res.status(404).json({ 
+                success: false,
+                error: 'Foto não encontrada' 
+            });
+        }
+
+        // Soft delete - marcar como inativa em vez de remover
+        await ProfilePhoto.findOneAndUpdate(
+            { id },
+            { isActive: false, updatedAt: new Date() }
+        );
+
+        console.log(`✅ Foto ${id} removida (soft delete)`);
+
+        res.json({
+            success: true,
+            message: 'Foto removida com sucesso'
+        });
+
+    } catch (error) {
+        console.error('❌ Erro ao remover foto:', error);
+        res.status(500).json({ 
+            success: false,
+            error: 'Erro ao remover foto',
+            details: error instanceof Error ? error.message : 'Erro desconhecido'
+        });
+    }
+});
+
+// PUT /api/users/me/photos/:id/set-main - Definir foto como avatar principal do usuário atual
+router.put('/me/photos/:id/set-main', protect, async (req: AuthRequest, res) => {
+    try {
+        const userId = getCurrentUserId(req);
+        const { id } = req.params;
+
+        if (!userId) {
+            return res.status(401).json({ 
+                success: false,
+                error: 'Usuário não autenticado' 
+            });
+        }
+
+        console.log(`👤 Definindo foto ${id} como avatar principal do usuário ${userId}`);
+
+        // Verificar se a foto existe e pertence ao usuário
+        const photo = await ProfilePhoto.findOne({ id, userId, photoType: 'avatar' });
+
+        if (!photo) {
+            return res.status(404).json({ 
+                success: false,
+                error: 'Foto não encontrada' 
+            });
+        }
+
+        // Remover status principal de outros avatares
+        await ProfilePhoto.updateMany(
+            { userId, photoType: 'avatar', isMain: true },
+            { isMain: false }
+        );
+
+        // Definir esta foto como principal
+        const updatedPhoto = await ProfilePhoto.findOneAndUpdate(
+            { id },
+            { isMain: true, updatedAt: new Date() },
+            { new: true }
+        );
+
+        if (updatedPhoto) {
+            // VALIDAÇÃO: Bloquear URLs Base64 - apenas permitir URLs normais
+            if (updatedPhoto.photoUrl && updatedPhoto.photoUrl.startsWith('data:image')) {
+                return res.status(400).json({ 
+                    success: false, 
+                    error: 'URLs Base64 não são permitidas. Use o upload de arquivos.' 
+                });
+            }
+
+            await User.findOneAndUpdate(
+                { id: userId },
+                { avatarUrl: updatedPhoto.photoUrl, updatedAt: new Date() }
+            );
+            console.log(`✅ Avatar do usuário atualizado: ${updatedPhoto.photoUrl}`);
+
+            // Sincronizar avatar com streams ativas do usuário
+            await Streamer.updateMany(
+                { hostId: userId },
+                { 
+                    avatar: updatedPhoto.photoUrl,
+                    updatedAt: new Date()
+                }
+            );
+            console.log(`✅ Avatar sincronizado com streams do usuário: ${userId}`);
+        }
+
+        console.log(`✅ Foto ${id} definida como avatar principal`);
+
+        res.json({
+            success: true,
+            message: 'Avatar principal atualizado com sucesso'
+        });
+
+    } catch (error) {
+        console.error('❌ Erro ao definir avatar principal:', error);
+        res.status(500).json({ 
+            success: false,
+            error: 'Erro ao definir avatar principal',
             details: error instanceof Error ? error.message : 'Erro desconhecido'
         });
     }

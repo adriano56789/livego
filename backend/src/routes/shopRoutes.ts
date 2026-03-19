@@ -1,5 +1,5 @@
 import express from 'express';
-import { ShopItem, UserInventory, UserAvatar, User } from '../models';
+import { ShopItem, UserInventory, UserAvatar, User, Streamer } from '../models';
 
 const router = express.Router();
 
@@ -541,6 +541,16 @@ router.post('/avatars/:avatarId/equip', async (req, res) => {
             { id: userId },
             { avatarUrl: avatar.imageUrl }
         );
+
+        // Sincronizar avatar com streams ativas do usuário
+        await Streamer.updateMany(
+            { hostId: userId },
+            { 
+                avatar: avatar.imageUrl,
+                updatedAt: new Date()
+            }
+        );
+        console.log(`✅ Avatar sincronizado com streams do usuário: ${userId}`);
 
         res.json({ 
             success: true, 

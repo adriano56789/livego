@@ -28,20 +28,15 @@ const UserItem: React.FC<{ user: User & { value: number }; rank: number }> = ({ 
             <div className="flex items-center space-x-3">
                 <div className="w-8 flex justify-center">{getRankIcon()}</div>
                 <div className="relative">
-                    {user.avatarUrl ? (
-                        <img 
-                            src={user.avatarUrl} 
-                            alt={user.name || 'Usuário'} 
-                            className="w-12 h-12 rounded-full object-cover"
-                            onError={(e) => {
-                                // Se falhar, não mostrar imagem genérica - deixar transparente
-                                e.currentTarget.style.display = 'none';
-                            }}
-                        />
-                    ) : (
-                        // Placeholder vazio sem imagem genérica
-                        <div className="w-12 h-12 rounded-full bg-gray-600/30 border-2 border-gray-500/30" />
-                    )}
+                    <img 
+                        src={user.avatarUrl || `https://picsum.photos/seed/${user.id}/100/100.jpg`} 
+                        alt={user.name || 'Usuário'} 
+                        className="w-12 h-12 rounded-full object-cover"
+                        onError={(e) => {
+                            // Fallback para imagem padrão se falhar
+                            e.currentTarget.src = `https://picsum.photos/seed/fallback-${user.id}/100/100.jpg`;
+                        }}
+                    />
                     {/* Diamantes descendo ao lado do avatar - igual Bingo Live */}
                     {user.value > 0 && (
                         <div className="absolute -bottom-1 -right-1 bg-yellow-400 rounded-full p-0.5 flex items-center space-x-0.5 shadow-lg border-2 border-yellow-500">

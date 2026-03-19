@@ -1,5 +1,5 @@
 import express from 'express';
-import { ProfilePhoto, User } from '../models/index';
+import { ProfilePhoto, User, Streamer } from '../models/index';
 
 const router = express.Router();
 
@@ -261,6 +261,16 @@ router.put('/:userId/photos/:id/set-main', async (req, res) => {
                 { avatarUrl: updatedPhoto.photoUrl, updatedAt: new Date() }
             );
             console.log(`✅ Avatar do usuário atualizado: ${updatedPhoto.photoUrl}`);
+
+            // Sincronizar avatar com streams ativas do usuário
+            await Streamer.updateMany(
+                { hostId: userId },
+                { 
+                    avatar: updatedPhoto.photoUrl,
+                    updatedAt: new Date()
+                }
+            );
+            console.log(`✅ Avatar sincronizado com streams do usuário: ${userId}`);
         }
 
         console.log(`✅ Foto ${id} definida como avatar principal`);

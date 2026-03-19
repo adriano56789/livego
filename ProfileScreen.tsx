@@ -21,10 +21,10 @@ import {
     ShieldIcon,
     LiveIndicatorIcon,
     BankIcon
-} from './icons';
-import { User } from '../types';
-import { useTranslation } from '../i18n';
-import { avatarFrames, getRemainingDays, getFrameGlowClass } from '../utils/chatUtils';
+} from './components/icons';
+import { User } from './types';
+import { useTranslation } from './i18n';
+import { avatarFrames, getRemainingDays, getFrameGlowClass } from './utils/chatUtils';
 
 interface ProfileScreenProps {
     currentUser: User;
@@ -116,9 +116,12 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({
           <button onClick={avatarAction} className="relative mb-4 group" aria-label={avatarAriaLabel}>
             <div className="relative w-24 h-24">
                 <img
-                  src={currentUser.avatarUrl}
+                  src={currentUser.avatarUrl || `https://picsum.photos/seed/${currentUser.id}/200/200.jpg`}
                   alt="User Avatar"
                   className="w-full h-full rounded-full object-cover p-1 group-hover:opacity-80 transition-opacity"
+                  onError={(e) => {
+                      e.currentTarget.src = `https://picsum.photos/seed/fallback-${currentUser.id}/200/200.jpg`;
+                  }}
                 />
                 
                 {ActiveFrameComponent && (

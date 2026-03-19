@@ -344,7 +344,7 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
                 globalFetchControl.set(controlKey, true);
                 
                 try {
-                    const users = await api.getOnlineUsers(streamer.id);
+                    const users = await api.getOnlineUsers(currentUser.id, streamer.id);
                     if (users) {
                         setOnlineUsers(users);
                         updateLiveSession({ viewers: users.length });
@@ -521,7 +521,7 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
         if (!isBroadcaster) return;
         const newPrivacy = !streamer.isPrivate;
         try {
-            await api.updateStream(streamer.id, { isPrivate: newPrivacy });
+            await api.updateStream(currentUser.id, streamer.id, { isPrivate: newPrivacy });
             onStreamUpdate({ isPrivate: newPrivacy });
         } catch (error) {
         }
@@ -647,7 +647,7 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
 
         // Now, call the API in the background
         try {
-            const { success, error, updatedSender, updatedReceiver } = await api.sendGift(currentUser.id, streamer.id, gift.name, quantity);
+            const { success, error, updatedSender, updatedReceiver } = await api.sendGift(currentUser.id, streamer.id, streamer.id, gift.name, quantity);
 
             if (success && updatedSender) {
                 // 🔧 SINCRONIZAÇÃO: Usar dados reais da API (banco de dados) para atualizar o remetente
@@ -1031,7 +1031,7 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
 
             {/* 5. Modals & Overlays */}
             {/* FIX: Corrected typo for state setter from 'setIsOnlineUsersOpen' to 'setOnlineUsersOpen'. */}
-            {isOnlineUsersOpen && <OnlineUsersModal onClose={() => setOnlineUsersOpen(false)} streamId={streamer.id} />}
+            {isOnlineUsersOpen && <OnlineUsersModal onClose={() => setOnlineUsersOpen(false)} streamId={streamer.id} userId={currentUser.id} />}
             <ToolsModal
                 isOpen={isToolsOpen}
                 onClose={() => setIsToolsOpen(false)}
@@ -1056,7 +1056,7 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
             {isBeautyPanelOpen && <BeautyEffectsPanel onClose={() => setBeautyPanelOpen(false)} currentUser={currentUser} addToast={addToast} />}
             <ResolutionPanel isOpen={isResolutionPanelOpen} onClose={() => setResolutionPanelOpen(false)} onSelectResolution={handleSelectResolution} currentResolution={currentResolution} />
             <CoHostModal isOpen={isCoHostModalOpen} onClose={() => setIsCoHostModalOpen(false)} onInvite={handleInvite} onOpenTimerSettings={handleOpenTimerSettings} currentUser={currentUser} addToast={addToast} streamId={streamer.id} />
-            {isRankingOpen && <ContributionRankingModal onClose={() => setIsRankingOpen(false)} liveRanking={rankingData} currentUser={currentUser} />}}
+            {isRankingOpen && <ContributionRankingModal onClose={() => setIsRankingOpen(false)} liveRanking={rankingData} currentUser={currentUser} />}
 
             <GiftModal
                 isOpen={isGiftModalOpen}
@@ -1085,3 +1085,5 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
 }
 
 export default StreamRoom;
+
+

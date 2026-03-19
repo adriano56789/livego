@@ -225,7 +225,7 @@ export default function PKBattleScreen({
             const newBanner = { ...giftPayload, id: nextGiftId.current++ };
             setBannerGifts(prev => [...prev, newBanner].slice(-5));
 
-            const { success, error, updatedSender, updatedReceiver } = await api.sendGift(currentUser.id, streamer.id, gift.name, quantity);
+            const { success, error, updatedSender, updatedReceiver } = await api.sendGift(currentUser.id, streamer.id, streamer.id, gift.name, quantity);
             
             if (success && updatedSender && updatedReceiver) {
                 updateUser(updatedSender);
@@ -631,7 +631,7 @@ export default function PKBattleScreen({
               </div>
             ))}
             
-            {isOnlineUsersOpen && <OnlineUsersModal onClose={() => setIsOnlineUsersOpen(false)} streamId={streamer.id} />}
+            {isOnlineUsersOpen && <OnlineUsersModal onClose={() => setIsOnlineUsersOpen(false)} streamId={streamer.id} userId={currentUser.id} />}
             {isRankingOpen && <ContributionRankingModal onClose={() => setIsRankingOpen(false)} liveRanking={onlineUsers} />}
             
             <ToolsModal 

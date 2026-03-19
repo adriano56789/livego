@@ -8,6 +8,7 @@ import { LoadingSpinner } from '../Loading';
 interface OnlineUsersModalProps {
     onClose: () => void;
     streamId: string;
+    userId: string;
 }
 
 const UserItem: React.FC<{ user: User & { value: number }; rank: number }> = ({ user, rank }) => {
@@ -60,7 +61,7 @@ const UserItem: React.FC<{ user: User & { value: number }; rank: number }> = ({ 
 };
 
 
-const OnlineUsersModal: React.FC<OnlineUsersModalProps> = ({ onClose, streamId }) => {
+const OnlineUsersModal: React.FC<OnlineUsersModalProps> = ({ onClose, streamId, userId }) => {
     const [users, setUsers] = useState<(User & { value: number })[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -77,7 +78,7 @@ const OnlineUsersModal: React.FC<OnlineUsersModalProps> = ({ onClose, streamId }
             if (data.streamId === streamId) {
                 // Recarregar usuários para atualizar os valores enviados
                 try {
-                    const updatedUsers = await api.getOnlineUsers(streamId);
+                    const updatedUsers = await api.getOnlineUsers(userId, streamId);
                     if (Array.isArray(updatedUsers)) {
                         setUsers(updatedUsers);
                     }
@@ -108,7 +109,7 @@ const OnlineUsersModal: React.FC<OnlineUsersModalProps> = ({ onClose, streamId }
                     throw new Error('ID da stream inválido');
                 }
                 
-                const data = await api.getOnlineUsers(streamId);
+                const data = await api.getOnlineUsers(userId, streamId);
                 
                 console.log('🔍 [ONLINE USERS MODAL] API retornou:', data);
                 

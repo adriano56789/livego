@@ -38,13 +38,10 @@ const UserItem: React.FC<{ user: User & { value: number }; rank: number }> = ({ 
                 </div>
                 <div>
                     <p className="font-semibold text-white">{user.name || 'Usuário'}</p>
-                    <p className="text-sm text-gray-400">ID: {user.identification || user.id}</p>
+                    <p className="text-sm text-gray-400">Nível {user.level || 1}</p>
                 </div>
             </div>
-            <div className="flex items-center space-x-1 text-yellow-400">
-                <span className="font-bold text-lg">{(user.value || 0).toLocaleString('pt-BR')}</span>
-                <YellowDiamondIcon className="w-5 h-5" />
-            </div>
+            {/* Removida exibição de diamantes - mostra apenas ranking por posição */}
         </div>
     );
 };

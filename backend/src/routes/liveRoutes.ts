@@ -445,26 +445,48 @@ router.get('/streams/:id/online-users', async (req, res) => {
         // Buscar usuários marcados como online nesta stream no banco de dados
         const onlineUsersInStream = await User.find({
             isOnline: true,
-            currentStreamId: streamId
-        }).select('id name avatarUrl identification level activeFrameId frameExpiration enviados receptores');
+            currentStreamId: streamId,
+            name: { $exists: true, $nin: ['', null] }, // Apenas usuários com nome válido
+            id: { $exists: true, $nin: ['', null] } // Apenas usuários com ID válido
+        }).select('id name avatarUrl identification level activeFrameId frameExpiration');
 
-        // Enriquecer com valor de presentes enviados (valor = total de gifts enviados = enviados)
-        const usersWithValue = onlineUsersInStream.map(u => ({
-            id: u.id,
-            name: u.name,
-            avatarUrl: u.avatarUrl,
-            identification: u.identification,
-            level: u.level || 1,
-            activeFrameId: u.activeFrameId || null,
-            frameExpiration: u.frameExpiration || null,
-            value: u.enviados || 0
-        }));
+        // Buscar transações de presentes desta live para calcular valores enviados APENAS nesta live
+        const { GiftTransaction } = await import('../models');
+        const liveGiftTransactions = await GiftTransaction.find({
+            streamId: streamId
+        }).select('fromUserId totalValue');
 
-        // Ordenar por valor (quem mais enviou presentes aparece primeiro)
+        // Agrupar valores por usuário para esta live específica
+        const userValuesInLive: Record<string, number> = {};
+        liveGiftTransactions.forEach(transaction => {
+            const userId = transaction.fromUserId;
+            const value = transaction.totalValue || 0;
+            userValuesInLive[userId] = (userValuesInLive[userId] || 0) + value;
+        });
+
+        // Enriquecer com valor de presentes enviados APENAS nesta live
+        const usersWithValue = onlineUsersInStream.map(u => {
+            const liveValue = userValuesInLive[u.id] || 0;
+            return {
+                id: u.id,
+                name: u.name,
+                avatarUrl: u.avatarUrl,
+                identification: u.identification,
+                level: u.level || 1,
+                activeFrameId: u.activeFrameId || null,
+                frameExpiration: u.frameExpiration || null,
+                value: liveValue // Apenas diamantes enviados nesta live
+            };
+        });
+
+        // Ordenar por valor (quem mais enviou presentes nesta live aparece primeiro)
         usersWithValue.sort((a, b) => b.value - a.value);
+
+        console.log(`👥 [ONLINE USERS] Stream ${streamId}: ${usersWithValue.length} usuários online, valores calculados para esta live`);
 
         return res.json(usersWithValue);
     } catch (error: any) {
+        console.error('❌ [ONLINE USERS] Erro:', error);
         return res.status(500).json({ error: error.message });
     }
 });
@@ -761,10 +783,35 @@ router.post('/streams/:streamId/end', async (req, res) => {
                     }
                 }
                 
-                // 🔧 CORREÇÃO CRÍTICA: NÃO zerar diamantes do streamer ao encerrar live
-                // Os diamantes acumulados devem permanecer para exibição no perfil
-                // Apenas transferimos para earnings, mas mantemos o contador visual
-                console.log(`✅ [STREAM END] Live ${streamId} encerrada. Diamantes mantidos: ${streamDiamonds}`);
+                // Zerar contadores de presentes da live (enviados durante esta live)
+                try {
+                    console.log(`🧹 [STREAM END] Limpando contadores de presentes da live ${streamId}`);
+                    
+                    // Zerar contador de diamantes da stream
+                    await Streamer.findOneAndUpdate(
+                        { id: streamId },
+                        { $set: { diamonds: 0 } }
+                    );
+                    
+                    console.log(`✅ [STREAM END] Contadores da live ${streamId} zerados`);
+                    
+                    // Notificar via WebSocket que os contadores foram zerados
+                    const io = req.app.get('io');
+                    if (io) {
+                        io.emit('live_coins_updated', {
+                            streamId: streamId,
+                            coins: 0,
+                            totalCoins: 0,
+                            timestamp: endTime.toISOString(),
+                            fromUser: 'System',
+                            giftName: 'Live End - Counters Reset'
+                        });
+                        
+                        console.log(`📡 [STREAM END] WebSocket emitido: live_coins_updated com contadores zerados`);
+                    }
+                } catch (cleanupError: any) {
+                    console.error(`❌ [STREAM END] Erro ao zerar contadores: ${cleanupError.message}`);
+                }
             } else {
                 console.log(`ℹ️ [STREAM END] Sem diamantes acumulados para transferir na live ${streamId}`);
             }

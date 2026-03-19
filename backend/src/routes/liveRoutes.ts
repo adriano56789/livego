@@ -467,6 +467,7 @@ router.get('/streams/:id/online-users', async (req, res) => {
         // Enriquecer com valor de presentes enviados APENAS nesta live
         const usersWithValue = onlineUsersInStream.map(u => {
             const liveValue = userValuesInLive[u.id] || 0;
+            console.log(`👤 [DEBUG] Usuário ${u.name} (${u.id}): liveValue=${liveValue} (de transações)`);
             return {
                 id: u.id,
                 name: u.name,
@@ -482,8 +483,7 @@ router.get('/streams/:id/online-users', async (req, res) => {
         // Ordenar por valor (quem mais enviou presentes nesta live aparece primeiro)
         usersWithValue.sort((a, b) => b.value - a.value);
 
-        console.log(`👥 [ONLINE USERS] Stream ${streamId}: ${usersWithValue.length} usuários online, valores calculados para esta live`);
-
+        console.log(`🎯 [DEBUG] Resultado final:`, usersWithValue);
         return res.json(usersWithValue);
     } catch (error: any) {
         console.error('❌ [ONLINE USERS] Erro:', error);

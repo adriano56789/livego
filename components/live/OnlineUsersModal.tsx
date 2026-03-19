@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { CloseIcon, ActionIcon, YellowDiamondIcon, CrownIcon, UserIcon, RankIcon } from '../icons';
 import { User } from '../../types';
 import { api } from '../../services/api';
+import { socketService } from '../../services/socket';
 import { LoadingSpinner } from '../Loading';
 
 interface OnlineUsersModalProps {
@@ -35,16 +36,24 @@ const UserItem: React.FC<{ user: User & { value: number }; rank: number }> = ({ 
                             e.currentTarget.src = 'https://picsum.photos/seed/fallback-avatar/200/200.jpg';
                         }}
                     />
+                    {/* Diamantes descendo ao lado do avatar - igual Bingo Live */}
+                    {user.value > 0 && (
+                        <div className="absolute -bottom-1 -right-1 bg-yellow-400 rounded-full p-0.5 flex items-center space-x-0.5 shadow-lg border-2 border-yellow-500">
+                            <YellowDiamondIcon className="h-2.5 w-2.5 text-yellow-900" />
+                            <span className="text-[10px] font-black text-yellow-900 leading-none">{user.value}</span>
+                        </div>
+                    )}
                 </div>
                 <div>
                     <p className="font-semibold text-white">{user.name || 'Usuário'}</p>
-                    <span className="bg-purple-600 text-white text-xs font-semibold px-2 py-1 rounded-full flex items-center space-x-1 ml-2">
-                        <RankIcon className="h-3 w-3" />
-                        <span>{user.level || 1}</span>
-                    </span>
+                    <div className="flex items-center space-x-2 mt-1">
+                        <span className="bg-purple-600 text-white text-xs font-semibold px-2 py-1 rounded-full flex items-center space-x-1">
+                            <RankIcon className="h-3 w-3" />
+                            <span>{user.level || 1}</span>
+                        </span>
+                    </div>
                 </div>
             </div>
-            {/* Removida exibição de diamantes - mostra apenas ranking por posição */}
         </div>
     );
 };
@@ -55,58 +64,69 @@ const OnlineUsersModal: React.FC<OnlineUsersModalProps> = ({ onClose, streamId }
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
+    // Calcular total de diamantes enviados na live
+    const totalDiamonds = users.reduce((sum, user) => sum + (user.value || 0), 0);
+
     useEffect(() => {
-        const handleUpdate = (data: { roomId: string; users: (User & { value: number })[] }) => {
-            if (data.roomId === streamId) {
-                setUsers(data.users || []);
-                setError(null);
+        // Conectar à sala da stream para receber atualizações em tempo real
+        socketService.joinRoom(streamId);
+
+        // Handler para quando presente é enviado para a stream
+        const handleGiftSent = async (data: { streamId: string; gift: { fromUserId: string; totalValue: number } }) => {
+            if (data.streamId === streamId) {
+                // Recarregar usuários para atualizar os valores enviados
+                try {
+                    const updatedUsers = await api.getOnlineUsers(streamId);
+                    if (Array.isArray(updatedUsers)) {
+                        setUsers(updatedUsers);
+                    }
+                } catch (error) {
+                    console.error('Erro ao atualizar usuários após presente:', error);
+                }
             }
         };
 
-        // Simplificado - sem WebSocket para navegação isolada
-        // webSocketManager.on('onlineUsersUpdate', handleUpdate);
+        // Handler para quando live é encerrada (zerar valores)
+        const handleStreamEnded = (data: { streamId: string }) => {
+            if (data.streamId === streamId) {
+                // Zerar valores de todos os usuários
+                setUsers(prevUsers => 
+                    prevUsers.map(user => ({ ...user, value: 0 }))
+                );
+            }
+        };
 
-        // Initial fetch com tratamento de erro robusto
-        setIsLoading(true);
-        setError(null);
-        
+        // Registrar listeners
+        socketService.onGiftSentToStream(handleGiftSent);
+        socketService.onStreamEnded(handleStreamEnded);
+
+        // Initial fetch - APENAS UMA CHAMADA
         const fetchUsers = async () => {
             try {
-                // Validar streamId
                 if (!streamId || typeof streamId !== 'string') {
                     throw new Error('ID da stream inválido');
                 }
-
                 
                 const data = await api.getOnlineUsers(streamId);
                 
-                console.log('✅ OnlineUsersModal: Dados frescos carregados da API', {
-                    streamId,
-                    usersCount: data?.length || 0,
-                    users: data?.map(u => ({ id: u.id, name: u.name, value: u.value }))
-                });
+                console.log('🔍 [ONLINE USERS MODAL] API retornou:', data);
                 
-                // Validar resposta da API
-                if (!data) {
-                    setUsers([]);
-                } else if (!Array.isArray(data)) {
-                    setUsers([]);
-                } else {
-                    // Validar cada usuário
+                if (Array.isArray(data)) {
                     const validUsers = data.filter(user => 
                         user && 
                         typeof user === 'object' && 
                         user.id && 
                         user.name
                     );
-                    
                     setUsers(validUsers);
+                } else {
+                    setUsers([]);
                 }
                 
                 setError(null);
             } catch (err) {
                 setError('Não foi possível carregar os usuários');
-                setUsers([]); // Garantir array vazio em caso de erro
+                setUsers([]);
             } finally {
                 setIsLoading(false);
             }
@@ -115,8 +135,10 @@ const OnlineUsersModal: React.FC<OnlineUsersModalProps> = ({ onClose, streamId }
         fetchUsers();
         
         return () => {
-            // Simplificado - sem WebSocket para navegação isolada
-            // webSocketManager.off('onlineUsersUpdate', handleUpdate);
+            // Cleanup: remover listeners e sair da sala
+            socketService.off('gift_sent_to_stream', handleGiftSent);
+            socketService.off('stream_ended', handleStreamEnded);
+            socketService.leaveRoom(streamId);
         };
     }, [streamId]);
 

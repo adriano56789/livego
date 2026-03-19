@@ -1158,8 +1158,15 @@ router.post('/streams/:id/end-session', async (req, res) => {
 router.delete('/cards/:streamId', async (req, res) => {
     try {
         const { streamId } = req.params;
+        const { userId } = req.query;
 
-        console.log(`🗑️ Removendo card da live ${streamId}`);
+        console.log(`🗑️ Removendo card da live ${streamId} pelo usuário ${userId}`);
+
+        // Validar userId
+        if (!userId) {
+            console.warn(`⚠️ userId não fornecido para remover card ${streamId}`);
+            return res.status(400).json({ success: false, error: 'User ID required' });
+        }
 
         // 1. Buscar a stream
         const stream = await Streamer.findOne({ id: streamId });
@@ -1169,7 +1176,13 @@ router.delete('/cards/:streamId', async (req, res) => {
             return res.status(404).json({ success: false, error: 'Stream not found' });
         }
 
-        // 2. Remover o card (marcar como offline)
+        // 2. Verificar se o usuário é o dono da stream
+        if (stream.hostId !== userId) {
+            console.warn(`⚠️ Usuário ${userId} não é dono da stream ${streamId} (dono: ${stream.hostId})`);
+            return res.status(403).json({ success: false, error: 'Unauthorized: Only stream owner can remove card' });
+        }
+
+        // 3. Remover o card (marcar como offline)
         await Streamer.findOneAndUpdate(
             { id: streamId },
             {

@@ -482,17 +482,20 @@ router.get('/streams/:id/online-users', async (req, res) => {
                     name: { $exists: true, $nin: ['', null] }
                 }).select('id name avatarUrl identification level activeFrameId frameExpiration');
                 
-                // Combinar dados dos usuários SEM valores de presentes (não mostrar diamantes)
-                const usersWithGiftData = senderUsers.map(u => ({
-                    id: u.id,
-                    name: u.name,
-                    avatarUrl: u.avatarUrl,
-                    identification: u.identification,
-                    level: u.level || 1,
-                    activeFrameId: u.activeFrameId || null,
-                    frameExpiration: u.frameExpiration || null,
-                    value: 0 // SEMPRE 0 - não mostrar diamantes no modal
-                }));
+                // Combinar dados dos usuários com valores reais de presentes enviados nesta live
+                const usersWithGiftData = senderUsers.map(u => {
+                    const senderData = giftSenders.find(s => s._id === u.id);
+                    return {
+                        id: u.id,
+                        name: u.name,
+                        avatarUrl: u.avatarUrl,
+                        identification: u.identification,
+                        level: u.level || 1,
+                        activeFrameId: u.activeFrameId || null,
+                        frameExpiration: u.frameExpiration || null,
+                        value: senderData?.totalValue || 0 // Valor real enviado nesta live
+                    };
+                });
                 
                 console.log(`🎯 [ONLINE USERS] Resultado final (presentes):`, usersWithGiftData);
                 return res.json(usersWithGiftData);
@@ -513,7 +516,7 @@ router.get('/streams/:id/online-users', async (req, res) => {
             userValuesInLive[userId] = (userValuesInLive[userId] || 0) + value;
         });
 
-        // Enriquecer com valor ZERO (não mostrar diamantes no modal)
+        // Enriquecer com valores reais de presentes enviados nesta live
         const usersWithValue = onlineUsersInStream.map(u => ({
             id: u.id,
             name: u.name,
@@ -522,11 +525,11 @@ router.get('/streams/:id/online-users', async (req, res) => {
             level: u.level || 1,
             activeFrameId: u.activeFrameId || null,
             frameExpiration: u.frameExpiration || null,
-            value: 0 // SEMPRE 0 - não mostrar diamantes no modal
+            value: userValuesInLive[u.id] || 0 // Valor real enviado nesta live
         }));
 
-        // Como todos os valores são 0, ordenar por nível em vez de valor
-        usersWithValue.sort((a, b) => (b.level || 1) - (a.level || 1));
+        // Ordenar por valor de presentes enviados (maior primeiro)
+        usersWithValue.sort((a, b) => (b.value || 0) - (a.value || 0));
 
         // Se ainda não encontrar nada, buscar o host da stream como fallback
         if (usersWithValue.length === 0) {
@@ -544,7 +547,7 @@ router.get('/streams/:id/online-users', async (req, res) => {
                         level: host.level || 1,
                         activeFrameId: host.activeFrameId || null,
                         frameExpiration: host.frameExpiration || null,
-                        value: 0
+                        value: userValuesInLive[host.id] || 0 // Valor real enviado pelo host
                     };
                     console.log(`🎯 [ONLINE USERS] Host encontrado como fallback:`, hostData);
                     return res.json([hostData]);

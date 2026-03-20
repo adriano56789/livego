@@ -159,7 +159,7 @@ router.post('/send', async (req: any, res) => {
         if (io) {
             // 🔄 ATUALIZAÇÃO DO MODAL DE CONVITE
             if (streamId && streamId !== 'unknown') {
-                io.emit('gift_sent_to_stream', {
+                io.to(streamId).emit('gift_sent_to_stream', {
                     streamId,
                     gift: {
                         fromUserId,

@@ -186,6 +186,17 @@ router.post('/streams', async (req, res) => {
             if (!existingStream.isLive || existingStream.streamStatus !== 'active') {
                 console.log(`🔄 [STREAM CREATE] Reativando stream existente ${existingStream.id} COM DADOS ZERADOS`);
 
+                // 🔥 LIMPAR TRANSAÇÕES DE PRESENTES DA LIVE ANTERIOR
+                try {
+                    const { GiftTransaction } = await import('../models');
+                    const deleteResult = await GiftTransaction.deleteMany({ 
+                        streamId: existingStream.id 
+                    });
+                    console.log(`🧹 [STREAM CREATE] Limpadas ${deleteResult.deletedCount} transações de presentes da live anterior`);
+                } catch (cleanupError: any) {
+                    console.warn(`⚠️ [STREAM CREATE] Erro ao limpar transações (mas continuando): ${cleanupError.message}`);
+                }
+
                 // Atualizar stream existente para status ativo ZERANDO dados da live anterior
                 const updatedStream = await Streamer.findOneAndUpdate(
                     { id: existingStream.id },
@@ -1186,7 +1197,7 @@ router.post('/streams/:id/end-session', async (req, res) => {
         // 7. Notificar via WebSocket
         const io = req.app.get('io');
         if (io) {
-            io.emit('stream_ended', {
+            io.to(streamId).emit('stream_ended', {
                 streamId: streamId,
                 hostId: stream.hostId,
                 timestamp: new Date().toISOString()

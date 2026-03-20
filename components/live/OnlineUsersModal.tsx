@@ -19,6 +19,14 @@ const UserItem: React.FC<{ user: User & { value: number }; rank: number }> = ({ 
         if (rank === 3) return <div className="w-6 h-6 flex items-center justify-center font-bold text-yellow-700 bg-yellow-900/50 rounded-full text-sm">3</div>;
         return <span className="w-6 text-center text-lg font-semibold text-gray-400">{rank}</span>;
     };
+
+    // LevelBadge igual ao ranking
+    const LevelBadge: React.FC<{ level: number }> = ({ level }) => (
+        <div className="flex items-center space-x-0.5 px-1.5 py-0.5 rounded-full bg-[#3b0764]/80 border border-purple-500 text-purple-100 shadow-sm">
+            <RankIcon className="h-2.5 w-2.5" />
+            <span className="text-[10px] font-bold leading-none">{level}</span>
+        </div>
+    );
     
     // Proteção contra dados inválidos
     if (!user || !user.id) {
@@ -31,28 +39,25 @@ const UserItem: React.FC<{ user: User & { value: number }; rank: number }> = ({ 
                 <div className="w-8 flex justify-center">{getRankIcon()}</div>
                 <div className="relative">
                     <img 
-                        src={user.avatarUrl && user.avatarUrl.trim() ? `${user.avatarUrl}${user.avatarUrl.includes('?') ? '&' : '?'}v=${user.avatarUrl.slice(-12)}` : 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48"><rect width="48" height="48" fill="#4B5563"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="white" font-size="20">?</text></svg>')} 
+                        src={user.avatarUrl && user.avatarUrl.trim() ? `${user.avatarUrl}${user.avatarUrl.includes('?') ? '&' : '?'}v=${user.avatarUrl.slice(-12)}` : 'https://picsum.photos/seed/default-avatar/200/200.jpg'} 
                         alt={user.name || 'Usuário'} 
-                        className="w-12 h-12 rounded-full object-cover bg-gray-700"
+                        className="w-12 h-12 rounded-full object-cover bg-gray-800"
                         onError={(e) => {
-                            (e.target as HTMLImageElement).src = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48"><rect width="48" height="48" fill="#4B5563"/></svg>');
+                            (e.target as HTMLImageElement).src = 'https://picsum.photos/seed/fallback-avatar/200/200.jpg';
                         }}
                     />
-                    {/* Diamantes descendo ao lado do avatar - igual Bingo Live */}
-                    {user.value > 0 && (
+                    {/* Diamantes descendo ao lado do avatar - USA VALUE DA API */}
+                    {(user.value || 0) > 0 && (
                         <div className="absolute -bottom-1 -right-1 bg-yellow-400 rounded-full p-0.5 flex items-center space-x-0.5 shadow-lg border-2 border-yellow-500">
                             <YellowDiamondIcon className="h-2.5 w-2.5 text-yellow-900" />
-                            <span className="text-[10px] font-black text-yellow-900 leading-none">{user.value}</span>
+                            <span className="text-[10px] font-black text-yellow-900 leading-none">{user.value || 0}</span>
                         </div>
                     )}
                 </div>
                 <div>
                     <p className="font-semibold text-white">{user.name || 'Usuário'}</p>
                     <div className="flex items-center space-x-2 mt-1">
-                        <span className="bg-purple-600 text-white text-xs font-semibold px-2 py-1 rounded-full flex items-center space-x-1">
-                            <RankIcon className="h-3 w-3" />
-                            <span>{user.level || 1}</span>
-                        </span>
+                        <LevelBadge level={user.level || 1} />
                     </div>
                 </div>
             </div>
@@ -63,6 +68,7 @@ const UserItem: React.FC<{ user: User & { value: number }; rank: number }> = ({ 
 
 const OnlineUsersModal: React.FC<OnlineUsersModalProps> = ({ onClose, streamId, userId, currentUser }) => {
     const [users, setUsers] = useState<(User & { value: number })[]>([]);
+    const [liveGifts, setLiveGifts] = useState<Record<string, number>>({}); // Rastreia presentes da live atual
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -71,8 +77,8 @@ const OnlineUsersModal: React.FC<OnlineUsersModalProps> = ({ onClose, streamId, 
         currentUser && u.id === currentUser.id ? { ...u, avatarUrl: currentUser.avatarUrl || u.avatarUrl } : u
     );
 
-    // Calcular total de diamantes enviados na live
-    const totalDiamonds = (users || []).reduce((sum, user) => sum + (user.value || 0), 0);
+    // Calcular total de diamantes enviados na live atual (não da API)
+    const totalDiamonds = Object.values(liveGifts).reduce((sum: number, value: number) => sum + (value || 0), 0);
 
     useEffect(() => {
         // Conectar à sala da stream para receber atualizações em tempo real
@@ -81,31 +87,46 @@ const OnlineUsersModal: React.FC<OnlineUsersModalProps> = ({ onClose, streamId, 
         // Handler para quando presente é enviado para a stream
         const handleGiftSent = async (data: { streamId: string; gift: { fromUserId: string; totalValue: number } }) => {
             if (data.streamId === streamId) {
-                // Recarregar usuários para atualizar os valores enviados
+                // Atualizar controle de presentes da live atual
+                setLiveGifts(prev => ({
+                    ...prev,
+                    [data.gift.fromUserId]: (prev[data.gift.fromUserId] || 0) + (data.gift.totalValue || 0)
+                }));
+                
+                // Recarregar usuários da API para pegar valores atualizados
                 try {
                     const updatedUsers = await api.getOnlineUsers(userId, streamId);
                     if (Array.isArray(updatedUsers)) {
                         setUsers(updatedUsers);
                     }
                 } catch (error) {
-                    console.error('Erro ao atualizar usuários após presente:', error);
+                    console.log('Erro ao recarregar usuários após presente:', error);
                 }
             }
         };
 
-        // Handler para quando live é encerrada (zerar valores)
+        // Handler para quando live é encerrada (remover todos os usuários)
         const handleStreamEnded = (data: { streamId: string }) => {
             if (data.streamId === streamId) {
-                // Zerar apenas os diamantes dos usuários, mas manter os usuários online
-                setUsers(prevUsers => 
-                    prevUsers.map(user => ({ ...user, value: 0 }))
-                );
+                // Remover todos os usuários E limpar presentes da live atual
+                setUsers([]);
+                setLiveGifts({});
+            }
+        };
+
+        // Handler para quando usuário é forçado a sair da live
+        const handleLiveStreamEnded = (data: { streamId: string }) => {
+            if (data.streamId === streamId) {
+                // Limpar usuários E presentes quando a live termina
+                setUsers([]);
+                setLiveGifts({});
             }
         };
 
         // Registrar listeners
         socketService.onGiftSentToStream(handleGiftSent);
         socketService.onStreamEnded(handleStreamEnded);
+        socketService.onLiveStreamEnded(handleLiveStreamEnded);
 
         // Initial fetch - APENAS UMA CHAMADA
         const fetchUsers = async () => {
@@ -152,6 +173,7 @@ const OnlineUsersModal: React.FC<OnlineUsersModalProps> = ({ onClose, streamId, 
             // Cleanup: remover listeners e sair da sala
             socketService.off('gift_sent_to_stream', handleGiftSent);
             socketService.off('stream_ended', handleStreamEnded);
+            socketService.off('live_stream_ended', handleLiveStreamEnded);
             socketService.leaveRoom(streamId);
         };
     }, [streamId]);
@@ -190,7 +212,11 @@ const OnlineUsersModal: React.FC<OnlineUsersModalProps> = ({ onClose, streamId, 
                         </div>
                     ) : usersWithFreshAvatar.length > 0 ? (
                         usersWithFreshAvatar.map((user, index) => (
-                            <UserItem key={user.id || `user-${index}`} user={user} rank={index + 1} />
+                            <UserItem 
+                                key={user.id || `user-${index}`} 
+                                user={user} 
+                                rank={index + 1} 
+                            />
                         ))
                     ) : (
                         <div className="flex flex-col items-center justify-center h-full text-gray-500 text-center p-4">

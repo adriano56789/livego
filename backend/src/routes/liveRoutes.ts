@@ -184,9 +184,9 @@ router.post('/streams', async (req, res) => {
 
             // Se o stream existente estiver offline, reativá-lo em vez de criar novo
             if (!existingStream.isLive || existingStream.streamStatus !== 'active') {
-                console.log(`🔄 [STREAM CREATE] Reativando stream existente ${existingStream.id}`);
+                console.log(`🔄 [STREAM CREATE] Reativando stream existente ${existingStream.id} COM DADOS ZERADOS`);
 
-                // Atualizar stream existente para status ativo
+                // Atualizar stream existente para status ativo ZERANDO dados da live anterior
                 const updatedStream = await Streamer.findOneAndUpdate(
                     { id: existingStream.id },
                     {
@@ -195,6 +195,7 @@ router.post('/streams', async (req, res) => {
                             streamStatus: 'active',
                             startTime: new Date().toISOString(),
                             viewers: 0,
+                            diamonds: 0, // 🔥 ZERAR diamantes da live anterior
                             name: name.trim(),
                             message: `Ao vivo: ${name.trim()}`,
                             tags: ['live', category.toLowerCase()],
@@ -481,20 +482,17 @@ router.get('/streams/:id/online-users', async (req, res) => {
                     name: { $exists: true, $nin: ['', null] }
                 }).select('id name avatarUrl identification level activeFrameId frameExpiration');
                 
-                // Combinar dados dos usuários com valores enviados
-                const usersWithGiftData = senderUsers.map(u => {
-                    const giftData = giftSenders.find(g => g._id === u.id);
-                    return {
-                        id: u.id,
-                        name: u.name,
-                        avatarUrl: u.avatarUrl,
-                        identification: u.identification,
-                        level: u.level || 1,
-                        activeFrameId: u.activeFrameId || null,
-                        frameExpiration: u.frameExpiration || null,
-                        value: giftData?.totalValue || 0
-                    };
-                });
+                // Combinar dados dos usuários SEM valores de presentes (não mostrar diamantes)
+                const usersWithGiftData = senderUsers.map(u => ({
+                    id: u.id,
+                    name: u.name,
+                    avatarUrl: u.avatarUrl,
+                    identification: u.identification,
+                    level: u.level || 1,
+                    activeFrameId: u.activeFrameId || null,
+                    frameExpiration: u.frameExpiration || null,
+                    value: 0 // SEMPRE 0 - não mostrar diamantes no modal
+                }));
                 
                 console.log(`🎯 [ONLINE USERS] Resultado final (presentes):`, usersWithGiftData);
                 return res.json(usersWithGiftData);
@@ -515,24 +513,20 @@ router.get('/streams/:id/online-users', async (req, res) => {
             userValuesInLive[userId] = (userValuesInLive[userId] || 0) + value;
         });
 
-        // Enriquecer com valor de presentes enviados APENAS nesta live
-        const usersWithValue = onlineUsersInStream.map(u => {
-            const liveValue = userValuesInLive[u.id] || 0;
-            console.log(`👤 [DEBUG] Usuário ${u.name} (${u.id}): liveValue=${liveValue} (de transações)`);
-            return {
-                id: u.id,
-                name: u.name,
-                avatarUrl: u.avatarUrl,
-                identification: u.identification,
-                level: u.level || 1,
-                activeFrameId: u.activeFrameId || null,
-                frameExpiration: u.frameExpiration || null,
-                value: liveValue // Apenas diamantes enviados nesta live
-            };
-        });
+        // Enriquecer com valor ZERO (não mostrar diamantes no modal)
+        const usersWithValue = onlineUsersInStream.map(u => ({
+            id: u.id,
+            name: u.name,
+            avatarUrl: u.avatarUrl,
+            identification: u.identification,
+            level: u.level || 1,
+            activeFrameId: u.activeFrameId || null,
+            frameExpiration: u.frameExpiration || null,
+            value: 0 // SEMPRE 0 - não mostrar diamantes no modal
+        }));
 
-        // Ordenar por valor (quem mais enviou presentes nesta live aparece primeiro)
-        usersWithValue.sort((a, b) => b.value - a.value);
+        // Como todos os valores são 0, ordenar por nível em vez de valor
+        usersWithValue.sort((a, b) => (b.level || 1) - (a.level || 1));
 
         // Se ainda não encontrar nada, buscar o host da stream como fallback
         if (usersWithValue.length === 0) {
@@ -796,14 +790,15 @@ router.post('/streams/:streamId/end', async (req, res) => {
             console.warn(`⚠️ [STREAM END] Erro ao salvar histórico: ${historyError.message}`);
         }
 
-        // Atualizar status da stream
+        // Atualizar status da stream e ZERAR todos os dados da live
         await Streamer.findOneAndUpdate(
             { id: streamId },
             {
                 isLive: false,
                 streamStatus: 'ended',
                 endTime: endTime.toISOString(),
-                viewers: 0
+                viewers: 0,
+                diamonds: 0 // 🔥 ZERAR diamantes da live ao encerrar
             }
         );
 

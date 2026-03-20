@@ -1126,7 +1126,7 @@ const logLiveEvent = (type: string, data: any) => {
         title: activeStream.name,
         startTime: liveSession.startTime,
         endTime: endTime,
-        duration: endTime - liveSession.startTime,
+        duration: Math.floor((endTime - liveSession.startTime) / 1000), // Converter para segundos
         viewers: liveSession.viewers || 0,
         followers: liveSession.followers,
         members: liveSession.members,

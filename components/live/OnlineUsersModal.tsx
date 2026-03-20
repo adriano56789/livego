@@ -119,13 +119,20 @@ const OnlineUsersModal: React.FC<OnlineUsersModalProps> = ({ onClose, streamId, 
                 console.log('🔍 [ONLINE USERS MODAL] API retornou:', data);
                 
                 if (Array.isArray(data)) {
+                    // Filtrar usuários válidos e remover duplicados por ID
                     const validUsers = data.filter(user => 
                         user && 
                         typeof user === 'object' && 
                         user.id && 
                         user.name
                     );
-                    setUsers(validUsers);
+                    
+                    // Remover duplicados mantendo apenas a primeira ocorrência de cada ID
+                    const uniqueUsers = validUsers.filter((user, index, self) => 
+                        index === self.findIndex((u) => u.id === user.id)
+                    );
+                    
+                    setUsers(uniqueUsers);
                 } else {
                     setUsers([]);
                 }

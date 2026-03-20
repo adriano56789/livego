@@ -96,7 +96,7 @@ const OnlineUsersModal: React.FC<OnlineUsersModalProps> = ({ onClose, streamId, 
         // Handler para quando live é encerrada (zerar valores)
         const handleStreamEnded = (data: { streamId: string }) => {
             if (data.streamId === streamId) {
-                // Zerar valores de todos os usuários
+                // Zerar apenas os diamantes dos usuários, mas manter os usuários online
                 setUsers(prevUsers => 
                     prevUsers.map(user => ({ ...user, value: 0 }))
                 );

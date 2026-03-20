@@ -22,7 +22,7 @@ const EndStreamSummaryScreen: React.FC<EndStreamSummaryScreenProps> = ({ data, o
   
   const formatStat = (value: number) => {
     if (!value || value === 0) return '0';
-    const formatted = value.toLocaleString('pt-BR');
+    const formatted = (Number(value) || 0).toLocaleString('pt-BR');
     return value > 0 ? `+${formatted}` : formatted;
   };
 
@@ -35,8 +35,8 @@ const EndStreamSummaryScreen: React.FC<EndStreamSummaryScreenProps> = ({ data, o
       <div className="flex flex-col items-center">
         <div className="relative mb-4">
           <img 
-            src={data.user.avatarUrl}
-            alt={data.user.name}
+            src={data.user?.avatarUrl || ''}
+            alt={data.user?.name || 'Streamer'}
             className="w-28 h-28 rounded-full object-cover border-4 border-white/50"
           />
           <div className="absolute -bottom-2 -right-2 bg-gray-800 rounded-full p-1 border-2 border-[#111111]">
@@ -45,22 +45,22 @@ const EndStreamSummaryScreen: React.FC<EndStreamSummaryScreenProps> = ({ data, o
             </div>
           </div>
         </div>
-        <p className="text-xl font-semibold">{data.user.name}</p>
+        <p className="text-xl font-semibold">{data.user?.name || 'Streamer'}</p>
       </div>
 
       <div className="w-full max-w-sm">
         <div className="space-y-8">
             <div className="flex justify-around items-start">
-                <StatItem value={data.viewers?.toLocaleString('pt-BR') || '0'} label={t('endStream.viewers')} />
+                <StatItem value={data.viewers !== undefined ? data.viewers.toLocaleString('pt-BR') : '0'} label={t('endStream.viewers')} />
                 <StatItem value={data.duration} label={t('endStream.duration')} />
             </div>
             <div>
-                <StatItem value={data.coins?.toLocaleString('pt-BR') || '0'} label={t('endStream.coins')} isPrimary />
+                <StatItem value={data.coins !== undefined ? data.coins.toLocaleString('pt-BR') : '0'} label={t('endStream.coins')} isPrimary />
             </div>
             <div className="flex justify-around items-start">
-                <StatItem value={formatStat(data.followers)} label={t('endStream.newFollowers')} />
-                <StatItem value={formatStat(data.members)} label={t('endStream.members')} />
-                <StatItem value={formatStat(data.fans)} label={t('endStream.newFans')} />
+                <StatItem value={formatStat(data.followers !== undefined ? data.followers : 0)} label={t('endStream.newFollowers')} />
+                <StatItem value={formatStat(data.members !== undefined ? data.members : 0)} label={t('endStream.members')} />
+                <StatItem value={formatStat(data.fans !== undefined ? data.fans : 0)} label={t('endStream.newFans')} />
             </div>
         </div>
       </div>

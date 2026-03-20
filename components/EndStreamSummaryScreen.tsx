@@ -42,16 +42,16 @@ const EndStreamSummaryScreen: React.FC<EndStreamSummaryScreenProps> = ({ data, o
       <div className="w-full max-w-sm">
         <div className="space-y-8">
             <div className="flex justify-around items-start">
-                <StatItem value={formatStat(data.viewers)} label="Número de espectadores" />
+                <StatItem value={data.viewers !== undefined ? data.viewers.toLocaleString('pt-BR') : '0'} label="Número de espectadores" />
                 <StatItem value={data.duration} label="Duração ao vivo" />
             </div>
             <div>
-                <StatItem value={data.coins.toLocaleString('pt-BR')} label="Moedas" isPrimary />
+                <StatItem value={data.coins !== undefined ? data.coins.toLocaleString('pt-BR') : '0'} label="Moedas" isPrimary />
             </div>
             <div className="flex justify-around items-start">
-                <StatItem value={formatStat(data.followers)} label="Seguidores" />
-                <StatItem value={formatStat(data.members)} label="Membro" />
-                <StatItem value={formatStat(data.fans)} label="Fãs" />
+                <StatItem value={formatStat(data.followers !== undefined ? data.followers : 0)} label="Seguidores" />
+                <StatItem value={formatStat(data.members !== undefined ? data.members : 0)} label="Membro" />
+                <StatItem value={formatStat(data.fans !== undefined ? data.fans : 0)} label="Fãs" />
             </div>
         </div>
       </div>

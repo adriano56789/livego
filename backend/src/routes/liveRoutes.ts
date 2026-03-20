@@ -457,6 +457,50 @@ router.get('/streams/:id/online-users', async (req, res) => {
             hasAvatar: !!u.avatarUrl
         })));
 
+        // Se não encontrar usuários online, buscar todos os usuários que enviaram presentes nesta live
+        if (onlineUsersInStream.length === 0) {
+            console.log(`🔍 [ONLINE USERS] Nenhum usuário online encontrado, buscando usuários que enviaram presentes...`);
+            
+            // Importar GiftTransaction apenas quando necessário
+            const { GiftTransaction } = await import('../models');
+            
+            // Buscar usuários que enviaram presentes nesta live
+            const giftSenders = await GiftTransaction.aggregate([
+                { $match: { streamId: streamId } },
+                { $group: { _id: '$fromUserId', totalValue: { $sum: '$totalValue' } } },
+                { $sort: { totalValue: -1 } }
+            ]);
+            
+            console.log(`🎁 [ONLINE USERS] Remetentes de presentes encontrados:`, giftSenders);
+            
+            // Buscar dados completos desses usuários
+            const senderIds = giftSenders.map(s => s._id);
+            if (senderIds.length > 0) {
+                const senderUsers = await User.find({
+                    id: { $in: senderIds },
+                    name: { $exists: true, $nin: ['', null] }
+                }).select('id name avatarUrl identification level activeFrameId frameExpiration');
+                
+                // Combinar dados dos usuários com valores enviados
+                const usersWithGiftData = senderUsers.map(u => {
+                    const giftData = giftSenders.find(g => g._id === u.id);
+                    return {
+                        id: u.id,
+                        name: u.name,
+                        avatarUrl: u.avatarUrl,
+                        identification: u.identification,
+                        level: u.level || 1,
+                        activeFrameId: u.activeFrameId || null,
+                        frameExpiration: u.frameExpiration || null,
+                        value: giftData?.totalValue || 0
+                    };
+                });
+                
+                console.log(`🎯 [ONLINE USERS] Resultado final (presentes):`, usersWithGiftData);
+                return res.json(usersWithGiftData);
+            }
+        }
+
         // Buscar transações de presentes desta live para calcular valores enviados APENAS nesta live
         const { GiftTransaction } = await import('../models');
         const liveGiftTransactions = await GiftTransaction.find({
@@ -489,6 +533,30 @@ router.get('/streams/:id/online-users', async (req, res) => {
 
         // Ordenar por valor (quem mais enviou presentes nesta live aparece primeiro)
         usersWithValue.sort((a, b) => b.value - a.value);
+
+        // Se ainda não encontrar nada, buscar o host da stream como fallback
+        if (usersWithValue.length === 0) {
+            console.log(`🔍 [ONLINE USERS] Nenhum usuário encontrado, buscando host como fallback...`);
+            
+            const stream = await Streamer.findOne({ id: streamId });
+            if (stream && stream.hostId) {
+                const host = await User.findOne({ id: stream.hostId }).select('id name avatarUrl identification level activeFrameId frameExpiration');
+                if (host) {
+                    const hostData = {
+                        id: host.id,
+                        name: host.name,
+                        avatarUrl: host.avatarUrl,
+                        identification: host.identification,
+                        level: host.level || 1,
+                        activeFrameId: host.activeFrameId || null,
+                        frameExpiration: host.frameExpiration || null,
+                        value: 0
+                    };
+                    console.log(`🎯 [ONLINE USERS] Host encontrado como fallback:`, hostData);
+                    return res.json([hostData]);
+                }
+            }
+        }
 
         console.log(`🎯 [DEBUG] Resultado final:`, usersWithValue);
         return res.json(usersWithValue);

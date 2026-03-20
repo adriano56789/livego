@@ -31,12 +31,11 @@ const UserItem: React.FC<{ user: User & { value: number }; rank: number }> = ({ 
                 <div className="w-8 flex justify-center">{getRankIcon()}</div>
                 <div className="relative">
                     <img 
-                        src={user.avatarUrl ? `${user.avatarUrl}${user.avatarUrl.includes('?') ? '&' : '?'}v=${user.avatarUrl.slice(-12)}` : undefined} 
+                        src={user.avatarUrl && user.avatarUrl.trim() ? `${user.avatarUrl}${user.avatarUrl.includes('?') ? '&' : '?'}v=${user.avatarUrl.slice(-12)}` : 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48"><rect width="48" height="48" fill="#4B5563"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="white" font-size="20">?</text></svg>')} 
                         alt={user.name || 'Usuário'} 
-                        className="w-12 h-12 rounded-full object-cover"
+                        className="w-12 h-12 rounded-full object-cover bg-gray-700"
                         onError={(e) => {
-                            // Se falhar, mostrar placeholder fixo baseado no ID
-                            e.currentTarget.src = `https://picsum.photos/seed/user-${user.id}/100/100.jpg`;
+                            (e.target as HTMLImageElement).src = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48"><rect width="48" height="48" fill="#4B5563"/></svg>');
                         }}
                     />
                     {/* Diamantes descendo ao lado do avatar - igual Bingo Live */}
@@ -62,13 +61,18 @@ const UserItem: React.FC<{ user: User & { value: number }; rank: number }> = ({ 
 };
 
 
-const OnlineUsersModal: React.FC<OnlineUsersModalProps> = ({ onClose, streamId, userId }) => {
+const OnlineUsersModal: React.FC<OnlineUsersModalProps> = ({ onClose, streamId, userId, currentUser }) => {
     const [users, setUsers] = useState<(User & { value: number })[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
+    // Mesclar avatar atualizado do usuário logado (sincronização em tempo real)
+    const usersWithFreshAvatar = (users || []).map(u =>
+        currentUser && u.id === currentUser.id ? { ...u, avatarUrl: currentUser.avatarUrl || u.avatarUrl } : u
+    );
+
     // Calcular total de diamantes enviados na live
-    const totalDiamonds = users.reduce((sum, user) => sum + (user.value || 0), 0);
+    const totalDiamonds = (users || []).reduce((sum, user) => sum + (user.value || 0), 0);
 
     useEffect(() => {
         // Conectar à sala da stream para receber atualizações em tempo real

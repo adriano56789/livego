@@ -29,9 +29,13 @@ interface ConversationItemProps {
 
 const ConversationItem: React.FC<ConversationItemProps> = ({ conversation, onStartChat, onViewProfile }) => (
     <div className="flex items-center p-4 space-x-4 cursor-pointer hover:bg-gray-800/50" onClick={() => onStartChat(conversation.friend)}>
-        <button onClick={(e) => { e.stopPropagation(); onViewProfile(conversation.friend); }} className="flex-shrink-0 focus:outline-none rounded-full">
-            <img src={conversation.friend.avatarUrl || null} alt={conversation.friend.name} className="w-14 h-14 rounded-full object-cover" onError={(e) => { e.currentTarget.src = ''; }} />
-        </button>
+                <button onClick={(e) => { e.stopPropagation(); onViewProfile(conversation.friend); }} className="flex-shrink-0 focus:outline-none rounded-full">
+                    {conversation.friend.avatarUrl && conversation.friend.avatarUrl.trim() ? (
+                        <img src={conversation.friend.avatarUrl} alt={conversation.friend.name} className="w-14 h-14 rounded-full object-cover bg-gray-700" onError={(e) => { (e.target as HTMLImageElement).src = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="56" height="56" viewBox="0 0 56 56"><rect width="56" height="56" fill="#4B5563"/></svg>'); }} />
+                    ) : (
+                        <div className="w-14 h-14 rounded-full bg-gray-600 flex items-center justify-center text-white text-xl font-bold">{conversation.friend.name?.[0] || '?'}</div>
+                    )}
+                </button>
         <div className="flex-grow">
             <div className="flex justify-between items-center">
                 <h3 className="font-semibold text-white">{conversation.friend.name}</h3>
@@ -58,7 +62,11 @@ const FriendItem: React.FC<FriendItemProps> = ({ friend, onStartChat, onViewProf
         <div className="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-800/50" onClick={() => onStartChat(friend)}>
             <div className="flex items-center space-x-4">
                 <button onClick={(e) => { e.stopPropagation(); onViewProfile(friend); }} className="flex-shrink-0 focus:outline-none rounded-full">
-                    <img src={friend.avatarUrl || null} alt={friend.name} className="w-14 h-14 rounded-full object-cover" onError={(e) => { e.currentTarget.src = ''; }} />
+                    {friend.avatarUrl && friend.avatarUrl.trim() ? (
+                        <img src={friend.avatarUrl} alt={friend.name} className="w-14 h-14 rounded-full object-cover bg-gray-700" onError={(e) => { (e.target as HTMLImageElement).src = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="56" height="56" viewBox="0 0 56 56"><rect width="56" height="56" fill="#4B5563"/></svg>'); }} />
+                    ) : (
+                        <div className="w-14 h-14 rounded-full bg-gray-600 flex items-center justify-center text-white text-xl font-bold">{friend.name?.[0] || '?'}</div>
+                    )}
                 </button>
                 <div>
                     <h3 className="font-semibold text-white">{friend.name}</h3>

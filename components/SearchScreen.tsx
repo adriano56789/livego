@@ -27,7 +27,7 @@ const UserItem: React.FC<{ user: User; onViewProfile: (user: User) => void; onFo
                     alt={user.name} 
                     className="w-14 h-14 rounded-full object-cover"
                     onError={(e) => {
-                        (e.target as HTMLImageElement).src = 'https://via.placeholder.com/56x56/333/fff?text=?';
+                        (e.target as HTMLImageElement).src = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="56" height="56" viewBox="0 0 56 56"><rect width="56" height="56" fill="#333"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="white" font-size="24">?</text></svg>');
                     }}
                 />
                 <div className="min-w-0">

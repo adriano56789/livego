@@ -182,7 +182,11 @@ const MarketScreen: React.FC<MarketScreenProps> = ({ onClose, user, updateUser, 
             {/* Preview Section */}
             <div className="flex-shrink-0 mb-4 flex flex-col items-center justify-center h-40">
               <div className="relative w-24 h-24">
-                <img src={user.avatarUrl || ''} alt="User Avatar" className="w-full h-full object-cover rounded-full" onError={(e) => { e.currentTarget.src = ''; }} />
+                {user.avatarUrl && user.avatarUrl.trim() ? (
+                  <img src={user.avatarUrl} alt="User Avatar" className="w-full h-full object-cover rounded-full" onError={(e) => { (e.target as HTMLImageElement).src = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 96 96"><rect width="96" height="96" fill="#4B5563"/></svg>'); }} />
+                ) : (
+                  <div className="w-full h-full rounded-full bg-gray-600 flex items-center justify-center text-white text-3xl font-bold">{user.name?.[0] || '?'}</div>
+                )}
                 {SelectedFrameComponent && (
                   <div className="absolute -top-4 -left-4 w-32 h-32 pointer-events-none avatar-frame-glow-effect">
                     <SelectedFrameComponent className="w-full h-full" />

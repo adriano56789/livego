@@ -112,7 +112,7 @@ const BeautyEffectsPanel: React.FC<BeautyEffectsPanelProps> = ({ onClose, curren
             </div>
             {activeTab === 'Recomendar' && (
                 <div className="flex justify-around items-center text-center">
-                    {effectsData.filters.map(f => (
+                    {(effectsData?.filters || []).map(f => (
                         <button key={f.name} onClick={() => setSelectedFilter(f.name)} className="flex flex-col items-center space-y-2 focus:outline-none">
                             {f.img ? 
                                 <img src={f.img} alt={f.name} className={`w-12 h-12 rounded-lg object-cover border-2 transition-all ${selectedFilter === f.name ? 'border-purple-500' : 'border-transparent'}`} /> : 
@@ -130,7 +130,7 @@ const BeautyEffectsPanel: React.FC<BeautyEffectsPanelProps> = ({ onClose, curren
                         <input type="range" min="0" max="100" value={currentEffectValue} onChange={handleSliderChange} disabled={isLoading} className="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-purple-500 disabled:opacity-50" />
                     </div>
                      <div className="flex justify-around items-center text-center">
-                        {effectsData.effects.map((e) => (
+                        {(effectsData?.effects || []).map((e) => (
                              <button key={e.name} onClick={() => setSelectedEffect(e.name)} className="flex flex-col items-center space-y-2 focus:outline-none">
                                 <div className={`w-12 h-12 rounded-lg flex items-center justify-center text-xl transition-colors ${selectedEffect === e.name ? 'bg-purple-600' : 'bg-gray-700'}`}>
                                     {e.icon}

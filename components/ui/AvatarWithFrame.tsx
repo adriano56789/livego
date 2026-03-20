@@ -37,10 +37,11 @@ const isFrameValid = (user: User): boolean => {
   return expirationDate > now;
 };
 
-// Cache bust para forçar atualização quando avatar muda (evita imagem antiga)
-const avatarSrc = (avatarUrl: string | undefined, name: string): string => {
-  const fallback = `https://via.placeholder.com/150/4B5563/FFFFFF?text=${encodeURIComponent(name || 'User')}`;
-  if (!avatarUrl) return fallback;
+// Fallback SVG local (evita via.placeholder que causa ERR_NAME_NOT_RESOLVED)
+const AVATAR_PLACEHOLDER_SVG = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="150" height="150" viewBox="0 0 150 150"><rect width="150" height="150" fill="#4B5563"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="white" font-family="sans-serif" font-size="48">?</text></svg>');
+
+const avatarSrc = (avatarUrl: string | undefined, _name: string): string => {
+  if (!avatarUrl || avatarUrl.trim() === '') return AVATAR_PLACEHOLDER_SVG;
   const sep = avatarUrl.includes('?') ? '&' : '?';
   return `${avatarUrl}${sep}t=${avatarUrl.length}_${avatarUrl.slice(-12)}`;
 };
@@ -97,7 +98,7 @@ const AvatarWithFrame: React.FC<AvatarWithFrameProps> = ({
           className="w-full h-full object-cover"
           onError={(e) => {
             const target = e.target as HTMLImageElement;
-            target.src = `https://via.placeholder.com/150/4B5563/FFFFFF?text=${encodeURIComponent(user.name || 'User')}`;
+            target.src = AVATAR_PLACEHOLDER_SVG;
           }}
         />
       </div>

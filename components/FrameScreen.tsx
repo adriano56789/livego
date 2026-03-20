@@ -132,7 +132,7 @@ const FrameScreen: React.FC<FrameScreenProps> = ({
             className="w-full h-32 object-cover rounded-lg mb-3"
             onError={(e) => {
               const target = e.target as HTMLImageElement;
-              target.src = `https://via.placeholder.com/150x150/4B5563/FFFFFF?text=${encodeURIComponent(frame.name)}`;
+              target.src = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="150" height="150" viewBox="0 0 150 150"><rect width="150" height="150" fill="#4B5563"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="white" font-size="24">?</text></svg>');
             }}
           />
           {isEquipped && (

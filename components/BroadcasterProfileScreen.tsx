@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { User, FeedPhoto } from '../types';
-import { BackIcon, BrazilFlagIcon, MaleIcon, FemaleIcon, RankIcon, MoreVerticalIcon, PencilIcon, ChevronRightIcon, CopyIcon, PlayIcon, HeartIcon, DetailsIcon, VIPBadgeIcon, ShieldIcon, LiveIndicatorIcon } from './icons';
+import { BackIcon, BrazilFlagIcon, MaleIcon, FemaleIcon, RankIcon, MoreVerticalIcon, PencilIcon, ChevronRightIcon, CopyIcon, PlayIcon, HeartIcon, DetailsIcon, VIPBadgeIcon, ShieldIcon, LiveIndicatorIcon, TrashIcon } from './icons';
 import BlockReportModal from './BlockReportModal';
 import { useTranslation } from '../i18n';
 import { api } from '../services/api';
@@ -23,6 +23,7 @@ interface UserProfileScreenProps {
   onOpenPhotoViewer: (photos: FeedPhoto[], index: number) => void;
   lastPhotoLikeUpdate: number;
   onPhotoLiked: () => void;
+  onPhotoRemoved?: (updatedUser: User) => void;
 }
 
 const IMAGE_PLACEHOLDER = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDEwMCAxMDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CiAgPHJlY3Qgd2lkdGg9IjEwMCIgaGVpZ2h0PSIxMDAiIGZpbGw9IiMyYzJjMmUiLz4KICA8c3ZnIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeD0iMjUiIHk9IjI1IiB3aWR0aD0iNTAiIGhlaWdodD0iNTAiIGZpbGw9Im5vbmUiIHZpZXdCb3g9IjAgMCAyNCAyNCIgc3Ryb2tlLXdpZHRoPSIxLjUiIHN0cm9rZT0iIzZiNzI4MCI+CiAgICA8cGF0aCBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGQ9Ik0yLjI1IDE1Ljc1bDUuMTU5LTUuMTU5YTIuMjUgMi4yNSAwIDAxMy4xODIgMGw1LjE1OSA1LjE1OW0tMS41LTEuNWwxLjQwOS0xLjQwOWEyLjI1IDIuMjUgMCAwMTMuMTgyIDBsMi45MDkgMi45MDltLTE4IDMuNzVoMTYuNWExLjUgMS41IDAgMDAxLjUtMS41VjZhMS41IDEuNSAwIDAwLTEuNS0xLjVIMy43NUExLjUgMS41IDAgMDAyLjI1IDZ2MTJhMS41IDEuNSAwIDAwMS41IDEuNXptMTAuNS0xMS4yNWguMDA4di4wMDhoLS4wMDhWOC4yNXoiIC8+CiAgPC9zdmc+Cjwvc3ZnPg==';
@@ -78,7 +79,7 @@ const ProfileTab: React.FC<{ label: string; icon: React.ReactNode; isActive: boo
     </button>
 );
 
-const UserProfileScreen: React.FC<UserProfileScreenProps> = ({ user, isCurrentUser, onBack, onEdit, onOpenTopFans, onOpenFollowing, onOpenFans, onFollow, onStartChat, onBlockUser, onReportUser, onOpenPhotoViewer, lastPhotoLikeUpdate, onPhotoLiked }) => {
+const UserProfileScreen: React.FC<UserProfileScreenProps> = ({ user, isCurrentUser, onBack, onEdit, onOpenTopFans, onOpenFollowing, onOpenFans, onFollow, onStartChat, onBlockUser, onReportUser, onOpenPhotoViewer, lastPhotoLikeUpdate, onPhotoLiked, onPhotoRemoved }) => {
     const { t } = useTranslation();
     const [activeTab, setActiveTab] = useState('Obras');
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -97,20 +98,26 @@ const UserProfileScreen: React.FC<UserProfileScreenProps> = ({ user, isCurrentUs
         return () => { isMounted = false; };
     }, [user.id]);
 
+    // Obras vêm de User.obras (banco) - fonte única, sempre atualizado
     useEffect(() => {
-        let isMounted = true;
         if (activeTab === 'Obras') {
             setIsLoadingObras(true);
-            api.getUserPhotos(user.id).then(data => {
-                if (isMounted) {
-                    setObras(data || []);
-                    setIsLoadingObras(false);
+            api.getUser(user.id).then(data => {
+                if (data?.obras && Array.isArray(data.obras)) {
+                    const asFeedPhotos = data.obras.map((o: any) => ({
+                        id: o.id,
+                        photoUrl: o.url || o.photoUrl,
+                        url: o.url,
+                        likes: o.likes || 0,
+                        isLiked: o.isLiked || false,
+                        user: data,
+                    }));
+                    setObras(asFeedPhotos);
+                } else {
+                    setObras([]);
                 }
-            }).catch(err => {
-                if (isMounted) setIsLoadingObras(false);
-            });
+            }).catch(() => setObras([])).finally(() => setIsLoadingObras(false));
         }
-        return () => { isMounted = false; };
     }, [activeTab, user.id, lastPhotoLikeUpdate]);
 
     useEffect(() => {
@@ -173,6 +180,23 @@ const UserProfileScreen: React.FC<UserProfileScreenProps> = ({ user, isCurrentUs
             }
         } catch (error) {
             listSetter(originalList);
+        }
+    };
+
+    const handleRemovePhoto = async (photoId: string) => {
+        if (!isCurrentUser) return;
+        const newObrasList = obras.filter(p => p.id !== photoId);
+        try {
+            // Endpoint dedicado DELETE /user/photo/:photoId - remove do banco
+            await api.profile.deleteImage(photoId, user.id);
+            setObras(newObrasList);
+            const fresh = await api.getUser(user.id);
+            if (fresh) {
+                setFreshUser(fresh);
+                onPhotoRemoved?.(fresh);
+            }
+        } catch (e) {
+            console.error('Erro ao remover foto:', e);
         }
     };
 
@@ -344,6 +368,15 @@ const UserProfileScreen: React.FC<UserProfileScreenProps> = ({ user, isCurrentUs
                                             onClick={() => onOpenPhotoViewer(obras, index)}
                                             className="relative group aspect-[3/4] bg-[#2c2c2e] focus:outline-none overflow-hidden"
                                         >
+                                            {isCurrentUser && (
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); handleRemovePhoto(obra.id); }}
+                                                    className="absolute top-1 right-1 z-20 bg-red-500 text-white rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+                                                    aria-label="Remover foto"
+                                                >
+                                                    <TrashIcon className="w-3.5 h-3.5" />
+                                                </button>
+                                            )}
                                             {isVideo ? (
                                                 <div className="w-full h-full relative">
                                                     <video 

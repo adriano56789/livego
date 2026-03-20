@@ -90,6 +90,36 @@ UserRoutes.patch('/:id', async (req, res) => {
     res.json({ success: !!user, user: standardizeUserResponse(user) });
 });
 
+// DELETE /api/users/:userId/photos/:photoId - Remover foto das obras do usuário (User.obras)
+UserRoutes.delete('/:userId/photos/:photoId', async (req, res) => {
+    try {
+        const { userId, photoId } = req.params;
+        const user = await User.findOne({ id: userId });
+        if (!user) return res.status(404).json({ success: false, error: 'Usuário não encontrado' });
+
+        const obras = Array.isArray(user.obras) ? user.obras : [];
+        const newObras = obras.filter((o: any) => o && o.id !== photoId);
+        if (newObras.length === obras.length) {
+            return res.status(404).json({ success: false, error: 'Foto não encontrada' });
+        }
+
+        const newAvatarUrl = newObras.length > 0 && newObras[0]?.url ? newObras[0].url : '';
+        const updated = await User.findOneAndUpdate(
+            { id: userId },
+            { $set: { obras: newObras, avatarUrl: newAvatarUrl } },
+            { new: true }
+        );
+
+        // Emitir avatar_updated para atualização em tempo real na UI
+        const io = req.app.get('io');
+        if (io && updated) io.emit('avatar_updated', { userId: updated.id, avatarUrl: newAvatarUrl, timestamp: new Date().toISOString() });
+
+        res.json({ success: true, message: 'Foto removida com sucesso' });
+    } catch (error: any) {
+        console.error('Erro ao remover foto:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
 
 UserRoutes.post('/:id/toggle-follow', async (req, res) => {
     try {

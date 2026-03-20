@@ -60,17 +60,20 @@ const EditProfileScreen: React.FC<EditProfileScreenProps> = ({ user, onBack, onS
   const dragPhoto = useRef<number>(0);
   const dragOverPhoto = useRef<number>(0);
 
-  // Initial Fetch to ensure data is fresh (using the new GET routes implicitly via current user or explicitly)
+  // Buscar obras do banco (User.obras) - fonte única de verdade
   useEffect(() => {
-      const fetchImages = async () => {
+      const fetchObras = async () => {
           try {
-              const images = await api.profile.getImages();
-              if (images) setFormData(prev => ({ ...prev, obras: images }));
-          } catch(e) {
+              const freshUser = await api.getFreshUserData(user.id);
+              if (freshUser?.obras && Array.isArray(freshUser.obras)) {
+                  setFormData(prev => ({ ...prev, obras: freshUser.obras, avatarUrl: freshUser.avatarUrl || prev.avatarUrl }));
+              }
+          } catch (e) {
+              if (user.obras?.length) setFormData(prev => ({ ...prev, obras: user.obras }));
           }
       };
-      fetchImages();
-  }, []);
+      fetchObras();
+  }, [user.id]);
 
   const handleGlobalSave = () => {
      onSave(formData);
@@ -223,24 +226,18 @@ const EditProfileScreen: React.FC<EditProfileScreenProps> = ({ user, onBack, onS
       const obraToDelete = formData.obras?.[indexToDelete];
       if (!obraToDelete) return;
 
+      const newObras = formData.obras?.filter((_, index) => index !== indexToDelete) || [];
+      const newAvatarUrl = newObras.length > 0 ? newObras[0].url : '';
+
+      // Atualização otimista na UI
+      setFormData(prev => ({ ...prev, obras: newObras, avatarUrl: newAvatarUrl }));
+
       try {
-          await api.profile.deleteImage(obraToDelete.id);
-          
-          const newObras = formData.obras?.filter((_, index) => index !== indexToDelete) || [];
-          const newAvatarUrl = newObras.length > 0 ? newObras[0].url : '';
-          
-          // Update avatar if changed (e.g. if we deleted the first image)
-          if (indexToDelete === 0) {
-              const updateResp = await api.updateProfile(user.id, { avatarUrl: newAvatarUrl });
-              if (updateResp.success && updateResp.user) {
-                   setFormData(prev => ({ ...prev, ...updateResp.user, obras: newObras }));
-              } else {
-                   setFormData(prev => ({ ...prev, obras: newObras, avatarUrl: newAvatarUrl }));
-              }
-          } else {
-               setFormData(prev => ({ ...prev, obras: newObras }));
-          }
+          // Usar endpoint dedicado DELETE /user/photo/:photoId - remove do banco
+          await api.profile.deleteImage(obraToDelete.id, user.id);
       } catch (error) {
+          console.error('Erro ao remover foto:', error);
+          setFormData(prev => ({ ...prev, obras: formData.obras, avatarUrl: formData.avatarUrl }));
       }
   };
 

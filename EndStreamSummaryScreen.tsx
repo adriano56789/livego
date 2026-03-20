@@ -26,6 +26,17 @@ const EndStreamSummaryScreen: React.FC<EndStreamSummaryScreenProps> = ({ data, o
     return value > 0 ? `+${formatted}` : formatted;
   };
 
+  const formatDuration = (duration: number | string) => {
+    const totalSeconds = typeof duration === 'string' ? parseInt(duration) : duration;
+    if (!totalSeconds || totalSeconds === 0) return '00:00:00';
+    
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  };
+
   return (
     <div className="absolute inset-0 bg-[#111111] z-[60] flex flex-col items-center justify-around text-white p-8">
       <div>
@@ -52,7 +63,7 @@ const EndStreamSummaryScreen: React.FC<EndStreamSummaryScreenProps> = ({ data, o
         <div className="space-y-8">
             <div className="flex justify-around items-start">
                 <StatItem value={data.viewers !== undefined ? data.viewers.toLocaleString('pt-BR') : '0'} label={t('endStream.viewers')} />
-                <StatItem value={data.duration} label={t('endStream.duration')} />
+                <StatItem value={formatDuration(data.duration)} label={t('endStream.duration')} />
             </div>
             <div>
                 <StatItem value={data.coins !== undefined ? data.coins.toLocaleString('pt-BR') : '0'} label={t('endStream.coins')} isPrimary />

@@ -11,7 +11,7 @@ import RegionModal from './components/RegionModal';
 import GoLiveScreen, { InviteData } from './components/GoLiveScreen';
 import StreamRoom from './components/StreamRoom';
 import PKBattleScreen from './components/PKBattleScreen';
-import { ToastType, ToastData, Streamer, User, Gift, StreamSummaryData, LiveSessionState, RankedUser, Conversation, Country, NotificationSettings, BeautySettings, FeedPhoto, StreamHistoryEntry, Visitor, PurchaseRecord, Message } from './types';
+import { ToastType, ToastData, Streamer, User, Gift, StreamSummaryData, LiveSessionState, RankedUser, Conversation, Country, NotificationSettings, BeautySettings, FeedPhoto, StreamHistoryEntry, Visitor, PurchaseRecord, Message, EndStreamSummary } from './types';
 import Toast from './components/Toast';
 import MessageNotification from './components/MessageNotification';
 import { socketService } from './services/socket';
@@ -639,6 +639,12 @@ const AppContent: React.FC = () => {
   }, []);
 
   const handleStreamUpdate = (updates: Partial<Streamer>) => {
+    // Validate that updates.id is not [object Object]
+    if (updates.id && (typeof updates.id !== 'string' || updates.id === '[object Object]')) {
+      console.error('❌ [STREAM UPDATE] Invalid stream ID in updates:', updates.id, updates);
+      return; // Don't apply invalid updates
+    }
+    
     setActiveStream(prev => {
       if (!prev) return null;
       return { ...prev, ...updates };
@@ -1016,6 +1022,14 @@ const logLiveEvent = (type: string, data: any) => {
 
   const handleSelectStream = async (streamer: Streamer) => {
     if (!currentUser) return;
+    
+    // Validate that streamer.id is a string
+    if (typeof streamer.id !== 'string' || streamer.id === '[object Object]') {
+      console.error('❌ [SELECT STREAM] Invalid stream ID:', streamer.id, streamer);
+      addToast(ToastType.Error, "ID da stream inválido. Não foi possível entrar na live.");
+      return;
+    }
+    
     setIsEnteringStream(true);
     try {
       if (streamer.isPrivate && streamer.hostId !== currentUser.id) {
@@ -1075,6 +1089,17 @@ const logLiveEvent = (type: string, data: any) => {
     setIsEndStreamConfirmOpen(false);
 
     if (activeStream && liveSession) {
+      // Validate that activeStream.id is a string
+      if (typeof activeStream.id !== 'string' || activeStream.id === '[object Object]') {
+        console.error('❌ [END STREAM] Invalid stream ID:', activeStream.id, activeStream);
+        addToast(ToastType.Error, "ID da stream inválido. Não foi possível encerrar a transmissão.");
+        setActiveStream(null);
+        setIsPKBattleActive(false);
+        setPkOpponent(null);
+        setLiveSession(null);
+        return;
+      }
+      
       const endTime = Date.now();
       const historyEntry: StreamHistoryEntry = {
         id: `hist_stream-${activeStream.id}_${endTime}_${Math.random().toString(36).slice(2)}`,
@@ -1084,21 +1109,16 @@ const logLiveEvent = (type: string, data: any) => {
         startTime: liveSession.startTime,
         endTime: endTime,
       };
-
       setStreamHistory(prev => [historyEntry, ...prev]);
-      simpleEventManager.disconnect();
 
-      const durationMs = endTime - liveSession.startTime;
-      const totalSeconds = Math.floor(durationMs / 1000);
-      const hours = Math.floor(totalSeconds / 3600);
-      const minutes = Math.floor((totalSeconds % 3600) / 60);
-      const seconds = totalSeconds % 60;
-      const durationStr = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-
-      const summary: StreamSummaryData = {
-        viewers: liveSession.peakViewers,
-        duration: durationStr,
-        coins: liveSession.coins,
+      // Prepare summary data
+      const summary: EndStreamSummary = {
+        streamId: activeStream.id,
+        title: activeStream.name,
+        startTime: liveSession.startTime,
+        endTime: endTime,
+        duration: endTime - liveSession.startTime,
+        viewers: liveSession.viewers || 0,
         followers: liveSession.followers,
         members: liveSession.members,
         fans: liveSession.fans,
@@ -1107,9 +1127,7 @@ const logLiveEvent = (type: string, data: any) => {
       setStreamSummaryData(summary);
       setIsEndStreamSummaryOpen(true);
 
-      // 🚀 CHAMADA À API ESPECÍFICA PARA REMOVER O CARD DA LIVE
       try {
-        // 1. Encerrar sessão da live (salvar histórico, etc.)
         if (!liveSession) {
           throw new Error('Sessão da live não encontrada');
         }

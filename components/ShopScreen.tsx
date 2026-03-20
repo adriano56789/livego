@@ -166,7 +166,7 @@ const ShopScreen: React.FC<ShopScreenProps> = ({
             className="w-full h-32 object-cover rounded-lg mb-3"
             onError={(e) => {
               const target = e.target as HTMLImageElement;
-              target.src = `https://via.placeholder.com/150x150/4B5563/FFFFFF?text=${encodeURIComponent(item.name)}`;
+              target.src = `https://picsum.photos/seed/avatar-${item.id}/100/100.jpg`;
             }}
           />
           {isEquipped && (

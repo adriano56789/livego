@@ -30,7 +30,7 @@ const UserItem: React.FC<{ user: User & { value: number }; rank: number }> = ({ 
                 <div className="w-8 flex justify-center">{getRankIcon()}</div>
                 <div className="relative">
                     <img 
-                        src={user.avatarUrl} 
+                        src={user.avatarUrl || null} 
                         alt={user.name || 'Usuário'} 
                         className="w-12 h-12 rounded-full object-cover"
                         onError={(e) => {

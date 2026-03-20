@@ -103,9 +103,8 @@ const GoLiveScreen: React.FC<GoLiveScreenProps> = ({ isOpen, onClose, onStartStr
                     // Create a draft stream as soon as the screen opens (Only for broadcasters)
                     try {
                         const streamName = streamTitle || `Live de ${currentUser.name}`;
-                        const newDraft = await api.createStream({
-                            name: streamName,
-                            hostId: currentUser.id
+                        const newDraft = await api.createStream(currentUser.id, {
+                            name: streamName
                         });
                         if (!newDraft) {
                             throw new Error("API failed to return a stream draft.");

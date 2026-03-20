@@ -218,6 +218,22 @@ export interface LiveSessionState {
   isAutoPrivateInviteEnabled?: boolean;
 }
 
+export interface EndStreamSummary {
+  streamId: string;
+  title: string;
+  startTime: number;
+  endTime: number;
+  duration: number;
+  viewers: number;
+  followers: number;
+  members: number;
+  fans: number;
+  user: {
+    name: string;
+    avatarUrl: string;
+  };
+}
+
 export interface NotificationSettings {
   newMessages: boolean;
   streamerLive: boolean;

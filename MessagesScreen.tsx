@@ -30,7 +30,7 @@ interface ConversationItemProps {
 const ConversationItem: React.FC<ConversationItemProps> = ({ conversation, onStartChat, onViewProfile }) => (
     <div className="flex items-center p-4 space-x-4 cursor-pointer hover:bg-gray-800/50" onClick={() => onStartChat(conversation.friend)}>
         <button onClick={(e) => { e.stopPropagation(); onViewProfile(conversation.friend); }} className="flex-shrink-0 focus:outline-none rounded-full">
-            <img src={conversation.friend.avatarUrl || ''} alt={conversation.friend.name} className="w-14 h-14 rounded-full object-cover" onError={(e) => { e.currentTarget.src = ''; }} />
+            <img src={conversation.friend.avatarUrl || null} alt={conversation.friend.name} className="w-14 h-14 rounded-full object-cover" onError={(e) => { e.currentTarget.src = ''; }} />
         </button>
         <div className="flex-grow">
             <div className="flex justify-between items-center">
@@ -58,7 +58,7 @@ const FriendItem: React.FC<FriendItemProps> = ({ friend, onStartChat, onViewProf
         <div className="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-800/50" onClick={() => onStartChat(friend)}>
             <div className="flex items-center space-x-4">
                 <button onClick={(e) => { e.stopPropagation(); onViewProfile(friend); }} className="flex-shrink-0 focus:outline-none rounded-full">
-                    <img src={friend.avatarUrl || ''} alt={friend.name} className="w-14 h-14 rounded-full object-cover" onError={(e) => { e.currentTarget.src = ''; }} />
+                    <img src={friend.avatarUrl || null} alt={friend.name} className="w-14 h-14 rounded-full object-cover" onError={(e) => { e.currentTarget.src = ''; }} />
                 </button>
                 <div>
                     <h3 className="font-semibold text-white">{friend.name}</h3>

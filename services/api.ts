@@ -296,20 +296,20 @@ export const api = {
         if (userId) url += `userId=${userId}`;
         return callApi<Streamer[]>('GET', url);
     },
-    createStream: (userId: string, options: Partial<Streamer>) => callApi<Streamer>('POST', `/api/streams/${userId}`, options),
-    updateStream: (streamId: string, updates: Partial<Streamer>) => callApi<Streamer>('PUT', `/api/streams/${streamId}`, updates),
+    createStream: (userId: string, options: Partial<Streamer>) => callApi<Streamer>('POST', `/api/streams`, { ...options, hostId: userId }),
+    updateStream: (streamId: string, updates: Partial<Streamer>, p0: { isPrivate: boolean; }) => callApi<Streamer>('PUT', `/api/streams/${streamId}`, updates),
     patchStream: (streamId: string, updates: Partial<Streamer>) => callApi<{ success: boolean, stream: Streamer }>('PATCH', `/api/streams/${streamId}`, updates),
     saveStream: (streamId: string, updates: any) => callApi<{ success: boolean, stream: Streamer }>('POST', `/api/streams/${streamId}/save`, updates),
     uploadStreamCover: (streamId: string, coverData: any) => callApi<{ success: boolean, stream: Streamer }>('POST', `/api/streams/${streamId}/cover`, coverData),
     getStreamManual: () => callApi<any[]>('GET', '/api/streams/manual'),
     getBeautyEffects: () => callApi<any>('GET', '/api/streams/effects'),
-    getOnlineUsers: (streamId: string) => callApi<(User & { value: number })[]>('GET', `/api/streams/${streamId}/online-users`),
+    getOnlineUsers: (userId: string, streamId: string) => callApi<(User & { value: number })[]>('GET', `/api/streams/${streamId}/online-users`),
     endLiveSession: (streamId: string, sessionData: LiveSessionState) => callApi<{ success: boolean, user: User }>('POST', `/api/streams/${streamId}/end-session`, { session: sessionData }),
     removeLiveCard: (streamId: string, userId: string) => callApi<{ success: boolean }>('DELETE', `/api/cards/${streamId}?userId=${userId}`),
     sendGift: (fromUserId: string, toUserId: string, streamId: string, giftName: string, amount: number) => callApi<{ success: boolean; error?: string; updatedSender: User; updatedReceiver: User; }>('POST', `/api/streams/${streamId}/gift`, { fromUserId, toUserId, giftName, amount }),
     updateSimStatus: (isOnline: boolean) => callApi<{ success: boolean, user: User }>('POST', '/api/sim/status', { isOnline }),
 
-    // --- SRS & WebRTC Signaling ---
+    // ... (rest of the code remains the same)
     publishWebRTC: (streamUrl: string, sdp: string, streamKey?: string) => callApi<SRSResponse>('POST', '/api/rtc/v1/publish', { streamUrl, sdp, streamKey }),
     playWebRTC: (streamUrl: string, sdp: string) => callApi<SRSPlayResponse>('POST', '/api/rtc/v1/play', { streamUrl, sdp }),
     stopWebRTC: (streamUrl: string) => callApi<SRSResponse>('DELETE', '/api/rtc/v1/stop', { streamUrl }),

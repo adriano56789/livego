@@ -1,9 +1,9 @@
 
 
 import React from 'react';
-import { StreamSummaryData } from '../types';
-import { BrazilFlagIcon } from './icons';
-import { useTranslation } from '../i18n';
+import { StreamSummaryData } from './types';
+import { BrazilFlagIcon } from './components/icons';
+import { useTranslation } from './i18n';
 
 interface EndStreamSummaryScreenProps {
   data: StreamSummaryData;
@@ -21,6 +21,7 @@ const EndStreamSummaryScreen: React.FC<EndStreamSummaryScreenProps> = ({ data, o
   const { t } = useTranslation();
   
   const formatStat = (value: number) => {
+    if (!value || value === 0) return '0';
     const formatted = value.toLocaleString('pt-BR');
     return value > 0 ? `+${formatted}` : formatted;
   };
@@ -50,11 +51,11 @@ const EndStreamSummaryScreen: React.FC<EndStreamSummaryScreenProps> = ({ data, o
       <div className="w-full max-w-sm">
         <div className="space-y-8">
             <div className="flex justify-around items-start">
-                <StatItem value={data.viewers.toLocaleString('pt-BR')} label={t('endStream.viewers')} />
+                <StatItem value={data.viewers?.toLocaleString('pt-BR') || '0'} label={t('endStream.viewers')} />
                 <StatItem value={data.duration} label={t('endStream.duration')} />
             </div>
             <div>
-                <StatItem value={data.coins.toLocaleString('pt-BR')} label={t('endStream.coins')} isPrimary />
+                <StatItem value={data.coins?.toLocaleString('pt-BR') || '0'} label={t('endStream.coins')} isPrimary />
             </div>
             <div className="flex justify-around items-start">
                 <StatItem value={formatStat(data.followers)} label={t('endStream.newFollowers')} />

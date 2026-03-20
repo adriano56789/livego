@@ -3,6 +3,7 @@ import http from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import path from 'path';
 import { connectDB } from './config/db';
 import { User, Message, Follow, Friendship, Streamer } from './models/index';
 import userRoutes from './routes/userRoutes';
@@ -124,6 +125,9 @@ app.use('/api/interactions', interactionRoutes); // handles /api/interactions/pr
 app.use('/api/*', (req, res) => {
     res.status(404).json({ error: `API endpoint not found: ${req.method} ${req.path}` });
 });
+
+// Servir avatares enviados
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // Servir arquivos estáticos do frontend DEPOIS das rotas da API
 app.use(express.static('../dist'));

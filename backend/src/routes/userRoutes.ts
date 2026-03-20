@@ -83,6 +83,10 @@ UserRoutes.delete('/:id', async (req, res) => {
 });
 UserRoutes.patch('/:id', async (req, res) => {
     const user = await User.findOneAndUpdate({ id: req.params.id }, req.body, { new: true });
+    if (user && req.body.avatarUrl) {
+        const io = req.app.get('io');
+        if (io) io.emit('avatar_updated', { userId: user.id, avatarUrl: user.avatarUrl, timestamp: new Date().toISOString() });
+    }
     res.json({ success: !!user, user: standardizeUserResponse(user) });
 });
 

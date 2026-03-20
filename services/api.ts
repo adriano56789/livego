@@ -343,6 +343,20 @@ export const api = {
     likePhoto: (photoId: string, userId?: string) => callApi<{ success: boolean; likes: number; isLiked: boolean; }>('POST', `/api/photos/${photoId}/like`, { userId: userId || getCurrentUserId() }),
     uploadChatPhoto: (userId: string, base64Image: string) => callApi<{ success: boolean; url: string; photo: { id: string; url: string; } }>('POST', `/api/interactions/photos/upload/${userId}`, { image: base64Image }),
 
+    // Upload de avatar (arquivo) - retorna URL persistida, evita bloqueio de Base64
+    uploadAvatar: async (userId: string, file: File): Promise<{ success: boolean; avatarUrl: string }> => {
+        const token = localStorage.getItem('token');
+        const formData = new FormData();
+        formData.append('avatar', file);
+        const response = await axios({
+            method: 'POST',
+            url: `${API_BASE_URL}/api/upload/avatar/${userId}`,
+            data: formData,
+            headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+        });
+        return response.data;
+    },
+
     // --- Search ---
     searchUsers: (query: string, limit?: number) => callApi<{ success: boolean; users: User[]; count: number }>('GET', `/api/search/users?q=${encodeURIComponent(query)}${limit ? `&limit=${limit}` : ''}`),
 

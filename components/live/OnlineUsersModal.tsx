@@ -9,6 +9,7 @@ interface OnlineUsersModalProps {
     onClose: () => void;
     streamId: string;
     userId: string;
+    currentUser?: User | null; // Para sincronizar avatar do usuário atual em tempo real
 }
 
 const UserItem: React.FC<{ user: User & { value: number }; rank: number }> = ({ user, rank }) => {
@@ -30,7 +31,7 @@ const UserItem: React.FC<{ user: User & { value: number }; rank: number }> = ({ 
                 <div className="w-8 flex justify-center">{getRankIcon()}</div>
                 <div className="relative">
                     <img 
-                        src={user.avatarUrl || null} 
+                        src={user.avatarUrl ? `${user.avatarUrl}${user.avatarUrl.includes('?') ? '&' : '?'}v=${user.avatarUrl.slice(-12)}` : undefined} 
                         alt={user.name || 'Usuário'} 
                         className="w-12 h-12 rounded-full object-cover"
                         onError={(e) => {
@@ -176,8 +177,8 @@ const OnlineUsersModal: React.FC<OnlineUsersModalProps> = ({ onClose, streamId, 
                                 Tentar novamente
                             </button>
                         </div>
-                    ) : users.length > 0 ? (
-                        users.map((user, index) => (
+                    ) : usersWithFreshAvatar.length > 0 ? (
+                        usersWithFreshAvatar.map((user, index) => (
                             <UserItem key={user.id || `user-${index}`} user={user} rank={index + 1} />
                         ))
                     ) : (

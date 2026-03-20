@@ -181,38 +181,42 @@ const EditProfileScreen: React.FC<EditProfileScreenProps> = ({ user, onBack, onS
     }
   };
 
-  const processUpload = (file: File, currentObras: Obra[]) => {
-      const reader = new FileReader();
-      reader.onload = async (event) => {
-          const dataUrl = event.target?.result as string;
-          if (dataUrl) {
-              try {
-                  // Upload para API real
-                  const uploadResp = await api.uploadChatPhoto(user.id, dataUrl);
-                  
-                  // Usar o ID retornado pelo backend
-                  const newObra: Obra = { 
-                      id: uploadResp.photo?.id || uploadResp.url, 
-                      url: uploadResp.url 
-                  };
-                  
-                  // We need to 'save' this new image list.
-                  const newObras = [newObra, ...currentObras];
-                  const newAvatarUrl = newObras.length > 0 ? newObras[0].url : '';
-                  
-                  // Update profile with new obras AND new avatarUrl
-                  const updateResp = await api.updateProfile(user.id, { obras: newObras, avatarUrl: newAvatarUrl }); 
-                  
-                  if (updateResp.success && updateResp.user) {
-                      setFormData(prev => ({ ...prev, ...updateResp.user }));
-                  } else {
-                      setFormData(prev => ({ ...prev, obras: newObras, avatarUrl: newAvatarUrl }));
-                  }
-              } catch(e) {
-              }
+  const processUpload = async (file: File, currentObras: Obra[]) => {
+      try {
+          let newObra: Obra;
+          let newAvatarUrl: string;
+
+          if (file.type.startsWith('image/')) {
+              // Usar upload de avatar (arquivo) - retorna URL persistida, sem bloqueio de Base64
+              const uploadResp = await api.uploadAvatar(user.id, file);
+              newAvatarUrl = uploadResp.avatarUrl;
+              newObra = { id: `obra_${Date.now()}`, url: uploadResp.avatarUrl };
+          } else {
+              // Vídeo: usar upload de chat (base64 permitido nesta rota)
+              const reader = new FileReader();
+              const dataUrl = await new Promise<string>((res, rej) => {
+                  reader.onload = (e) => res((e.target?.result as string) || '');
+                  reader.onerror = rej;
+                  reader.readAsDataURL(file);
+              });
+              if (!dataUrl) return;
+              const uploadResp = await api.uploadChatPhoto(user.id, dataUrl);
+              newAvatarUrl = currentObras.length === 0 ? uploadResp.url : (currentObras[0]?.url || '');
+              newObra = { id: uploadResp.photo?.id || uploadResp.url, url: uploadResp.url };
           }
-      };
-      reader.readAsDataURL(file);
+
+          const newObras = [newObra, ...currentObras];
+          const finalAvatarUrl = newObras.length > 0 ? newObras[0].url : newAvatarUrl;
+
+          const updateResp = await api.updateProfile(user.id, { obras: newObras, avatarUrl: finalAvatarUrl });
+          if (updateResp.success && updateResp.user) {
+              setFormData(prev => ({ ...prev, ...updateResp.user }));
+          } else {
+              setFormData(prev => ({ ...prev, obras: newObras, avatarUrl: finalAvatarUrl }));
+          }
+      } catch (e) {
+          console.error('Erro no upload:', e);
+      }
   }
 
   const handleDeletePhoto = async (indexToDelete: number) => {

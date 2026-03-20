@@ -53,8 +53,9 @@ router.post('/avatar/:userId', upload.single('avatar'), async (req, res) => {
             });
         }
 
-        // Construir URL da imagem
-        const avatarUrl = `https://livego.store/uploads/avatars/${req.file.filename}`;
+        // Construir URL da imagem (suporte dev: base dinâmica)
+        const baseUrl = process.env.BASE_URL || (req.protocol && req.get('host') ? `${req.protocol}://${req.get('host')}` : 'https://livego.store');
+        const avatarUrl = `${baseUrl}/uploads/avatars/${req.file.filename}`;
         
         console.log(`📸 Upload de avatar para usuário ${userId}: ${avatarUrl}`);
 
@@ -93,6 +94,12 @@ router.post('/avatar/:userId', upload.single('avatar'), async (req, res) => {
         );
 
         console.log(`✅ Avatar sincronizado com streams do usuário: ${userId}`);
+
+        // Emitir evento WebSocket para atualização em tempo real em todos os clientes
+        const io = req.app.get('io');
+        if (io) {
+            io.emit('avatar_updated', { userId, avatarUrl, timestamp: new Date().toISOString() });
+        }
 
         res.json({
             success: true,

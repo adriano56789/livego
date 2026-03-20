@@ -1031,7 +1031,7 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
 
             {/* 5. Modals & Overlays */}
             {/* FIX: Corrected typo for state setter from 'setIsOnlineUsersOpen' to 'setOnlineUsersOpen'. */}
-            {isOnlineUsersOpen && <OnlineUsersModal onClose={() => setOnlineUsersOpen(false)} streamId={streamer.id} userId={currentUser.id} />}
+            {isOnlineUsersOpen && <OnlineUsersModal onClose={() => setOnlineUsersOpen(false)} streamId={streamer.id} userId={currentUser.id} currentUser={currentUser} />}
             <ToolsModal
                 isOpen={isToolsOpen}
                 onClose={() => setIsToolsOpen(false)}

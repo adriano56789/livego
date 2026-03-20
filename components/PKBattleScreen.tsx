@@ -631,7 +631,7 @@ export default function PKBattleScreen({
               </div>
             ))}
             
-            {isOnlineUsersOpen && <OnlineUsersModal onClose={() => setIsOnlineUsersOpen(false)} streamId={streamer.id} userId={currentUser.id} />}
+            {isOnlineUsersOpen && <OnlineUsersModal onClose={() => setIsOnlineUsersOpen(false)} streamId={streamer.id} userId={currentUser.id} currentUser={currentUser} />}
             {isRankingOpen && <ContributionRankingModal onClose={() => setIsRankingOpen(false)} liveRanking={onlineUsers} />}
             
             <ToolsModal 

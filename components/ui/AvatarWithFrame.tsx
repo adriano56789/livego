@@ -37,6 +37,14 @@ const isFrameValid = (user: User): boolean => {
   return expirationDate > now;
 };
 
+// Cache bust para forçar atualização quando avatar muda (evita imagem antiga)
+const avatarSrc = (avatarUrl: string | undefined, name: string): string => {
+  const fallback = `https://via.placeholder.com/150/4B5563/FFFFFF?text=${encodeURIComponent(name || 'User')}`;
+  if (!avatarUrl) return fallback;
+  const sep = avatarUrl.includes('?') ? '&' : '?';
+  return `${avatarUrl}${sep}t=${avatarUrl.length}_${avatarUrl.slice(-12)}`;
+};
+
 // Função para obter o componente do frame
 const getFrameComponent = (frameId: string | null): React.ComponentType<any> | null => {
   if (!frameId) return null;
@@ -84,7 +92,7 @@ const AvatarWithFrame: React.FC<AvatarWithFrameProps> = ({
         onClick={onClick}
       >
         <img
-          src={user.avatarUrl || `https://via.placeholder.com/150/4B5563/FFFFFF?text=${encodeURIComponent(user.name || 'User')}`}
+          src={avatarSrc(user.avatarUrl, user.name)}
           alt={user.name || 'User'}
           className="w-full h-full object-cover"
           onError={(e) => {

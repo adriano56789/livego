@@ -478,6 +478,14 @@ const AppContent: React.FC = () => {
         }
       });
 
+      // Avatar atualizado - sincronizar em tempo real em todo o app
+      socketService.on('avatar_updated', (data: { userId: string; avatarUrl: string }) => {
+        if (data.userId === currentUser.id) {
+          const updatedUser = { ...currentUser, avatarUrl: data.avatarUrl };
+          updateUserEverywhere(updatedUser);
+        }
+      });
+
       // Escutar atualizações de diamantes em tempo real (remetente de presente)
       socketService.on('diamonds_updated', (data: { userId: string; diamonds: number; enviados?: number; change: number; timestamp: string; source?: string }) => {
         
@@ -608,6 +616,7 @@ const AppContent: React.FC = () => {
 
     return () => {
       socketService.off('user_status_updated');
+      socketService.off('avatar_updated');
       socketService.off('diamonds_updated');
       socketService.off('earnings_updated');
       socketService.off('platform_earnings_updated');
@@ -1190,6 +1199,11 @@ const logLiveEvent = (type: string, data: any) => {
     setIsEditingProfile(false);
     setViewingProfile(updatedUser);
     addToast(ToastType.Success, t('toasts.profileSaved'));
+    // Refetch do servidor para garantir sincronização e dados persistentes
+    try {
+      const freshUser = await api.getFreshUserData(currentUser.id);
+      if (freshUser) updateUserEverywhere(freshUser);
+    } catch (_) { /* ignora erro de refetch */ }
   };
 
   const handleFollowUser = async (userToFollow: User, streamId?: string) => {

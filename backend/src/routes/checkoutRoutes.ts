@@ -94,14 +94,18 @@ router.post('/pix', FraudDetectionMiddleware.detectFraud, async (req, res) => {
             console.log('[MERCADO PAGO SUCCESS] Pagamento criado:', payment.body.id);
         
             // Verificar se a resposta tem as propriedades esperadas
-            if (!payment.body.point_of_interaction?.transaction_data?.qr_code) {
-                console.error('[PIX ERROR] Resposta do Mercado Pago:', JSON.stringify(payment.body, null, 2));
-                throw new Error('Mercado Pago não retornou dados do PIX. Verifique as credenciais e configuração.');
+            // Tentar obter os dados do PIX de diferentes formas (dependendo da versão do SDK/API)
+            const transactionData = payment.body.point_of_interaction?.transaction_data;
+            const pixCode = transactionData?.qr_code || payment.body.qr_code || (payment.body.point_of_interaction && payment.body.point_of_interaction.transaction_data && payment.body.point_of_interaction.transaction_data.qr_code);
+            const qrCodeBase64 = transactionData?.qr_code_base64 || payment.body.qr_code_base64 || (payment.body.point_of_interaction && payment.body.point_of_interaction.transaction_data && payment.body.point_of_interaction.transaction_data.qr_code_base64);
+
+            if (!pixCode) {
+                console.error('[PIX ERROR] Resposta do Mercado Pago (sem qr_code):', JSON.stringify(payment.body, null, 2));
+                throw new Error('Mercado Pago não retornou o código PIX (Copia e Cola).');
             }
             
-            if (!payment.body.point_of_interaction.transaction_data.qr_code_base64) {
-                console.error('[PIX ERROR] QR Code base64 ausente:', JSON.stringify(payment.body.point_of_interaction.transaction_data, null, 2));
-                throw new Error('QR Code base64 não fornecido pelo Mercado Pago.');
+            if (!qrCodeBase64) {
+                console.warn('[PIX WARNING] QR Code base64 ausente na resposta direta, tentando extrair do objeto completo.');
             }
 
             // Atualizar ordem com dados do pagamento
@@ -111,15 +115,16 @@ router.post('/pix', FraudDetectionMiddleware.detectFraud, async (req, res) => {
                 {
                     externalReference: externalReference,
                     mpPaymentId: payment.body.id,
-                    pixQrCode: payment.body.point_of_interaction.transaction_data.qr_code_base64,
+                    pixCode: pixCode,
+                    pixQrCode: qrCodeBase64,
                     pixExpiration: payment.body.date_of_expiration
                 }
             );
             
             const pixResponse = {
                 success: true,
-                pixCode: payment.body.point_of_interaction.transaction_data.qr_code,
-                qrCode: payment.body.point_of_interaction.transaction_data.qr_code_base64,
+                pixCode: pixCode,
+                qrCode: qrCodeBase64,
                 expiration: payment.body.date_of_expiration,
                 orderId: orderId,
                 amount: order.amount,

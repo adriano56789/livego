@@ -37,7 +37,7 @@ import manualRoutes from './routes/manualRoutes';
 import paymentRoutes from './routes/paymentRoutes';
 import { blockBase64Middleware } from './middleware/blockBase64';
 
-dotenv.config();
+dotenv.config({ path: '.env.production' });
 
 const app = express();
 app.set('etag', false); // Desabilitar ETag para sempre retornar 200 em vez de 304

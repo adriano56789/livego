@@ -188,6 +188,7 @@ export const api = {
     processPixPayment: (orderId: string) => callApi<PixPaymentResponse>('POST', '/api/checkout/pix', { orderId }),
     processCreditCardPayment: (data: CreditCardPaymentRequest) => callApi<{ success: boolean, message: string, orderId: string }>('POST', '/api/checkout/credit-card', data),
     confirmPurchase: (orderId: string) => callApi<{ success: boolean, user: User, order: Order }>('POST', '/api/purchase/confirm', { orderId }),
+    checkPixPaymentStatus: (orderId: string) => callApi<{ success: boolean, status: string, order: Order, payment?: any }>('GET', `/api/payments/pix/status/${orderId}`),
 
     // --- Admin Control ---
     saveAdminWithdrawalMethod: (email: string) => callApi<{ success: boolean, user: User }>('POST', '/api/admin/withdrawal-method', { email }),

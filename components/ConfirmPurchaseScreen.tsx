@@ -100,6 +100,7 @@ const ConfirmPurchaseScreen: React.FC<ConfirmPurchaseScreenProps> = ({ onClose, 
   const [pixKeyString, setPixKeyString] = useState("adrianomdk5@gmail.com"); 
   const [pixStatus, setPixStatus] = useState<'pending' | 'confirmed'>('pending');
   const [pixCode, setPixCode] = useState<string | null>(null);
+  const [qrCodeBase64, setQrCodeBase64] = useState<string | null>(null);
   const [isLoadingPix, setIsLoadingPix] = useState(false);
   
   // Card Form State
@@ -122,6 +123,7 @@ const ConfirmPurchaseScreen: React.FC<ConfirmPurchaseScreenProps> = ({ onClose, 
                   // 2. Fetch Pix Details from Backend
                   const pixData = await api.processPixPayment(order.id);
                   setPixCode(pixData.pixCode);
+                  setQrCodeBase64(pixData.qrCode);
                   setIsLoadingPix(false);
               }
           } catch (error) {
@@ -141,23 +143,39 @@ const ConfirmPurchaseScreen: React.FC<ConfirmPurchaseScreenProps> = ({ onClose, 
     }
   }, [paymentMethod, timeLeft]);
 
-  // Poll for Pix Status (Simulated via timeout in this component for now, or could check API)
+  // Poll for Pix Status (usando API real)
   useEffect(() => {
-    if (paymentMethod === 'pix' && pixStatus === 'pending' && pixCode) {
-        // Real implementation would poll an endpoint like /api/payment/status/{orderId}
-        const timeout = setTimeout(async () => {
-            if (orderId) {
-                try {
-                    // Simulate confirmation call
-                    await api.confirmPurchase(orderId);
+    if (paymentMethod === 'pix' && pixStatus === 'pending' && pixCode && orderId) {
+        const checkStatus = async () => {
+            try {
+                const statusResponse = await api.checkPixPaymentStatus(orderId);
+                
+                if (statusResponse.success && statusResponse.status === 'approved') {
+                    console.log('✅ [PIX] Pagamento aprovado via API!');
                     setPixStatus('confirmed');
-                    addToast(ToastType.Success, "Pagamento via Pix identificado!");
-                    setTimeout(() => onConfirmPurchase(packageDetails), 1500);
-                } catch (e) {
+                    addToast(ToastType.Success, "Pagamento via Pix confirmado!");
+                    
+                    // Aguardar um pouco e depois confirmar a compra
+                    setTimeout(() => {
+                        onConfirmPurchase(packageDetails);
+                    }, 1500);
+                } else if (statusResponse.status === 'rejected' || statusResponse.status === 'cancelled') {
+                    console.log('❌ [PIX] Pagamento rejeitado/cancelado');
+                    addToast(ToastType.Error, "Pagamento não aprovado. Tente novamente.");
+                    setPixStatus('pending'); // Manter como pending para permitir nova tentativa
                 }
+            } catch (error) {
+                console.error('❌ [PIX] Erro ao verificar status:', error);
             }
-        }, 10000);
-        return () => clearTimeout(timeout);
+        };
+
+        // Verificar status a cada 5 segundos
+        const interval = setInterval(checkStatus, 5000);
+        
+        // Verificar imediatamente na primeira vez
+        checkStatus();
+
+        return () => clearInterval(interval);
     }
   }, [paymentMethod, pixStatus, pixCode, orderId, addToast, onConfirmPurchase, packageDetails]);
 
@@ -307,12 +325,16 @@ const ConfirmPurchaseScreen: React.FC<ConfirmPurchaseScreenProps> = ({ onClose, 
                         <div className="w-48 h-48 flex items-center justify-center">
                             <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-black"></div>
                         </div>
-                    ) : (
-                         <img 
-                            src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(pixCode || '')}&color=000000&bgcolor=ffffff`}
+                    ) : qrCodeBase64 ? (
+                        <img 
+                            src={qrCodeBase64}
                             alt="Pix QR Code" 
                             className="w-48 h-48 mix-blend-multiply"
                         />
+                    ) : (
+                        <div className="w-48 h-48 flex items-center justify-center bg-gray-200">
+                            <p className="text-red-500 text-xs text-center">QR Code não disponível</p>
+                        </div>
                     )}
                 </div>
                 

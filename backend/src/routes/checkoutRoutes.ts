@@ -62,37 +62,85 @@ router.post('/pix', FraudDetectionMiddleware.detectFraud, async (req, res) => {
             }
         };
 
-        // Criar pagamento no Mercado Pago
-        const axios = require('axios');
-        const mpResponse = await axios.post(
-            'https://api.mercadopago.com/v1/payments',
-            pixData,
-            {
-                headers: {
-                    'Authorization': `Bearer ${process.env.MERCADO_PAGO_ACCESS_TOKEN}`,
-                    'Content-Type': 'application/json'
+        // Criar pagamento no Mercado Pago usando SDK oficial
+        const mercadopago = require('mercadopago');
+        
+        // Inicializar o SDK com as credenciais
+        mercadopago.configure({
+            access_token: process.env.MERCADO_PAGO_ACCESS_TOKEN
+        });
+        
+        console.log(`[PIX PRODUCTION] Criando PIX real para order ${orderId}: R$${order.amount} (${order.diamonds} diamantes)`);
+        console.log(`[DEBUG] Token prefix: ${process.env.MERCADO_PAGO_ACCESS_TOKEN?.substring(0, 20)}...`);
+        
+        try {
+            const payment = await mercadopago.payment.create({
+                transaction_amount: order.amount,
+                description: `LiveGo - Compra de ${order.diamonds} diamantes`,
+                payment_method_id: 'pix',
+                external_reference: `purchase_${orderId}_${Date.now()}`,
+                notification_url: process.env.NOTIFICATION_URL,
+                payer: {
+                    email: req.body.payerEmail || 'comprador@livego.store',
+                    first_name: req.body.payerFirstName || 'Comprador',
+                    last_name: req.body.payerLastName || 'LiveGo',
+                    identification: {
+                        type: 'CPF',
+                        number: req.body.payerCpf || '00000000000'
+                    }
                 }
+            });
+            
+            console.log('[MERCADO PAGO SUCCESS] Pagamento criado:', payment.body.id);
+        
+            // Verificar se a resposta tem as propriedades esperadas
+            if (!payment.body.point_of_interaction?.transaction_data?.qr_code) {
+                console.error('[PIX ERROR] Resposta do Mercado Pago:', JSON.stringify(payment.body, null, 2));
+                throw new Error('Mercado Pago não retornou dados do PIX. Verifique as credenciais e configuração.');
             }
-        );
+            
+            if (!payment.body.point_of_interaction.transaction_data.qr_code_base64) {
+                console.error('[PIX ERROR] QR Code base64 ausente:', JSON.stringify(payment.body.point_of_interaction.transaction_data, null, 2));
+                throw new Error('QR Code base64 não fornecido pelo Mercado Pago.');
+            }
 
-        const payment = mpResponse.data;
-        
-        const pixResponse = {
-            success: true,
-            pixCode: payment.point_of_interaction.transaction_data.qr_code,
-            qrCode: payment.point_of_interaction.transaction_data.qr_code_base64,
-            expiration: payment.date_of_expiration,
-            orderId: orderId,
-            amount: order.amount,
-            diamonds: order.diamonds,
-            mpPaymentId: payment.id
-        };
+            // Atualizar ordem com dados do pagamento
+            const externalReference = payment.body.external_reference;
+            await Order.findOneAndUpdate(
+                { id: orderId },
+                {
+                    externalReference: externalReference,
+                    mpPaymentId: payment.body.id,
+                    pixQrCode: payment.body.point_of_interaction.transaction_data.qr_code_base64,
+                    pixExpiration: payment.body.date_of_expiration
+                }
+            );
+            
+            const pixResponse = {
+                success: true,
+                pixCode: payment.body.point_of_interaction.transaction_data.qr_code,
+                qrCode: payment.body.point_of_interaction.transaction_data.qr_code_base64,
+                expiration: payment.body.date_of_expiration,
+                orderId: orderId,
+                amount: order.amount,
+                diamonds: order.diamonds,
+                mpPaymentId: payment.body.id
+            };
 
-        console.log(`[PIX SUCCESS] PIX gerado para order ${orderId}: R$${order.amount} (${order.diamonds} diamantes)`);
-        
-        res.json(pixResponse);
+            console.log(`[PIX SUCCESS] PIX REAL gerado para order ${orderId}:`);
+            console.log(`  - Valor: R$${order.amount} (${order.diamonds} diamantes)`);
+            console.log(`  - PIX Code: ${payment.body.point_of_interaction.transaction_data.qr_code.substring(0, 50)}...`);
+            console.log(`  - Expiração: ${payment.body.date_of_expiration}`);
+            console.log(`  - MP Payment ID: ${payment.body.id}`);
+            console.log(`  - External Reference: ${externalReference}`);
+            
+            res.json(pixResponse);
+        } catch (err: any) {
+            console.error('[PIX ERROR] Erro ao gerar PIX com SDK:', err);
+            res.status(500).json({ error: err.message });
+        }
     } catch (err: any) {
-        console.error(`[PIX ERROR] Erro ao gerar PIX:`, err);
+        console.error('[PIX ERROR] Erro ao gerar PIX:', err);
         res.status(500).json({ error: err.message });
     }
 });
@@ -107,6 +155,19 @@ router.post('/credit-card', FraudDetectionMiddleware.detectFraud, async (req, re
         }
 
         // Gerar pagamento com cartão via Mercado Pago
+        const axios = require('axios');
+        
+        // Verificar se está configurado para produção
+        if (!process.env.MERCADO_PAGO_ACCESS_TOKEN) {
+            throw new Error('Mercado Pago Access Token não configurado');
+        }
+        
+        if (process.env.MERCADO_PAGO_ACCESS_TOKEN.includes('TEST-')) {
+            throw new Error('Mercado Pago configurado para modo de teste. Use credenciais de produção.');
+        }
+        
+        console.log(`[CREDIT CARD PRODUCTION] Processando cartão real para order ${orderId}: R$${order.amount} (${order.diamonds} diamantes)`);
+        
         const cardData = {
             transaction_amount: order.amount,
             token: cardToken,
@@ -121,7 +182,6 @@ router.post('/credit-card', FraudDetectionMiddleware.detectFraud, async (req, re
             }
         };
 
-        const axios = require('axios');
         const mpResponse = await axios.post(
             'https://api.mercadopago.com/v1/payments',
             cardData,

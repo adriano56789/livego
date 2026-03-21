@@ -348,6 +348,7 @@ export interface Order {
 export interface PixPaymentResponse {
     success: boolean;
     pixCode: string;
+    qrCode: string;
     expiration: string;
     orderId: string;
 }

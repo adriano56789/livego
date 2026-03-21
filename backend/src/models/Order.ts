@@ -12,6 +12,10 @@ export interface IOrder extends Document {
     pixExpiration?: string;
     paymentConfirmationId?: string;
     confirmedAt?: Date;
+    mpPaymentId?: string; // ID do pagamento no Mercado Pago
+    externalReference?: string; // Referência externa para webhook
+    pixQrCode?: string; // QR Code em base64
+    createdAt?: Date; // Data de criação
 }
 
 const OrderSchema = new Schema<IOrder>({
@@ -25,7 +29,11 @@ const OrderSchema = new Schema<IOrder>({
     pixCode: { type: String },
     pixExpiration: { type: String },
     paymentConfirmationId: { type: String },
-    confirmedAt: { type: Date }
+    confirmedAt: { type: Date },
+    mpPaymentId: { type: String }, // ID do pagamento no Mercado Pago
+    externalReference: { type: String }, // Referência externa para webhook
+    pixQrCode: { type: String }, // QR Code em base64
+    createdAt: { type: Date, default: Date.now } // Data de criação
 }, {
     timestamps: true,
     toJSON: {

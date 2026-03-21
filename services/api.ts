@@ -185,8 +185,8 @@ export const api = {
     // --- Checkout & Payments (New) ---
     getDiamondPackages: () => callApi<DiamondPackage[]>('GET', '/api/checkout/pack'),
     createOrder: (userId: string, packageId: string, amount: number, diamonds: number) => callApi<Order>('POST', '/api/checkout/order', { userId, packageId, amount, diamonds }),
-    processPixPayment: (orderId: string) => callApi<PixPaymentResponse>('POST', '/api/payment/pix', { orderId }),
-    processCreditCardPayment: (data: CreditCardPaymentRequest) => callApi<{ success: boolean, message: string, orderId: string }>('POST', '/api/payment/credit-card', data),
+    processPixPayment: (orderId: string) => callApi<PixPaymentResponse>('POST', '/api/checkout/pix', { orderId }),
+    processCreditCardPayment: (data: CreditCardPaymentRequest) => callApi<{ success: boolean, message: string, orderId: string }>('POST', '/api/checkout/credit-card', data),
     confirmPurchase: (orderId: string) => callApi<{ success: boolean, user: User, order: Order }>('POST', '/api/purchase/confirm', { orderId }),
 
     // --- Admin Control ---

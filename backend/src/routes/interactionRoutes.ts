@@ -919,18 +919,27 @@ router.patch('/notifications/:id/read', async (req, res) => res.json({ success: 
 // GET /api/interactions/effects/beauty - Buscar efeitos de beleza
 router.get('/effects/beauty', async (req, res) => {
     try {
-        // Buscar todos os efeitos de beleza
-        const allEffects = await BeautyEffect.find({}).sort({ type: 1, name: 1 });
+        // Buscar tudo ordenado pelo sort_order
+        const allEffects = await BeautyEffect.find({}).sort({ sort_order: 1 });
         
-        // Separar por tipo
-        const filters = allEffects.filter(effect => effect.type === 'filter');
-        const effects = allEffects.filter(effect => effect.type === 'effect');
+        // Separa os filtros (Aba Recomendar)
+        const filters = allEffects
+            .filter(e => e.type === 'filter')
+            .map(e => ({ name: e.name, icon: e.icon, img: e.img }));
+            
+        // Separa os efeitos (Aba Beleza)
+        const effects = allEffects
+            .filter(e => e.type === 'effect')
+            .map(e => ({ name: e.name, icon: e.icon, img: e.img }));
         
         console.log(`✅ [BEAUTY_EFFECTS] Encontrados ${filters.length} filters e ${effects.length} effects`);
         
+        // ⚠️ O FRONT-END ESPERA EXATAMENTE ESTA ESTRUTURA DE RETORNO:
         res.json({
-            filters,
-            effects
+            data: {
+                filters: filters,
+                effects: effects
+            }
         });
         
     } catch (error: any) {

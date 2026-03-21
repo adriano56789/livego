@@ -404,6 +404,9 @@ export const api = {
     makeModerator: (streamId: string, userId: string, hostId: string) => callApi<void>('POST', `/api/streams/${streamId}/moderator`, { userId, hostId }),
     endLiveStream: (streamId: string) => callApi<{ success: boolean }>('POST', `/api/lives/${streamId}/end`),
 
+    // --- Manual de Transmissão ---
+    getManualTransmissao: () => callApi<{ success: boolean, data: { titulo: string; secoes: Array<{ titulo: string; itens: string[] }> } }>('GET', '/api/manual-transmissao'),
+
     // --- Live Notifications ---
     startLiveStream: (streamId: string) => callApi<{ success: boolean }>('POST', '/api/lives/start', { streamId }),
     getNotifications: () => callApi<LiveNotification[]>('GET', '/api/notifications'),

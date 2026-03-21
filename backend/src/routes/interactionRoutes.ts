@@ -1,6 +1,7 @@
 import express from 'express';
 import { Message, User, Photo, Streamer, Followers, Friendship, Invitation, Visitor, GiftTransaction } from '../models';
 import { getUserIdFromToken } from '../middleware/auth';
+import BeautyEffect from '../models/BeautyEffect';
 
 const router = express.Router();
 
@@ -914,5 +915,28 @@ router.post('/streams/:id/kick', async (req, res) => res.json({}));
 router.post('/streams/:id/moderator', async (req, res) => res.json({}));
 router.get('/notifications', async (req, res) => res.json([]));
 router.patch('/notifications/:id/read', async (req, res) => res.json({ success: true }));
+
+// GET /api/interactions/effects/beauty - Buscar efeitos de beleza
+router.get('/effects/beauty', async (req, res) => {
+    try {
+        // Buscar todos os efeitos de beleza
+        const allEffects = await BeautyEffect.find({}).sort({ type: 1, name: 1 });
+        
+        // Separar por tipo
+        const filters = allEffects.filter(effect => effect.type === 'filter');
+        const effects = allEffects.filter(effect => effect.type === 'effect');
+        
+        console.log(`✅ [BEAUTY_EFFECTS] Encontrados ${filters.length} filters e ${effects.length} effects`);
+        
+        res.json({
+            filters,
+            effects
+        });
+        
+    } catch (error: any) {
+        console.error('❌ Erro ao buscar efeitos de beleza:', error);
+        res.status(500).json({ error: 'Erro ao buscar efeitos de beleza' });
+    }
+});
 
 export default router;

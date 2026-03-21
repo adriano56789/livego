@@ -246,6 +246,17 @@ export interface BeautySettings {
     [effectName: string]: number;
 }
 
+export interface BeautyEffect {
+  name: string;
+  icon?: string;
+  img?: string;
+}
+
+export interface BeautyEffectsData {
+  filters: BeautyEffect[];
+  effects: BeautyEffect[];
+}
+
 export interface PurchaseRecord {
   id: string;
   userId: string;

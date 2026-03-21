@@ -37,22 +37,19 @@ async function seedBeautyEffects() {
     await BeautyEffect.deleteMany({});
     console.log('Dados existentes removidos');
 
-    // Dados iniciais - Filters (presets)
+    // Dados iniciais - Filters (presets) - EXATAMENTE como o frontend espera
     const filters = [
-      { name: 'Musa', type: 'filter', icon: '✨' },
-      { name: 'Branquear', type: 'filter', icon: '🌟' },
-      { name: 'Saudável', type: 'filter', icon: '💫' },
-      { name: 'Doce', type: 'filter', icon: '🍯' },
-      { name: 'Fresca', type: 'filter', icon: '🌸' }
+      { name: 'Musa', type: 'filter', img: 'https://picsum.photos/seed/beauty_musa/200/200.jpg' },
+      { name: 'Bonito', type: 'filter', img: 'https://picsum.photos/seed/beauty_bonito/200/200.jpg' },
+      { name: 'Vitalidade', type: 'filter', img: 'https://picsum.photos/seed/beauty_vitalidade/200/200.jpg' }
     ];
 
-    // Dados iniciais - Effects (controles)
+    // Dados iniciais - Effects (controles) - EXATAMENTE como o frontend espera
     const effects = [
-      { name: 'Bigode', type: 'effect', icon: '👨' },
-      { name: 'Barba', type: 'effect', icon: '🧔' },
-      { name: 'Sobrancelha', type: 'effect', icon: '👁️' },
-      { name: 'Blush', type: 'effect', icon: '🌹' },
-      { name: 'Lentes', type: 'effect', icon: '👓' }
+      { name: 'Branquear', type: 'effect', icon: '✨' },
+      { name: 'Alisar a pele', type: 'effect', icon: '🌟' },
+      { name: 'Ruborizar', type: 'effect', icon: '🌹' },
+      { name: 'Contraste', type: 'effect', icon: '�' }
     ];
 
     // Inserir todos os dados

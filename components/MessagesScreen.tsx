@@ -42,7 +42,14 @@ const ConversationItem: React.FC<ConversationItemProps> = ({ conversation, onSta
     return (
         <div className="flex items-center p-4 space-x-4 cursor-pointer hover:bg-gray-800/50" onClick={() => onStartChat(friend)}>
             <button onClick={(e) => { e.stopPropagation(); onViewProfile(friend); }} className="relative flex-shrink-0 focus:outline-none rounded-full">
-                <img src={friend.avatarUrl || ''} alt={friend.name || ''} className="w-14 h-14 rounded-full object-cover" />
+                <img 
+                    src={friend.avatarUrl || `https://picsum.photos/seed/${friend.id || 'default'}/200/200.jpg`} 
+                    alt={friend.name || 'Usuário'} 
+                    className="w-14 h-14 rounded-full object-cover"
+                    onError={(e) => {
+                        e.currentTarget.src = `https://picsum.photos/seed/${friend.id || 'default'}/200/200.jpg`;
+                    }}
+                />
                 {friend.isOnline && (
                     <div className="absolute bottom-0 right-0 w-4 h-4 bg-green-400 rounded-full border-2 border-[#111111]"></div>
                 )}

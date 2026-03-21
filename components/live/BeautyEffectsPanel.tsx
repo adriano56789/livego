@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { CloseIcon } from '../icons';
 import { api } from '../../services/api';
 import { BeautySettings, User, ToastType } from '../../types';
+import { videoProcessor, BeautyEffectSettings } from '../../services/VideoProcessor';
+import { beautyWebRTCIntegration } from '../../services/BeautyWebRTCIntegration';
 
 interface BeautyEffectsPanelProps {
     onClose: () => void;
@@ -37,8 +39,9 @@ const BeautyEffectsPanel: React.FC<BeautyEffectsPanelProps> = ({ onClose, curren
             // Lidar com a nova estrutura da API: { data: { filters, effects } }
             const data = response?.data || response || { filters: [], effects: [] };
             setEffectsData(data);
-            console.log(' [BEAUTY_PANEL] Efeitos carregados da API:', data);
-        }).catch(err => console.error("Failed to fetch beauty effects:", err));
+        }).catch(err => {
+            console.error('❌ [BEAUTY_PANEL] Erro ao buscar efeitos:', err);
+        });
     }, []);
 
     // Fetch user's saved settings
@@ -48,12 +51,14 @@ const BeautyEffectsPanel: React.FC<BeautyEffectsPanelProps> = ({ onClose, curren
             api.getBeautySettings(currentUser.id)
                 .then(data => {
                     setSettings(data || {});
-                    // Aplicar configurações salvas ao vídeo
-                    Object.entries(data || {}).forEach(([effectName, intensity]) => {
-                        if (typeof intensity === 'number' && intensity > 0) {
-                            applyEffectToVideo(effectName, intensity);
-                        }
-                    });
+                    // Aplicar configurações salvas ao processador de vídeo
+                    const beautySettings = convertSettingsToBeautySettings(data || {});
+                    videoProcessor.updateBeautySettings(beautySettings);
+                    
+                    // Iniciar processamento se ainda não estiver ativo
+                    if (videoRef?.current && !beautyWebRTCIntegration.isBeautyActive()) {
+                        initializeBeautyProcessing();
+                    }
                 })
                 .catch(err => {
                     console.error("Failed to fetch beauty settings:", err);
@@ -61,7 +66,54 @@ const BeautyEffectsPanel: React.FC<BeautyEffectsPanelProps> = ({ onClose, curren
                 })
                 .finally(() => setIsLoading(false));
         }
-    }, [currentUser, addToast]);
+    }, [currentUser, addToast, videoRef]);
+
+    // Inicializar processamento de beleza quando o painel abrir
+    useEffect(() => {
+        if (videoRef?.current && currentUser?.id) {
+            initializeBeautyProcessing();
+        }
+        
+        return () => {
+            // Limpar quando o painel fechar
+            // Não parar o processamento aqui, pois pode ser usado em outras partes
+        };
+    }, [videoRef, currentUser]);
+
+    // Converter configurações do formato da API para o formato do VideoProcessor
+    const convertSettingsToBeautySettings = (apiSettings: BeautySettings): BeautyEffectSettings => {
+        return {
+            whitening: apiSettings['Branquear'] || 0,
+            smoothing: apiSettings['Alisar a pele'] || 0,
+            saturation: apiSettings['Ruborizar'] || 0,
+            contrast: apiSettings['Contraste'] || 0
+        };
+    };
+
+    // Inicializar processamento de beleza
+    const initializeBeautyProcessing = async () => {
+        try {
+            const video = videoRef?.current;
+            if (!video) return;
+
+            // Inicializar processador de vídeo
+            const success = await videoProcessor.initialize(video);
+            if (!success) {
+                return;
+            }
+
+            // Iniciar processamento
+            const processedStream = videoProcessor.startProcessing();
+            
+            // Configurar integração com WebRTC
+            await beautyWebRTCIntegration.initialize(processedStream);
+            beautyWebRTCIntegration.toggleBeauty(); // Ativar beleza
+            
+        } catch (error) {
+            console.error('❌ [BEAUTY_PANEL] Erro ao inicializar processamento:', error);
+            addToast(ToastType.Error, "Falha ao inicializar efeitos de beleza.");
+        }
+    };
 
     // Função para aplicar efeitos CSS diretamente no vídeo
     const applyEffectToVideo = (effectName: string, intensity: number) => {
@@ -94,8 +146,6 @@ const BeautyEffectsPanel: React.FC<BeautyEffectsPanelProps> = ({ onClose, curren
 
         video.style.filter = filterString;
         currentFilters.current = filterString;
-        
-        console.log(` [BEAUTY_PANEL] Efeito aplicado: ${effectName}=${intensity}, filtro: ${filterString}`);
     };
 
     // Função para aplicar filtro pré-definido
@@ -113,8 +163,6 @@ const BeautyEffectsPanel: React.FC<BeautyEffectsPanelProps> = ({ onClose, curren
         const filterString = filterMap[filterName] || 'none';
         video.style.filter = filterString;
         currentFilters.current = filterString;
-        
-        console.log(` [BEAUTY_PANEL] Filtro aplicado: ${filterName}, CSS: ${filterString}`);
     };
 
     // Debounced save function
@@ -124,9 +172,14 @@ const BeautyEffectsPanel: React.FC<BeautyEffectsPanelProps> = ({ onClose, curren
         }
         saveTimeout.current = window.setTimeout(() => {
             if (currentUser?.id) {
-                api.updateBeautySettings(currentUser.id, newSettings).catch(() => {
-                    addToast(ToastType.Error, "Falha ao salvar o efeito.");
-                });
+                api.updateBeautySettings(currentUser.id, newSettings)
+                    .then(response => {
+                        // Success - no sensitive data logged
+                    })
+                    .catch(err => {
+                        console.error('❌ [BEAUTY_PANEL] Erro ao salvar configurações:', err);
+                        addToast(ToastType.Error, "Falha ao salvar o efeito.");
+                    });
             }
         }, 500);
     };
@@ -149,24 +202,74 @@ const BeautyEffectsPanel: React.FC<BeautyEffectsPanelProps> = ({ onClose, curren
         setSettings(newSettings);
         saveSettings(newSettings);
         
-        // Aplicar efeito em tempo real no vídeo
-        applyEffectToVideo(selectedEffect, value);
+        // Aplicar efeito em tempo real no processador de vídeo
+        const beautySettings = convertSettingsToBeautySettings(newSettings);
+        videoProcessor.updateBeautySettings(beautySettings);
+        
+        // Fallback para CSS se o processador não estiver ativo
+        if (!beautyWebRTCIntegration.isBeautyActive()) {
+            applyEffectToVideo(selectedEffect, value);
+        }
     };
 
     // Handler para seleção de filtros (Recomendar)
     const handleFilterSelect = (filterName: string) => {
         setSelectedFilter(filterName);
-        // Aplicar filtro em tempo real no vídeo
-        applyFilterToVideo(filterName);
+        
+        // Configurações para filtros pré-definidos
+        const filterSettings: Record<string, BeautyEffectSettings> = {
+            'Fechar': { whitening: 0, smoothing: 0, saturation: 0, contrast: 0 },
+            'Musa': { whitening: 10, smoothing: 15, saturation: 20, contrast: 5 },
+            'Bonito': { whitening: 15, smoothing: 20, saturation: 10, contrast: 10 },
+            'Vitalidade': { whitening: 20, smoothing: 10, saturation: 30, contrast: 15 }
+        };
+        
+        const selectedSettings = filterSettings[filterName] || filterSettings['Fechar'];
+        
+        // Converter para o formato da API
+        const apiSettings: BeautySettings = {};
+        if (selectedSettings.whitening > 0) apiSettings['Branquear'] = selectedSettings.whitening;
+        if (selectedSettings.smoothing > 0) apiSettings['Alisar a pele'] = selectedSettings.smoothing;
+        if (selectedSettings.saturation > 0) apiSettings['Ruborizar'] = selectedSettings.saturation;
+        if (selectedSettings.contrast > 0) apiSettings['Contraste'] = selectedSettings.contrast;
+        
+        // Salvar na API
+        saveSettings(apiSettings);
+        
+        // Aplicar filtro pré-definido via processador ou CSS
+        if (beautyWebRTCIntegration.isBeautyActive()) {
+            videoProcessor.updateBeautySettings(selectedSettings);
+        } else {
+            // Fallback para CSS
+            applyFilterToVideo(filterName);
+        }
     };
 
     // Handler para seleção de efeitos (Beleza)
     const handleEffectSelect = (effectName: string) => {
         setSelectedEffect(effectName);
+        
         // Aplicar efeito atual com nova intensidade
         const currentIntensity = settings[effectName] || 0;
-        if (currentIntensity > 0) {
-            applyEffectToVideo(effectName, currentIntensity);
+        
+        // Se não tiver intensidade definida, usar um valor padrão
+        const newIntensity = currentIntensity || 20; // Valor padrão 20
+        const newSettings = {
+            ...settings,
+            [effectName]: newIntensity
+        };
+        
+        // Salvar na API
+        saveSettings(newSettings);
+        setSettings(newSettings);
+        
+        // Aplicar efeito em tempo real
+        const beautySettings = convertSettingsToBeautySettings(newSettings);
+        videoProcessor.updateBeautySettings(beautySettings);
+        
+        // Fallback para CSS se necessário
+        if (!beautyWebRTCIntegration.isBeautyActive()) {
+            applyEffectToVideo(effectName, newIntensity);
         }
     };
 
@@ -181,14 +284,20 @@ const BeautyEffectsPanel: React.FC<BeautyEffectsPanelProps> = ({ onClose, curren
         setSelectedFilter('Musa');
         setSelectedEffect('Branquear');
         
-        // Resetar vídeo
+        // Resetar processador de vídeo
+        videoProcessor.updateBeautySettings({
+            whitening: 0,
+            smoothing: 0,
+            saturation: 0,
+            contrast: 0
+        });
+        
+        // Resetar vídeo (fallback CSS)
         const video = videoRef?.current;
         if (video) {
             video.style.filter = 'none';
             currentFilters.current = '';
         }
-        
-        console.log(' [BEAUTY_PANEL] Todos os efeitos resetados');
     };
     
     const currentEffectValue = settings[selectedEffect] ?? 0;

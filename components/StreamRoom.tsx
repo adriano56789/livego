@@ -22,6 +22,7 @@ import FullScreenGiftAnimation from './live/FullScreenGiftAnimation';
 import { webRTCService } from '../services/webrtcService.js';
 import { socketService } from '../services/socket';
 import AvatarWithFrame from './ui/AvatarWithFrame';
+import { beautyWebRTCIntegration } from '../services/BeautyWebRTCIntegration';
 
 interface ChatMessageType {
     id: number;
@@ -215,8 +216,23 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
             videoEl.removeAttribute('src');
             videoEl.load();
 
-            const onVideoReady = () => {
+            const onVideoReady = async () => {
                 setIsVideoPlaying(true);
+                
+                // Inicializar sistema de beleza para broadcasters
+                if (isBroadcaster) {
+                    try {
+                        const localStream = webRTCService.getLocalStream();
+                        if (localStream) {
+                            // Inicializar integração de beleza com WebRTC
+                            await beautyWebRTCIntegration.initialize(localStream);
+                            console.log('✅ [STREAM_ROOM] Sistema de beleza inicializado para broadcaster');
+                        }
+                    } catch (error) {
+                        console.warn('⚠️ [STREAM_ROOM] Falha ao inicializar sistema de beleza:', error);
+                    }
+                }
+                
                 videoEl.play().catch(e => {
                     if (e.name !== 'AbortError') {
                     }
@@ -543,6 +559,17 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
             chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
         }
     }, [messages]);
+
+    // Cleanup do sistema de beleza ao desmontar
+    useEffect(() => {
+        return () => {
+            // Parar processamento de beleza ao sair da sala
+            if (beautyWebRTCIntegration.isBeautyActive()) {
+                beautyWebRTCIntegration.stopBeautyProcessing();
+                console.log('🧹 [STREAM_ROOM] Sistema de beleza limpo ao sair');
+            }
+        };
+    }, []);
 
     // activeScreen é controlado pela prop setActiveScreen do componente pai
 

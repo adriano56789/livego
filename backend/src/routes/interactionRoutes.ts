@@ -919,6 +919,10 @@ router.patch('/notifications/:id/read', async (req, res) => res.json({ success: 
 // GET /api/interactions/effects/beauty - Buscar efeitos de beleza
 router.get('/effects/beauty', async (req, res) => {
     try {
+        console.log('🔍 [BEAUTY_API] Requisição recebida para /effects/beauty');
+        console.log('📋 [BEAUTY_API] Headers:', req.headers);
+        console.log('🌐 [BEAUTY_API] IP:', req.ip);
+        
         // Buscar tudo ordenado pelo sort_order
         const allEffects = await BeautyEffect.find({}).sort({ sort_order: 1 });
         
@@ -932,18 +936,23 @@ router.get('/effects/beauty', async (req, res) => {
             .filter(e => e.type === 'effect')
             .map(e => ({ name: e.name, icon: e.icon, img: e.img }));
         
-        console.log(`✅ [BEAUTY_EFFECTS] Encontrados ${filters.length} filters e ${effects.length} effects`);
+        console.log(`✅ [BEAUTY_API] Encontrados ${filters.length} filters e ${effects.length} effects`);
+        console.log('📦 [BEAUTY_API] Filters:', filters);
+        console.log('📦 [BEAUTY_API] Effects:', effects);
         
         // ⚠️ O FRONT-END ESPERA EXATAMENTE ESTA ESTRUTURA DE RETORNO:
-        res.json({
+        const responseData = {
             data: {
                 filters: filters,
                 effects: effects
             }
-        });
+        };
+        
+        console.log('📤 [BEAUTY_API] Enviando resposta:', responseData);
+        res.json(responseData);
         
     } catch (error: any) {
-        console.error('❌ Erro ao buscar efeitos de beleza:', error);
+        console.error('❌ [BEAUTY_API] Erro ao buscar efeitos de beleza:', error);
         res.status(500).json({ error: 'Erro ao buscar efeitos de beleza' });
     }
 });

@@ -104,18 +104,28 @@ router.post('/settings/gift-notifications/:id', async (req, res) => {
 // Beauty Settings - Usa campos do User
 router.get('/settings/beauty/:id', async (req, res) => {
     try {
-        const user = await User.findOne({ id: req.params.id });
+        const userId = req.params.id;
+        console.log('🔍 [BEAUTY_SETTINGS] GET - Requisição recebida para usuário:', userId);
+        console.log('📋 [BEAUTY_SETTINGS] Headers:', req.headers);
+        console.log('🌐 [BEAUTY_SETTINGS] IP:', req.ip);
+        
+        const user = await User.findOne({ id: userId });
         
         if (!user) {
+            console.log('❌ [BEAUTY_SETTINGS] Usuário não encontrado:', userId);
             return res.status(404).json({ error: 'User not found' });
         }
+        
+        console.log('✅ [BEAUTY_SETTINGS] Usuário encontrado:', user.name);
         
         // Retornar configurações de beleza (padrão vazio)
         const settings = {}; // Pode ser expandido no futuro
         
-        res.json({ settings });
+        console.log('📤 [BEAUTY_SETTINGS] Enviando configurações:', settings);
+        res.json(settings);
+        
     } catch (error: any) {
-        console.error('Error getting beauty settings:', error);
+        console.error('❌ [BEAUTY_SETTINGS] Erro ao buscar configurações de beleza:', error);
         res.status(500).json({ error: error.message });
     }
 });
@@ -125,14 +135,25 @@ router.post('/settings/beauty/:id', async (req, res) => {
         const userId = req.params.id;
         const { settings } = req.body;
         
+        console.log('🔍 [BEAUTY_SETTINGS] POST - Requisição recebida para usuário:', userId);
+        console.log('📋 [BEAUTY_SETTINGS] Headers:', req.headers);
+        console.log('📦 [BEAUTY_SETTINGS] Settings recebidos:', settings);
+        console.log('🌐 [BEAUTY_SETTINGS] IP:', req.ip);
+        
         if (!settings) {
+            console.log('❌ [BEAUTY_SETTINGS] Settings não fornecidos');
             return res.status(400).json({ error: 'Settings are required' });
         }
         
+        console.log('✅ [BEAUTY_SETTINGS] Salvar configurações - Futura implementação');
+        
         // No momento, apenas confirma sucesso (pode ser expandido)
-        res.json({ success: true, settings });
+        const response = { success: true, settings };
+        console.log('📤 [BEAUTY_SETTINGS] Enviando resposta:', response);
+        res.json(response);
+        
     } catch (error: any) {
-        console.error('Error updating beauty settings:', error);
+        console.error('❌ [BEAUTY_SETTINGS] Erro ao atualizar configurações de beleza:', error);
         res.status(500).json({ error: error.message });
     }
 });

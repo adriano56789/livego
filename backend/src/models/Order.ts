@@ -10,6 +10,8 @@ export interface IOrder extends Document {
     paymentMethod?: 'pix' | 'credit_card';
     pixCode?: string;
     pixExpiration?: string;
+    paymentConfirmationId?: string;
+    confirmedAt?: Date;
 }
 
 const OrderSchema = new Schema<IOrder>({
@@ -21,7 +23,9 @@ const OrderSchema = new Schema<IOrder>({
     status: { type: String, enum: ['pending', 'paid', 'failed', 'cancelled'], default: 'pending' },
     paymentMethod: { type: String, enum: ['pix', 'credit_card'] },
     pixCode: { type: String },
-    pixExpiration: { type: String }
+    pixExpiration: { type: String },
+    paymentConfirmationId: { type: String },
+    confirmedAt: { type: Date }
 }, {
     timestamps: true,
     toJSON: {

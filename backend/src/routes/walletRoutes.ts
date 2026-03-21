@@ -1,7 +1,8 @@
 import express from 'express';
-   import { PurchaseRecord, GiftTransaction, User, Streamer } from '../models';
+import { PurchaseRecord, GiftTransaction, User, Streamer, BannedEntity } from '../models';
 import { standardizeUserResponse } from '../utils/userResponse';
 import { calculateBRLFromDiamonds } from '../utils/diamondConversion';
+import FraudDetectionMiddleware from '../middleware/fraudDetection';
 
 const router = express.Router();
 
@@ -229,7 +230,7 @@ router.post('/gifts/sync-all', async (req, res) => {
     }
 });
 // API para realizar saque (diminui earnings)
-router.post('/withdraw/:userId', async (req, res) => {
+router.post('/withdraw/:userId', FraudDetectionMiddleware.detectFraud, async (req, res) => {
     try {
         const { amount } = req.body;
         const userId = req.params.userId;
@@ -390,7 +391,7 @@ router.post('/earnings/calculate', async (req, res) => {
         }
     });
 });
-router.post('/earnings/withdraw/:id', async (req, res) => {
+router.post('/earnings/withdraw/:id', FraudDetectionMiddleware.detectFraud, async (req, res) => {
     try {
         const amount = req.body.amount || 0;
         const user = await import('../models').then(m => m.User).then(U => U.findOne({ id: req.params.id }));
@@ -440,7 +441,7 @@ router.post('/earnings/withdraw/:id', async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 });
-router.post('/earnings/method/set/:id', async (req, res) => {
+router.post('/earnings/method/set/:id', FraudDetectionMiddleware.detectFraud, async (req, res) => {
     const user = await import('../models').then(m => m.User).then(U => U.findOneAndUpdate(
         { id: req.params.id },
         { withdrawal_method: { method: req.body.method, details: req.body.details } },

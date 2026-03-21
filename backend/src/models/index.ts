@@ -34,3 +34,4 @@ export { UserAvatar } from './UserAvatar';
 export { Frame } from './Frame';
 export { UserFrame } from './UserFrame';
 export { ManualTransmissao } from './ManualTransmissao';
+export { BannedEntity } from './BannedEntity';

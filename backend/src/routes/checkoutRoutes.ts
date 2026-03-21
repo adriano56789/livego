@@ -44,13 +44,48 @@ router.post('/pix', FraudDetectionMiddleware.detectFraud, async (req, res) => {
             return res.status(404).json({ error: 'Order not found' });
         }
 
+        // Gerar PIX real via Mercado Pago
+        const pixData = {
+            transaction_amount: order.amount,
+            description: `LiveGo - Compra de ${order.diamonds} diamantes`,
+            payment_method_id: 'pix',
+            external_reference: `purchase_${orderId}_${Date.now()}`,
+            notification_url: process.env.NOTIFICATION_URL,
+            payer: {
+                email: req.body.payerEmail || 'comprador@livego.store',
+                first_name: req.body.payerFirstName || 'Comprador',
+                last_name: req.body.payerLastName || 'LiveGo',
+                identification: {
+                    type: 'CPF',
+                    number: req.body.payerCpf || '00000000000'
+                }
+            }
+        };
+
+        // Criar pagamento no Mercado Pago
+        const axios = require('axios');
+        const mpResponse = await axios.post(
+            'https://api.mercadopago.com/v1/payments',
+            pixData,
+            {
+                headers: {
+                    'Authorization': `Bearer ${process.env.MERCADO_PAGO_ACCESS_TOKEN}`,
+                    'Content-Type': 'application/json'
+                }
+            }
+        );
+
+        const payment = mpResponse.data;
+        
         const pixResponse = {
             success: true,
-            pixCode: `test-pix-${orderId}-${Date.now()}`,
-            expiration: new Date(Date.now() + 30 * 60 * 1000).toISOString(), // 30 minutos
+            pixCode: payment.point_of_interaction.transaction_data.qr_code,
+            qrCode: payment.point_of_interaction.transaction_data.qr_code_base64,
+            expiration: payment.date_of_expiration,
             orderId: orderId,
             amount: order.amount,
-            diamonds: order.diamonds
+            diamonds: order.diamonds,
+            mpPaymentId: payment.id
         };
 
         console.log(`[PIX SUCCESS] PIX gerado para order ${orderId}: R$${order.amount} (${order.diamonds} diamantes)`);
@@ -62,7 +97,55 @@ router.post('/pix', FraudDetectionMiddleware.detectFraud, async (req, res) => {
     }
 });
 router.post('/credit-card', FraudDetectionMiddleware.detectFraud, async (req, res) => {
-    res.json({ success: true, message: 'Pago', orderId: req.body.orderId });
+    try {
+        const { orderId, cardToken, payerEmail, payerName, installments = 1 } = req.body;
+        
+        // Verificar se a order existe
+        const order = await Order.findOne({ id: orderId });
+        if (!order) {
+            return res.status(404).json({ error: 'Order not found' });
+        }
+
+        // Gerar pagamento com cartão via Mercado Pago
+        const cardData = {
+            transaction_amount: order.amount,
+            token: cardToken,
+            description: `LiveGo - Compra de ${order.diamonds} diamantes`,
+            installments: parseInt(installments),
+            payment_method_id: 'credit_card',
+            external_reference: `purchase_${orderId}_${Date.now()}`,
+            notification_url: process.env.NOTIFICATION_URL,
+            payer: {
+                email: payerEmail,
+                name: payerName
+            }
+        };
+
+        const axios = require('axios');
+        const mpResponse = await axios.post(
+            'https://api.mercadopago.com/v1/payments',
+            cardData,
+            {
+                headers: {
+                    'Authorization': `Bearer ${process.env.MERCADO_PAGO_ACCESS_TOKEN}`,
+                    'Content-Type': 'application/json'
+                }
+            }
+        );
+
+        const payment = mpResponse.data;
+        
+        res.json({ 
+            success: true, 
+            status: payment.status,
+            orderId: orderId,
+            mpPaymentId: payment.id,
+            message: 'Pagamento processado'
+        });
+    } catch (err: any) {
+        console.error(`[CREDIT CARD ERROR] Erro ao processar pagamento:`, err);
+        res.status(500).json({ error: err.message });
+    }
 });
 router.post('/confirm', FraudDetectionMiddleware.detectFraud, async (req, res) => {
     try {

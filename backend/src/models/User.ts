@@ -66,6 +66,17 @@ export interface IUser extends Document {
     };
     platformEarnings?: number;
     adminWithdrawalMethod?: { email: string; };
+    withdrawal_requests?: Array<{
+        external_reference: string;
+        mp_payment_id?: string;
+        amount: number;
+        net_amount?: number;
+        fee_amount?: number;
+        status: 'pending' | 'approved' | 'rejected' | 'cancelled';
+        created_at: string;
+        approved_at?: string;
+        description: string;
+    }>;
     frameExpiration?: string | null;
     geoLocation?: {
         type: 'Point';
@@ -144,6 +155,21 @@ const UserSchema = new Schema<IUser>({
     adminWithdrawalMethod: {
         email: { type: String }
     },
+    withdrawal_requests: [{
+        external_reference: { type: String, required: true },
+        mp_payment_id: { type: String },
+        amount: { type: Number, required: true },
+        net_amount: { type: Number },
+        fee_amount: { type: Number },
+        status: { 
+            type: String, 
+            enum: ['pending', 'approved', 'rejected', 'cancelled'], 
+            default: 'pending' 
+        },
+        created_at: { type: String, required: true },
+        approved_at: { type: String },
+        description: { type: String, required: true }
+    }],
     frameExpiration: { type: String, default: null },
     geoLocation: {
         type: { type: String, enum: ['Point'], default: 'Point' },

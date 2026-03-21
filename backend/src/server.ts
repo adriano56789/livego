@@ -34,6 +34,7 @@ import contributionRoutes from './routes/contributionRoutes';
 import purchaseRoutes from './routes/purchaseRoutes';
 import uploadRoutes from './routes/uploadRoutes';
 import manualRoutes from './routes/manualRoutes';
+import paymentRoutes from './routes/paymentRoutes';
 import { blockBase64Middleware } from './middleware/blockBase64';
 
 dotenv.config();
@@ -114,6 +115,7 @@ app.use('/api', frameRoutes); // Rotas de frames (quadros de avatar)
 app.use('/api', contributionRoutes); // Rotas de ranking de contribuição
 app.use('/api/upload', uploadRoutes); // Rotas de upload de arquivos
 app.use('/api', manualRoutes); // Rotas do manual de transmissão
+app.use('/api/payments', paymentRoutes); // Rotas do Mercado Pago
 // Disponibilizar io para as rotas
 app.set('io', io);
 

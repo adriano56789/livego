@@ -3,6 +3,7 @@ import { PurchaseRecord, GiftTransaction, User, Streamer, BannedEntity } from '.
 import { standardizeUserResponse } from '../utils/userResponse';
 import { calculateBRLFromDiamonds } from '../utils/diamondConversion';
 import FraudDetectionMiddleware from '../middleware/fraudDetection';
+import mercadoPagoService from '../services/mercadoPagoService';
 
 const router = express.Router();
 
@@ -229,7 +230,7 @@ router.post('/gifts/sync-all', async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 });
-// API para realizar saque (diminui earnings)
+// API para realizar saque real via Mercado Pago
 router.post('/withdraw/:userId', FraudDetectionMiddleware.detectFraud, async (req, res) => {
     try {
         const { amount } = req.body;
@@ -239,7 +240,7 @@ router.post('/withdraw/:userId', FraudDetectionMiddleware.detectFraud, async (re
             return res.status(400).json({ error: 'Valor de saque inválido' });
         }
         
-        console.log(`💸 [WITHDRAW] Processando saque de ${amount} diamantes para usuário ${userId}`);
+        console.log(`💸 [WITHDRAW] Processando saque REAL de ${amount} diamantes para usuário ${userId}`);
         
         // Buscar usuário
         const user = await User.findOne({ id: userId });
@@ -257,31 +258,71 @@ router.post('/withdraw/:userId', FraudDetectionMiddleware.detectFraud, async (re
             });
         }
         
-        // Realizar saque
+        // Verificar método de saque configurado
+        if (!user.withdrawal_method) {
+            return res.status(400).json({ error: 'Método de saque não configurado' });
+        }
+        
+        // Calcular valores
+        const brl_amount = calculateBRLFromDiamonds(amount);
+        const platform_fee_brl = brl_amount * 0.20;
+        const net_amount_brl = brl_amount - platform_fee_brl;
+        
+        // Verificar configuração do Mercado Pago
+        if (!mercadoPagoService.isConfigured()) {
+            console.error('❌ [WITHDRAW] Mercado Pago não está configurado');
+            return res.status(500).json({ error: 'Serviço de pagamento não configurado' });
+        }
+        
+        // Gerar referência externa única
+        const external_reference = `withdraw_${userId}_${Date.now()}`;
+        
+        // Preparar requisição para Mercado Pago
+        const withdrawalRequest = {
+            amount: net_amount_brl,
+            description: `LiveGo - Saque de ${amount} diamantes (Líquido: R$ ${net_amount_brl.toFixed(2)})`,
+            external_reference,
+            payer_email: user.withdrawal_method.details.pixKey || user.withdrawal_method.details.email || user.email
+        };
+        
+        console.log(`🔄 [WITHDRAW] Enviando para Mercado Pago:`);
+        console.log(`   Valor: R$ ${net_amount_brl.toFixed(2)}`);
+        console.log(`   Email: ${withdrawalRequest.payer_email}`);
+        console.log(`   Ref: ${external_reference}`);
+        
+        // Realizar saque no Mercado Pago
+        const mpWithdrawal = await mercadoPagoService.makeWithdrawal(withdrawalRequest);
+        
+        // Atualizar saldo do usuário (após confirmação do Mercado Pago)
         const newEarnings = currentEarnings - amount;
         
-        // Zerar diamonds e receptores também após saque
         await User.findOneAndUpdate(
             { id: userId },
             { 
                 $set: { earnings: newEarnings, diamonds: 0, receptores: 0 },
-                $inc: { earnings_withdrawn: amount }
+                $inc: { earnings_withdrawn: amount },
+                $push: {
+                    withdrawal_requests: {
+                        external_reference,
+                        mp_payment_id: mpWithdrawal.id,
+                        amount: net_amount_brl,
+                        net_amount: mpWithdrawal.net_amount,
+                        fee_amount: mpWithdrawal.fee_amount,
+                        status: mpWithdrawal.status,
+                        created_at: new Date().toISOString(),
+                        description: withdrawalRequest.description
+                    }
+                }
             }
         );
         
-        // 🔧 CORREÇÃO: Zerar também o contador da live ativa (Streamer.diamonds)
+        // 🔧 CORREÇÃO: Zerar contador da live ativa
         await Streamer.findOneAndUpdate(
             { hostId: userId, isLive: true },
             { $set: { diamonds: 0 } }
         );
         
-        // Calcular valor em BRL
-        const brl_amount = calculateBRLFromDiamonds(amount);
-        const platform_fee_brl = brl_amount * 0.20;
-        const net_amount_brl = brl_amount - platform_fee_brl;
-        
-        // 🔧 SINCRONIZAÇÃO: Transferir taxa para a carteira ADM usando $inc atômico
-        // Regra: 20% de toda taxa vai para a carteira ADM (identificada por email do admin)
+        // 🔧 SINCRONIZAÇÃO: Transferir taxa para carteira ADM
         const ADM_EMAIL = process.env.ADM_EMAIL || 'adrianomdk5@gmail.com';
         const admUser = await User.findOneAndUpdate(
             { email: ADM_EMAIL },
@@ -290,10 +331,8 @@ router.post('/withdraw/:userId', FraudDetectionMiddleware.detectFraud, async (re
         );
         
         if (admUser) {
-            console.log(`🏦 [WITHDRAW] Taxa de R$ ${platform_fee_brl.toFixed(2)} transferida para carteira ADM (${admUser.name})`);
-            console.log(`💰 [WITHDRAW] Carteira ADM atualizada: R$ ${(admUser.platformEarnings || 0).toFixed(2)}`);
+            console.log(`🏦 [WITHDRAW] Taxa de R$ ${platform_fee_brl.toFixed(2)} transferida para carteira ADM`);
             
-            // Registrar entrada na carteira ADM no histórico
             await PurchaseRecord.create({
                 id: `fee_${Date.now()}_${userId}`,
                 userId: admUser.id,
@@ -304,7 +343,6 @@ router.post('/withdraw/:userId', FraudDetectionMiddleware.detectFraud, async (re
                 status: 'Concluído'
             });
             
-            // Atualização em tempo real para a carteira ADM
             const io = req.app.get('io');
             if (io) {
                 io.emit('platform_earnings_updated', {
@@ -315,41 +353,44 @@ router.post('/withdraw/:userId', FraudDetectionMiddleware.detectFraud, async (re
                     timestamp: new Date().toISOString()
                 });
             }
-        } else {
-            console.warn(`⚠️ [WITHDRAW] Carteira ADM não encontrada para email: ${ADM_EMAIL}`);
         }
         
-        // Registrar saque no histórico do usuário
+        // Registrar saque no histórico
         await PurchaseRecord.create({
             id: `withdraw_${Date.now()}_${userId}`,
             userId,
             type: 'withdraw_earnings',
-            description: `Saque via Pix: ${amount} diamantes = R$ ${brl_amount.toFixed(2)} - 20% taxa = R$ ${net_amount_brl.toFixed(2)}`,
+            description: `Saque via Mercado Pago: ${amount} diamantes = R$ ${brl_amount.toFixed(2)} - 20% taxa = R$ ${net_amount_brl.toFixed(2)}`,
             amountBRL: net_amount_brl,
             amountCoins: amount,
-            status: 'Concluído'
+            status: mpWithdrawal.status === 'approved' ? 'Concluído' : 'Processando',
+            metadata: {
+                mp_payment_id: mpWithdrawal.id,
+                external_reference,
+                status: mpWithdrawal.status
+            }
         });
         
-        console.log(`✅ [WITHDRAW] Saque realizado: ${amount} diamantes (Líquido: R$ ${net_amount_brl.toFixed(2)})`);
-        console.log(`💳 [WITHDRAW] Saldo atualizado: ${currentEarnings} → ${newEarnings} diamantes`);
+        console.log(`✅ [WITHDRAW] Saque REAL processado com sucesso:`);
+        console.log(`   MP Payment ID: ${mpWithdrawal.id}`);
+        console.log(`   Status: ${mpWithdrawal.status}`);
+        console.log(`   Valor líquido: R$ ${mpWithdrawal.net_amount.toFixed(2)}`);
+        console.log(`   Taxa MP: R$ ${mpWithdrawal.fee_amount.toFixed(2)}`);
         
-        // 🔧 CORREÇÃO: Zerar também o contador da live ativa (Streamer.diamonds)
-        await Streamer.findOneAndUpdate(
-            { hostId: userId, isLive: true },
-            { $set: { diamonds: 0 } }
-        );
-        
-        // Enviar WebSocket sobre saque para o usuário específico (com dados completos)
+        // Enviar WebSocket para atualização em tempo real
         const io = req.app.get('io');
         if (io) {
             io.to(userId).emit('earnings_withdrawn', {
                 userId,
                 amount,
                 newEarnings,
-                diamonds: 0, // Carteira zerada
-                receptores: 0, // Receptores zerados
-                streamDiamonds: 0, // Contador da live zerado
+                diamonds: 0,
+                receptores: 0,
+                streamDiamonds: 0,
                 brl_amount: net_amount_brl,
+                mp_payment_id: mpWithdrawal.id,
+                external_reference,
+                status: mpWithdrawal.status,
                 timestamp: new Date().toISOString()
             });
         }
@@ -360,11 +401,14 @@ router.post('/withdraw/:userId', FraudDetectionMiddleware.detectFraud, async (re
             newEarnings,
             brl_amount: net_amount_brl,
             platform_fee: platform_fee_brl,
-            message: `Saque de ${amount} diamantes (R$ ${net_amount_brl.toFixed(2)}) realizado com sucesso`
+            mp_payment_id: mpWithdrawal.id,
+            external_reference,
+            status: mpWithdrawal.status,
+            message: `Sque de ${amount} diamantes (R$ ${net_amount_brl.toFixed(2)}) enviado para Mercado Pago`
         });
         
     } catch (error: any) {
-        console.error('❌ [WITHDRAW] Erro ao processar saque:', error);
+        console.error('❌ [WITHDRAW] Erro ao processar saque REAL:', error);
         res.status(500).json({ error: error.message });
     }
 });

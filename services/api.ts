@@ -7,7 +7,7 @@ import axios, { Method } from 'axios';
 const getApiBaseUrl = () => {
     // Em desenvolvimento, detectar automaticamente o IP do backend
     if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-        return 'http://192.168.3.12:3000'; // IP fixo do backend
+        return 'http://localhost:3000'; // Usar localhost em desenvolvimento
     }
     
     // Em produção, usar o mesmo domínio
@@ -403,8 +403,8 @@ export const api = {
     sendChatMessage: (from: string, to: string, text?: string, imageUrl?: string, tempId?: string): Promise<{ success: boolean; message: Message }> => callApi<{ success: boolean; message: Message }>('POST', '/api/chats/send', { from, to, text, imageUrl, tempId }) as Promise<{ success: boolean; message: Message }>,
     deleteMessage: (messageId: string, userId?: string): Promise<{ success: boolean }> => callApi<{ success: boolean }>('DELETE', `/api/messages/${messageId}?userId=${userId || getCurrentUserId()}`),
     markMessagesAsRead: (messageIds: string[], userId: string) => callApi<{ success: boolean }>('PUT', `/api/messages/messages/${messageIds[0]}/read`, { userId }),
-    getVisitors: (userId: string) => callApi<Visitor[]>('GET', `/api/visitors/list/${userId}`),
-    clearVisitors: (userId: string) => callApi<{ success: boolean }>('DELETE', `/api/visitors/clear/${userId}`),
+    getVisitors: (userId: string) => callApi<Visitor[]>('GET', `/api/interactions/visitors/list/${userId}`),
+    clearVisitors: (userId: string) => callApi<{ success: boolean }>('DELETE', `/api/interactions/visitors/clear/${userId}`),
     updateVideoQuality: (streamId: string, quality: string, userId?: string) => callApi<{ success: boolean, stream: Streamer }>('PUT', `/api/streams/${streamId}/quality`, { quality, userId: userId || getCurrentUserId() }),
     toggleMicrophone: (streamId: string) => callApi<void>('POST', `/api/streams/${streamId}/toggle-mic`),
     toggleAutoFollow: (streamId: string, isEnabled: boolean) => callApi<void>('POST', `/api/streams/${streamId}/toggle-auto-follow`, { isEnabled }),

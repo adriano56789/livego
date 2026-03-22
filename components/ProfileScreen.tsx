@@ -153,23 +153,20 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({
                 </div>
               )}
                 
-              {displayUser.isLive ? (
+              {displayUser.isLive && (
                   <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-black/60 rounded-md px-2 py-1 flex items-center space-x-1.5 backdrop-blur-sm z-20">
                     <LiveIndicatorIcon className="w-4 h-4 text-green-400" />
                     <span className="text-xs font-bold text-white uppercase tracking-wider">{t('footer.live')}</span>
                   </div>
-              ) : (
-                  <>
-                      {displayUser.isOnline && (
-                        <div className="absolute bottom-1 right-1 w-4 h-4 bg-green-400 rounded-full border-2 border-black z-20" title="Online"></div>
-                      )}
-                      <div className="absolute -bottom-1 -right-1 bg-gray-800 rounded-full p-0.5 z-20">
-                        <div className="w-6 h-6 rounded-full overflow-hidden flex items-center justify-center">
-                          <BrazilFlagIcon />
-                        </div>
-                      </div>
-                  </>
               )}
+              {displayUser.isOnline && !displayUser.isLive && (
+                  <div className="absolute bottom-1 right-1 w-4 h-4 bg-green-400 rounded-full border-2 border-black z-20" title="Online"></div>
+              )}
+              <div className="absolute -bottom-1 -right-1 bg-gray-800 rounded-full p-0.5 z-20">
+                  <div className="w-6 h-6 rounded-full overflow-hidden flex items-center justify-center">
+                      <BrazilFlagIcon />
+                  </div>
+              </div>
             </div>
         </button>
           <div className="flex items-center space-x-2 text-center">

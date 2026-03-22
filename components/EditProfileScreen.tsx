@@ -1,7 +1,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { User, Obra } from '../types';
-import { BackIcon, PlusIcon, ChevronRightIcon, TrashIcon, PlayIcon } from './icons';
+import { BackIcon, PlusIcon, ChevronRightIcon, TrashIcon, PlayIcon, BrazilFlagIcon } from './icons';
 import { EditTextModal, EditTextAreaModal, EditGenderModal, EditBirthdayModal } from './modals/edit-profile';
 import { useTranslation } from '../i18n';
 import { api } from '../services/api'; // Import api service
@@ -330,6 +330,13 @@ const EditProfileScreen: React.FC<EditProfileScreenProps> = ({ user, onBack, onS
                   )}
                   {index === 0 && (
                     <div className="absolute bottom-1 left-1 bg-black/50 text-white px-1.5 py-0.5 rounded text-[10px] font-semibold">{t('editProfile.portrait')}</div>
+                  )}
+                  {index === 0 && user.country === 'br' && (
+                    <div className="absolute -bottom-1 -right-1 bg-gray-800 rounded-full p-0.5 z-10">
+                      <div className="w-6 h-6 rounded-full overflow-hidden flex items-center justify-center">
+                        <BrazilFlagIcon />
+                      </div>
+                    </div>
                   )}
                   <button
                     onClick={() => handleDeletePhoto(index)}

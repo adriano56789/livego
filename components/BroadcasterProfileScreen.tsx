@@ -274,28 +274,25 @@ const UserProfileScreen: React.FC<UserProfileScreenProps> = ({ user, isCurrentUs
                                 className="w-24 h-24"
                             />
 
-                            {user.isLive ? (
+                            {user.isLive && (
                                 <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-black/60 rounded-md px-2 py-1 flex items-center space-x-1.5 backdrop-blur-sm z-10">
                                   <LiveIndicatorIcon className="w-4 h-4 text-green-400" />
                                   <span className="text-xs font-bold text-white uppercase tracking-wider">{t('footer.live')}</span>
                                 </div>
-                            ) : (
-                                <>
-                                    {user.isOnline && (
-                                        <div className="absolute bottom-1 right-1 w-5 h-5 bg-green-400 rounded-full border-2 border-black" title="Online"></div>
-                                    )}
-                                    {user.isAvatarProtected && (
-                                        <div className="absolute -top-1 -right-1 bg-gray-900 rounded-full p-1">
-                                            <ShieldIcon className="w-6 h-6 text-blue-400" />
-                                        </div>
-                                    )}
-                                    <div className="absolute -bottom-1 -right-1 bg-gray-800 rounded-full p-0.5">
-                                        <div className="w-6 h-6 rounded-full overflow-hidden flex items-center justify-center">
-                                            {user.country === 'br' && <BrazilFlagIcon />}
-                                        </div>
-                                    </div>
-                                </>
                             )}
+                            {user.isOnline && !user.isLive && (
+                                <div className="absolute bottom-1 right-1 w-5 h-5 bg-green-400 rounded-full border-2 border-black" title="Online"></div>
+                            )}
+                            {user.isAvatarProtected && (
+                                <div className="absolute -top-1 -right-1 bg-gray-900 rounded-full p-1">
+                                    <ShieldIcon className="w-6 h-6 text-blue-400" />
+                                </div>
+                            )}
+                            <div className="absolute -bottom-1 -right-1 bg-gray-800 rounded-full p-0.5 z-20">
+                                <div className="w-6 h-6 rounded-full overflow-hidden flex items-center justify-center">
+                                    <BrazilFlagIcon />
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </header>
@@ -369,13 +366,16 @@ const UserProfileScreen: React.FC<UserProfileScreenProps> = ({ user, isCurrentUs
                                             className="relative group aspect-[3/4] bg-[#2c2c2e] focus:outline-none overflow-hidden"
                                         >
                                             {isCurrentUser && (
-                                                <button
+                                                <div
                                                     onClick={(e) => { e.stopPropagation(); handleRemovePhoto(obra.id); }}
-                                                    className="absolute top-1 right-1 z-20 bg-red-500 text-white rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+                                                    className="absolute top-1 right-1 z-20 bg-red-500 text-white rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-opacity shadow-lg cursor-pointer"
+                                                    role="button"
+                                                    tabIndex={0}
+                                                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); handleRemovePhoto(obra.id); } }}
                                                     aria-label="Remover foto"
                                                 >
                                                     <TrashIcon className="w-3.5 h-3.5" />
-                                                </button>
+                                                </div>
                                             )}
                                             {isVideo ? (
                                                 <div className="w-full h-full relative">

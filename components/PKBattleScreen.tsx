@@ -45,7 +45,6 @@ interface PKBattleScreenProps {
     onLeaveStreamView: () => void;
     onViewProfile: (user: User) => void;
     currentUser: User;
-    onOpenWallet: (initialTab?: 'Diamante' | 'Ganhos') => void;
     onFollowUser: (user: User, streamId?: string) => void;
     onOpenPrivateChat: () => void;
     onOpenPrivateInviteModal: () => void;
@@ -91,7 +90,7 @@ const FollowChatMessage: React.FC<{ follower: string; followed: string }> = ({ f
 
 export default function PKBattleScreen({ 
     streamer, opponent, onEndPKBattle, onRequestEndStream, onLeaveStreamView, onViewProfile, currentUser,
-    onOpenWallet, onFollowUser, onOpenPrivateChat, onOpenPrivateInviteModal, onStartChatWithStreamer,
+    onFollowUser, onOpenPrivateChat, onOpenPrivateInviteModal, onStartChatWithStreamer,
     onOpenPKTimerSettings, onOpenFans, onOpenFriendRequests, gifts, receivedGifts, liveSession,
     updateLiveSession, logLiveEvent, updateUser, onStreamUpdate, refreshStreamRoomData, addToast,
     followingUsers, pkBattleDuration, onOpenVIPCenter
@@ -175,7 +174,6 @@ export default function PKBattleScreen({
 
     const handleRecharge = () => {
         setGiftModalOpen(false);
-        onOpenWallet('Diamante');
     };
 
     const postGiftChatMessage = (payload: GiftPayload) => {
@@ -656,7 +654,7 @@ export default function PKBattleScreen({
                 isAutoPrivateInviteEnabled={isAutoPrivateInviteEnabled}
                 onToggleAutoPrivateInvite={handleToggleAutoPrivateInvite}
             />
-            <GiftModal isOpen={isGiftModalOpen} onClose={() => setGiftModalOpen(false)} userDiamonds={currentUser.diamonds ?? 0} onSendGift={handleSendGift} onRecharge={() => onOpenWallet('Diamante')} gifts={gifts} receivedGifts={receivedGifts} isBroadcaster={isBroadcaster} onOpenVIPCenter={onOpenVIPCenter} isVIP={currentUser.isVIP || false} currentUser={currentUser} />
+            <GiftModal isOpen={isGiftModalOpen} onClose={() => setGiftModalOpen(false)} userDiamonds={currentUser.diamonds ?? 0} onSendGift={handleSendGift} onRecharge={() => setGiftModalOpen(false)} gifts={gifts} receivedGifts={receivedGifts} isBroadcaster={isBroadcaster} onOpenVIPCenter={onOpenVIPCenter} isVIP={currentUser.isVIP || false} currentUser={currentUser} />
             {isBeautyPanelOpen && <BeautyEffectsPanel onClose={() => setBeautyPanelOpen(false)} currentUser={currentUser} addToast={addToast} />}
             {isCoHostModalOpen && <CoHostModal isOpen={isCoHostModalOpen} onClose={() => setIsCoHostModalOpen(false)} onInvite={()=>{}} onOpenTimerSettings={onOpenPKTimerSettings} currentUser={currentUser} addToast={addToast} streamId={streamer.id} />}
             <ResolutionPanel isOpen={isResolutionPanelOpen} onClose={() => setResolutionPanelOpen(false)} onSelectResolution={()=>{}} currentResolution={"480p"} />

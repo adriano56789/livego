@@ -128,12 +128,10 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({
         { icon: <EnvelopeIcon className="h-6 w-6 text-gray-400" />, label: t('profile.menu.messages'), action: onNavigateToMessages },
         { icon: <FAQIcon className="h-6 w-6 text-gray-400" />, label: t('profile.menu.faq'), action: onOpenFAQ },
         { icon: <SettingsIcon className="h-6 w-6 text-gray-400" />, label: t('profile.menu.settings'), action: onOpenSettings },
-        { icon: <BankIcon className="h-6 w-6 text-amber-300" />, label: 'Carteira Admin', action: onOpenAdminWallet, isAdminOnly: true },
     ];
 
     // Simplificado - sem frames para navegação isolada
     const frameGlowClass = '';
-
 
   return (
     <div className="bg-[#111111] h-full text-white overflow-y-auto no-scrollbar pb-24 flex flex-col">

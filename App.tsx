@@ -181,7 +181,6 @@ const AppContent: React.FC = () => {
   const [photoViewerData, setPhotoViewerData] = useState<{ photos: FeedPhoto[], initialIndex: number } | null>(null);
   const [isLiveHistoryOpen, setIsLiveHistoryOpen] = useState(false);
   const [isLanguageModalOpen, setIsLanguageModalOpen] = useState(false);
-  const [isAdminWalletOpen, setIsAdminWalletOpen] = useState(false);
   const [isVIPCenterOpen, setIsVIPCenterOpen] = useState(false);
   const [isPaymentSuccessOpen, setIsPaymentSuccessOpen] = useState(false);
   const [paymentSuccessData, setPaymentSuccessData] = useState<PaymentSuccessData | null>(null);
@@ -1272,11 +1271,6 @@ const logLiveEvent = (type: string, data: any) => {
     addToast(ToastType.Success, `${userToUnblock.name} foi desbloqueado.`);
   };
 
-  const handleOpenWallet = (initialTab: 'Diamante' | 'Ganhos' = 'Diamante') => {
-    setWalletInitialTab(initialTab);
-    setIsWalletScreenOpen(true);
-  };
-
   const handlePurchase = (pkg: { diamonds: number; price: number }) => {
     setSelectedPackage(pkg);
     setIsWalletScreenOpen(false);
@@ -1467,7 +1461,6 @@ const logLiveEvent = (type: string, data: any) => {
             onRequestEndStream={handleRequestEndStream}
             onViewProfile={handleViewProfile}
             currentUser={currentUser}
-            onOpenWallet={handleOpenWallet}
             onFollowUser={handleFollowUser}
             onOpenPrivateChat={() => setIsPrivateChatModalOpen(true)}
             onStartChatWithStreamer={handleStartChatWithStreamer}
@@ -1500,7 +1493,7 @@ const logLiveEvent = (type: string, data: any) => {
             onStartPKBattle={handleStartPKBattle}
             onViewProfile={handleViewProfile}
             currentUser={currentUser}
-            onOpenWallet={handleOpenWallet}
+            onOpenWallet={() => setIsWalletScreenOpen(true)}
             onFollowUser={handleFollowUser}
             onOpenPrivateChat={() => setIsPrivateChatModalOpen(true)}
             onStartChatWithStreamer={handleStartChatWithStreamer}
@@ -1542,14 +1535,12 @@ const logLiveEvent = (type: string, data: any) => {
                   onOpenAvatarProtection={() => setIsAvatarProtectionScreenOpen(true)}
                   onOpenFAQ={() => setIsFAQScreenOpen(true)}
                   onOpenSettings={() => setIsSettingsScreenOpen(true)}
-                  onOpenAdminWallet={() => setIsAdminWalletOpen(true)}
                   onOpenVIPCenter={handleOpenVIPCenter}
                   onNavigateToMessages={() => currentUser && setChattingWith(currentUser)}
                   onOpenFans={() => handleOpenListScreen('fans')}
                   onOpenFollowing={() => handleOpenListScreen('following')}
                   onOpenVisitors={() => setIsVisitorsScreenOpen(true)}
                   onOpenTopFans={() => handleOpenListScreen('topFans')}
-                  onOpenWallet={handleOpenWallet}
                   onOpenMarket={() => setIsMarketScreenOpen(true)}
                   onEnterMyStream={() => {
                     if (currentUser?.isLive) {
@@ -1608,7 +1599,7 @@ const logLiveEvent = (type: string, data: any) => {
       {isMyLevelScreenOpen && <MyLevelScreen onClose={() => setIsMyLevelScreenOpen(false)} currentUser={currentUser} />}
       {isBlockListScreenOpen && <BlockListScreen onClose={() => setIsBlockListScreenOpen(false)} onUnblockUser={handleUnblockUser} onViewProfile={handleViewProfile} />}
       {isAvatarProtectionScreenOpen && <AvatarProtectionScreen onClose={() => setIsAvatarProtectionScreenOpen(false)} currentUser={currentUser} updateUser={updateUserEverywhere} addToast={addToast} />}
-      {isMarketScreenOpen && currentUser && <MarketScreen onClose={() => setIsMarketScreenOpen(false)} user={currentUser} updateUser={updateUserEverywhere} onOpenWallet={(tab) => { setIsMarketScreenOpen(false); setIsWalletScreenOpen(true); setWalletInitialTab(tab); }} onPurchaseFrame={handlePurchaseFrame} addToast={addToast} />}
+      {isMarketScreenOpen && currentUser && <MarketScreen onClose={() => setIsMarketScreenOpen(false)} user={currentUser} updateUser={updateUserEverywhere} onPurchaseFrame={handlePurchaseFrame} addToast={addToast} />}
       {isFAQScreenOpen && <FAQScreen onClose={() => setIsFAQScreenOpen(false)} />}
       {isSettingsScreenOpen && <SettingsScreen onClose={() => setIsSettingsScreenOpen(false)} currentUser={currentUser} gifts={allGifts} updateUser={updateUserEverywhere} addToast={addToast} onOpenPipModal={() => setIsPipSettingsModalOpen(true)} onLogout={handleLogout} onDeleteAccount={handleDeleteAccount} onOpenLanguageModal={() => setIsLanguageModalOpen(true)} />}
       <PipSettingsModal isOpen={isPipSettingsModalOpen} onClose={() => setIsPipSettingsModalOpen(false)} currentUser={currentUser} updateUser={updateUserEverywhere} addToast={addToast} />
@@ -1630,7 +1621,6 @@ const logLiveEvent = (type: string, data: any) => {
         </>
       )}
       <LiveHistoryScreen isOpen={isLiveHistoryOpen} onClose={() => setIsLiveHistoryOpen(false)} history={streamHistory} />
-      <AdminWalletScreen isOpen={isAdminWalletOpen} onClose={() => setIsAdminWalletOpen(false)} currentUser={currentUser} updateUser={updateUserEverywhere} addToast={addToast} />
       <PrivateChatModal isOpen={isPrivateChatModalOpen} onClose={() => setIsPrivateChatModalOpen(false)} onStartChat={(user) => { setIsPrivateChatModalOpen(false); setChattingWith(user); }} conversations={conversations} />
       
       {/* Notificações de mensagens */}

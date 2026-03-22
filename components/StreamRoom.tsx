@@ -95,7 +95,7 @@ const globalFetchControl = new Map<string, boolean>();
 
 const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, onLeaveStreamView, onStartPKBattle, onViewProfile, currentUser, onOpenWallet, onFollowUser, onOpenPrivateChat, onOpenPrivateInviteModal, setActiveScreen, onStartChatWithStreamer, onOpenPKTimerSettings, onOpenFans, onOpenFriendRequests, gifts, receivedGifts, updateUser, liveSession, updateLiveSession, logLiveEvent, onStreamUpdate, refreshStreamRoomData, addToast, followingUsers, streamers, onSelectStream, onOpenVIPCenter, rankingData }) => {
     const { t } = useTranslation();
-    
+
     // Early validation for required props
     if (!streamer || !currentUser) {
         return (
@@ -107,7 +107,7 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
             </div>
         );
     }
-    
+
     const [isUiVisible, setIsUiVisible] = useState(true);
     const [showChatScreen, setShowChatScreen] = useState(false);
     const [isToolsOpen, setIsToolsOpen] = useState(false);
@@ -218,7 +218,7 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
 
             const onVideoReady = async () => {
                 setIsVideoPlaying(true);
-                
+
                 // Inicializar sistema de beleza para broadcasters
                 if (isBroadcaster) {
                     try {
@@ -232,7 +232,7 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
                         console.warn('⚠️ [STREAM_ROOM] Falha ao inicializar sistema de beleza:', error);
                     }
                 }
-                
+
                 videoEl.play().catch(e => {
                     if (e.name !== 'AbortError') {
                     }
@@ -261,46 +261,46 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
                 }
             } else {
                 // Scenario 2: I am a Viewer
-                
+
                 try {
                     // Construct the WebRTC URL for SRS
                     // Assuming standard SRS format: http://<server>/rtc/v1/play/
                     // But our service expects the full stream URL like: webrtc://<server>/live/<streamId>
                     // Let's use the one from streamer object or construct it
-                    
+
                     // 🔧 SINCRONIZAÇÃO: Usar variável de ambiente para URL do SRS (não hardcoded)
                     // Prioridade: playbackUrl da stream > variável de ambiente > fallback
                     const srsWebrtcBase = import.meta.env?.VITE_SRS_WEBRTC_URL || 'webrtc://72.60.249.175/live';
                     const webrtcUrl = (streamer.playbackUrl && streamer.playbackUrl.startsWith('webrtc://'))
                         ? streamer.playbackUrl
                         : `${srsWebrtcBase}/${streamer.id}`;
-                    
-                    
+
+
                     const remoteStream = await webRTCService.startPlay(webrtcUrl);
-                    
+
                     if (remoteStream) {
-                         videoEl.srcObject = remoteStream;
-                         videoEl.muted = false;
-                         videoEl.volume = 1.0;
-                         videoEl.onloadeddata = onVideoReady;
-                         
-                         // ✅ DEBUG: Verificar video element
-                         videoEl.onloadedmetadata = () => {
-                             
-                             if (videoEl.videoWidth === 0) {
-                             }
-                         };
-                         
-                         videoEl.onerror = (e) => {
-                         };
-                         
-                         // Auto-play might be blocked, ensure we try
-                         try {
-                             await videoEl.play();
-                         } catch (e) {
-                         }
+                        videoEl.srcObject = remoteStream;
+                        videoEl.muted = false;
+                        videoEl.volume = 1.0;
+                        videoEl.onloadeddata = onVideoReady;
+
+                        // ✅ DEBUG: Verificar video element
+                        videoEl.onloadedmetadata = () => {
+
+                            if (videoEl.videoWidth === 0) {
+                            }
+                        };
+
+                        videoEl.onerror = (e) => {
+                        };
+
+                        // Auto-play might be blocked, ensure we try
+                        try {
+                            await videoEl.play();
+                        } catch (e) {
+                        }
                     } else {
-                         throw new Error("No remote stream returned");
+                        throw new Error("No remote stream returned");
                     }
                 } catch (e) {
                     // Continue with fallback without throwing to prevent breaking render
@@ -311,7 +311,7 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
                             videoEl.muted = false;
                             videoEl.onloadeddata = onVideoReady;
                         } else if (streamer.playbackUrl && streamer.playbackUrl.includes('.flv')) {
-                             // Implement flv.js player here if needed, or just log
+                            // Implement flv.js player here if needed, or just log
                         } else {
                             // Final fallback: show cover image
                             setIsVideoPlaying(false);
@@ -354,11 +354,11 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
         // Initial fetch para definir baseline
         const fetchInitialUsers = async () => {
             const controlKey = `${streamer.id}_${currentUser.id}`;
-            
+
             if (!hasFetchedInitialUsers && !globalFetchControl.get(controlKey)) {
                 hasFetchedInitialUsers = true;
                 globalFetchControl.set(controlKey, true);
-                
+
                 try {
                     const users = await api.getOnlineUsers(currentUser.id, streamer.id);
                     if (users) {
@@ -385,7 +385,7 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
 
         socketService.connect();
         socketService.joinRoom(streamer.id);
-        
+
         // Escutar usuários entrando na stream
         socketService.onUserJoined((data) => {
             // Adicionar usuário à lista de online users
@@ -407,7 +407,7 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
                 return prev;
             });
         });
-        
+
         // Escutar usuários saindo da stream
         socketService.onUserLeft((data) => {
             // Remover usuário da lista de online users
@@ -417,7 +417,7 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
                 return updated;
             });
         });
-        
+
         // Escutar atualizações de contagem de viewers
         socketService.onViewersCountUpdated((data) => {
             updateLiveSession({ viewers: data.count });
@@ -426,12 +426,12 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
         return () => {
             // Marcar que está saindo para evitar múltiplas chamadas
             hasLeft = true;
-            
+
             // Limpar listeners WebSocket
             socketService.off('user_joined_stream');
             socketService.off('user_left_stream');
             socketService.off('viewers_count_updated');
-            
+
             // Marcar usuário como offline ao sair da stream (apenas uma vez)
             if (hasJoined && !hasLeft) {
                 api.leaveStream(streamer.id, currentUser.id).then(success => {
@@ -440,7 +440,7 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
                     }
                 });
             }
-            
+
             socketService.leaveRoom(streamer.id);
         };
     }, [streamer.id, currentUser.id]); // Removido onlineUsersInterval das dependências
@@ -699,13 +699,13 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
                             earnings: updatedReceiver.earnings
                         });
                     }
-                    
-                    // Atualizar liveSession coins com diamonds do streamer
+
+                    // Atualizar liveSession coins com diamonds contados nesta stream
                     if (liveSession) {
-                        const diamonds = updatedReceiver.diamonds ?? 0;
-                        updateLiveSession({ coins: diamonds });
-                        console.log('✅ StreamRoom: Contador da live atualizado', {
-                            coins: diamonds
+                        const addedValue = gift.price * quantity;
+                        updateLiveSession({ coins: (liveSession.coins || 0) + addedValue });
+                        console.log('✅ StreamRoom: Contador da live atualizado localmente', {
+                            added: addedValue
                         });
                     }
                 }
@@ -821,17 +821,17 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
         >
             {/* Renderizar ChatScreen quando showChatScreen for true */}
             {showChatScreen && (
-                <ChatScreen 
+                <ChatScreen
                     currentUser={currentUser}
                     onOpenProfile={onViewProfile}
                     onBack={() => setShowChatScreen(false)}
                     isModal={false}
                     user={currentUser}
-                    onNavigateToFriends={() => {}}
+                    onNavigateToFriends={() => { }}
                     onFollowUser={onFollowUser}
-                    onBlockUser={() => {}}
-                    onReportUser={() => {}}
-                    onOpenPhotoViewer={() => {}}
+                    onBlockUser={() => { }}
+                    onReportUser={() => { }}
+                    onOpenPhotoViewer={() => { }}
                 />
             )}
 
@@ -892,7 +892,7 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
                             <button onClick={(e) => { e.stopPropagation(); streamerDisplayUser && onViewProfile(streamerDisplayUser); }} className="flex items-center bg-black/40 rounded-full p-1 pr-3 space-x-2 text-left">
                                 <div className="relative">
                                     <div className="live-ring-animated">
-                                        <AvatarWithFrame 
+                                        <AvatarWithFrame
                                             user={streamerDisplayUser || {
                                                 id: streamer.hostId,
                                                 name: streamer.name,
@@ -905,7 +905,7 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
                                                 isOnline: true,
                                                 isVIP: false,
                                                 isAvatarProtected: false
-                                            }} 
+                                            }}
                                             size="sm"
                                         />
                                     </div>
@@ -914,7 +914,7 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
                                     <p className="text-white font-bold text-sm">{streamerDisplayUser?.name || streamer.name}</p>
                                     <div className="flex items-center space-x-1 text-gray-300 text-xs">
                                         <ViewerIcon className="w-4 h-4" />
-                                        <span>{liveSession?.viewers.toLocaleString() || '0'}</span>
+                                        <span>{Math.max(1, liveSession?.viewers || 0).toLocaleString()}</span>
                                     </div>
                                 </div>
                             </button>
@@ -965,7 +965,7 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
                             {/* FIX: Corrected typo for state setter from 'setIsOnlineUsersOpen' to 'setOnlineUsersOpen'. */}
                             <button onClick={(e) => { e.stopPropagation(); setOnlineUsersOpen(true); }} className="flex items-center bg-black/40 rounded-full px-2.5 py-1.5 space-x-1 text-sm cursor-pointer">
                                 <BellIcon className="w-5 h-5 text-yellow-400" />
-                                <span className="text-white font-semibold">{onlineUsers.length}</span>
+                                <span className="text-white font-semibold">{Math.max(1, onlineUsers.length)}</span>
                             </button>
 
                             {/* Close button */}
@@ -1045,10 +1045,10 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
                         {isBroadcaster ? (
                             <button onClick={(e) => { e.stopPropagation(); setIsToolsOpen(true); }} className="bg-black/40 w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0 hover:bg-white/10 transition-colors"><MoreIcon className="w-6 h-6 text-white" /></button>
                         ) : (
-                            <button onClick={(e) => { 
-                                e.stopPropagation(); 
+                            <button onClick={(e) => {
+                                e.stopPropagation();
                                 if (streamerUser) {
-                                    onStartChatWithStreamer(streamerUser); 
+                                    onStartChatWithStreamer(streamerUser);
                                 }
                             }} className="bg-black/40 w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0 hover:bg-white/10 transition-colors"><MessageIcon className="w-6 h-6 text-white" /></button>
                         )}

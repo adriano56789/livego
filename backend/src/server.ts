@@ -5,7 +5,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
 import { connectDB } from './config/db';
-import { User, Message, Follow, Friendship, Streamer } from './models/index';
+import { User, Message, Follow, Friendship, Streamer, UserLevel } from './models/index';
 import userRoutes from './routes/userRoutes';
 import profileRoutes from './routes/profileRoutes';
 import walletRoutes from './routes/walletRoutes';
@@ -39,6 +39,7 @@ import webhookRoutes from './routes/webhookRoutes';
 import withdrawalRoutes from './routes/withdrawalRoutes';
 import zoomRoutes from './routes/zoomRoutes';
 import userStatusRoutes from './routes/userStatusRoutes';
+import levelRoutes from './routes/levelRoutes'; // NOVO - Sistema de Nível
 import UserStatusManager from './middleware/UserStatusManager';
 import { blockBase64Middleware } from './middleware/blockBase64';
 
@@ -127,6 +128,7 @@ app.use('/api/payments', paymentRoutes); // Rotas do Mercado Pago
 app.use('/api/webhooks', webhookRoutes); // Rotas de webhooks
 app.use('/api/withdrawals', withdrawalRoutes); // Rotas de saques via Pix
 app.use('/api/zoom', zoomRoutes); // Rotas de configurações de zoom
+app.use('/api/level', levelRoutes); // NOVO - Sistema de Nível
 app.use('/api', userStatusRoutes); // Rotas de status online do usuário
 // Disponibilizar io para as rotas
 app.set('io', io);

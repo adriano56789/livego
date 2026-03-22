@@ -28,6 +28,7 @@ export { NotificationSettings } from './NotificationSettings';
 export { GiftNotificationSettings } from './GiftNotificationSettings';
 export { BeautySettings } from './BeautySettings';
 export { UserPermissions } from './UserPermissions';
+export { UserLevel } from './UserLevel'; // NOVO - Sistema de Nível
 export { ShopItem } from './ShopItem';
 export { UserInventory } from './UserInventory';
 export { UserAvatar } from './UserAvatar';

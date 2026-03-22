@@ -144,6 +144,82 @@ export const api = {
     getLevelInfo: (userId: string) => callApi<LevelInfo>('GET', `/api/users/${userId}/level-info`),
     recordVisit: (profileId: string, visitorId: string) => callApi<void>('POST', `/api/users/${profileId}/visit`, { userId: visitorId }),
 
+    // --- Sistema de Nível (NOVO) ---
+    level: {
+      // Obter informações completas do nível
+      getLevelInfo: (userId: string) => callApi<{
+        level: number;
+        currentExp: number;
+        expForNextLevel: number;
+        totalExp: number;
+        progress: number;
+        expNeeded: number;
+        lastGain: { amount: number; reason: string; timestamp: string };
+        levelHistory: Array<{ level: number; reachedAt: string; expRequired: number }>;
+        rank: string;
+      }>('GET', `/api/level/${userId}`),
+
+      // Adicionar EXP ao usuário
+      addExp: (userId: string, amount: number, reason?: string) => callApi<{
+        leveledUp: boolean;
+        newLevels: number[];
+        currentLevel: number;
+        currentExp: number;
+        expForNextLevel: number;
+        totalExp: number;
+        progress: number;
+      }>('POST', `/api/level/${userId}/add-exp`, { amount, reason }),
+
+      // Adicionar EXP múltiplas vezes (batch)
+      addMultipleExp: (userId: string, expGains: Array<{ amount: number; reason: string }>) => callApi<{
+        leveledUp: boolean;
+        newLevels: number[];
+        currentLevel: number;
+        currentExp: number;
+        expForNextLevel: number;
+        totalExp: number;
+        progress: number;
+        totalGained: number;
+        levelUps: number[];
+      }>('POST', `/api/level/${userId}/multi-add`, { expGains }),
+
+      // Obter ranking de usuários
+      getLeaderboard: (limit?: number, offset?: number) => callApi<Array<{
+        rank: number;
+        user: User;
+        level: number;
+        totalExp: number;
+        currentExp: number;
+        expForNextLevel: number;
+        progress: number;
+      }>>('GET', `/api/level/leaderboard?limit=${limit || 50}&offset=${offset || 0}`),
+
+      // Calcular EXP necessária para um nível específico
+      calculateExpForLevel: (level: number) => callApi<{
+        level: number;
+        expForLevel: number;
+        totalExpNeeded: number;
+        difficulty: string;
+      }>('GET', `/api/level/calculate/${level}`),
+
+      // Adicionar EXP por ações específicas
+      addExpForAction: async (userId: string, action: 'login' | 'message' | 'gift' | 'follow' | 'stream_start' | 'stream_end', metadata?: any) => {
+        const expValues = {
+          login: { amount: 5, reason: 'Login diário' },
+          message: { amount: 2, reason: 'Mensagem enviada' },
+          gift: { amount: 10, reason: 'Presente enviado' },
+          follow: { amount: 15, reason: 'Seguiu usuário' },
+          stream_start: { amount: 25, reason: 'Iniciou transmissão' },
+          stream_end: { amount: 50, reason: 'Finalizou transmissão' }
+        };
+
+        const expConfig = expValues[action];
+        if (!expConfig) return null;
+
+        return api.level.addExp(userId, expConfig.amount, expConfig.reason);
+      }
+    },
+
     // --- Profile Management (Correct Routes) ---
     profile: {
         getImages: (userId?: string) => callApi<FeedPhoto[]>('GET', userId ? `/api/users/${userId}/photos` : '/api/users/me/photos'),

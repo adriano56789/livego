@@ -101,6 +101,9 @@ const ConfirmPurchaseScreen: React.FC<ConfirmPurchaseScreenProps> = ({ onClose, 
   const [qrCodeBase64, setQrCodeBase64] = useState<string | null>(null);
   const [isLoadingPix, setIsLoadingPix] = useState(false);
   
+  // Fixed Pix key for the merchant
+  const pixKeyString = "livego@livego.com";
+  
   // Card Form State
   const [cardNumber, setCardNumber] = useState('');
   const [cardName, setCardName] = useState('');
@@ -186,6 +189,11 @@ const ConfirmPurchaseScreen: React.FC<ConfirmPurchaseScreenProps> = ({ onClose, 
         navigator.clipboard.writeText(pixCode);
         addToast(ToastType.Success, "Código Pix Copia e Cola copiado!");
     }
+  };
+
+  const handleCopyPixKey = () => {
+    navigator.clipboard.writeText(pixKeyString);
+    addToast(ToastType.Success, "Chave Pix copiada!");
   };
 
   const handleConfirm = async () => {
@@ -329,19 +337,6 @@ const ConfirmPurchaseScreen: React.FC<ConfirmPurchaseScreenProps> = ({ onClose, 
                     )}
                 </div>
                 
-                {/* Specific Pix Key Display */}
-                <div className="w-full bg-[#1E1E1E] rounded-xl border border-white/5 overflow-hidden">
-                    <div className="bg-[#2a2a2c] px-4 py-2 text-xs text-gray-400 font-bold uppercase border-b border-white/5">
-                        Chave Pix (E-mail)
-                    </div>
-                    <div className="flex items-center p-3">
-                         <span className="flex-grow text-white font-mono text-sm">{pixKeyString}</span>
-                         <button onClick={handleCopyPixKey} className="text-blue-400 hover:text-blue-300 font-bold text-xs uppercase ml-2">
-                             Copiar
-                         </button>
-                    </div>
-                </div>
-
                 {/* Copy Pix Code */}
                 <div className="w-full space-y-2">
                     <p className="text-xs text-gray-400 font-bold ml-1 uppercase">Pix Copia e Cola</p>

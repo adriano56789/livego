@@ -31,6 +31,7 @@ interface ProfileScreenProps {
     currentUser: User;
     onOpenProfile: () => void;
     onEnterMyStream: () => void;
+    onOpenWallet: (initialTab?: 'Diamante' | 'Ganhos') => void;
     onOpenFollowing: () => void;
     onOpenFans: () => void;
     onOpenVisitors: () => void;
@@ -64,6 +65,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({
     currentUser,
     onOpenProfile,
     onEnterMyStream, 
+    onOpenWallet,
     onOpenFollowing, 
     onOpenFans, 
     onOpenVisitors,

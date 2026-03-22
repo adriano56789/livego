@@ -5,6 +5,7 @@ import { BackIcon, PlusIcon, ChevronRightIcon, TrashIcon, PlayIcon, BrazilFlagIc
 import { EditTextModal, EditTextAreaModal, EditGenderModal, EditBirthdayModal } from './modals/edit-profile';
 import { useTranslation } from '../i18n';
 import { api } from '../services/api'; // Import api service
+import { useUserStatus, formatLastSeen } from '../hooks/useUserStatus';
 
 interface EditProfileScreenProps {
   user: User;
@@ -15,6 +16,39 @@ interface EditProfileScreenProps {
 type EditableField = keyof User | null;
 
 const IMAGE_PLACEHOLDER = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDEwMCAxMDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CiAgPHJlY3Qgd2lkdGg9IjEwMCIgaGVpZ2h0PSIxMDAiIGZpbGw9IiMyYzJjMmUiLz4KICA8c3ZnIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeD0iMjUiIHk9IjI1IiB3aWR0aD0iNTAiIGhlaWdodD0iNTAiIGZpbGw9Im5vbmUiIHZpZXdCb3g9IjAgMCAyNCAyNCIgc3Ryb2tlLXdpZHRoPSIxLjUiIHN0cm9rZT0iIzZiNzI4MCI+CiAgICA8cGF0aCBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGQ9Ik0yLjI1IDE1Ljc1bDUuMTU5LTUuMTU5YTIuMjUgMi4yNSAwIDAxMy4xODIgMGw1LjE1OSA1LjE1OW0tMS41LTEuNWwxLjQwOS0xLjQwOWEyLjI1IDIuMjUgMCAwMTMuMTgyIDBsMi45MDkgMi45MDltLTE4IDMuNzVoMTYuNWExLjUgMS41IDAgMDAxLjUtMS41VjZhMS41IDEuNSAwIDAwLTEuNS0xLjVIMy43NUExLjUgMS41IDAgMDAyLjI1IDZ2MTJhMS41IDEuNSAwIDAwMS41IDEuNXptMTAuNS0xMS4yNWguMDA4di4wMDhoLS4wMDhWOC4yNXoiIC8+CiAgPC9zdmc+Cjwvc3ZnPg==';
+
+// Componente para exibir status online
+const OnlineStatusIndicator: React.FC<{ status: any; isLoading: boolean }> = ({ status, isLoading }) => {
+  if (isLoading) {
+    return (
+      <div className="flex items-center space-x-1 text-xs text-gray-400">
+        <div className="w-2 h-2 bg-gray-500 rounded-full animate-pulse"></div>
+        <span>Carregando...</span>
+      </div>
+    );
+  }
+
+  if (!status) {
+    return (
+      <div className="flex items-center space-x-1 text-xs text-gray-400">
+        <div className="w-2 h-2 bg-gray-500 rounded-full"></div>
+        <span>Status indisponível</span>
+      </div>
+    );
+  }
+
+  const isOnline = status.is_online;
+  const lastSeenText = formatLastSeen(status.last_seen);
+
+  return (
+    <div className="flex items-center space-x-1 text-xs">
+      <div className={`w-2 h-2 rounded-full ${isOnline ? 'bg-green-500' : 'bg-gray-500'}`}></div>
+      <span className={isOnline ? 'text-green-400' : 'text-gray-400'}>
+        {isOnline ? 'Online agora' : lastSeenText}
+      </span>
+    </div>
+  );
+};
 const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
   if (e.currentTarget.src !== IMAGE_PLACEHOLDER) {
     e.currentTarget.src = IMAGE_PLACEHOLDER;
@@ -59,6 +93,18 @@ const EditProfileScreen: React.FC<EditProfileScreenProps> = ({ user, onBack, onS
   
   const dragPhoto = useRef<number>(0);
   const dragOverPhoto = useRef<number>(0);
+
+  // Hook para status online do usuário
+  const { status: userStatus, isLoading: statusLoading } = useUserStatus(user.id);
+
+  // Debug básico para ver se o hook está sendo chamado
+  console.log('🔍 EditProfileScreen Debug:', {
+    userId: user.id,
+    userStatus,
+    statusLoading,
+    hasUserStatus: !!userStatus,
+    isOnline: userStatus?.is_online
+  });
 
   // Buscar obras do banco (User.obras) - fonte única de verdade
   useEffect(() => {
@@ -331,6 +377,11 @@ const EditProfileScreen: React.FC<EditProfileScreenProps> = ({ user, onBack, onS
                   {index === 0 && (
                     <div className="absolute bottom-1 left-1 bg-black/50 text-white px-1.5 py-0.5 rounded text-[10px] font-semibold">{t('editProfile.portrait')}</div>
                   )}
+                  {index === 0 && (
+                    <div className="absolute top-1 right-1 bg-green-500 rounded-full p-1 z-20">
+                      <div className={`w-2 h-2 rounded-full ${userStatus?.is_online ? 'bg-green-400 animate-pulse' : 'bg-gray-500'}`}></div>
+                    </div>
+                  )}
                   {index === 0 && user.country === 'br' && (
                     <div className="absolute -bottom-1 -right-1 bg-gray-800 rounded-full p-0.5 z-10">
                       <div className="w-6 h-6 rounded-full overflow-hidden flex items-center justify-center">
@@ -360,6 +411,51 @@ const EditProfileScreen: React.FC<EditProfileScreenProps> = ({ user, onBack, onS
           </div>
           <input type="file" className="hidden" ref={fileInputRef} onChange={handlePhotoUpload} accept="image/*,video/*" />
           <p className="text-xs text-gray-500 mt-2">{t('editProfile.uploadHelper', { count: formData.obras?.length || 0 })}</p>
+        </div>
+
+        {/* Status Online - Finalzinho da tela */}
+        <div className="my-4 bg-white/10 rounded-lg p-3 flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <span className="text-white text-sm">ID: {user.id}</span>
+            <span className="text-white text-sm">•</span>
+            <span className="text-white text-sm">Nível {user.level}</span>
+          </div>
+          <div className="flex items-center space-x-1">
+            {/* Sempre mostrar algo, mesmo que o hook não funcione */}
+            {statusLoading ? (
+              <span className="text-yellow-400 text-xs">Carregando...</span>
+            ) : userStatus ? (
+              <>
+                <div className={`w-2 h-2 rounded-full ${userStatus?.is_online ? 'bg-green-500' : 'bg-gray-500'}`}></div>
+                <span className={`text-xs ${userStatus?.is_online ? 'text-green-400' : 'text-gray-400'}`}>
+                  {userStatus?.is_online ? 'Online agora' : formatLastSeen(userStatus?.last_seen || new Date().toISOString())}
+                </span>
+                <span className="text-xs text-gray-500 ml-2">
+                  ({userStatus?.is_online ? 'ON' : 'OFF'})
+                </span>
+              </>
+            ) : (
+              <>
+                <div className="w-2 h-2 rounded-full bg-gray-500"></div>
+                <span className="text-xs text-gray-400">
+                  Status indisponível
+                </span>
+                <span className="text-xs text-red-400 ml-2">
+                  (NO DATA)
+                </span>
+              </>
+            )}
+          </div>
+        </div>
+        
+        {/* Debug: Mostrar dados completos para diagnóstico */}
+        <div className="my-2 bg-red-900/20 rounded p-2 text-xs text-gray-300">
+          <div>🔍 DEBUG:</div>
+          <div>Loading: {statusLoading ? 'true' : 'false'}</div>
+          <div>Has Status: {userStatus ? 'true' : 'false'}</div>
+          <div>Status: {JSON.stringify(userStatus, null, 2)}</div>
+          <div>User ID: {user.id}</div>
+          <div>Hook Called: YES</div>
         </div>
 
         <div>

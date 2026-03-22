@@ -251,14 +251,14 @@ const UserProfileScreen: React.FC<UserProfileScreenProps> = ({ user, isCurrentUs
     };
     
     const detailItems = [
-        { label: t('editProfile.nickname'), value: user.name, show: !!user.name },
-        { label: t('editProfile.gender'), value: getGender(user.gender), show: !!user.gender && user.gender !== 'not_specified' },
-        { label: t('editProfile.birthday'), value: user.birthday, show: !!user.birthday },
-        { label: t('editProfile.bio'), value: user.bio, show: !!user.bio },
-        { label: t('editProfile.residence'), value: user.residence, show: !!user.residence },
-        { label: t('editProfile.emotionalStatus'), value: user.emotional_status, show: !!user.emotional_status },
-        { label: t('editProfile.tags'), value: user.tags, show: !!user.tags },
-        { label: t('editProfile.profession'), value: user.profession, show: !!user.profession },
+        { label: t('editProfile.nickname'), value: freshUser.name || 'Não especificado', show: !!freshUser.name },
+        { label: t('editProfile.gender'), value: getGender(freshUser.gender), show: !!freshUser.gender && freshUser.gender !== 'not_specified' },
+        { label: t('editProfile.birthday'), value: freshUser.birthday || 'Não especificado', show: !!freshUser.birthday },
+        { label: t('editProfile.bio'), value: freshUser.bio || 'Não especificado', show: !!freshUser.bio },
+        { label: t('editProfile.residence'), value: freshUser.residence || 'Não especificado', show: !!freshUser.residence },
+        { label: t('editProfile.emotionalStatus'), value: freshUser.emotional_status || 'Não especificado', show: !!freshUser.emotional_status },
+        { label: t('editProfile.tags'), value: freshUser.tags || 'Não especificado', show: !!freshUser.tags },
+        { label: t('editProfile.profession'), value: freshUser.profession || 'Não especificado', show: !!freshUser.profession },
     ].filter(item => item.show);
 
     const hasDetails = detailItems.length > 0;

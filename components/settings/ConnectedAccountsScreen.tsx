@@ -1,10 +1,10 @@
-
 import React, { useState, useEffect } from 'react';
 import { BackIcon } from '../icons';
 import { useTranslation } from '../../i18n';
 import { GoogleAccount, User, ToastType } from '../../types';
 import { api } from '../../services/api';
 import { LoadingSpinner } from '../Loading';
+import AvatarWithFrame from '../ui/AvatarWithFrame';
 
 interface ConnectedAccountsScreenProps {
   onBack: () => void;
@@ -62,7 +62,11 @@ const ConnectedAccountsScreen: React.FC<ConnectedAccountsScreenProps> = ({ onBac
                         {accounts.map(account => (
                             <div key={account.id} className="bg-[#1C1C1E] p-4 rounded-lg">
                                 <div className="flex items-center space-x-4">
-                                    <img src={currentUser.avatarUrl} alt="User Avatar" className="w-12 h-12 rounded-full object-cover" />
+                                    <AvatarWithFrame 
+                                        user={currentUser} 
+                                        size="md" 
+                                        className="w-12 h-12" 
+                                    />
                                     <div>
                                         <p className="font-semibold text-white">Você</p>
                                         <p className="text-gray-400 text-sm">{account.email}</p>

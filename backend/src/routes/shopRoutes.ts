@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import { ShopItem, UserInventory, UserAvatar, User, Streamer } from '../models';
 
 const router = express.Router();
@@ -589,5 +589,219 @@ router.get('/avatars/current/:userId', async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 });
+
+router.post('/frames/cleanup-expired', async (req, res) => {
+    try {
+        const { userId } = req.body;
+
+        if (!userId) {
+            return res.status(400).json({ error: 'User ID required' });
+        }
+
+        // Buscar usuário
+        const user = await User.findOne({ id: userId });
+        if (!user) {
+            return res.status(404).json({ error: 'Usuário não encontrado' });
+        }
+
+        const now = new Date();
+        let removedCount = 0;
+        let currentFrameRemoved = false;
+
+        // Filtrar frames expirados
+        const validFrames = (user.ownedFrames || []).filter(frame => {
+            const isExpired = new Date(frame.expirationDate) <= now;
+            if (isExpired) {
+                removedCount++;
+                // Verificar se era o frame atual
+                if (user.activeFrameId === frame.frameId) {
+                    currentFrameRemoved = true;
+                }
+            }
+            return !isExpired;
+        });
+
+        // Atualizar usuário apenas com frames válidos
+        const updateData: any = { ownedFrames: validFrames };
+        
+        // Se o frame atual expirou, remover activeFrameId
+        if (currentFrameRemoved) {
+            updateData.activeFrameId = null;
+        }
+        
+        await User.updateOne(
+            { id: userId },
+            updateData
+        );
+
+        // Sincronizar com streams
+        if (currentFrameRemoved) {
+            await Streamer.updateMany(
+                { hostId: userId },
+                { 
+                    activeFrameId: null,
+                    updatedAt: new Date()
+                }
+            );
+        }
+
+        console.log(`🧹 Cleanup: ${removedCount} frames expirados removidos do usuário ${userId}`);
+
+        res.json({ 
+            success: true, 
+            removedCount,
+            currentFrameRemoved,
+            message: `${removedCount} frames expirados removidos com sucesso`
+        });
+
+    } catch (error: any) {
+        console.error('Erro ao limpar frames expirados:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Middleware para verificar frames expirados automaticamente
+const checkExpiredFrames = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const { userId } = req.body;
+        
+        if (userId) {
+            const user = await User.findOne({ id: userId });
+            if (user && user.ownedFrames) {
+                const now = new Date();
+                const currentFrame = user.ownedFrames.find(f => f.frameId === user.activeFrameId);
+                
+                if (currentFrame && new Date(currentFrame.expirationDate) <= now) {
+                    // Frame atual expirou, remover
+                    await User.updateOne(
+                        { id: userId },
+                        { activeFrameId: null }
+                    );
+                    
+                    await Streamer.updateMany(
+                        { hostId: userId },
+                        { 
+                            activeFrameId: null,
+                            updatedAt: new Date()
+                        }
+                    );
+                    
+                    console.log(`⚠️ Frame expirado removido: ${currentFrame.frameId} do usuário ${userId}`);
+                }
+            }
+        }
+        
+        next();
+    } catch (error) {
+        console.error('Erro no middleware de verificação:', error);
+        next();
+    }
+};
+
+// Aplicar middleware nas rotas de equipar
+router.use('/frames/equip', checkExpiredFrames);
+router.use('/frames/:frameId/equip', checkExpiredFrames);
+
+router.post('/avatars/cleanup-expired', async (req, res) => {
+    try {
+        const { userId } = req.body;
+
+        if (!userId) {
+            return res.status(400).json({ error: 'User ID required' });
+        }
+
+        // Buscar avatares expirados do usuário
+        const expiredAvatars = await UserAvatar.find({
+            userId,
+            expirationDate: { $lte: new Date() }
+        });
+
+        if (expiredAvatars.length > 0) {
+            // Remover avatares expirados
+            await UserAvatar.deleteMany({
+                userId,
+                expirationDate: { $lte: new Date() }
+            });
+
+            // Verificar se algum avatar expirado era o atual
+            const currentExpiredAvatar = expiredAvatars.find(avatar => avatar.isCurrent);
+            if (currentExpiredAvatar) {
+                // Resetar avatarUrl do usuário para padrão
+                await User.updateOne(
+                    { id: userId },
+                    { avatarUrl: null }
+                );
+
+                // Sincronizar com streams
+                await Streamer.updateMany(
+                    { hostId: userId },
+                    { 
+                        avatar: null,
+                        updatedAt: new Date()
+                    }
+                );
+            }
+
+            console.log(`🧹 Cleanup: ${expiredAvatars.length} avatares expirados removidos do usuário ${userId}`);
+        }
+
+        res.json({ 
+            success: true, 
+            removedCount: expiredAvatars.length,
+            message: `${expiredAvatars.length} avatares expirados removidos com sucesso`
+        });
+
+    } catch (error: any) {
+        console.error('Erro ao limpar avatares expirados:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Middleware para verificar avatares expirados automaticamente
+const checkExpiredAvatars = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const { userId } = req.body;
+        
+        if (userId) {
+            const currentAvatar = await UserAvatar.findOne({ 
+                userId, 
+                isCurrent: true,
+                expirationDate: { $lte: new Date() }
+            });
+            
+            if (currentAvatar) {
+                // Avatar atual expirou, remover
+                await UserAvatar.updateOne(
+                    { _id: currentAvatar._id },
+                    { isCurrent: false }
+                );
+                
+                await User.updateOne(
+                    { id: userId },
+                    { avatarUrl: null }
+                );
+                
+                await Streamer.updateMany(
+                    { hostId: userId },
+                    { 
+                        avatar: null,
+                        updatedAt: new Date()
+                    }
+                );
+                
+                console.log(`⚠️ Avatar expirado removido: ${currentAvatar.avatarId} do usuário ${userId}`);
+            }
+        }
+        
+        next();
+    } catch (error) {
+        console.error('Erro no middleware de verificação de avatares:', error);
+        next();
+    }
+};
+
+// Aplicar middleware nas rotas de equipar de avatares
+router.use('/avatars/equip', checkExpiredAvatars);
+router.use('/avatars/:avatarId/equip', checkExpiredAvatars);
 
 export default router;

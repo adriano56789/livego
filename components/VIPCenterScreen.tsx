@@ -2,6 +2,7 @@ import React from 'react';
 import { BackIcon, CheckCircleIcon, VIPIcon, VIPBadgeIcon } from './icons';
 import { User } from '../types';
 import { useTranslation } from '../i18n';
+import AvatarWithFrame from './ui/AvatarWithFrame';
 
 interface VIPCenterScreenProps {
     isOpen: boolean;
@@ -47,7 +48,11 @@ const VIPCenterScreen: React.FC<VIPCenterScreenProps> = ({ isOpen, onClose, user
 
             <main className="flex-grow overflow-y-auto p-4 space-y-6 no-scrollbar">
                 <div className="bg-black/20 rounded-lg p-4 flex items-center space-x-4">
-                    <img src={user.avatarUrl} alt={user.name} className="w-16 h-16 rounded-full object-cover border-2 border-yellow-400" />
+                    <AvatarWithFrame 
+                        user={user} 
+                        size="lg" 
+                        className="w-16 h-16" 
+                    />
                     <div>
                         <div className="flex items-center space-x-2">
                            <p className="font-bold text-lg">{user.name}</p>

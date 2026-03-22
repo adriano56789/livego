@@ -94,35 +94,54 @@ const UserProfileScreen: React.FC<UserProfileScreenProps> = ({ user, isCurrentUs
     // 🔧 SINCRONIZAÇÃO: Buscar dados frescos do usuário da API ao montar
     // Garante que enviados, receptores e diamonds reflitam o banco de dados real
     const [freshUser, setFreshUser] = useState<User>(user);
+    const [lastUserUpdate, setLastUserUpdate] = useState<number>(Date.now());
+    
     useEffect(() => {
         let isMounted = true;
-        api.getUser(user.id).then(data => {
-            if (isMounted && data) setFreshUser(data);
-        }).catch(() => { /* fallback: usar dados originais */ });
-        return () => { isMounted = false; };
-    }, [user.id]);
+        let timeoutId: NodeJS.Timeout;
+        
+        // Adicionar debounce mais longo e verificar se realmente precisa atualizar
+        timeoutId = setTimeout(() => {
+            const now = Date.now();
+            // Só atualizar se passou mais de 2 segundos desde a última atualização
+            if (now - lastUserUpdate > 2000) {
+                api.getUser(user.id).then(data => {
+                    if (isMounted && data) {
+                        setFreshUser(data);
+                        setLastUserUpdate(now);
+                    }
+                }).catch(() => { /* fallback: usar dados originais */ });
+            }
+        }, 1000); // 1 segundo de debounce
+        
+        return () => { 
+            isMounted = false;
+            if (timeoutId) clearTimeout(timeoutId);
+        };
+    }, [user.id, lastUserUpdate]);
 
     // Obras vêm de User.obras (banco) - fonte única, sempre atualizado
     useEffect(() => {
         if (activeTab === 'Obras') {
             setIsLoadingObras(true);
-            api.getUser(user.id).then(data => {
-                if (data?.obras && Array.isArray(data.obras)) {
-                    const asFeedPhotos = data.obras.map((o: any) => ({
-                        id: o.id,
-                        photoUrl: o.url || o.photoUrl,
-                        url: o.url,
-                        likes: o.likes || 0,
-                        isLiked: o.isLiked || false,
-                        user: data,
-                    }));
-                    setObras(asFeedPhotos);
-                } else {
-                    setObras([]);
-                }
-            }).catch(() => setObras([])).finally(() => setIsLoadingObras(false));
+            // Usar freshUser em vez de fazer nova chamada API para evitar recarregamentos
+            if (freshUser?.obras && Array.isArray(freshUser.obras)) {
+                const asFeedPhotos = freshUser.obras.map((o: any) => ({
+                    id: o.id,
+                    photoUrl: o.url || o.photoUrl,
+                    url: o.url,
+                    likes: o.likes || 0,
+                    isLiked: o.isLiked || false,
+                    user: freshUser,
+                }));
+                setObras(asFeedPhotos);
+                setIsLoadingObras(false);
+            } else {
+                setObras([]);
+                setIsLoadingObras(false);
+            }
         }
-    }, [activeTab, user.id, lastPhotoLikeUpdate]);
+    }, [activeTab, freshUser.obras, freshUser.id]);
 
     useEffect(() => {
         let isMounted = true;
@@ -297,19 +316,14 @@ const UserProfileScreen: React.FC<UserProfileScreenProps> = ({ user, isCurrentUs
                                 className="w-24 h-24"
                             />
 
-                            {/* Ícone de status online - canto superior direito */}
-                            <div className="absolute top-0 right-0 w-4 h-4 bg-green-500 rounded-full border-2 border-white z-30">
-                                <div className={`w-full h-full rounded-full ${userStatus?.is_online ? 'bg-green-400' : 'bg-gray-400'}`}></div>
-                            </div>
-
                             {user.isLive && (
                                 <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-black/60 rounded-md px-2 py-1 flex items-center space-x-1.5 backdrop-blur-sm z-10">
                                   <LiveIndicatorIcon className="w-4 h-4 text-green-400" />
                                   <span className="text-xs font-bold text-white uppercase tracking-wider">{t('footer.live')}</span>
                                 </div>
                             )}
-                            {user.isAvatarProtected && (
-                                <div className="absolute -top-1 -right-1 bg-gray-900 rounded-full p-1">
+                            {freshUser.isAvatarProtected && (
+                                <div className="absolute -top-1 -right-1 bg-gray-900 rounded-full p-1 transition-opacity duration-300">
                                     <ShieldIcon className="w-6 h-6 text-blue-400" />
                                 </div>
                             )}

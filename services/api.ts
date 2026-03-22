@@ -139,7 +139,6 @@ export const api = {
     getFriends: (userId: string) => callApi<User[]>('GET', `/api/users/${userId}/friends`),
     getConversations: (userId: string) => callApi<Conversation[]>('GET', `/api/users/${userId}/messages`),
     getBlockedUsers: () => callApi<User[]>('GET', '/api/users/me/blocklist'),
-    getUserStatus: (userId: string) => callApi<{ isOnline: boolean; lastSeen: string }>('GET', `/api/users/${userId}/status`),
     getUserPhotos: (userId: string) => callApi<FeedPhoto[]>('GET', `/api/users/${userId}/photos`),
     getLikedPhotos: (userId: string) => callApi<FeedPhoto[]>('GET', `/api/users/${userId}/liked-photos`),
     getLevelInfo: (userId: string) => callApi<LevelInfo>('GET', `/api/users/${userId}/level-info`),
@@ -340,7 +339,6 @@ export const api = {
     uploadStreamCover: (streamId: string, coverData: any) => callApi<{ success: boolean, stream: Streamer }>('POST', `/api/streams/${streamId}/cover`, coverData),
     getStreamManual: () => callApi<any[]>('GET', '/api/streams/manual'),
     getBeautyEffects: () => callApi<BeautyEffectsData>('GET', '/api/interactions/effects/beauty'),
-    getOnlineUsers: (userId: string, streamId: string) => callApi<(User & { value: number })[]>('GET', `/api/streams/${streamId}/online-users`),
     endLiveSession: (streamId: string, sessionData: LiveSessionState) => callApi<{ success: boolean, user: User }>('POST', `/api/streams/${streamId}/end-session`, { session: sessionData }),
     removeLiveCard: (streamId: string, userId: string) => callApi<{ success: boolean }>('DELETE', `/api/cards/${streamId}?userId=${userId}`),
     sendGift: (fromUserId: string, toUserId: string, streamId: string, giftName: string, amount: number) => callApi<{ success: boolean; error?: string; updatedSender: User; updatedReceiver: User; }>('POST', `/api/streams/${streamId}/gift`, { fromUserId, toUserId, giftName, amount }),
@@ -473,7 +471,15 @@ export const api = {
     // --- Zoom Settings ---
     getZoomSettings: (userId: string) => callApi<{ userId: string; zoomLevel: number; isDefault: boolean }>('GET', `/api/zoom/user/${userId}`),
     updateZoomSettings: (userId: string, zoomLevel: number) => callApi<{ success: boolean; zoomSettings: any }>('PUT', `/api/zoom/user/${userId}`, { zoomLevel }),
-    resetZoomSettings: (userId: string) => callApi<{ success: boolean; zoomSettings: any }>('POST', `/api/zoom/user/${userId}/reset`)
+    resetZoomSettings: (userId: string) => callApi<{ success: boolean; zoomSettings: any }>('POST', `/api/zoom/user/${userId}/reset`),
+
+    // --- User Status (Online/Offline) ---
+    getUserStatus: (userId: string) => callApi<{ user_id: string; is_online: boolean; last_seen: string; updated_at: string }>('GET', `/api/user/${userId}/status`),
+    setUserOnline: (userId: string) => callApi<{ success: boolean; message: string }>('POST', `/api/user/${userId}/online`),
+    setUserOffline: (userId: string) => callApi<{ success: boolean; message: string }>('POST', `/api/user/${userId}/offline`),
+    updateUserStatus: (userId: string, isOnline: boolean) => callApi<{ success: boolean; message: string }>('PUT', `/api/user/${userId}/status`, { is_online: isOnline }),
+    getOnlineUsers: (limit = 50, offset = 0) => callApi<{ users: Array<{ user_id: string; last_seen: string; updated_at: string }>; total: number; limit: number; offset: number }>('GET', `/api/users/online?limit=${limit}&offset=${offset}`),
+    getBatchUserStatus: (userIds: string[]) => callApi<{ users: Array<{ user_id: string; is_online: boolean; last_seen: string; updated_at: string }>; total: number }>('POST', `/api/users/batch-status`, { user_ids: userIds })
 };
 
 export { callApi };

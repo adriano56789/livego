@@ -38,6 +38,8 @@ import paymentRoutes from './routes/paymentRoutes';
 import webhookRoutes from './routes/webhookRoutes';
 import withdrawalRoutes from './routes/withdrawalRoutes';
 import zoomRoutes from './routes/zoomRoutes';
+import userStatusRoutes from './routes/userStatusRoutes';
+import UserStatusManager from './middleware/UserStatusManager';
 import { blockBase64Middleware } from './middleware/blockBase64';
 
 dotenv.config({ path: '.env.production' });
@@ -50,6 +52,14 @@ const port = parseInt(process.env.PORT || '3000');
 const wsPort = parseInt(process.env.WS_PORT || '3001');
 
 connectDB();
+
+// Inicializar UserStatusManager para gerenciar status online
+const userStatusManager = new UserStatusManager(io);
+
+// Limpar usuários inativos periodicamente (a cada 5 minutos)
+setInterval(() => {
+    userStatusManager.cleanupInactiveUsers();
+}, 5 * 60 * 1000);
 
 // Middleware CORS - configurado antes de tudo
 app.use(cors({
@@ -117,6 +127,7 @@ app.use('/api/payments', paymentRoutes); // Rotas do Mercado Pago
 app.use('/api/webhooks', webhookRoutes); // Rotas de webhooks
 app.use('/api/withdrawals', withdrawalRoutes); // Rotas de saques via Pix
 app.use('/api/zoom', zoomRoutes); // Rotas de configurações de zoom
+app.use('/api', userStatusRoutes); // Rotas de status online do usuário
 // Disponibilizar io para as rotas
 app.set('io', io);
 

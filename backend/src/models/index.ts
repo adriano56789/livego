@@ -36,3 +36,4 @@ export { UserFrame } from './UserFrame';
 export { ManualTransmissao } from './ManualTransmissao';
 export { BannedEntity } from './BannedEntity';
 export { ZoomSettings } from './ZoomSettings';
+export { UserStatus } from './UserStatus';

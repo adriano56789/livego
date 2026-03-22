@@ -19,6 +19,7 @@ import UserProfileScreen from './components/BroadcasterProfileScreen';
 import EditProfileScreen from './components/EditProfileScreen';
 import WalletScreen from './components/WalletScreen';
 import { useZoomSettings } from './hooks/useZoomSettings';
+import { useUserStatus } from './hooks/useUserStatus';
 import FollowingScreen from './components/FollowingScreen';
 import FansScreen from './components/FansScreen';
 import VisitorsScreen from './components/VisitorsScreen';
@@ -230,6 +231,44 @@ const AppContent: React.FC = () => {
 
   // Aplicar configurações de zoom quando usuário está disponível
   useZoomSettings(currentUser?.id);
+
+  // Gerenciar status online do usuário
+  const { setUserOnline, setUserOffline } = useUserStatus(currentUser?.id);
+
+  // Marcar usuário como online quando autenticado
+  useEffect(() => {
+    if (isAuthenticated && currentUser?.id) {
+      setUserOnline();
+    }
+  }, [isAuthenticated, currentUser?.id, setUserOnline]);
+
+  // Marcar usuário como offline quando sair da página
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (currentUser?.id) {
+        setUserOffline();
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.hidden && currentUser?.id) {
+        setUserOffline();
+      } else if (!document.hidden && isAuthenticated && currentUser?.id) {
+        setUserOnline();
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      if (currentUser?.id) {
+        setUserOffline();
+      }
+    };
+  }, [currentUser?.id, isAuthenticated, setUserOnline, setUserOffline]);
 
   // Carregar dados da API na inicialização
   useEffect(() => {

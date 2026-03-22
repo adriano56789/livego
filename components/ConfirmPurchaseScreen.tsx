@@ -96,8 +96,6 @@ const ConfirmPurchaseScreen: React.FC<ConfirmPurchaseScreenProps> = ({ onClose, 
   
   const [timeLeft, setTimeLeft] = useState(598); // 09:58
   const [orderId, setOrderId] = useState<string | null>(null);
-  // Use a specific email key as requested for realism
-  const [pixKeyString, setPixKeyString] = useState("adrianomdk5@gmail.com"); 
   const [pixStatus, setPixStatus] = useState<'pending' | 'confirmed'>('pending');
   const [pixCode, setPixCode] = useState<string | null>(null);
   const [qrCodeBase64, setQrCodeBase64] = useState<string | null>(null);
@@ -143,7 +141,7 @@ const ConfirmPurchaseScreen: React.FC<ConfirmPurchaseScreenProps> = ({ onClose, 
     }
   }, [paymentMethod, timeLeft]);
 
-  // Poll for Pix Status (usando API real)
+  // Poll for Pix Status
   useEffect(() => {
     if (paymentMethod === 'pix' && pixStatus === 'pending' && pixCode && orderId) {
         const checkStatus = async () => {
@@ -151,7 +149,6 @@ const ConfirmPurchaseScreen: React.FC<ConfirmPurchaseScreenProps> = ({ onClose, 
                 const statusResponse = await api.checkPixPaymentStatus(orderId);
                 
                 if (statusResponse.success && statusResponse.status === 'approved') {
-                    console.log('✅ [PIX] Pagamento aprovado via API!');
                     setPixStatus('confirmed');
                     addToast(ToastType.Success, "Pagamento via Pix confirmado!");
                     
@@ -160,12 +157,11 @@ const ConfirmPurchaseScreen: React.FC<ConfirmPurchaseScreenProps> = ({ onClose, 
                         onConfirmPurchase(packageDetails);
                     }, 1500);
                 } else if (statusResponse.status === 'rejected' || statusResponse.status === 'cancelled') {
-                    console.log('❌ [PIX] Pagamento rejeitado/cancelado');
                     addToast(ToastType.Error, "Pagamento não aprovado. Tente novamente.");
                     setPixStatus('pending'); // Manter como pending para permitir nova tentativa
                 }
             } catch (error) {
-                console.error('❌ [PIX] Erro ao verificar status:', error);
+                // Erro ao verificar status
             }
         };
 
@@ -190,11 +186,6 @@ const ConfirmPurchaseScreen: React.FC<ConfirmPurchaseScreenProps> = ({ onClose, 
         navigator.clipboard.writeText(pixCode);
         addToast(ToastType.Success, "Código Pix Copia e Cola copiado!");
     }
-  };
-
-  const handleCopyPixKey = () => {
-    navigator.clipboard.writeText(pixKeyString);
-    addToast(ToastType.Success, "Chave Pix copiada!");
   };
 
   const handleConfirm = async () => {
@@ -336,19 +327,6 @@ const ConfirmPurchaseScreen: React.FC<ConfirmPurchaseScreenProps> = ({ onClose, 
                             <p className="text-red-500 text-xs text-center">QR Code não disponível</p>
                         </div>
                     )}
-                </div>
-                
-                {/* Specific Pix Key Display */}
-                <div className="w-full bg-[#1E1E1E] rounded-xl border border-white/5 overflow-hidden">
-                    <div className="bg-[#2a2a2c] px-4 py-2 text-xs text-gray-400 font-bold uppercase border-b border-white/5">
-                        Chave Pix (E-mail)
-                    </div>
-                    <div className="flex items-center p-3">
-                         <span className="flex-grow text-white font-mono text-sm">{pixKeyString}</span>
-                         <button onClick={handleCopyPixKey} className="text-blue-400 hover:text-blue-300 font-bold text-xs uppercase ml-2">
-                             Copiar
-                         </button>
-                    </div>
                 </div>
 
                 {/* Copy Pix Code */}

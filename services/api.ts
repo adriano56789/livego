@@ -32,7 +32,7 @@ const inFlightRequests = new Map<string, Promise<any>>();
  * Core API Caller
  * Performs real HTTP requests to the backend.
  */
-const callApi = async <T>(method: string, path: string, body?: any): Promise<T> => {
+const callApi = async <T>(method: string, path: string, body?: any, customBaseUrl?: string): Promise<T> => {
     const requestKey = `${method}:${path}:${JSON.stringify(body || {})}`;
 
     if (method === 'GET' && inFlightRequests.has(requestKey)) {
@@ -57,9 +57,11 @@ const callApi = async <T>(method: string, path: string, body?: any): Promise<T> 
                 headers['Pragma'] = 'no-cache';
             }
 
+            const baseUrl = customBaseUrl || API_BASE_URL;
+
             const response = await axios({
                 method: method as Method,
-                url: `${API_BASE_URL}${path}`,
+                url: `${baseUrl}${path}`,
                 headers,
                 data: body,
                 params: method === 'GET' && body ? body : undefined
@@ -171,11 +173,23 @@ export const api = {
     getPurchaseHistory: (userId: string) => callApi<PurchaseRecord[]>('GET', `/api/purchases/history/${userId}`),
     getEarningsInfo: (userId: string) => callApi<{
         withdrawal_method: boolean; available_diamonds: number; brl_value: number; conversion_rate: string; 
-}>('GET', `/api/wallet/earnings/get/${userId}`),
+    }>('GET', `/api/wallet/earnings/get/${userId}`),
     getFreshUserData: (userId: string) => callApi<User>('GET', `/api/users/${userId}`),
-    calculateWithdrawal: (amount: number) => callApi<{ diamonds: number; gross_brl: number; platform_fee_brl: number; net_brl: number; breakdown: { conversion: string; fee: string; final: string; } }>('POST', '/api/wallet/earnings/calculate', { amount }),
-    confirmWithdrawal: (userId: string, amount: number) => callApi<{ success: boolean, amount: number, newEarnings: number, brl_amount: number, platform_fee: number, message: string }>('POST', `/api/wallet/withdraw/${userId}`, { amount }),
-    setWithdrawalMethod: (method: string, details: any) => callApi<{ success: boolean, user: User }>('POST', `/api/wallet/earnings/method/set/${getCurrentUserId()}`, { method, details }),
+    calculateWithdrawal: (amount: number) => {
+        const isDevelopment = import.meta.env.DEV;
+        const baseUrl = isDevelopment ? API_BASE_URL : 'https://api.livego.store';
+        return callApi<{ diamonds: number; gross_brl: number; platform_fee_brl: number; net_brl: number; breakdown: { conversion: string; fee: string; final: string; } }>('POST', '/api/wallet/earnings/calculate', { amount }, baseUrl);
+    },
+    confirmWithdrawal: (userId: string, amount: number) => {
+        const isDevelopment = import.meta.env.DEV;
+        const baseUrl = isDevelopment ? API_BASE_URL : 'https://api.livego.store';
+        return callApi<{ success: boolean, amount: number, newEarnings: number, brl_amount: number, platform_fee: number, message: string }>('POST', `/api/wallet/withdraw/${userId}`, { amount }, baseUrl);
+    },
+    setWithdrawalMethod: (method: string, details: any) => {
+        const isDevelopment = import.meta.env.DEV;
+        const baseUrl = isDevelopment ? API_BASE_URL : 'https://api.livego.store';
+        return callApi<{ success: boolean, user: User }>('POST', `/api/wallet/earnings/method/set/${getCurrentUserId()}`, { method, details }, baseUrl);
+    },
     
     // --- Gift Counters ---
     validateGiftCounters: (userId: string) => callApi<{ userId: any; current: any; real: any; differences: any; needsUpdate: boolean; transactions: any; details: any; }>('GET', `/api/wallet/gifts/validate/${userId}`),
@@ -183,17 +197,54 @@ export const api = {
     syncAllGiftCounters: () => callApi<{ success: boolean; totalUsers: number; updated: number; totalDifferences: any; }>('POST', '/api/wallet/gifts/sync-all'),
 
     // --- Checkout & Payments (New) ---
-    getDiamondPackages: () => callApi<DiamondPackage[]>('GET', '/api/checkout/pack'),
-    createOrder: (userId: string, packageId: string, amount: number, diamonds: number) => callApi<Order>('POST', '/api/checkout/order', { userId, packageId, amount, diamonds }),
-    processPixPayment: (orderId: string) => callApi<PixPaymentResponse>('POST', '/api/checkout/pix', { orderId }),
-    processCreditCardPayment: (data: CreditCardPaymentRequest) => callApi<{ success: boolean, message: string, orderId: string }>('POST', '/api/checkout/credit-card', data),
-    confirmPurchase: (orderId: string) => callApi<{ success: boolean, user: User, order: Order }>('POST', '/api/purchase/confirm', { orderId }),
-    checkPixPaymentStatus: (orderId: string) => callApi<{ success: boolean, status: string, order: Order, payment?: any }>('GET', `/api/payments/pix/status/${orderId}`),
+    getDiamondPackages: () => {
+        // Usar localhost para desenvolvimento, VPS para produção
+        const isDevelopment = import.meta.env.DEV;
+        const baseUrl = isDevelopment ? API_BASE_URL : 'https://api.livego.store';
+        return callApi<DiamondPackage[]>('GET', '/api/checkout/pack', undefined, baseUrl);
+    },
+    createOrder: (userId: string, packageId: string, amount: number, diamonds: number) => {
+        const isDevelopment = import.meta.env.DEV;
+        const baseUrl = isDevelopment ? API_BASE_URL : 'https://api.livego.store';
+        return callApi<Order>('POST', '/api/checkout/order', { userId, packageId, amount, diamonds }, baseUrl);
+    },
+    processPixPayment: (orderId: string) => {
+        const isDevelopment = import.meta.env.DEV;
+        const baseUrl = isDevelopment ? API_BASE_URL : 'https://api.livego.store';
+        return callApi<PixPaymentResponse>('POST', '/api/checkout/pix', { orderId }, baseUrl);
+    },
+    processCreditCardPayment: (data: CreditCardPaymentRequest) => {
+        const isDevelopment = import.meta.env.DEV;
+        const baseUrl = isDevelopment ? API_BASE_URL : 'https://api.livego.store';
+        return callApi<{ success: boolean, message: string, orderId: string }>('POST', '/api/checkout/credit-card', data, baseUrl);
+    },
+    confirmPurchase: (orderId: string) => {
+        const isDevelopment = import.meta.env.DEV;
+        const baseUrl = isDevelopment ? API_BASE_URL : 'https://api.livego.store';
+        return callApi<{ success: boolean, user: User, order: Order }>('POST', '/api/purchase/confirm', { orderId }, baseUrl);
+    },
+    checkPixPaymentStatus: (orderId: string) => {
+        const isDevelopment = import.meta.env.DEV;
+        const baseUrl = isDevelopment ? API_BASE_URL : 'https://api.livego.store';
+        return callApi<{ success: boolean, status: string, order: Order, payment?: any }>('GET', `/api/payments/pix/status/${orderId}`, undefined, baseUrl);
+    },
 
     // --- Admin Control ---
-    saveAdminWithdrawalMethod: (email: string) => callApi<{ success: boolean, user: User }>('POST', '/api/admin/withdrawal-method', { email }),
-    requestAdminWithdrawal: () => callApi<{ success: boolean, message: string }>('POST', '/api/admin/withdraw'),
-    getAdminWithdrawalHistory: (status: string) => callApi<PurchaseRecord[]>('GET', `/api/admin/history?status=${status}`),
+    saveAdminWithdrawalMethod: (email: string) => {
+        const isDevelopment = import.meta.env.DEV;
+        const baseUrl = isDevelopment ? API_BASE_URL : 'https://api.livego.store';
+        return callApi<{ success: boolean, user: User }>('POST', '/api/admin/withdrawal-method', { email }, baseUrl);
+    },
+    requestAdminWithdrawal: () => {
+        const isDevelopment = import.meta.env.DEV;
+        const baseUrl = isDevelopment ? API_BASE_URL : 'https://api.livego.store';
+        return callApi<{ success: boolean, message: string }>('POST', '/api/admin/withdraw', undefined, baseUrl);
+    },
+    getAdminWithdrawalHistory: (status: string) => {
+        const isDevelopment = import.meta.env.DEV;
+        const baseUrl = isDevelopment ? API_BASE_URL : 'https://api.livego.store';
+        return callApi<PurchaseRecord[]>('GET', `/api/admin/history?status=${status}`, undefined, baseUrl);
+    },
 
     // --- Metadata & Catalog ---
     getRankingForPeriod: async (period: string, userId?: string): Promise<RankedUser[]> => {

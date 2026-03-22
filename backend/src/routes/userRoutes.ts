@@ -23,8 +23,8 @@ UserRoutes.get('/me', async (req, res) => {
         const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret_key_change_me_in_prod';
         const decoded = jwt.verify(token, JWT_SECRET);
 
-        // Find user by ID from token
-        let user = await User.findOne({ id: decoded.id });
+        // Find user by ID from token (forçar leitura fresh do banco)
+        let user = await User.findOne({ id: decoded.id }).lean();
         if (!user) {
             return res.status(404).json({ error: 'User not found' });
         }

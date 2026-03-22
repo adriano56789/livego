@@ -169,23 +169,28 @@ singleValueRoutes.forEach(({ route, field }) => {
 
             // Se for aniversário, salvar também no modelo Birthday
             if (field === 'birthday' && value) {
-                const birthDate = new Date(value);
-                const age = new Date().getFullYear() - birthDate.getFullYear();
-                
-                await Birthday.findOneAndUpdate(
-                    { userId },
-                    {
-                        userId,
-                        birthDate,
-                        age,
-                        zodiacSign: calculateZodiacSign(birthDate),
-                        isActive: true,
-                        updatedAt: new Date()
-                    },
+                // Converter data do formato brasileiro (dd/mm/yyyy) para Date
+                const parts = value.split('/');
+                if (parts.length === 3) {
+                    const [day, month, year] = parts.map(Number);
+                    const birthDate = new Date(year, month - 1, day); // mês-1 porque JS usa 0-1
+                    const age = new Date().getFullYear() - birthDate.getFullYear();
+                    
+                    await Birthday.findOneAndUpdate(
+                        { userId },
+                        {
+                            userId,
+                            birthDate,
+                            age,
+                            zodiacSign: calculateZodiacSign(birthDate),
+                            isActive: true,
+                            updatedAt: new Date()
+                        },
                     { upsert: true, new: true }
                 );
                 
                 console.log(`✅ Aniversário salvo para usuário ${userId}: ${value}`);
+                }
             }
             
             res.json({ success: true, user: standardizeUserResponse(user) });

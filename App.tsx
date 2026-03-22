@@ -1184,6 +1184,18 @@ const logLiveEvent = (type: string, data: any) => {
 
   const handleViewProfile = async (user: User) => {
     setChattingWith(null);
+    // Se for o próprio usuário, buscar dados frescos do servidor
+    if (user.id === currentUser?.id) {
+      try {
+        const freshUser = await api.getFreshUserData(currentUser.id);
+        if (freshUser) {
+          setViewingProfile(freshUser);
+          return;
+        }
+      } catch (_) { /* se falhar, usa os dados atuais */ }
+    }
+    
+    // Para outros usuários ou se falhar o fetch, usa dados disponíveis
     const fullUserFromState = allUsers.find(u => u.id === user.id);
     const userToView = user.id === currentUser?.id ? currentUser : (fullUserFromState || user);
     setViewingProfile(userToView);
@@ -1196,12 +1208,14 @@ const logLiveEvent = (type: string, data: any) => {
     const updatedUser = { ...currentUser, ...updatedData };
     updateUserEverywhere(updatedUser);
     setIsEditingProfile(false);
-    setViewingProfile(updatedUser);
     addToast(ToastType.Success, t('toasts.profileSaved'));
     // Refetch do servidor para garantir sincronização e dados persistentes
     try {
       const freshUser = await api.getFreshUserData(currentUser.id);
-      if (freshUser) updateUserEverywhere(freshUser);
+      if (freshUser) {
+        updateUserEverywhere(freshUser);
+        setViewingProfile(freshUser); // Usar dados frescos no viewingProfile
+      }
     } catch (_) { /* ignora erro de refetch */ }
   };
 

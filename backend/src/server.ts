@@ -37,6 +37,7 @@ import manualRoutes from './routes/manualRoutes';
 import paymentRoutes from './routes/paymentRoutes';
 import webhookRoutes from './routes/webhookRoutes';
 import withdrawalRoutes from './routes/withdrawalRoutes';
+import zoomRoutes from './routes/zoomRoutes';
 import { blockBase64Middleware } from './middleware/blockBase64';
 
 dotenv.config({ path: '.env.production' });
@@ -115,6 +116,7 @@ app.use('/api', manualRoutes); // Rotas do manual de transmissão
 app.use('/api/payments', paymentRoutes); // Rotas do Mercado Pago
 app.use('/api/webhooks', webhookRoutes); // Rotas de webhooks
 app.use('/api/withdrawals', withdrawalRoutes); // Rotas de saques via Pix
+app.use('/api/zoom', zoomRoutes); // Rotas de configurações de zoom
 // Disponibilizar io para as rotas
 app.set('io', io);
 

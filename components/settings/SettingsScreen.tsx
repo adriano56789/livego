@@ -12,8 +12,7 @@ import {
     DocumentTextIcon,
     ZoomInIcon,
     TrashIcon,
-    GlobeIcon,
-    ActionIcon
+    GlobeIcon
 } from '../icons';
 import ConnectedAccountsScreen from './ConnectedAccountsScreen';
 import NotificationSettingsScreen from './NotificationSettingsScreen';
@@ -52,11 +51,6 @@ const SettingsListItem: React.FC<SettingsListItemProps> = ({ label, icon, onClic
 
 const MainSettingsPage: React.FC<{ navigateTo: (page: string) => void; onLogout: () => void; onOpenLanguageModal: () => void; }> = ({ navigateTo, onLogout, onOpenLanguageModal }) => {
     const { t } = useTranslation();
-    
-    // Simplificado - sem database ou websocket para navegação isolada
-    const simulateLiveNotification = () => {
-        // Função desabilitada para navegação isolada
-    };
 
     const menuItems = [
         { icon: <ViewerIcon className="h-6 w-6" />, label: t('settings.main.connectedAccounts'), action: () => navigateTo('connected_accounts') },
@@ -69,8 +63,6 @@ const MainSettingsPage: React.FC<{ navigateTo: (page: string) => void; onLogout:
         { icon: <DocumentTextIcon className="h-6 w-6" />, label: t('settings.main.copyright'), action: () => navigateTo('copyright') },
         { icon: <DocumentTextIcon className="h-6 w-6" />, label: t('settings.main.appVersion'), action: () => navigateTo('app_version') },
         { icon: <ZoomInIcon className="h-6 w-6" />, label: t('settings.main.zoomAdjustment'), action: () => navigateTo('zoom') },
-        // Added Simulation Button
-        { icon: <ActionIcon className="h-6 w-6" />, label: "Simular Notificação de Live (Dev)", action: simulateLiveNotification },
         { icon: <TrashIcon className="h-6 w-6" />, label: t('settings.main.deleteAccount'), action: () => navigateTo('delete_account'), isDestructive: true },
     ];
 
@@ -132,7 +124,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onClose, currentUser, g
             case 'gift_notifications':
                 return <GiftNotificationSettingsScreen onBack={() => setPage('main')} user={currentUser} gifts={gifts} />;
             case 'zoom':
-                return <ZoomSettingsScreen onBack={() => setPage('main')} />;
+                return <ZoomSettingsScreen onBack={() => setPage('main')} currentUser={currentUser} />;
             case 'app_version':
                 return <AppVersionScreen onBack={() => setPage('main')} />;
             case 'earnings_info': 

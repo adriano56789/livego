@@ -468,7 +468,12 @@ export const api = {
         if (offset) params.append('offset', offset.toString());
         const url = `/api/withdrawals/history/${userId}${params.toString() ? '?' + params.toString() : ''}`;
         return callApi<any>('GET', url);
-    }
+    },
+
+    // --- Zoom Settings ---
+    getZoomSettings: (userId: string) => callApi<{ userId: string; zoomLevel: number; isDefault: boolean }>('GET', `/api/zoom/user/${userId}`),
+    updateZoomSettings: (userId: string, zoomLevel: number) => callApi<{ success: boolean; zoomSettings: any }>('PUT', `/api/zoom/user/${userId}`, { zoomLevel }),
+    resetZoomSettings: (userId: string) => callApi<{ success: boolean; zoomSettings: any }>('POST', `/api/zoom/user/${userId}/reset`)
 };
 
 export { callApi };

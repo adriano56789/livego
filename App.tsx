@@ -18,6 +18,7 @@ import { socketService } from './services/socket';
 import UserProfileScreen from './components/BroadcasterProfileScreen';
 import EditProfileScreen from './components/EditProfileScreen';
 import WalletScreen from './components/WalletScreen';
+import { useZoomSettings } from './hooks/useZoomSettings';
 import FollowingScreen from './components/FollowingScreen';
 import FansScreen from './components/FansScreen';
 import VisitorsScreen from './components/VisitorsScreen';
@@ -226,6 +227,9 @@ const AppContent: React.FC = () => {
     };
     restoreSession();
   }, []);
+
+  // Aplicar configurações de zoom quando usuário está disponível
+  useZoomSettings(currentUser?.id);
 
   // Carregar dados da API na inicialização
   useEffect(() => {

@@ -1529,7 +1529,6 @@ const logLiveEvent = (type: string, data: any) => {
               {activeScreen === 'profile' &&
                 <ProfileScreen
                   currentUser={currentUser}
-                  onEdit={handleEditProfile}
                   onOpenMyLevel={() => setIsMyLevelScreenOpen(true)}
                   onOpenBlockList={() => handleOpenListScreen('blockList')}
                   onOpenAvatarProtection={() => setIsAvatarProtectionScreenOpen(true)}
@@ -1542,6 +1541,10 @@ const logLiveEvent = (type: string, data: any) => {
                   onOpenVisitors={() => setIsVisitorsScreenOpen(true)}
                   onOpenTopFans={() => handleOpenListScreen('topFans')}
                   onOpenMarket={() => setIsMarketScreenOpen(true)}
+                  onOpenWallet={(initialTab?: 'Diamante' | 'Ganhos') => {
+                    setWalletInitialTab(initialTab || 'Diamante');
+                    setIsWalletScreenOpen(true);
+                  }}
                   onEnterMyStream={() => {
                     if (currentUser?.isLive) {
                       const userStream = streamers.find(s => s.hostId === currentUser.id);

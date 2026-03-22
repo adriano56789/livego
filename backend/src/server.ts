@@ -1,6 +1,6 @@
 import express from 'express';
 import http from 'http';
-import { Server } from 'socket.io';
+import { initSocket } from './socket';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
@@ -35,6 +35,8 @@ import purchaseRoutes from './routes/purchaseRoutes';
 import uploadRoutes from './routes/uploadRoutes';
 import manualRoutes from './routes/manualRoutes';
 import paymentRoutes from './routes/paymentRoutes';
+import webhookRoutes from './routes/webhookRoutes';
+import withdrawalRoutes from './routes/withdrawalRoutes';
 import { blockBase64Middleware } from './middleware/blockBase64';
 
 dotenv.config({ path: '.env.production' });
@@ -42,12 +44,7 @@ dotenv.config({ path: '.env.production' });
 const app = express();
 app.set('etag', false); // Desabilitar ETag para sempre retornar 200 em vez de 304
 const server = http.createServer(app);
-const io = new Server(server, {
-    cors: {
-        origin: '*', // Aceitar qualquer origem
-        methods: ['GET', 'POST']
-    }
-});
+const io = initSocket(server);
 const port = parseInt(process.env.PORT || '3000');
 const wsPort = parseInt(process.env.WS_PORT || '3001');
 
@@ -116,6 +113,8 @@ app.use('/api', contributionRoutes); // Rotas de ranking de contribuição
 app.use('/api/upload', uploadRoutes); // Rotas de upload de arquivos
 app.use('/api', manualRoutes); // Rotas do manual de transmissão
 app.use('/api/payments', paymentRoutes); // Rotas do Mercado Pago
+app.use('/api/webhooks', webhookRoutes); // Rotas de webhooks
+app.use('/api/withdrawals', withdrawalRoutes); // Rotas de saques via Pix
 // Disponibilizar io para as rotas
 app.set('io', io);
 

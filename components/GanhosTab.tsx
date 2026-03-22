@@ -81,7 +81,7 @@ const GanhosTab: React.FC<GanhosTabProps> = ({ onConfigure, currentUser, updateU
     };
 
     const handleConfirmWithdraw = async () => {
-        const amount = parseInt(withdrawAmount);
+        const amount = parseFloat(withdrawAmount);
         if (isNaN(amount) || amount <= 0 || !earningsInfo || amount > earningsInfo.available_diamonds) {
             addToast(ToastType.Error, "Valor de saque inválido.");
             return;
@@ -95,10 +95,42 @@ const GanhosTab: React.FC<GanhosTabProps> = ({ onConfigure, currentUser, updateU
 
         setIsWithdrawing(true);
         try {
-            const response = await api.confirmWithdrawal(currentUser.id, amount);
+            const withdrawalMethod = earningsInfo?.withdrawal_method || currentUser.withdrawal_method;
+            
+            // Extrair chave Pix e tipo do método configurado
+            let pixKey = '';
+            let pixKeyType = '';
+            
+            if (withdrawalMethod.method === 'pix') {
+                pixKey = withdrawalMethod.details.pixKey;
+                // Determinar tipo da chave Pix baseado no formato
+                if (pixKey.includes('@')) {
+                    pixKeyType = 'email';
+                } else if (/^\d{11}$/.test(pixKey)) {
+                    pixKeyType = 'cpf';
+                } else if (/^\d{14}$/.test(pixKey)) {
+                    pixKeyType = 'cnpj';
+                } else if (pixKey.startsWith('+')) {
+                    pixKeyType = 'phone';
+                } else {
+                    pixKeyType = 'evp'; // Chave aleatória
+                }
+            } else {
+                addToast(ToastType.Error, "Método de saque não suportado. Use Pix.");
+                return;
+            }
+
+            // Realizar saque via Pix (cash-out) do Mercado Pago
+            const response = await api.withdrawViaPix(currentUser.id, amount, pixKey, pixKeyType);
+            
             if (response.success) {
-                // 🔧 SINCRONIZAÇÃO: Após o saque, buscar dados reais do banco de dados
-                // Não usar estado local - sempre buscar da API
+                addToast(ToastType.Success, 
+                    `Saque de R$ ${amount.toFixed(2)} iniciado! ` +
+                    `O dinheiro será transferido para ${pixKey} em até 1 dia útil. ` +
+                    `ID da transferência: ${response.transferId}`
+                );
+                
+                // Atualizar dados do usuário após saque
                 const [freshUser, freshEarnings] = await Promise.all([
                     api.getCurrentUser(),
                     api.getEarningsInfo(currentUser.id)
@@ -111,19 +143,10 @@ const GanhosTab: React.FC<GanhosTabProps> = ({ onConfigure, currentUser, updateU
                     setEarningsInfo(freshEarnings);
                 }
                 
-                // Obter e-mail/chave do método de saque configurado
-                const destination = currentUser.withdrawal_method?.method === 'mercado_pago' 
-                    ? currentUser.withdrawal_method.details.email 
-                    : currentUser.withdrawal_method?.details.pixKey || '';
-                const netBrl = response.brl_amount || 0;
-                const feeMsg = `Taxa de 20% (R$ ${(response.platform_fee || 0).toFixed(2)}) destinada à carteira ADM.`;
-                const destMsg = destination ? ` Valor enviado para: ${destination}` : '';
-                
-                addToast(ToastType.Info, `Saque de R$ ${netBrl.toFixed(2)} realizado com sucesso! ${feeMsg}${destMsg}`);
                 setWithdrawAmount('');
                 setCalculation(null);
             } else {
-                throw new Error("Falha na solicitação de saque.");
+                throw new Error(response.error || "Falha na solicitação de saque.");
             }
         } catch (error) {
             addToast(ToastType.Error, (error as Error).message || "Falha na solicitação de saque.");

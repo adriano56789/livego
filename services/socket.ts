@@ -1,6 +1,17 @@
 import { io, Socket } from 'socket.io-client';
 
-const WS_URL = (import.meta as any).env?.VITE_WS_URL || 'wss://72.60.249.175:3000';
+const getWebSocketUrl = () => {
+    // Em desenvolvimento, detectar automaticamente o IP do backend
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        return 'ws://192.168.3.12:3000'; // IP fixo do backend
+    }
+    
+    // Em produção, usar o mesmo domínio com protocolo correto
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    return `${protocol}//${window.location.hostname}`;
+};
+
+const WS_URL = getWebSocketUrl();
 
 class SocketService {
     private socket: Socket | null = null;

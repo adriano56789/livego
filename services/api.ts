@@ -4,7 +4,17 @@
 import { User, Gift, Streamer, Message, RankedUser, Country, Conversation, NotificationSettings, BeautySettings, BeautyEffectsData, PurchaseRecord, EligibleUser, FeedPhoto, Obra, GoogleAccount, LiveSessionState, StreamHistoryEntry, Visitor, LevelInfo, Order, DiamondPackage, LiveNotification, Invitation, PixPaymentResponse, CreditCardPaymentRequest, SRSResponse, SRSPlayResponse, SRSStreamInfo } from '../types';
 import axios, { Method } from 'axios';
 
-const API_BASE_URL = import.meta.env?.VITE_API_BASE_URL || 'http://localhost:3000';
+const getApiBaseUrl = () => {
+    // Em desenvolvimento, detectar automaticamente o IP do backend
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        return 'http://192.168.3.12:3000'; // IP fixo do backend
+    }
+    
+    // Em produção, usar o mesmo domínio
+    return `${window.location.protocol}//${window.location.hostname}`;
+};
+
+const API_BASE_URL = getApiBaseUrl();
 
 const getCurrentUserId = () => {
     try {
@@ -176,17 +186,13 @@ export const api = {
     }>('GET', `/api/wallet/earnings/get/${userId}`),
     getFreshUserData: (userId: string) => callApi<User>('GET', `/api/users/${userId}`),
     calculateWithdrawal: (amount: number) => {
-        // SEMPRE USAR VPS - PRODUÇÃO 100%
-        const baseUrl = 'https://api.livego.store';
-        return callApi<{ diamonds: number; gross_brl: number; platform_fee_brl: number; net_brl: number; breakdown: { conversion: string; fee: string; final: string; } }>('POST', '/api/wallet/earnings/calculate', { amount }, baseUrl);
+        return callApi<{ diamonds: number; gross_brl: number; platform_fee_brl: number; net_brl: number; breakdown: { conversion: string; fee: string; final: string; } }>('POST', '/api/wallet/earnings/calculate', { amount });
     },
     confirmWithdrawal: (userId: string, amount: number) => {
-        const baseUrl = 'https://api.livego.store';
-        return callApi<{ success: boolean, amount: number, newEarnings: number, brl_amount: number, platform_fee: number, message: string }>('POST', `/api/wallet/withdraw/${userId}`, { amount }, baseUrl);
+        return callApi<{ success: boolean, amount: number, newEarnings: number, brl_amount: number, platform_fee: number, message: string }>('POST', `/api/wallet/withdraw/${userId}`, { amount });
     },
     setWithdrawalMethod: (method: string, details: any) => {
-        const baseUrl = 'https://api.livego.store';
-        return callApi<{ success: boolean, user: User }>('POST', `/api/wallet/earnings/method/set/${getCurrentUserId()}`, { method, details }, baseUrl);
+        return callApi<{ success: boolean, user: User }>('POST', `/api/wallet/earnings/method/set/${getCurrentUserId()}`, { method, details });
     },
     
     // --- Gift Counters ---
@@ -196,44 +202,33 @@ export const api = {
 
     // --- Checkout & Payments (New) ---
     getDiamondPackages: () => {
-        // SEMPRE USAR VPS - PRODUÇÃO 100%
-        const baseUrl = 'https://api.livego.store';
-        return callApi<DiamondPackage[]>('GET', '/api/checkout/pack', undefined, baseUrl);
+        return callApi<DiamondPackage[]>('GET', '/api/checkout/pack');
     },
     createOrder: (userId: string, packageId: string, amount: number, diamonds: number) => {
-        const baseUrl = 'https://api.livego.store';
-        return callApi<Order>('POST', '/api/checkout/order', { userId, packageId, amount, diamonds }, baseUrl);
+        return callApi<Order>('POST', '/api/checkout/order', { userId, packageId, amount, diamonds });
     },
     processPixPayment: (orderId: string) => {
-        const baseUrl = 'https://api.livego.store';
-        return callApi<PixPaymentResponse>('POST', '/api/checkout/pix', { orderId }, baseUrl);
+        return callApi<PixPaymentResponse>('POST', '/api/checkout/pix', { orderId });
     },
     processCreditCardPayment: (data: CreditCardPaymentRequest) => {
-        const baseUrl = 'https://api.livego.store';
-        return callApi<{ success: boolean, message: string, orderId: string }>('POST', '/api/checkout/credit-card', data, baseUrl);
+        return callApi<{ success: boolean, message: string, orderId: string }>('POST', '/api/checkout/credit-card', data);
     },
     confirmPurchase: (orderId: string) => {
-        const baseUrl = 'https://api.livego.store';
-        return callApi<{ success: boolean, user: User, order: Order }>('POST', '/api/purchase/confirm', { orderId }, baseUrl);
+        return callApi<{ success: boolean, user: User, order: Order }>('POST', '/api/purchase/confirm', { orderId });
     },
     checkPixPaymentStatus: (orderId: string) => {
-        const baseUrl = 'https://api.livego.store';
-        return callApi<{ success: boolean, status: string, order: Order, payment?: any }>('GET', `/api/payments/pix/status/${orderId}`, undefined, baseUrl);
+        return callApi<{ success: boolean, status: string, order: Order, payment?: any }>('GET', `/api/payments/pix/status/${orderId}`);
     },
 
     // --- Admin Control ---
     saveAdminWithdrawalMethod: (email: string) => {
-        // SEMPRE USAR VPS - PRODUÇÃO 100%
-        const baseUrl = 'https://api.livego.store';
-        return callApi<{ success: boolean, user: User }>('POST', '/api/admin/withdrawal-method', { email }, baseUrl);
+        return callApi<{ success: boolean, user: User }>('POST', '/api/admin/withdrawal-method', { email });
     },
     requestAdminWithdrawal: () => {
-        const baseUrl = 'https://api.livego.store';
-        return callApi<{ success: boolean, message: string }>('POST', '/api/admin/withdraw', undefined, baseUrl);
+        return callApi<{ success: boolean, message: string }>('POST', '/api/admin/withdraw');
     },
     getAdminWithdrawalHistory: (status: string) => {
-        const baseUrl = 'https://api.livego.store';
-        return callApi<PurchaseRecord[]>('GET', `/api/admin/history?status=${status}`, undefined, baseUrl);
+        return callApi<PurchaseRecord[]>('GET', `/api/admin/history?status=${status}`);
     },
 
     // --- Metadata & Catalog ---
@@ -455,6 +450,25 @@ export const api = {
     getNotifications: () => callApi<LiveNotification[]>('GET', '/api/notifications'),
     markNotificationRead: (id: string) => callApi<{ success: boolean }>('PATCH', `/api/notifications/${id}/read`),
     getLiveDetails: (liveId: string) => callApi<Streamer>('GET', `/api/lives/${liveId}`),
+
+    // --- Withdrawal via Pix (cash-out) ---
+    withdrawViaPix: (userId: string, amount: number, pixKey: string, pixKeyType: string) => {
+        return callApi<any>('POST', '/api/withdrawals/pix', { userId, amount, pixKey, pixKeyType });
+    },
+
+    // Get withdrawal status
+    getWithdrawalStatus: (transferId: string) => {
+        return callApi<any>('GET', `/api/withdrawals/status/${transferId}`);
+    },
+
+    // Get withdrawal history
+    getWithdrawalHistory: (userId: string, limit?: number, offset?: number) => {
+        const params = new URLSearchParams();
+        if (limit) params.append('limit', limit.toString());
+        if (offset) params.append('offset', offset.toString());
+        const url = `/api/withdrawals/history/${userId}${params.toString() ? '?' + params.toString() : ''}`;
+        return callApi<any>('GET', url);
+    }
 };
 
 export { callApi };

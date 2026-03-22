@@ -65,30 +65,28 @@ router.post('/pix', FraudDetectionMiddleware.detectFraud, async (req, res) => {
         // Criar pagamento no Mercado Pago usando SDK oficial
         const mercadopago = require('mercadopago');
         
-        // Inicializar o SDK com as credenciais - API NOVA VERSÃO
-        const client = new mercadopago.MercadoPago({
-            accessToken: process.env.MERCADO_PAGO_ACCESS_TOKEN
+        // Inicializar o SDK com as credenciais - MODO CORRETO v2
+        mercadopago.configure({
+            access_token: process.env.MERCADO_PAGO_ACCESS_TOKEN
         });
         
         console.log(`[PIX PRODUCTION] Criando PIX real para order ${orderId}: R$${order.amount} (${order.diamonds} diamantes)`);
         console.log(`[DEBUG] Token prefix: ${process.env.MERCADO_PAGO_ACCESS_TOKEN?.substring(0, 20)}...`);
         
         try {
-            const payment = await client.payment.create({
-                body: {
-                    transaction_amount: order.amount,
-                    description: `LiveGo - Compra de ${order.diamonds} diamantes`,
-                    payment_method_id: 'pix',
-                    external_reference: `purchase_${orderId}_${Date.now()}`,
-                    notification_url: process.env.NOTIFICATION_URL,
-                    payer: {
-                        email: req.body.payerEmail || 'comprador@livego.store',
-                        first_name: req.body.payerFirstName || 'Comprador',
-                        last_name: req.body.payerLastName || 'LiveGo',
-                        identification: {
-                            type: 'CPF',
-                            number: req.body.payerCpf || '00000000000'
-                        }
+            const payment = await mercadopago.payment.create({
+                transaction_amount: order.amount,
+                description: `LiveGo - Compra de ${order.diamonds} diamantes`,
+                payment_method_id: 'pix',
+                external_reference: `purchase_${orderId}_${Date.now()}`,
+                notification_url: process.env.NOTIFICATION_URL,
+                payer: {
+                    email: req.body.payerEmail || 'comprador@livego.store',
+                    first_name: req.body.payerFirstName || 'Comprador',
+                    last_name: req.body.payerLastName || 'LiveGo',
+                    identification: {
+                        type: 'CPF',
+                        number: req.body.payerCpf || '00000000000'
                     }
                 }
             });
@@ -97,9 +95,9 @@ router.post('/pix', FraudDetectionMiddleware.detectFraud, async (req, res) => {
         
             // Verificar se a resposta tem as propriedades esperadas
             // Tentar obter os dados do PIX de diferentes formas (dependendo da versão do SDK/API)
-            const transactionData = payment.body.point_of_interaction?.transaction_data;
-            const pixCode = transactionData?.qr_code || payment.body.qr_code || (payment.body.point_of_interaction && payment.body.point_of_interaction.transaction_data && payment.body.point_of_interaction.transaction_data.qr_code);
-            const qrCodeBase64 = transactionData?.qr_code_base64 || payment.body.qr_code_base64 || (payment.body.point_of_interaction && payment.body.point_of_interaction.transaction_data && payment.body.point_of_interaction.transaction_data.qr_code_base64);
+            const transactionData = payment.body?.point_of_interaction?.transaction_data;
+            const pixCode = transactionData?.qr_code || payment.body?.qr_code;
+            const qrCodeBase64 = transactionData?.qr_code_base64 || payment.body?.qr_code_base64;
 
             if (!pixCode) {
                 console.error('[PIX ERROR] Resposta do Mercado Pago (sem qr_code):', JSON.stringify(payment.body, null, 2));
@@ -111,15 +109,15 @@ router.post('/pix', FraudDetectionMiddleware.detectFraud, async (req, res) => {
             }
 
             // Atualizar ordem com dados do pagamento
-            const externalReference = payment.body.external_reference;
+            const externalReference = payment.body?.external_reference;
             await Order.findOneAndUpdate(
                 { id: orderId },
                 {
                     externalReference: externalReference,
-                    mpPaymentId: payment.body.id,
+                    mpPaymentId: payment.body?.id,
                     pixCode: pixCode,
                     pixQrCode: qrCodeBase64,
-                    pixExpiration: payment.body.date_of_expiration
+                    pixExpiration: payment.body?.date_of_expiration
                 }
             );
             
@@ -127,18 +125,18 @@ router.post('/pix', FraudDetectionMiddleware.detectFraud, async (req, res) => {
                 success: true,
                 pixCode: pixCode,
                 qrCode: qrCodeBase64,
-                expiration: payment.body.date_of_expiration,
+                expiration: payment.body?.date_of_expiration,
                 orderId: orderId,
                 amount: order.amount,
                 diamonds: order.diamonds,
-                mpPaymentId: payment.body.id
+                mpPaymentId: payment.body?.id
             };
 
             console.log(`[PIX SUCCESS] PIX REAL gerado para order ${orderId}:`);
             console.log(`  - Valor: R$${order.amount} (${order.diamonds} diamantes)`);
-            console.log(`  - PIX Code: ${payment.body.point_of_interaction.transaction_data.qr_code.substring(0, 50)}...`);
-            console.log(`  - Expiração: ${payment.body.date_of_expiration}`);
-            console.log(`  - MP Payment ID: ${payment.body.id}`);
+            console.log(`  - PIX Code: ${pixCode?.substring(0, 50)}...`);
+            console.log(`  - Expiração: ${payment.body?.date_of_expiration}`);
+            console.log(`  - MP Payment ID: ${payment.body?.id}`);
             console.log(`  - External Reference: ${externalReference}`);
             
             res.json(pixResponse);
@@ -173,36 +171,34 @@ router.post('/credit-card', FraudDetectionMiddleware.detectFraud, async (req, re
             throw new Error('Mercado Pago configurado para modo de teste. Use credenciais de produção.');
         }
         
-        // Inicializar o SDK com as credenciais - API NOVA VERSÃO
-        const client = new mercadopago.MercadoPago({
-            accessToken: process.env.MERCADO_PAGO_ACCESS_TOKEN
+        // Inicializar o SDK
+        mercadopago.configure({
+            access_token: process.env.MERCADO_PAGO_ACCESS_TOKEN
         });
         
         console.log(`[CREDIT CARD PRODUCTION] Processando cartão real para order ${orderId}: R$${order.amount} (${order.diamonds} diamantes)`);
         
         const cardData = {
-            body: {
-                transaction_amount: order.amount,
-                token: cardToken,
-                description: `LiveGo - Compra de ${order.diamonds} diamantes`,
-                installments: parseInt(installments),
-                payment_method_id: 'credit_card',
-                external_reference: `purchase_${orderId}_${Date.now()}`,
-                notification_url: process.env.NOTIFICATION_URL,
-                payer: {
-                    email: payerEmail,
-                    name: payerName
-                }
+            transaction_amount: order.amount,
+            token: cardToken,
+            description: `LiveGo - Compra de ${order.diamonds} diamantes`,
+            installments: parseInt(installments),
+            payment_method_id: 'credit_card',
+            external_reference: `purchase_${orderId}_${Date.now()}`,
+            notification_url: process.env.NOTIFICATION_URL,
+            payer: {
+                email: payerEmail,
+                name: payerName
             }
         };
 
-        const payment = await client.payment.create(cardData);
+        const payment = await mercadopago.payment.create(cardData);
         
         res.json({ 
             success: true, 
-            status: payment.status,
+            status: payment.body?.status,
             orderId: orderId,
-            mpPaymentId: payment.id,
+            mpPaymentId: payment.body?.id,
             message: 'Pagamento processado'
         });
     } catch (err: any) {

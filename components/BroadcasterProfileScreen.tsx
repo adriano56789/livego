@@ -7,6 +7,7 @@ import { useTranslation } from '../i18n';
 import { api } from '../services/api';
 import { LoadingSpinner } from './Loading';
 import AvatarWithFrame from './ui/AvatarWithFrame';
+import { useUserStatus, formatLastSeen } from '../hooks/useUserStatus';
 
 interface UserProfileScreenProps {
   user: User;
@@ -87,6 +88,9 @@ const UserProfileScreen: React.FC<UserProfileScreenProps> = ({ user, isCurrentUs
     const [isLoadingLikes, setIsLoadingLikes] = useState(false);
     const [obras, setObras] = useState<FeedPhoto[]>([]);
     const [isLoadingObras, setIsLoadingObras] = useState(false);
+    
+    // Hook para status online do usuário
+    const { status: userStatus, isLoading: statusLoading } = useUserStatus(user.id);
     // 🔧 SINCRONIZAÇÃO: Buscar dados frescos do usuário da API ao montar
     // Garante que enviados, receptores e diamonds reflitam o banco de dados real
     const [freshUser, setFreshUser] = useState<User>(user);
@@ -251,7 +255,26 @@ const UserProfileScreen: React.FC<UserProfileScreenProps> = ({ user, isCurrentUs
                     {/* Removendo imagem de capa que está atrapalhando o layout */}
                     <div className="absolute inset-0 bg-gradient-to-b from-[#111111] to-black"></div>
                     <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent"></div>
-                    <div className="absolute top-4 left-4 right-4 flex justify-between items-center z-10">
+                    
+                    {/* Status online no canto superior direito */}
+                    <div className="absolute top-72 right-4 text-sm text-gray-400 text-right">
+                        {statusLoading ? (
+                            <span>Carregando...</span>
+                        ) : userStatus ? (
+                            <span className={userStatus.is_online ? 'text-green-400' : 'text-gray-400'}>
+                                {userStatus.is_online ? 'Online agora' : formatLastSeen(userStatus.last_seen || new Date().toISOString())}
+                            </span>
+                        ) : (
+                            <span className="text-gray-400">Status indisponível</span>
+                        )}
+                    </div>
+                    
+                    <div className="absolute top-4 left-4 flex items-center z-10">
+                        <button onClick={onBack} className="w-8 h-8 bg-black/30 rounded-full flex items-center justify-center">
+                            <BackIcon className="w-5 h-5" />
+                        </button>
+                    </div>
+                        <div className="absolute top-4 left-4 right-4 flex justify-between items-center z-10">
                         <button onClick={onBack} className="w-8 h-8 bg-black/30 rounded-full flex items-center justify-center">
                             <BackIcon className="w-5 h-5" />
                         </button>
@@ -274,14 +297,16 @@ const UserProfileScreen: React.FC<UserProfileScreenProps> = ({ user, isCurrentUs
                                 className="w-24 h-24"
                             />
 
+                            {/* Ícone de status online - canto superior direito */}
+                            <div className="absolute top-0 right-0 w-4 h-4 bg-green-500 rounded-full border-2 border-white z-30">
+                                <div className={`w-full h-full rounded-full ${userStatus?.is_online ? 'bg-green-400' : 'bg-gray-400'}`}></div>
+                            </div>
+
                             {user.isLive && (
                                 <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-black/60 rounded-md px-2 py-1 flex items-center space-x-1.5 backdrop-blur-sm z-10">
                                   <LiveIndicatorIcon className="w-4 h-4 text-green-400" />
                                   <span className="text-xs font-bold text-white uppercase tracking-wider">{t('footer.live')}</span>
                                 </div>
-                            )}
-                            {user.isOnline && !user.isLive && (
-                                <div className="absolute bottom-1 right-1 w-5 h-5 bg-green-400 rounded-full border-2 border-black" title="Online"></div>
                             )}
                             {user.isAvatarProtected && (
                                 <div className="absolute -top-1 -right-1 bg-gray-900 rounded-full p-1">

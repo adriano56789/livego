@@ -176,18 +176,16 @@ export const api = {
     }>('GET', `/api/wallet/earnings/get/${userId}`),
     getFreshUserData: (userId: string) => callApi<User>('GET', `/api/users/${userId}`),
     calculateWithdrawal: (amount: number) => {
-        const isDevelopment = import.meta.env.DEV;
-        const baseUrl = isDevelopment ? API_BASE_URL : 'https://api.livego.store';
+        // SEMPRE USAR VPS - PRODUÇÃO 100%
+        const baseUrl = 'https://api.livego.store';
         return callApi<{ diamonds: number; gross_brl: number; platform_fee_brl: number; net_brl: number; breakdown: { conversion: string; fee: string; final: string; } }>('POST', '/api/wallet/earnings/calculate', { amount }, baseUrl);
     },
     confirmWithdrawal: (userId: string, amount: number) => {
-        const isDevelopment = import.meta.env.DEV;
-        const baseUrl = isDevelopment ? API_BASE_URL : 'https://api.livego.store';
+        const baseUrl = 'https://api.livego.store';
         return callApi<{ success: boolean, amount: number, newEarnings: number, brl_amount: number, platform_fee: number, message: string }>('POST', `/api/wallet/withdraw/${userId}`, { amount }, baseUrl);
     },
     setWithdrawalMethod: (method: string, details: any) => {
-        const isDevelopment = import.meta.env.DEV;
-        const baseUrl = isDevelopment ? API_BASE_URL : 'https://api.livego.store';
+        const baseUrl = 'https://api.livego.store';
         return callApi<{ success: boolean, user: User }>('POST', `/api/wallet/earnings/method/set/${getCurrentUserId()}`, { method, details }, baseUrl);
     },
     
@@ -198,51 +196,43 @@ export const api = {
 
     // --- Checkout & Payments (New) ---
     getDiamondPackages: () => {
-        // Usar localhost para desenvolvimento, VPS para produção
-        const isDevelopment = import.meta.env.DEV;
-        const baseUrl = isDevelopment ? API_BASE_URL : 'https://api.livego.store';
+        // SEMPRE USAR VPS - PRODUÇÃO 100%
+        const baseUrl = 'https://api.livego.store';
         return callApi<DiamondPackage[]>('GET', '/api/checkout/pack', undefined, baseUrl);
     },
     createOrder: (userId: string, packageId: string, amount: number, diamonds: number) => {
-        const isDevelopment = import.meta.env.DEV;
-        const baseUrl = isDevelopment ? API_BASE_URL : 'https://api.livego.store';
+        const baseUrl = 'https://api.livego.store';
         return callApi<Order>('POST', '/api/checkout/order', { userId, packageId, amount, diamonds }, baseUrl);
     },
     processPixPayment: (orderId: string) => {
-        const isDevelopment = import.meta.env.DEV;
-        const baseUrl = isDevelopment ? API_BASE_URL : 'https://api.livego.store';
+        const baseUrl = 'https://api.livego.store';
         return callApi<PixPaymentResponse>('POST', '/api/checkout/pix', { orderId }, baseUrl);
     },
     processCreditCardPayment: (data: CreditCardPaymentRequest) => {
-        const isDevelopment = import.meta.env.DEV;
-        const baseUrl = isDevelopment ? API_BASE_URL : 'https://api.livego.store';
+        const baseUrl = 'https://api.livego.store';
         return callApi<{ success: boolean, message: string, orderId: string }>('POST', '/api/checkout/credit-card', data, baseUrl);
     },
     confirmPurchase: (orderId: string) => {
-        const isDevelopment = import.meta.env.DEV;
-        const baseUrl = isDevelopment ? API_BASE_URL : 'https://api.livego.store';
+        const baseUrl = 'https://api.livego.store';
         return callApi<{ success: boolean, user: User, order: Order }>('POST', '/api/purchase/confirm', { orderId }, baseUrl);
     },
     checkPixPaymentStatus: (orderId: string) => {
-        const isDevelopment = import.meta.env.DEV;
-        const baseUrl = isDevelopment ? API_BASE_URL : 'https://api.livego.store';
+        const baseUrl = 'https://api.livego.store';
         return callApi<{ success: boolean, status: string, order: Order, payment?: any }>('GET', `/api/payments/pix/status/${orderId}`, undefined, baseUrl);
     },
 
     // --- Admin Control ---
     saveAdminWithdrawalMethod: (email: string) => {
-        const isDevelopment = import.meta.env.DEV;
-        const baseUrl = isDevelopment ? API_BASE_URL : 'https://api.livego.store';
+        // SEMPRE USAR VPS - PRODUÇÃO 100%
+        const baseUrl = 'https://api.livego.store';
         return callApi<{ success: boolean, user: User }>('POST', '/api/admin/withdrawal-method', { email }, baseUrl);
     },
     requestAdminWithdrawal: () => {
-        const isDevelopment = import.meta.env.DEV;
-        const baseUrl = isDevelopment ? API_BASE_URL : 'https://api.livego.store';
+        const baseUrl = 'https://api.livego.store';
         return callApi<{ success: boolean, message: string }>('POST', '/api/admin/withdraw', undefined, baseUrl);
     },
     getAdminWithdrawalHistory: (status: string) => {
-        const isDevelopment = import.meta.env.DEV;
-        const baseUrl = isDevelopment ? API_BASE_URL : 'https://api.livego.store';
+        const baseUrl = 'https://api.livego.store';
         return callApi<PurchaseRecord[]>('GET', `/api/admin/history?status=${status}`, undefined, baseUrl);
     },
 
@@ -400,9 +390,10 @@ export const api = {
         const token = localStorage.getItem('token');
         const formData = new FormData();
         formData.append('avatar', file);
+        // USAR VPS PARA PRODUÇÃO 100%
         const response = await axios({
             method: 'POST',
-            url: `${API_BASE_URL}/api/upload/avatar/${userId}`,
+            url: `https://api.livego.store/api/upload/avatar/${userId}`,
             data: formData,
             headers: token ? { 'Authorization': `Bearer ${token}` } : {},
         });

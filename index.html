@@ -39,29 +39,29 @@
       }
       .animate-spin-slow {
         animation: spin 3s linear infinite;
-      }
+      }  
 
       /* Notification Animations - Slide Down Enter / Slide Up Exit */
-      @keyframes notify-slide-in {
+    @keyframes notify-slide-in {
         0% {
-          opacity: 0;
-          transform: translateY(-150%);
+            opacity: 0;
+            transform: translateY(-150%);
         }
         100% {
-          opacity: 1;
-          transform: translateY(0);
+            opacity: 1;
+            transform: translateY(0);
         }
-      }
-      @keyframes notify-slide-out {
+    }
+    @keyframes notify-slide-out {
         0% {
-          opacity: 1;
-          transform: translateY(0);
+            opacity: 0;
+            transform: translateY(-150%);
         }
         100% {
-          opacity: 0;
-          transform: translateY(-150%);
+            opacity: 1;
+            transform: translateY(-150%);
         }
-      }
+    }  
 
       .animate-notify-enter {
         animation: notify-slide-in 0.5s cubic-bezier(0.21, 1.02, 0.73, 1) forwards;

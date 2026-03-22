@@ -65,28 +65,30 @@ router.post('/pix', FraudDetectionMiddleware.detectFraud, async (req, res) => {
         // Criar pagamento no Mercado Pago usando SDK oficial
         const mercadopago = require('mercadopago');
         
-        // Inicializar o SDK com as credenciais
-        mercadopago.configure({
-            access_token: process.env.MERCADO_PAGO_ACCESS_TOKEN
+        // Inicializar o SDK com as credenciais - API NOVA VERSÃO
+        const client = new mercadopago.MercadoPago({
+            accessToken: process.env.MERCADO_PAGO_ACCESS_TOKEN
         });
         
         console.log(`[PIX PRODUCTION] Criando PIX real para order ${orderId}: R$${order.amount} (${order.diamonds} diamantes)`);
         console.log(`[DEBUG] Token prefix: ${process.env.MERCADO_PAGO_ACCESS_TOKEN?.substring(0, 20)}...`);
         
         try {
-            const payment = await mercadopago.payment.create({
-                transaction_amount: order.amount,
-                description: `LiveGo - Compra de ${order.diamonds} diamantes`,
-                payment_method_id: 'pix',
-                external_reference: `purchase_${orderId}_${Date.now()}`,
-                notification_url: process.env.NOTIFICATION_URL,
-                payer: {
-                    email: req.body.payerEmail || 'comprador@livego.store',
-                    first_name: req.body.payerFirstName || 'Comprador',
-                    last_name: req.body.payerLastName || 'LiveGo',
-                    identification: {
-                        type: 'CPF',
-                        number: req.body.payerCpf || '00000000000'
+            const payment = await client.payment.create({
+                body: {
+                    transaction_amount: order.amount,
+                    description: `LiveGo - Compra de ${order.diamonds} diamantes`,
+                    payment_method_id: 'pix',
+                    external_reference: `purchase_${orderId}_${Date.now()}`,
+                    notification_url: process.env.NOTIFICATION_URL,
+                    payer: {
+                        email: req.body.payerEmail || 'comprador@livego.store',
+                        first_name: req.body.payerFirstName || 'Comprador',
+                        last_name: req.body.payerLastName || 'LiveGo',
+                        identification: {
+                            type: 'CPF',
+                            number: req.body.payerCpf || '00000000000'
+                        }
                     }
                 }
             });
@@ -155,7 +157,7 @@ router.post('/credit-card', FraudDetectionMiddleware.detectFraud, async (req, re
         }
 
         // Gerar pagamento com cartão via Mercado Pago
-        const axios = require('axios');
+        const mercadopago = require('mercadopago');
         
         // Verificar se está configurado para produção
         if (!process.env.MERCADO_PAGO_ACCESS_TOKEN) {
@@ -166,34 +168,30 @@ router.post('/credit-card', FraudDetectionMiddleware.detectFraud, async (req, re
             throw new Error('Mercado Pago configurado para modo de teste. Use credenciais de produção.');
         }
         
+        // Inicializar o SDK com as credenciais - API NOVA VERSÃO
+        const client = new mercadopago.MercadoPago({
+            accessToken: process.env.MERCADO_PAGO_ACCESS_TOKEN
+        });
+        
         console.log(`[CREDIT CARD PRODUCTION] Processando cartão real para order ${orderId}: R$${order.amount} (${order.diamonds} diamantes)`);
         
         const cardData = {
-            transaction_amount: order.amount,
-            token: cardToken,
-            description: `LiveGo - Compra de ${order.diamonds} diamantes`,
-            installments: parseInt(installments),
-            payment_method_id: 'credit_card',
-            external_reference: `purchase_${orderId}_${Date.now()}`,
-            notification_url: process.env.NOTIFICATION_URL,
-            payer: {
-                email: payerEmail,
-                name: payerName
+            body: {
+                transaction_amount: order.amount,
+                token: cardToken,
+                description: `LiveGo - Compra de ${order.diamonds} diamantes`,
+                installments: parseInt(installments),
+                payment_method_id: 'credit_card',
+                external_reference: `purchase_${orderId}_${Date.now()}`,
+                notification_url: process.env.NOTIFICATION_URL,
+                payer: {
+                    email: payerEmail,
+                    name: payerName
+                }
             }
         };
 
-        const mpResponse = await axios.post(
-            'https://api.mercadopago.com/v1/payments',
-            cardData,
-            {
-                headers: {
-                    'Authorization': `Bearer ${process.env.MERCADO_PAGO_ACCESS_TOKEN}`,
-                    'Content-Type': 'application/json'
-                }
-            }
-        );
-
-        const payment = mpResponse.data;
+        const payment = await client.payment.create(cardData);
         
         res.json({ 
             success: true, 

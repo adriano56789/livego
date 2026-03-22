@@ -17,7 +17,6 @@ import MessageNotification from './components/MessageNotification';
 import { socketService } from './services/socket';
 import UserProfileScreen from './components/BroadcasterProfileScreen';
 import EditProfileScreen from './components/EditProfileScreen';
-import WalletScreen from './components/WalletScreen';
 import FollowingScreen from './components/FollowingScreen';
 import FansScreen from './components/FansScreen';
 import VisitorsScreen from './components/VisitorsScreen';
@@ -153,8 +152,6 @@ const AppContent: React.FC = () => {
   const [chattingWith, setChattingWith] = useState<User | null>(null);
   const [viewingProfile, setViewingProfile] = useState<User | null>(null);
   const [isEditingProfile, setIsEditingProfile] = useState<boolean>(false);
-  const [isWalletScreenOpen, setIsWalletScreenOpen] = useState<boolean>(false);
-  const [walletInitialTab, setWalletInitialTab] = useState<'Diamante' | 'Ganhos'>('Diamante');
   const [isConfirmingPurchase, setIsConfirmingPurchase] = useState<boolean>(false);
   const [selectedPackage, setSelectedPackage] = useState<{ diamonds: number; price: number; } | null>(null);
   const [isFollowingScreenOpen, setIsFollowingScreenOpen] = useState<boolean>(false);
@@ -1272,14 +1269,8 @@ const logLiveEvent = (type: string, data: any) => {
     addToast(ToastType.Success, `${userToUnblock.name} foi desbloqueado.`);
   };
 
-  const handleOpenWallet = (initialTab: 'Diamante' | 'Ganhos' = 'Diamante') => {
-    setWalletInitialTab(initialTab);
-    setIsWalletScreenOpen(true);
-  };
-
   const handlePurchase = (pkg: { diamonds: number; price: number }) => {
     setSelectedPackage(pkg);
-    setIsWalletScreenOpen(false);
     setIsConfirmingPurchase(true);
   };
 
@@ -1549,7 +1540,6 @@ const logLiveEvent = (type: string, data: any) => {
                   onOpenFollowing={() => handleOpenListScreen('following')}
                   onOpenVisitors={() => setIsVisitorsScreenOpen(true)}
                   onOpenTopFans={() => handleOpenListScreen('topFans')}
-                  onOpenWallet={handleOpenWallet}
                   onOpenMarket={() => setIsMarketScreenOpen(true)}
                   onEnterMyStream={() => {
                     if (currentUser?.isLive) {
@@ -1598,7 +1588,6 @@ const logLiveEvent = (type: string, data: any) => {
       {isEndStreamSummaryOpen && streamSummaryData && <EndStreamSummaryScreen data={streamSummaryData} onClose={() => { setIsEndStreamSummaryOpen(false); setStreamSummaryData(null); }} />}
       {viewingProfile && <UserProfileScreen user={viewingProfile} isCurrentUser={viewingProfile.id === currentUser?.id} onBack={() => setViewingProfile(null)} onEdit={handleEditProfile} onOpenTopFans={() => { setViewingProfile(null); handleOpenListScreen('topFans'); }} onOpenFollowing={() => { setViewingProfile(null); handleOpenListScreen('following'); }} onOpenFans={() => { setViewingProfile(null); handleOpenListScreen('fans'); }} onFollow={handleFollowUser} onStartChat={setChattingWith} onBlockUser={handleBlockUser} onReportUser={handleReportUser} onOpenPhotoViewer={(photos, index) => setPhotoViewerData({ photos, initialIndex: index })} lastPhotoLikeUpdate={lastPhotoLikeUpdate} onPhotoLiked={() => setLastPhotoLikeUpdate(Date.now())} onPhotoRemoved={(u) => { updateUserEverywhere(u); setViewingProfile(u); }} />}
       {isEditingProfile && <EditProfileScreen user={currentUser} onBack={() => setIsEditingProfile(false)} onSave={handleSaveProfile} />}
-      {isWalletScreenOpen && <WalletScreen onClose={() => setIsWalletScreenOpen(false)} onPurchase={handlePurchase} initialTab={walletInitialTab} isBroadcaster={true} currentUser={currentUser} updateUser={updateUserEverywhere} addToast={addToast} purchaseHistory={purchaseHistory} />}
       {isConfirmingPurchase && selectedPackage && <ConfirmPurchaseScreen onClose={() => setIsConfirmingPurchase(false)} packageDetails={selectedPackage} onConfirmPurchase={handleConfirmPurchase} addToast={addToast} currentUser={currentUser} />}
       {isFollowingScreenOpen && <FollowingScreen onBack={() => setIsFollowingScreenOpen(false)} onViewProfile={handleViewProfile} users={listScreenUsers} onFollowUser={handleFollowUser} />}
       {isFansScreenOpen && <FansScreen onBack={() => setIsFansScreenOpen(false)} onViewProfile={handleViewProfile} users={listScreenUsers} onFollowUser={handleFollowUser} />}
@@ -1608,7 +1597,7 @@ const logLiveEvent = (type: string, data: any) => {
       {isMyLevelScreenOpen && <MyLevelScreen onClose={() => setIsMyLevelScreenOpen(false)} currentUser={currentUser} />}
       {isBlockListScreenOpen && <BlockListScreen onClose={() => setIsBlockListScreenOpen(false)} onUnblockUser={handleUnblockUser} onViewProfile={handleViewProfile} />}
       {isAvatarProtectionScreenOpen && <AvatarProtectionScreen onClose={() => setIsAvatarProtectionScreenOpen(false)} currentUser={currentUser} updateUser={updateUserEverywhere} addToast={addToast} />}
-      {isMarketScreenOpen && currentUser && <MarketScreen onClose={() => setIsMarketScreenOpen(false)} user={currentUser} updateUser={updateUserEverywhere} onOpenWallet={(tab) => { setIsMarketScreenOpen(false); setIsWalletScreenOpen(true); setWalletInitialTab(tab); }} onPurchaseFrame={handlePurchaseFrame} addToast={addToast} />}
+      {isMarketScreenOpen && currentUser && <MarketScreen onClose={() => setIsMarketScreenOpen(false)} user={currentUser} updateUser={updateUserEverywhere} onPurchaseFrame={handlePurchaseFrame} addToast={addToast} />}
       {isFAQScreenOpen && <FAQScreen onClose={() => setIsFAQScreenOpen(false)} />}
       {isSettingsScreenOpen && <SettingsScreen onClose={() => setIsSettingsScreenOpen(false)} currentUser={currentUser} gifts={allGifts} updateUser={updateUserEverywhere} addToast={addToast} onOpenPipModal={() => setIsPipSettingsModalOpen(true)} onLogout={handleLogout} onDeleteAccount={handleDeleteAccount} onOpenLanguageModal={() => setIsLanguageModalOpen(true)} />}
       <PipSettingsModal isOpen={isPipSettingsModalOpen} onClose={() => setIsPipSettingsModalOpen(false)} currentUser={currentUser} updateUser={updateUserEverywhere} addToast={addToast} />

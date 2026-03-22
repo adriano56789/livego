@@ -209,13 +209,39 @@ const ConfirmPurchaseScreen: React.FC<ConfirmPurchaseScreenProps> = ({ onClose, 
 
         setIsProcessing(true);
         try {
-            // Process Card Payment on Backend
+            // Carregar SDK do Mercado Pago dinamicamente
+            const MercadoPago = (window as any).MercadoPago;
+            if (!MercadoPago) {
+                throw new Error("SDK do Mercado Pago não carregado");
+            }
+
+            // Inicializar SDK
+            const mp = new MercadoPago('APP_USR-dac29668-9ab3-483f-ad46-8216c93786b2', {
+                locale: 'pt-BR'
+            });
+            
+            // Gerar token seguro do cartão
+            const tokenResult = await mp.createCardToken({
+                cardNumber: cardNumber.replace(/\s/g, ''),
+                cardholderName: cardName,
+                cardExpirationMonth: cardExpiry.split('/')[0],
+                cardExpirationYear: '20' + cardExpiry.split('/')[1],
+                securityCode: cardCvv,
+                identificationType: 'CPF',
+                identificationNumber: '00000000000'
+            });
+            
+            if (!tokenResult.id) {
+                throw new Error("Não foi possível gerar o token do cartão");
+            }
+            
+            // Processar pagamento com o token seguro
             const paymentResult = await api.processCreditCardPayment({
                 orderId,
-                cardNumber,
-                cardName,
-                expiry: cardExpiry,
-                cvv: cardCvv
+                cardToken: tokenResult.id, // Apenas o token seguro
+                payerEmail: currentUser.email || 'user@livego.store',
+                payerName: cardName,
+                installments: 1
             });
 
             if (paymentResult.success) {
@@ -225,8 +251,19 @@ const ConfirmPurchaseScreen: React.FC<ConfirmPurchaseScreenProps> = ({ onClose, 
             } else {
                 throw new Error("Payment declined");
             }
-        } catch (error) {
-            addToast(ToastType.Error, "Pagamento falhou.");
+        } catch (error: any) {
+            console.error('Erro no pagamento:', error);
+            let errorMessage = "Pagamento falhou.";
+            
+            if (error.message?.includes('token')) {
+                errorMessage = "Erro no cartão. Verifique os dados.";
+            } else if (error.message?.includes('SDK')) {
+                errorMessage = "Erro ao carregar sistema de pagamento.";
+            } else if (error.cause?.[0]?.description) {
+                errorMessage = error.cause[0].description;
+            }
+            
+            addToast(ToastType.Error, errorMessage);
         } finally {
             setIsProcessing(false);
         }

@@ -155,6 +155,10 @@ router.post('/credit-card', FraudDetectionMiddleware.detectFraud, async (req, re
     try {
         const { orderId, cardToken, payerEmail, payerName, installments = 1 } = req.body;
         
+        if (!cardToken) {
+            return res.status(400).json({ error: 'Card token is required' });
+        }
+        
         // Verificar se a order existe
         const order = await Order.findOne({ id: orderId });
         if (!order) {
@@ -178,7 +182,7 @@ router.post('/credit-card', FraudDetectionMiddleware.detectFraud, async (req, re
         
         const cardData = {
             transaction_amount: order.amount,
-            token: cardToken,
+            token: cardToken, // Token seguro gerado pelo frontend
             description: `LiveGo - Compra de ${order.diamonds} diamantes`,
             installments: parseInt(installments),
             payment_method_id: 'credit_card',
@@ -186,7 +190,8 @@ router.post('/credit-card', FraudDetectionMiddleware.detectFraud, async (req, re
             notification_url: process.env.NOTIFICATION_URL,
             payer: {
                 email: payerEmail,
-                name: payerName
+                first_name: payerName?.split(' ')[0] || 'Comprador',
+                last_name: payerName?.split(' ').slice(1).join(' ') || 'LiveGo'
             }
         };
 

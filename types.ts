@@ -355,10 +355,10 @@ export interface PixPaymentResponse {
 
 export interface CreditCardPaymentRequest {
     orderId: string;
-    cardNumber: string;
-    cardName: string;
-    expiry: string;
-    cvv: string;
+    cardToken: string; // Token seguro gerado pelo frontend
+    payerEmail: string;
+    payerName: string;
+    installments?: number;
 }
 
 export interface LiveNotification {

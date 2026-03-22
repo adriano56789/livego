@@ -49,29 +49,46 @@ router.post('/pix', async (req, res) => {
         }
 
         // Inicializar SDK do Mercado Pago
-        const mercadopago = require('mercadopago');
-        mercadopago.configure({
+        const { default: mercadopago } = require('mercadopago');
+        const client = new mercadopago({
             access_token: process.env.MERCADO_PAGO_ACCESS_TOKEN
         });
 
-        console.log(`[WITHDRAWAL PIX] Processando transferência: R$ ${amount} para ${pixKey}`);
+        // Calcular valores (80% para streamer, 20% para app)
+        const streamerAmount = amount * 0.8; // 80% para o streamer
+        const appCommission = amount * 0.2; // 20% para o app
+        
+        console.log(`[WITHDRAWAL PIX] Distribuição: Streamer=R$ ${streamerAmount.toFixed(2)} (80%), App=R$ ${appCommission.toFixed(2)} (20%)`);
 
-        // Criar transferência (cash-out) via Pix
-        const transferData = {
-            amount: amount,
-            description: `LiveGo - Saque de ${user.name || userId}`,
+        // Criar transferência para o streamer (80%)
+        const streamerTransferData = {
+            amount: streamerAmount,
+            description: `LiveGo - Pagamento para ${user.name || userId} (80% comissão)`,
             pix: {
                 key: pixKey,
-                key_type: pixKeyType // 'cpf', 'cnpj', 'email', 'phone' ou 'evp'
+                key_type: pixKeyType
             }
         };
 
-        // Realizar transferência
-        const transfer = await mercadopago.transfer.create(transferData);
-        
-        console.log(`[WITHDRAWAL SUCCESS] Transferência criada: ${transfer.body.id}`);
+        // Realizar transferência para o streamer
+        const streamerTransfer = await client.transfer.create({ body: streamerTransferData });
+        console.log(`[WITHDRAWAL SUCCESS] Transferência streamer criada: ${streamerTransfer.id}`);
 
-        // Deduzir saldo do usuário
+        // Criar transferência para o app (20% - comissão)
+        const appTransferData = {
+            amount: appCommission,
+            description: `LiveGo - Comissão do app (20%) - Streamer: ${user.name || userId}`,
+            pix: {
+                key: process.env.APP_PIX_KEY || 'app@livego.store', // Chave PIX do app
+                key_type: 'email'
+            }
+        };
+
+        // Realizar transferência para o app
+        const appTransfer = await client.transfer.create({ body: appTransferData });
+        console.log(`[WITHDRAWAL SUCCESS] Transferência app criada: ${appTransfer.id}`);
+
+        // Deduzir saldo total do usuário
         const updatedUser = await User.findOneAndUpdate(
             { id: userId },
             { 
@@ -84,21 +101,42 @@ router.post('/pix', async (req, res) => {
             { new: true }
         );
 
-        // Registrar no histórico
+        // Registrar no histórico - transferência para o streamer
         const PurchaseRecord = (await import('../models')).PurchaseRecord;
         await PurchaseRecord.create({
-            id: `withdrawal_${userId}_${Date.now()}`,
+            id: `withdrawal_streamer_${userId}_${Date.now()}`,
             userId: userId,
             type: 'withdrawal',
-            description: `Saque via Pix - R$ ${amount.toFixed(2)} - Transferência: ${transfer.body.id}`,
-            amountBRL: -amount,
+            description: `Saque via Pix - R$ ${streamerAmount.toFixed(2)} (80%) - Transferência: ${streamerTransfer.id}`,
+            amountBRL: -streamerAmount,
             amountCoins: 0,
             status: 'Processando',
             timestamp: new Date(),
             metadata: {
-                transferId: transfer.body.id,
+                transferId: streamerTransfer.id,
                 pixKey: pixKey,
-                pixKeyType: pixKeyType
+                pixKeyType: pixKeyType,
+                commissionType: 'streamer_payment',
+                percentage: 80
+            }
+        });
+
+        // Registrar no histórico - comissão do app
+        await PurchaseRecord.create({
+            id: `withdrawal_app_${userId}_${Date.now()}`,
+            userId: 'system_app', // ID do sistema para comissões
+            type: 'commission',
+            description: `Comissão do app (20%) - Streamer: ${user.name || userId} - Transferência: ${appTransfer.id}`,
+            amountBRL: appCommission,
+            amountCoins: 0,
+            status: 'Processando',
+            timestamp: new Date(),
+            metadata: {
+                transferId: appTransfer.id,
+                streamerId: userId,
+                streamerName: user.name,
+                commissionType: 'app_commission',
+                percentage: 20
             }
         });
 
@@ -107,9 +145,11 @@ router.post('/pix', async (req, res) => {
         if (io) {
             io.to(userId).emit('withdrawal_processed', {
                 userId,
-                amount: -amount,
+                totalAmount: amount,
+                streamerAmount: streamerAmount,
+                appCommission: appCommission,
                 newBalance: updatedUser?.earnings || 0,
-                transferId: transfer.body.id,
+                transferId: streamerTransfer.id,
                 status: 'processing'
             });
             
@@ -123,10 +163,12 @@ router.post('/pix', async (req, res) => {
 
         res.json({
             success: true,
-            transferId: transfer.body.id,
-            amount: amount,
+            transferId: streamerTransfer.id,
+            totalAmount: amount,
+            streamerAmount: streamerAmount,
+            appCommission: appCommission,
             status: 'processing',
-            message: 'Saque iniciado com sucesso. O dinheiro será transferido para sua conta Pix em até 1 dia útil.',
+            message: `Saque de R$ ${streamerAmount.toFixed(2)} iniciado com sucesso (80% do valor total). O dinheiro será transferido para sua conta Pix em até 1 dia útil.`,
             newBalance: updatedUser?.earnings || 0
         });
 

@@ -31,7 +31,6 @@ interface ProfileScreenProps {
     currentUser: User;
     onOpenProfile: () => void;
     onEnterMyStream: () => void;
-    onOpenWallet: (initialTab?: 'Diamante' | 'Ganhos') => void;
     onOpenFollowing: () => void;
     onOpenFans: () => void;
     onOpenVisitors: () => void;
@@ -65,7 +64,6 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({
     currentUser,
     onOpenProfile,
     onEnterMyStream, 
-    onOpenWallet, 
     onOpenFollowing, 
     onOpenFans, 
     onOpenVisitors,
@@ -220,6 +218,22 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({
         
         {/* Main Content */}
         <div className="px-2 sm:px-4 py-4 space-y-2">
+          {/* Earnings - Apenas para streamers */}
+          {currentUser.isBroadcaster && (
+            <div className="flex items-center justify-between p-4 bg-[#111111] rounded-lg w-full">
+              <div className="flex items-center space-x-3">
+                <GoldCoinIcon className="h-6 w-6 text-orange-400" />
+                <span className="font-semibold">{t('profile.earnings')}</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <span className="text-sm text-orange-400 font-bold">
+                  R$ {displayUser.earnings?.toFixed(2).replace('.', ',') || '0,00'}
+                </span>
+                <ChevronRightIcon className="h-5 w-5 text-gray-500" />
+              </div>
+            </div>
+          )}
+          
           {/* Wallet */}
           <div className="flex items-center justify-between p-4 bg-[#111111] rounded-lg w-full">
               <button onClick={() => onOpenWallet()} className="flex items-center space-x-3 text-left hover:opacity-80 transition-opacity">
@@ -244,10 +258,8 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({
           {/* Menu List */}
           <div className="bg-[#111111] rounded-lg overflow-hidden">
               {menuItems.map((item, index) => {
-                  // 🚀 MOSTRAR CARTEIRA ADM SEMPRE (remover condição escondida)
                   // if ((item as any).isAdminOnly && displayUser.platformEarnings === undefined) {
                   //     return null;
-                  // }
                   return (
                       <button key={index} onClick={item.action} disabled={!item.action} className="flex items-center justify-between p-4 hover:bg-[#2c2c2e] transition-colors w-full text-left disabled:opacity-60 disabled:cursor-not-allowed border-b border-gray-800/50 last:border-none">
                           <div className="flex items-center space-x-3">

@@ -15,11 +15,11 @@ const CameraPermissionModal: React.FC<CameraPermissionModalProps> = ({ isOpen, p
   const contentMap = {
     camera: {
       icon: <CameraIcon className="w-8 h-8 text-gray-300" />,
-      title: 'Permitir que o app LiveGo tire fotos e grave vídeos?',
+      title: 'Permitir que o app Livenza tire fotos e grave vídeos?',
     },
     microphone: {
       icon: <MicrophoneIcon className="w-8 h-8 text-gray-300" />,
-      title: 'Permitir que o app LiveGo grave áudio?',
+      title: 'Permitir que o app Livenza grave áudio?',
     },
   };
 

@@ -11,7 +11,7 @@ interface HeaderProps {
 const Header: React.FC<HeaderProps> = ({ onOpenReminderModal, onOpenRegionModal, onOpenSearch }) => {
   return (
     <header className="flex items-center justify-between p-4 flex-shrink-0">
-      <h1 className="text-2xl font-bold">LiveGo</h1>
+      <h1 className="text-2xl font-bold">Livenza</h1>
       <div className="flex items-center space-x-3">
         <button 
             onClick={onOpenReminderModal}

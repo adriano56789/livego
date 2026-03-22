@@ -24,7 +24,7 @@ export const LiveGoLogo: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
 
         {/* Text */}
         <text x="125" y="130" fontFamily="Arial, sans-serif" fontSize="40" fontWeight="bold" fill="url(#logoGradientPurple)" textAnchor="middle">
-        livego
+        livenza
         </text>
     </g>
   </svg>

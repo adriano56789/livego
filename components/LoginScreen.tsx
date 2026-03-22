@@ -52,7 +52,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
         {/* Seção do Logo */}
         <div className="mb-12 text-center">
             <h1 className="text-6xl font-black italic tracking-tighter text-white drop-shadow-2xl" style={{ fontFamily: 'Arial, sans-serif' }}>
-                LiveGo
+                Livenza
             </h1>
             <p className="text-xs font-bold tracking-[0.3em] text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-500 uppercase mt-2 drop-shadow-sm">
                 EXPERIÊNCIA VIP REAL
@@ -117,7 +117,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
 
       {/* Versão no Rodapé */}
       <div className="absolute bottom-8 z-10 text-white/20 text-[10px] font-bold tracking-[0.2em] uppercase">
-        LIVEGO
+        LIVENZA
       </div>
     </div>
   );

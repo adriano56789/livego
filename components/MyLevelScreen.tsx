@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BackIcon, CheckCircleIcon, LockIcon } from './icons';
+import { BackIcon } from './icons';
 import { useTranslation } from '../i18n';
 import { User, LevelInfo } from '../types';
 import { api } from '../services/api';
@@ -14,6 +14,7 @@ const MyLevelScreen: React.FC<MyLevelScreenProps> = ({ onClose, currentUser }) =
   const { t } = useTranslation();
   const [levelInfo, setLevelInfo] = useState<LevelInfo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [previousLevel, setPreviousLevel] = useState<number | null>(null);
 
   useEffect(() => {
     if (currentUser) {
@@ -25,23 +26,66 @@ const MyLevelScreen: React.FC<MyLevelScreenProps> = ({ onClose, currentUser }) =
     }
   }, [currentUser]);
 
+  // Detectar mudança de nível para animação
+  useEffect(() => {
+    if (levelInfo && previousLevel !== null && previousLevel !== levelInfo.level) {
+      // Animação quando sobe de nível
+      const levelElement = document.getElementById('current-level');
+      if (levelElement) {
+        levelElement.classList.add('animate-bounce', 'duration-500');
+        setTimeout(() => {
+          levelElement.classList.remove('animate-bounce', 'duration-500');
+        }, 500);
+      }
+    }
+    if (levelInfo) {
+      setPreviousLevel(levelInfo.level);
+    }
+  }, [levelInfo, previousLevel]);
+
   const LevelHexagon: React.FC<{ level: number, size: 'small' | 'large', type: 'previous' | 'current' | 'next' }> = ({ level, size, type }) => {
     const styles = {
       small: { width: '80px', height: '92px', fontSize: '2rem' },
-      large: { width: '120px', height: '138px', fontSize: '3.75rem' }
+      large: { width: '130px', height: '150px', fontSize: '4rem' }
     };
     const clipPath = 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)';
 
     let bgColor = '';
-    if (type === 'current') bgColor = 'linear-gradient(to bottom right, #a855f7, #d946ef)';
-    else if (type === 'previous') bgColor = '#4a0e4e';
-    else bgColor = '#3f3f46';
+    let shadow = '';
+    if (type === 'current') {
+      bgColor = 'linear-gradient(135deg, #8b5cf6, #d946ef)';
+      shadow = '0 0 20px rgba(139, 92, 246, 0.4)';
+    } else if (type === 'previous') {
+      bgColor = 'linear-gradient(135deg, #4a0e4e, #6b1e6b)';
+      shadow = '0 0 10px rgba(74, 14, 78, 0.2)';
+    } else {
+      bgColor = 'linear-gradient(135deg, #3f3f46, #4b5563)';
+      shadow = '0 0 5px rgba(63, 63, 70, 0.1)';
+    }
 
-    const opacity = type === 'current' ? 1 : 0.5;
+    const opacity = type === 'current' ? 1 : type === 'previous' ? 0.7 : 0.4;
 
     return (
-      <div className="flex items-center justify-center" style={{ ...styles[size], clipPath, background: bgColor }}>
-        <span className="font-bold" style={{ opacity }}>{level}</span>
+      <div 
+        id={type === 'current' ? 'current-level' : undefined}
+        className={`flex items-center justify-center transition-all duration-400 ${type === 'current' ? 'transform hover:scale-105' : ''}`}
+        style={{ 
+          ...styles[size], 
+          clipPath, 
+          background: bgColor,
+          boxShadow: shadow,
+          filter: type === 'current' ? 'brightness(1.1)' : 'brightness(0.9)'
+        }}
+      >
+        <span 
+          className="font-bold text-white"
+          style={{ 
+            opacity,
+            textShadow: type === 'current' ? '0 2px 8px rgba(0,0,0,0.3)' : 'none'
+          }}
+        >
+          {level}
+        </span>
       </div>
     );
   };
@@ -51,7 +95,7 @@ const MyLevelScreen: React.FC<MyLevelScreenProps> = ({ onClose, currentUser }) =
         <div className="absolute inset-0 bg-[#111] z-50 flex flex-col text-white">
             <header className="flex items-center p-4 flex-shrink-0">
                 <button onClick={onClose} className="absolute z-10"><BackIcon className="w-6 h-6" /></button>
-                <div className="flex-grow text-center"><h1 className="text-xl font-bold">{t('myLevel.title')}</h1></div>
+                <div className="flex-grow text-center"><h1 className="text-xl font-bold">Meu Nível</h1></div>
             </header>
             <div className="flex-grow flex items-center justify-center">
                 <LoadingSpinner />
@@ -60,59 +104,78 @@ const MyLevelScreen: React.FC<MyLevelScreenProps> = ({ onClose, currentUser }) =
     );
   }
 
-  const { level, xp, xpForNextLevel, progress, privileges, nextRewards } = levelInfo;
+  const { level, xp, xpForNextLevel, progress } = levelInfo;
   const xpProgress = xp - levelInfo.xpForCurrentLevel;
   const xpTotalForLevel = xpForNextLevel - levelInfo.xpForCurrentLevel;
+
+  // Gerar sequência de níveis para visualização
+  const levelSequence = [];
+  const startLevel = Math.max(1, level - 2);
+  const endLevel = level + 2;
+  
+  for (let i = startLevel; i <= endLevel; i++) {
+    let type: 'previous' | 'current' | 'next' = 'next';
+    if (i === level) type = 'current';
+    else if (i < level) type = 'previous';
+    
+    levelSequence.push({ level: i, type });
+  }
 
   return (
     <div className="absolute inset-0 bg-black z-50 flex flex-col text-white font-sans">
       <header className="flex items-center p-4 flex-shrink-0">
         <button onClick={onClose} className="absolute z-10"><BackIcon className="w-6 h-6" /></button>
-        <div className="flex-grow text-center"><h1 className="text-xl font-bold">{t('myLevel.title')}</h1></div>
+        <div className="flex-grow text-center"><h1 className="text-xl font-bold">Meu Nível</h1></div>
       </header>
-      <main className="flex-grow overflow-y-auto p-6 space-y-8 no-scrollbar bg-[#111]">
+      <main className="flex-grow overflow-y-auto p-6 space-y-8 no-scrollbar bg-[#111] flex flex-col justify-center">
+        
+        {/* Níveis em sequência com destaque para o atual */}
         <div className="flex justify-center items-center space-x-4">
-          {level > 1 && <LevelHexagon level={level - 1} size="small" type="previous" />}
-          <LevelHexagon level={level} size="large" type="current" />
-          <LevelHexagon level={level + 1} size="small" type="next" />
+          {levelSequence.map(({ level: lvl, type }) => (
+            <LevelHexagon 
+              key={lvl} 
+              level={lvl} 
+              size={type === 'current' ? 'large' : 'small'} 
+              type={type} 
+            />
+          ))}
         </div>
         
-        <div className="space-y-2">
+        {/* Indicador visual do nível atual */}
+        <div className="flex justify-center">
+          <div className="text-center">
+            <div className="text-2xl font-bold text-purple-400 mb-2">Nível Atual</div>
+            <div className="text-4xl font-bold bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent">
+              {level}
+            </div>
+          </div>
+        </div>
+        
+        {/* Barra de progresso EXP */}
+        <div className="space-y-4 max-w-md mx-auto w-full">
             <div className="flex justify-between text-sm font-semibold text-gray-300">
                 <span>Nível {level}</span>
                 <span>Nível {level + 1}</span>
             </div>
-            <div className="w-full bg-gray-700 rounded-full h-2.5">
-                <div className="bg-gradient-to-r from-purple-500 to-pink-500 h-2.5 rounded-full" style={{width: `${progress}%`}}></div>
+            <div className="w-full bg-gray-700 rounded-full h-3 overflow-hidden">
+                <div 
+                  className="bg-gradient-to-r from-purple-500 to-pink-500 h-3 rounded-full transition-all duration-500 ease-out"
+                  style={{width: `${progress}%`}}
+                ></div>
             </div>
-             <div className="text-center text-gray-400 text-sm">{xpProgress.toLocaleString()}/{xpTotalForLevel.toLocaleString()} EXP</div>
-        </div>
-
-        <div>
-            <h2 className="text-xl font-bold mb-4">{t('myLevel.currentPrivileges', {level: level})}</h2>
-            <div className="space-y-3">
-                {privileges.length > 0 ? privileges.map(p => (
-                  <div key={p} className="bg-[#2c2c2e] p-3 rounded-lg flex items-center space-x-3">
-                      <CheckCircleIcon className="w-6 h-6 text-purple-400" />
-                      <span className="font-medium">{p}</span>
-                  </div>
-                )) : (
-                  <p className="text-gray-500 text-center py-4">Nenhum privilégio neste nível.</p>
-                )}
+            <div className="text-center text-gray-400 text-sm">
+              {xpProgress.toLocaleString()}/{xpTotalForLevel.toLocaleString()} EXP
             </div>
         </div>
 
-        <div>
-            <h2 className="text-xl font-bold mb-4">{t('myLevel.nextRewards', {level: level + 1})}</h2>
-            <div className="space-y-3 opacity-60">
-                 {nextRewards.map(r => (
-                    <div key={r} className="bg-[#2c2c2e] p-3 rounded-lg flex items-center space-x-3">
-                        <LockIcon className="w-6 h-6 text-gray-400" />
-                        <span className="font-medium">{r}</span>
-                    </div>
-                 ))}
+        {/* Destaque especial para níveis mais altos */}
+        {level >= 10 && (
+          <div className="text-center">
+            <div className="inline-block px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full">
+              <span className="text-lg font-bold text-white">🌟 Nível Avançado 🌟</span>
             </div>
-        </div>
+          </div>
+        )}
 
       </main>
     </div>

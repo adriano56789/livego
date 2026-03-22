@@ -62,11 +62,11 @@ router.post('/pix', FraudDetectionMiddleware.detectFraud, async (req, res) => {
             }
         };
 
-        // Criar pagamento no Mercado Pago usando SDK oficial
-        const mercadopago = require('mercadopago');
+        // Criar pagamento no Mercado Pago usando SDK oficial v2
+        const { default: mercadopago, Payment } = require('mercadopago');
         
-        // Inicializar o SDK com as credenciais - MODO CORRETO v2
-        mercadopago.configure({
+        // Inicializar o SDK v2
+        const client = new mercadopago({
             access_token: process.env.MERCADO_PAGO_ACCESS_TOKEN
         });
         
@@ -74,7 +74,7 @@ router.post('/pix', FraudDetectionMiddleware.detectFraud, async (req, res) => {
         console.log(`[DEBUG] Token prefix: ${process.env.MERCADO_PAGO_ACCESS_TOKEN?.substring(0, 20)}...`);
         
         try {
-            const payment = await mercadopago.payment.create({
+            const paymentData = {
                 transaction_amount: order.amount,
                 description: `LiveGo - Compra de ${order.diamonds} diamantes`,
                 payment_method_id: 'pix',
@@ -89,35 +89,37 @@ router.post('/pix', FraudDetectionMiddleware.detectFraud, async (req, res) => {
                         number: req.body.payerCpf || '00000000000'
                     }
                 }
-            });
+            };
             
-            console.log('[MERCADO PAGO SUCCESS] Pagamento criado:', payment.body.id);
+            // Usar a API v2 correta
+            const payment = new Payment(client);
+            const result = await payment.create({ body: paymentData });
+            
+            console.log('[MERCADO PAGO SUCCESS] Pagamento criado:', result.id);
         
-            // Verificar se a resposta tem as propriedades esperadas
-            // Tentar obter os dados do PIX de diferentes formas (dependendo da versão do SDK/API)
-            const transactionData = payment.body?.point_of_interaction?.transaction_data;
-            const pixCode = transactionData?.qr_code || payment.body?.qr_code;
-            const qrCodeBase64 = transactionData?.qr_code_base64 || payment.body?.qr_code_base64;
+            // Extrair dados do PIX da resposta correta da API v2
+            const pixCode = result.point_of_interaction?.transaction_data?.qr_code;
+            const qrCodeBase64 = result.point_of_interaction?.transaction_data?.qr_code_base64;
 
             if (!pixCode) {
-                console.error('[PIX ERROR] Resposta do Mercado Pago (sem qr_code):', JSON.stringify(payment.body, null, 2));
-                throw new Error('Mercado Pago não retornou o código PIX (Copia e Cola).');
+                console.error('[PIX ERROR] Resposta do Mercado Pago (sem qr_code):', JSON.stringify(result, null, 2));
+                throw new Error('Mercado Pago não retornou o código PIX (Copia e Cola). Verifique se a conta tem uma chave PIX configurada.');
             }
             
             if (!qrCodeBase64) {
-                console.warn('[PIX WARNING] QR Code base64 ausente na resposta direta, tentando extrair do objeto completo.');
+                console.warn('[PIX WARNING] QR Code base64 ausente na resposta');
             }
 
             // Atualizar ordem com dados do pagamento
-            const externalReference = payment.body?.external_reference;
+            const externalReference = result.external_reference;
             await Order.findOneAndUpdate(
                 { id: orderId },
                 {
                     externalReference: externalReference,
-                    mpPaymentId: payment.body?.id,
+                    mpPaymentId: result.id,
                     pixCode: pixCode,
                     pixQrCode: qrCodeBase64,
-                    pixExpiration: payment.body?.date_of_expiration
+                    pixExpiration: result.date_of_expiration
                 }
             );
             
@@ -125,18 +127,18 @@ router.post('/pix', FraudDetectionMiddleware.detectFraud, async (req, res) => {
                 success: true,
                 pixCode: pixCode,
                 qrCode: qrCodeBase64,
-                expiration: payment.body?.date_of_expiration,
+                expiration: result.date_of_expiration,
                 orderId: orderId,
                 amount: order.amount,
                 diamonds: order.diamonds,
-                mpPaymentId: payment.body?.id
+                mpPaymentId: result.id
             };
 
             console.log(`[PIX SUCCESS] PIX REAL gerado para order ${orderId}:`);
             console.log(`  - Valor: R$${order.amount} (${order.diamonds} diamantes)`);
             console.log(`  - PIX Code: ${pixCode?.substring(0, 50)}...`);
-            console.log(`  - Expiração: ${payment.body?.date_of_expiration}`);
-            console.log(`  - MP Payment ID: ${payment.body?.id}`);
+            console.log(`  - Expiração: ${result.date_of_expiration}`);
+            console.log(`  - MP Payment ID: ${result.id}`);
             console.log(`  - External Reference: ${externalReference}`);
             
             res.json(pixResponse);
@@ -160,19 +162,15 @@ router.post('/credit-card', FraudDetectionMiddleware.detectFraud, async (req, re
         }
 
         // Gerar pagamento com cartão via Mercado Pago
-        const mercadopago = require('mercadopago');
+        const { default: mercadopago, Payment } = require('mercadopago');
         
         // Verificar se está configurado para produção
         if (!process.env.MERCADO_PAGO_ACCESS_TOKEN) {
             throw new Error('Mercado Pago Access Token não configurado');
         }
         
-        if (process.env.MERCADO_PAGO_ACCESS_TOKEN.includes('TEST-')) {
-            throw new Error('Mercado Pago configurado para modo de teste. Use credenciais de produção.');
-        }
-        
-        // Inicializar o SDK
-        mercadopago.configure({
+        // Inicializar o SDK v2
+        const client = new mercadopago({
             access_token: process.env.MERCADO_PAGO_ACCESS_TOKEN
         });
         
@@ -192,13 +190,14 @@ router.post('/credit-card', FraudDetectionMiddleware.detectFraud, async (req, re
             }
         };
 
-        const payment = await mercadopago.payment.create(cardData);
+        const payment = new Payment(client);
+        const result = await payment.create({ body: cardData });
         
         res.json({ 
             success: true, 
-            status: payment.body?.status,
+            status: result.status,
             orderId: orderId,
-            mpPaymentId: payment.body?.id,
+            mpPaymentId: result.id,
             message: 'Pagamento processado'
         });
     } catch (err: any) {

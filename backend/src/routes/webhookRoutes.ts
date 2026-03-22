@@ -15,13 +15,15 @@ router.post('/mercadopago', async (req, res) => {
             console.log(`[WEBHOOK] Processando pagamento ${paymentId}`);
 
             // Buscar informações do pagamento no Mercado Pago
-            const mercadopago = require('mercadopago');
-            mercadopago.configure({
+            const { default: mercadopago, Payment } = require('mercadopago');
+            
+            const client = new mercadopago({
                 access_token: process.env.MERCADO_PAGO_ACCESS_TOKEN
             });
 
-            const payment = await mercadopago.payment.findById(paymentId);
-            const paymentData = payment.body;
+            const payment = new Payment(client);
+            const paymentResult = await payment.get({ paymentId: paymentId });
+            const paymentData = paymentResult;
 
             console.log(`[WEBHOOK] Status do pagamento ${paymentId}: ${paymentData.status}`);
 

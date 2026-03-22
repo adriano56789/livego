@@ -278,13 +278,13 @@ const UserProfileScreen: React.FC<UserProfileScreenProps> = ({ user, isCurrentUs
                     {/* Status online no canto superior direito */}
                     <div className="absolute top-72 right-4 text-sm text-gray-400 text-right">
                         {statusLoading ? (
-                            <span>Carregando...</span>
+                            <span>Online agora</span>
                         ) : userStatus ? (
                             <span className={userStatus.is_online ? 'text-green-400' : 'text-gray-400'}>
                                 {userStatus.is_online ? 'Online agora' : formatLastSeen(userStatus.last_seen || new Date().toISOString())}
                             </span>
                         ) : (
-                            <span className="text-gray-400">Status indisponível</span>
+                            <span className="text-gray-400">Online agora</span>
                         )}
                     </div>
                     

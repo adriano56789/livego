@@ -20,9 +20,18 @@ export const useUserStatus = (userId?: string) => {
         try {
             setIsLoading(true);
             const userStatus = await api.getUserStatus(userId);
-            setStatus(userStatus);
+            if (userStatus) {
+                setStatus(userStatus);
+            }
         } catch (error) {
             console.error('Erro ao carregar status do usuário:', error);
+            // Em caso de erro, definir um status padrão offline
+            setStatus({
+                user_id: userId,
+                is_online: false,
+                last_seen: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+            });
         } finally {
             setIsLoading(false);
         }
@@ -79,7 +88,16 @@ export const useUserStatus = (userId?: string) => {
     // Carregar status quando o userId mudar
     useEffect(() => {
         if (userId) {
+            // Adicionar timeout para garantir que não fique preso em loading
+            const loadingTimeout = setTimeout(() => {
+                setIsLoading(false);
+            }, 3000); // 3 segundos máximo de loading
+            
             loadUserStatus();
+            
+            return () => {
+                clearTimeout(loadingTimeout);
+            };
         }
     }, [userId, loadUserStatus]);
 

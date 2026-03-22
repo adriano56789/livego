@@ -101,11 +101,8 @@ const FrameScreen: React.FC<FrameScreenProps> = ({
   };
 
   const getRemainingDays = (expirationDate: string) => {
-    const exp = new Date(expirationDate);
-    const now = new Date();
-    const diffTime = exp.getTime() - now.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return Math.max(0, diffDays);
+    // Sempre retorna 7 dias para padronização
+    return 7;
   };
 
   const formatPrice = (price: number) => {
@@ -156,7 +153,7 @@ const FrameScreen: React.FC<FrameScreenProps> = ({
               {tier.tier}
             </span>
             <span className="text-purple-400 text-xs">
-              {frame.duration} dias
+              7 dias
             </span>
           </div>
         </div>
@@ -204,15 +201,11 @@ const FrameScreen: React.FC<FrameScreenProps> = ({
             {(() => {
               const userFrame = userFrames.find(uf => uf.frameId === frame.id);
               if (userFrame) {
-                const remainingDays = getRemainingDays(userFrame.expirationDate);
                 return (
                   <div className="flex items-center justify-between text-xs">
                     <span className="text-gray-400">Tempo restante:</span>
-                    <span className={`font-semibold ${
-                      remainingDays <= 3 ? 'text-red-400' : 
-                      remainingDays <= 7 ? 'text-yellow-400' : 'text-green-400'
-                    }`}>
-                      {remainingDays} dias
+                    <span className="font-semibold text-green-400">
+                      7 dias
                     </span>
                   </div>
                 );

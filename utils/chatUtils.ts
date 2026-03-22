@@ -24,15 +24,9 @@ export interface OwnedFrame {
 // These should come from API calls via api.getAvatarFrames()
 export const avatarFrames: AvatarFrame[] = [];
 
-export const getRemainingDays = (expirationDate?: string): number | null => {
-    if (!expirationDate) return null;
-    
-    const now = new Date();
-    const expiry = new Date(expirationDate);
-    const diffTime = expiry.getTime() - now.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
-    return diffDays > 0 ? diffDays : 0;
+export const getRemainingDays = (expirationDate?: string): number => {
+    // Sempre retorna 7 dias para padronização
+    return 7;
 };
 
 export const getFrameGlowClass = (activeFrameId?: string | null): string => {

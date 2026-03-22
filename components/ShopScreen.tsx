@@ -146,11 +146,8 @@ const ShopScreen: React.FC<ShopScreenProps> = ({
   };
 
   const getRemainingDays = (expirationDate: string) => {
-    const exp = new Date(expirationDate);
-    const now = new Date();
-    const diffTime = exp.getTime() - now.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return Math.max(0, diffDays);
+    // Sempre retorna 7 dias para padronização
+    return 7;
   };
 
   const renderShopItem = (item: ShopItem) => {
@@ -184,11 +181,10 @@ const ShopScreen: React.FC<ShopScreenProps> = ({
         <h3 className="text-white font-semibold text-sm mb-1">{item.name}</h3>
         <p className="text-gray-400 text-xs mb-2">{item.description}</p>
         
-        {item.duration && (
-          <p className="text-purple-400 text-xs mb-2">
-            Duração: {item.duration} dias
-          </p>
-        )}
+        {/* Mostrar duração padrão de 7 dias para todos os itens */}
+        <p className="text-purple-400 text-xs mb-2">
+          Duração: 7 dias
+        </p>
         
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-1">

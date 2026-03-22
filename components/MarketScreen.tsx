@@ -195,11 +195,11 @@ const MarketScreen: React.FC<MarketScreenProps> = ({ onClose, user, updateUser, 
               </div>
               {isFrameOwned ? (
                 <div className="mt-4 text-sm text-purple-300 bg-purple-500/20 px-3 py-1 rounded-full">
-                  Válido por {remainingDays} dia(s)
+                  Válido por 7 dias
                 </div>
-              ) : selectedItem && (selectedItem as any).duration ? (
+              ) : selectedItem ? (
                 <div className="mt-4 text-sm text-gray-400 bg-gray-700/50 px-3 py-1 rounded-full">
-                  Válido por {(selectedItem as any).duration} dia(s)
+                  Válido por 7 dias
                 </div>
               ) : null}
             </div>

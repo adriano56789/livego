@@ -328,6 +328,19 @@ const ConfirmPurchaseScreen: React.FC<ConfirmPurchaseScreenProps> = ({ onClose, 
                         </div>
                     )}
                 </div>
+                
+                {/* Specific Pix Key Display */}
+                <div className="w-full bg-[#1E1E1E] rounded-xl border border-white/5 overflow-hidden">
+                    <div className="bg-[#2a2a2c] px-4 py-2 text-xs text-gray-400 font-bold uppercase border-b border-white/5">
+                        Chave Pix (E-mail)
+                    </div>
+                    <div className="flex items-center p-3">
+                         <span className="flex-grow text-white font-mono text-sm">{pixKeyString}</span>
+                         <button onClick={handleCopyPixKey} className="text-blue-400 hover:text-blue-300 font-bold text-xs uppercase ml-2">
+                             Copiar
+                         </button>
+                    </div>
+                </div>
 
                 {/* Copy Pix Code */}
                 <div className="w-full space-y-2">

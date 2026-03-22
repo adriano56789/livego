@@ -429,8 +429,8 @@
     "prompt": "Search for streamers and friends."
   },
   "cameraPermission": {
-    "cameraTitle": "Allow LiveGo to take pictures and record video?",
-    "micTitle": "Allow LiveGo to record audio?",
+    "cameraTitle": "Allow Livenza to take pictures and record video?",
+    "micTitle": "Allow Livenza to record audio?",
     "duringUse": "While using the app",
     "onlyThisTime": "Only this time",
     "deny": "Don't allow"

@@ -37,7 +37,7 @@
     "vipSuccess": "Parabéns! Agora você é um membro VIP."
   },
   "login": {
-    "title": "LiveGo",
+    "title": "Livenza",
     "subtitle": "Top Streamers, Boas Vibrações!",
     "signInWithGoogle": "Entrar com o Google",
     "moreOptions": "Mais opções de login",
@@ -153,7 +153,7 @@
     },
     "connected": {
         "title": "Contas Conectadas",
-        "description": "Esta é uma conta do Google que você usou para entrar no LiveGo. Você pode desconectar para entrar com outra conta.",
+        "description": "Esta é uma conta do Google que você usou para entrar no Livenza. Você pode desconectar para entrar com outra conta.",
         "disconnect": "Desconectar"
     },
     "notifications": {
@@ -162,7 +162,7 @@
         "newMessages": "Novas mensagens",
         "streamerLive": "Início ao vivo do streamer seguido",
         "pushSettings": "Iniciar configurações de push",
-        "followedPosts": "Pessoa em seguida postou um vídeo LiveGo",
+        "followedPosts": "Pessoa em seguida postou um vídeo Livenza",
         "interactive": "Notificações interativas",
         "request": "Pedido"
     },
@@ -208,7 +208,7 @@
     },
     "appVersion": {
         "title": "Versão do aplicativo",
-        "current": "Sua versão atual é 1.0.0 do livego",
+        "current": "Sua versão atual é 1.0.0 do livenza",
         "latest": "Última versão",
         "status": "Status",
         "upToDate": "Atualizado"
@@ -227,11 +227,11 @@
     "copyright": {
       "title": "Informações de Direitos Autorais",
       "section1Title": "Aviso de Direitos Autorais",
-      "section1p1": "© 2024 LiveGo. Todos os direitos reservados. O conteúdo, layout, design, dados, bancos de dados e gráficos neste aplicativo são protegidos por leis de propriedade intelectual e são de propriedade da LiveGo, salvo indicação em contrário.",
+      "section1p1": "© 2024 Livenza. Todos os direitos reservados. O conteúdo, layout, design, dados, bancos de dados e gráficos neste aplicativo são protegidos por leis de propriedade intelectual e são de propriedade da Livenza, salvo indicação em contrário.",
       "section2Title": "Propriedade Intelectual",
-      "section2p1": "Todas as marcas comerciais, marcas de serviço e nomes comerciais são propriedade da LiveGo ou de outros respectivos proprietários que concederam à LiveGo o direito e a licença para usar tais marcas.",
+      "section2p1": "Todas as marcas comerciais, marcas de serviço e nomes comerciais são propriedade da Livenza ou de outros respectivos proprietários que concederam à Livenza o direito e a licença para usar tais marcas.",
       "section3Title": "Conteúdo Gerado pelo Usuário",
-      "section3p1": "Você é o único responsável pelo conteúdo que transmite ou exibe ('posta') no serviço LiveGo. Você não deve postar conteúdo que infrinja os direitos de propriedade intelectual de terceiros. Removeremos o conteúdo infrator se formos devidamente notificados.",
+      "section3p1": "Você é o único responsável pelo conteúdo que transmite ou exibe ('posta') no serviço Livenza. Você não deve postar conteúdo que infrinja os direitos de propriedade intelectual de terceiros. Removeremos o conteúdo infrator se formos devidamente notificados.",
       "section4Title": "Denúncia de Infração",
       "section4p1": "Se você acredita que seu trabalho protegido por direitos autorais foi copiado de uma forma que constitui violação de direitos autorais e está acessível através do serviço, notifique nosso agente de direitos autorais.",
       "section4p2": "Por favor, envie todas as notificações de infração para:"
@@ -426,8 +426,8 @@
     "prompt": "Pesquise por streamers e amigos."
   },
   "cameraPermission": {
-    "cameraTitle": "Permitir que o app LiveGo tire fotos e grave vídeos?",
-    "micTitle": "Permitir que o app LiveGo grave áudio?",
+    "cameraTitle": "Permitir que o app Livenza tire fotos e grave vídeos?",
+    "micTitle": "Permitir que o app Livenza grave áudio?",
     "duringUse": "Durante o uso do app",
     "onlyThisTime": "Apenas esta vez",
     "deny": "Não permitir"

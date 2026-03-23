@@ -1,10 +1,11 @@
 import express from 'express';
 import { Block, User, Followers, Friendship } from '../models';
+import { blockProtection } from '../middleware/appOwnerProtection';
 
 const router = express.Router();
 
 // POST /api/blocks - Bloquear usuário
-router.post('/', async (req, res) => {
+router.post('/', blockProtection(), async (req, res) => {
     try {
         const { blockerId, blockedId } = req.body;
         

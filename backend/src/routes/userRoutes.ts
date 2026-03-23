@@ -2,6 +2,7 @@ import express from 'express';
 import { User, Streamer, Gift, Message, PurchaseRecord, Order, Photo, Follow, Friendship, Followers, Block } from '../models';
 import { getUserIdFromToken } from '../middleware/auth';
 import { standardizeUserResponse, standardizeUsersList } from '../utils/userResponse';
+import { blockProtection } from '../middleware/appOwnerProtection';
 
 export const UserRoutes = express.Router();
 
@@ -269,7 +270,7 @@ UserRoutes.post('/:id/toggle-follow', async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 });
-UserRoutes.post('/:id/block', async (req, res) => {
+UserRoutes.post('/:id/block', blockProtection(), async (req, res) => {
     try {
         const blockerId = '10755083'; // ID fixo para demonstração - pegar do token em produção
         const blockedId = req.params.id;

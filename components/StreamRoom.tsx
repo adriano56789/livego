@@ -751,6 +751,15 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
         setUserActionModalState({ isOpen: false, user: null });
     };
     const handleKickUser = (user: User) => {
+        // 🔐 PROTEÇÃO DO DONO - VERIFICAÇÃO DUPLA NO FRONTEND
+        const APP_OWNER_ID = '65384127';
+        
+        if (user.id === APP_OWNER_ID) {
+            console.log('🛡️ [FRONTEND_PROTECTION] Tentativa de expulsar dono bloqueada no frontend!');
+            addToast(ToastType.Error, 'PROIBIDO: Este usuário não pode ser expulso!');
+            return;
+        }
+        
         api.kickUser(streamer.id, user.id, currentUser.id);
         addToast(ToastType.Info, `Usuário ${user.name} foi expulso.`);
     };
@@ -1092,6 +1101,8 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
                 isOpen={userActionModalState.isOpen}
                 onClose={handleCloseUserActions}
                 user={userActionModalState.user}
+                currentUser={currentUser}
+                streamer={streamer}
                 onViewProfile={(user) => { handleCloseUserActions(); onViewProfile(user); }}
                 onMention={handleMentionUser}
                 onMakeModerator={handleMakeModerator}

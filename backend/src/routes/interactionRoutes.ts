@@ -1,8 +1,8 @@
 import express from 'express';
-import { Message, User, Photo, Streamer, Followers, Friendship, Invitation, Visitor, GiftTransaction } from '../models';
+import { User, Streamer, Gift, GiftTransaction, Followers, UserStatus, Visitor, ChatMessage, Chat, Conversation, Friendship, Invitation, Message, Photo } from '../models';
+import { kickProtection } from '../middleware/appOwnerProtection';
 import { getUserIdFromToken } from '../middleware/auth';
 import BeautyEffect from '../models/BeautyEffect';
-
 const router = express.Router();
 
 // Listar presentes enviados em uma live específica
@@ -460,12 +460,12 @@ router.get('/invitations/received', async (req, res) => {
         // Enriquecer com dados do remetente
         const fromUserIds = [...new Set(invitations.map(i => i.fromUserId))];
         const fromUsers = await User.find({ id: { $in: fromUserIds } });
-        const userMap = fromUsers.reduce((acc, user) => {
+        const userMap = fromUsers.reduce((acc: Record<string, any>, user: any) => {
             acc[user.id] = user;
             return acc;
         }, {} as Record<string, any>);
 
-        const enrichedInvitations = invitations.map(invitation => ({
+        const enrichedInvitations = invitations.map((invitation: any) => ({
             ...invitation.toJSON(),
             fromUser: userMap[invitation.fromUserId] ? {
                 id: userMap[invitation.fromUserId].id,
@@ -504,14 +504,14 @@ router.get('/feed/photos', async (req, res) => {
         // Fetch photos and populate user details manually based on userId
         const photos = await Photo.find().sort({ createdAt: -1 }).limit(50);
 
-        const userIds = [...new Set(photos.map(p => p.userId))];
+        const userIds = [...new Set(photos.map((p: any) => p.userId))];
         const users = await User.find({ id: { $in: userIds } });
-        const userMap = users.reduce((acc, user) => {
+        const userMap = users.reduce((acc: Record<string, any>, user: any) => {
             acc[user.id] = user;
             return acc;
         }, {} as Record<string, any>);
 
-        const photosWithUsers = photos.map(photo => {
+        const photosWithUsers = photos.map((photo: any) => {
             const photoJson = photo.toJSON();
             return {
                 ...photoJson,
@@ -911,7 +911,79 @@ router.post('/vip/subscribe/:id', async (req, res) => {
 
 router.post('/chats/mark-read', async (req, res) => res.json({}));
 // REMOVIDO: router.post('/chats/send') - já existe em chatRoutes.ts
-router.post('/streams/:id/kick', async (req, res) => res.json({}));
+router.post('/streams/:id/kick', kickProtection, async (req, res) => {
+    try {
+        const { userId, kickerId } = req.body;
+        const streamId = req.params.id;
+
+        console.log(`👢 [KICK] Tentativa de expulsar usuário ${userId} da stream ${streamId} por ${kickerId}`);
+
+        // 🔐 PROTEÇÃO DO DONO DO APLICATIVO - NINGUÉM PODE EXPULSAR O DONO
+        const APP_OWNER_ID = '65384127'; // ID do dono do aplicativo
+        
+        if (userId === APP_OWNER_ID) {
+            console.log(`🛡️ [PROTECTION] TENTATIVA BLOQUEADA: Usuário ${userId} é o DONO do aplicativo e não pode ser expulso!`);
+            return res.status(403).json({ 
+                success: false, 
+                error: 'PROIBIDO: Este usuário não pode ser expulso do aplicativo',
+                protection: 'APP_OWNER_PROTECTED'
+            });
+        }
+
+        // Verificar se o usuário que está tentando expulsar existe
+        const { User } = await import('../models');
+        const kicker = await User.findOne({ id: kickerId });
+        if (!kicker) {
+            return res.status(404).json({ success: false, error: 'Usuário que tentou expulsar não encontrado' });
+        }
+
+        // 🔐 PROTEÇÃO ADICIONAL: Dono também não pode ser expulso por tentativa de outro ID
+        if (kickerId === APP_OWNER_ID) {
+            console.log(`👑 [OWNER] Dono do aplicativo (${kickerId}) tentou expulsar usuário ${userId} - permitido`);
+        }
+
+        // Verificar se o stream existe
+        const { Streamer } = await import('../models');
+        const stream = await Streamer.findOne({ id: streamId });
+        if (!stream) {
+            return res.status(404).json({ success: false, error: 'Stream não encontrada' });
+        }
+
+        // 🔐 PROTEÇÃO DO HOST: Dono do stream não pode ser expulso da própria stream
+        if (userId === stream.hostId) {
+            console.log(`🛡️ [HOST_PROTECTION] Usuário ${userId} é o HOST da stream ${streamId} e não pode ser expulso`);
+            return res.status(403).json({ 
+                success: false, 
+                error: 'PROIBIDO: O host da transmissão não pode ser expulso',
+                protection: 'HOST_PROTECTED'
+            });
+        }
+
+        // Lógica normal de kick (pode ser implementada depois)
+        console.log(`✅ [KICK] Usuário ${userId} pode ser expulso da stream ${streamId}`);
+        
+        // Emitir WebSocket para notificar o kick
+        const io = req.app.get('io');
+        if (io) {
+            io.to(streamId).emit('user_kicked', {
+                userId,
+                kickerId,
+                streamId,
+                timestamp: new Date().toISOString()
+            });
+        }
+
+        res.json({ 
+            success: true, 
+            message: `Usuário ${userId} expulso da stream ${streamId}`,
+            protection: 'NONE'
+        });
+
+    } catch (error: any) {
+        console.error('❌ [KICK] Erro ao processar expulsão:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
 router.post('/streams/:id/moderator', async (req, res) => res.json({}));
 router.get('/notifications', async (req, res) => res.json([]));
 router.patch('/notifications/:id/read', async (req, res) => res.json({ success: true }));
@@ -928,13 +1000,13 @@ router.get('/effects/beauty', async (req, res) => {
         
         // Separa os filtros (Aba Recomendar)
         const filters = allEffects
-            .filter(e => e.type === 'filter')
-            .map(e => ({ name: e.name, icon: e.icon, img: e.img }));
+            .filter((e: any) => e.type === 'filter')
+            .map((e: any) => ({ name: e.name, icon: e.icon, img: e.img }));
             
         // Separa os efeitos (Aba Beleza)
         const effects = allEffects
-            .filter(e => e.type === 'effect')
-            .map(e => ({ name: e.name, icon: e.icon, img: e.img }));
+            .filter((e: any) => e.type === 'effect')
+            .map((e: any) => ({ name: e.name, icon: e.icon, img: e.img }));
         
         console.log(`✅ [BEAUTY_API] Encontrados ${filters.length} filters e ${effects.length} effects`);
         console.log('📦 [BEAUTY_API] Filters:', filters);

@@ -226,10 +226,10 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
                         if (localStream) {
                             // Inicializar integração de beleza com WebRTC
                             await beautyWebRTCIntegration.initialize(localStream);
-                            console.log('✅ [STREAM_ROOM] Sistema de beleza inicializado para broadcaster');
+                            // Sistema de beleza inicializado para broadcaster
                         }
                     } catch (error) {
-                        console.warn('⚠️ [STREAM_ROOM] Falha ao inicializar sistema de beleza:', error);
+                        // Falha ao inicializar sistema de beleza
                     }
                 }
 
@@ -566,7 +566,7 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
             // Parar processamento de beleza ao sair da sala
             if (beautyWebRTCIntegration.isBeautyActive()) {
                 beautyWebRTCIntegration.stopBeautyProcessing();
-                console.log('🧹 [STREAM_ROOM] Sistema de beleza limpo ao sair');
+                // Sistema de beleza limpo ao sair
             }
         };
     }, []);
@@ -679,12 +679,7 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
             if (success && updatedSender) {
                 // 🔧 SINCRONIZAÇÃO: Usar dados reais da API (banco de dados) para atualizar o remetente
                 updateUser(updatedSender);
-                console.log('✅ StreamRoom: Remetente atualizado com dados da API', {
-                    userId: updatedSender.id,
-                    diamonds: updatedSender.diamonds,
-                    enviados: updatedSender.enviados,
-                    earnings: updatedSender.earnings
-                });
+                // Remetente atualizado com dados da API
 
                 // 🔧 SINCRONIZAÇÃO: Atualizar streamer/destinatário se disponível
                 if (updatedReceiver) {
@@ -692,20 +687,13 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
                     if (streamerUser && streamerUser.id === updatedReceiver.id) {
                         // Atualizar o streamerUser com dados frescos
                         setStreamerUser(updatedReceiver);
-                        console.log('✅ StreamRoom: Streamer atualizado com dados da API', {
-                            streamerId: updatedReceiver.id,
-                            diamonds: updatedReceiver.diamonds,
-                            receptores: updatedReceiver.receptores,
-                            earnings: updatedReceiver.earnings
-                        });
+                        // Streamer atualizado com dados da API
                     }
 
                     // Atualizar liveSession coins com valor real retornado pelo banco
                     if (liveSession && updatedReceiver.receptores !== undefined) {
                         updateLiveSession({ coins: updatedReceiver.receptores });
-                        console.log('✅ StreamRoom: Contador da live sincronizado com receptores reais', {
-                            receptores: updatedReceiver.receptores
-                        });
+                        // Contador da live sincronizado com receptores reais
                     } else if (liveSession) {
                         const addedValue = gift.price * quantity;
                         updateLiveSession({ coins: (liveSession.coins || 0) + addedValue });

@@ -23,9 +23,9 @@ const ConversationSchema: Schema = new Schema({
         timestamp: { type: Date },
         messageType: { type: String, enum: ['text', 'image', 'gift', 'system'], default: 'text' }
     },
-    isActive: { type: Boolean, default: true },
-    createdAt: { type: Date, default: Date.now },
-    updatedAt: { type: Date, default: Date.now }
+    isActive: { type: Boolean, default: true }
+}, {
+    timestamps: true
 });
 
 // Índices para performance

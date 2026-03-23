@@ -21,6 +21,7 @@ export { Comment } from './Comment';
 export { ProfilePhoto } from './ProfilePhoto';
 export { Chat } from './Chat';
 export { ChatMessage } from './ChatMessage';
+export { Conversation } from './Conversation';
 export { Invitation } from './Invitation';
 export { Visitor } from './Visitor';
 export { UserIndex } from './UserIndex';

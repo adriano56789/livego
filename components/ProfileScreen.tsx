@@ -92,16 +92,9 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({
                 const userData = await api.getUser(currentUser.id);
                 if (isMounted && userData) {
                     setFreshUserData(userData);
-                    console.log('✅ ProfileScreen: Dados frescos carregados da API', {
-                        userId: currentUser.id,
-                        receptores: userData.receptores,
-                        enviados: userData.enviados,
-                        diamonds: userData.diamonds,
-                        earnings: userData.earnings
-                    });
                 }
             } catch (error) {
-                console.error('❌ ProfileScreen: Erro ao buscar dados frescos do usuário', error);
+                // Erro ao buscar dados frescos do usuário
                 if (isMounted) {
                     setFreshUserData(currentUser); // Fallback para dados existentes
                 }

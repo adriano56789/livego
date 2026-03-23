@@ -16,6 +16,8 @@ export interface IChatMessage extends Document {
         giftValue?: number;
         systemType?: string;
     };
+    createdAt?: Date;
+    updatedAt?: Date;
 }
 
 const ChatMessageSchema: Schema = new Schema({
@@ -34,6 +36,8 @@ const ChatMessageSchema: Schema = new Schema({
         giftValue: { type: Number },
         systemType: { type: String }
     }
+}, {
+    timestamps: true
 });
 
 // Índices para performance

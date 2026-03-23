@@ -615,10 +615,32 @@ router.post('/streams/:streamId/join', async (req, res) => {
             { new: true }
         );
 
-        // Incrementar viewers da stream
-        await Streamer.findOneAndUpdate(
+        // 🔧 MELHOR PRÁTICA: Incrementar viewers com $inc e upsert automático
+        const updatedStream = await Streamer.findOneAndUpdate(
             { id: streamId },
-            { $inc: { viewers: 1 } }
+            { 
+                $inc: { viewers: 1 },
+                $setOnInsert: {
+                    id: streamId,
+                    hostId: stream?.hostId || userId,
+                    name: stream?.name || 'Live Stream',
+                    avatar: stream?.avatar || '',
+                    location: stream?.location || 'Brasil',
+                    time: 'Live Now',
+                    message: stream?.message || 'Ao vivo',
+                    tags: stream?.tags || ['live'],
+                    country: stream?.country || 'br',
+                    isLive: true,
+                    streamStatus: 'active',
+                    startTime: new Date().toISOString(),
+                    quality: '720p',
+                    category: 'live'
+                }
+            },
+            { 
+                upsert: true, // Criar se não existir
+                new: true
+            }
         );
 
         // Notificar via WebSocket
@@ -644,12 +666,46 @@ router.post('/streams/:streamId/join', async (req, res) => {
             user: updatedUser,
             stream: {
                 id: streamId,
-                viewers: (stream.viewers || 0) + 1
+                viewers: updatedStream.viewers || 1
             }
         });
     } catch (error: any) {
         console.error('❌ [STREAM JOIN] Erro:', error);
         res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// 🔧 API DE SALDO DA LIVE - Retorna saldo em tempo real
+router.get('/streams/:id/balance', async (req, res) => {
+    try {
+        const streamId = req.params.id;
+        console.log(`💰 [BALANCE] Buscando saldo da live: ${streamId}`);
+        
+        // Buscar streamer pelo ID
+        const streamer = await Streamer.findOne({ id: streamId });
+        
+        if (!streamer) {
+            console.log(`❌ Streamer not found: ${streamId}`);
+            return res.status(404).json({ error: 'Streamer not found' });
+        }
+
+        // 🔧 USAR DIAMONDS DO STREAM (valor correto para o contador)
+        const currentBalance = streamer.diamonds || 0;
+        
+        console.log(`✅ [BALANCE] Saldo da live ${streamId}: ${currentBalance} diamantes`);
+        
+        // Retornar saldo atualizado
+        res.json({
+            streamId: streamId,
+            streamerName: streamer.name,
+            diamonds: currentBalance,
+            lastUpdated: streamer.updatedAt || new Date().toISOString(),
+            isLive: streamer.isLive
+        });
+        
+    } catch (error: any) {
+        console.error('❌ [BALANCE] Erro ao buscar saldo da live:', error);
+        res.status(500).json({ error: error.message });
     }
 });
 
@@ -705,14 +761,11 @@ router.post('/streams/:streamId/leave', async (req, res) => {
             );
         }
 
-        // Decrementar viewers da stream
-        const stream = await Streamer.findOne({ id: streamId });
-        if (stream && (stream.viewers || 0) > 0) {
-            await Streamer.findOneAndUpdate(
-                { id: streamId },
-                { $inc: { viewers: -1 } }
-            );
-        }
+        // 🔧 MELHOR PRÁTICA: Decrementar viewers com $inc ( MongoDB garante não ficar negativo com min: 0 )
+        await Streamer.findOneAndUpdate(
+            { id: streamId, viewers: { $gt: 0 } }, // Apenas se viewers > 0
+            { $inc: { viewers: -1 } }
+        );
 
         // Notificar via WebSocket
         const io = req.app.get('io');
@@ -741,7 +794,7 @@ router.post('/streams/:streamId/leave', async (req, res) => {
             },
             stream: {
                 id: streamId,
-                viewers: Math.max(0, (stream?.viewers || 0) - 1)
+                viewers: Math.max(0, 0) // 🔧 MELHOR PRÁTICA: MongoDB já controlou o decremento
             }
         });
     } catch (error: any) {
@@ -777,28 +830,36 @@ router.post('/streams/:streamId/end', async (req, res) => {
         const durationMs = endTime.getTime() - new Date(stream.startTime || endTime).getTime();
         const durationSeconds = Math.floor(durationMs / 1000);
 
-        // Salvar no histórico
+        // Salvar no histórico com upsert automático
         try {
             const { StreamHistory } = await import('../models');
-            await StreamHistory.create({
-                id: `hist_${streamId}_${endTime.getTime()}`,
-                streamId: streamId,
-                hostId: stream.hostId,
-                hostName: stream.name,
-                hostAvatar: stream.avatar,
-                title: stream.name,
-                startTime: stream.startTime,
-                endTime: endTime.toISOString(),
-                duration: new Date(durationSeconds * 1000).toISOString().substr(11, 8),
-                peakViewers: stream.viewers || 0,
-                totalCoins: 0,
-                totalFollowers: 0,
-                totalMembers: stream.viewers || 0,
+            const historyId = `hist_${streamId}_${endTime.getTime()}`;
+            await StreamHistory.findOneAndUpdate(
+                { id: historyId },
+                {
+                    id: historyId,
+                    streamId: streamId,
+                    hostId: stream.hostId,
+                    hostName: stream.name,
+                    hostAvatar: stream.avatar,
+                    title: stream.name,
+                    startTime: stream.startTime,
+                    endTime: endTime.toISOString(),
+                    duration: new Date(durationSeconds * 1000).toISOString().substr(11, 8),
+                    peakViewers: stream.viewers || 0,
+                    totalCoins: 0,
+                    totalFollowers: 0,
+                    totalMembers: stream.viewers || 0,
                 totalFans: 0,
-                category: stream.category,
-                tags: stream.tags || [],
-                country: stream.country
-            });
+                    category: stream.category,
+                    tags: stream.tags || [],
+                    country: stream.country
+                },
+                { 
+                    upsert: true, // Criar se não existir
+                    new: true
+                }
+            );
             console.log(`💾 [STREAM END] Histórico salvo para stream ${streamId}`);
         } catch (historyError: any) {
             console.warn(`⚠️ [STREAM END] Erro ao salvar histórico: ${historyError.message}`);
@@ -811,8 +872,8 @@ router.post('/streams/:streamId/end', async (req, res) => {
                 isLive: false,
                 streamStatus: 'ended',
                 endTime: endTime.toISOString(),
-                viewers: 0,
-                diamonds: 0 // 🔥 ZERAR diamantes da live ao encerrar
+                viewers: 0
+                // � REMOVIDO: Não zerar diamantes ao encerrar para manter persistência
             }
         );
 
@@ -871,28 +932,11 @@ router.post('/streams/:streamId/end', async (req, res) => {
                 try {
                     console.log(`🧹 [STREAM END] Limpando contadores de presentes da live ${streamId}`);
                     
-                    // Zerar contador de diamantes da stream
-                    await Streamer.findOneAndUpdate(
-                        { id: streamId },
-                        { $set: { diamonds: 0 } }
-                    );
+                    // 🔧 REMOVIDO: Não zerar diamantes da stream para manter persistência entre lives
+                console.log(`✅ [STREAM END] Diamantes da live ${streamId} preservados para próxima sessão`);
                     
-                    console.log(`✅ [STREAM END] Contadores da live ${streamId} zerados`);
-                    
-                    // Notificar via WebSocket que os contadores foram zerados
-                    const io = req.app.get('io');
-                    if (io) {
-                        io.emit('live_coins_updated', {
-                            streamId: streamId,
-                            coins: 0,
-                            totalCoins: 0,
-                            timestamp: endTime.toISOString(),
-                            fromUser: 'System',
-                            giftName: 'Live End - Counters Reset'
-                        });
-                        
-                        console.log(`📡 [STREAM END] WebSocket emitido: live_coins_updated com contadores zerados`);
-                    }
+                    // 🔧 REMOVIDO: Não emitir WebSocket com valores zerados para manter consistência
+                    console.log(`✅ [STREAM END] WebSocket não emitido para manter valores atuais`);
                 } catch (cleanupError: any) {
                     console.error(`❌ [STREAM END] Erro ao zerar contadores: ${cleanupError.message}`);
                 }
@@ -1612,12 +1656,10 @@ router.get('/lives/:id', async (req, res) => {
             return res.status(404).json({ error: 'Streamer not found' });
         }
 
-        // Recuperar o total de diamantes RECEBIDOS (receptores) do host, para alinhar com o ranking
-        const { User } = await import('../models');
-        const hostUser = await User.findOne({ id: streamer.hostId });
-        const finalDiamonds = hostUser ? (hostUser.receptores || 0) : 0;
+        // 🔧 CORREÇÃO: Usar diamonds do stream (valor correto para o contador)
+        const finalDiamonds = streamer.diamonds || 0;
         
-        console.log(`✅ Streamer found: ${streamer.name}, total receptores (live diamonds): ${finalDiamonds}`);
+        console.log(`✅ Streamer found: ${streamer.name}, stream diamonds (contador): ${finalDiamonds}`);
         
         // Retornar dados do streamer incluindo diamonds reais calculados
         res.json({

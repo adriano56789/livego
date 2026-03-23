@@ -7,6 +7,8 @@ export interface IVisitor extends Document {
     visitedAt: Date;
     visitorName?: string;
     visitorAvatar?: string;
+    createdAt?: Date;
+    updatedAt?: Date;
 }
 
 const VisitorSchema: Schema = new Schema({
@@ -16,6 +18,8 @@ const VisitorSchema: Schema = new Schema({
     visitedAt: { type: Date, default: Date.now },
     visitorName: { type: String, default: null },
     visitorAvatar: { type: String, default: null }
+}, {
+    timestamps: true
 });
 
 // Create a compound index to quickly find visitors for a user

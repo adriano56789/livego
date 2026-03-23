@@ -692,7 +692,7 @@ const AppContent: React.FC = () => {
   const handleStreamUpdate = (updates: Partial<Streamer>) => {
     // Validate that updates.id is not [object Object]
     if (updates.id && (typeof updates.id !== 'string' || updates.id === '[object Object]')) {
-      console.error('❌ [STREAM UPDATE] Invalid stream ID in updates:', updates.id, updates);
+      // Invalid stream ID in updates
       return; // Don't apply invalid updates
     }
     
@@ -1076,7 +1076,7 @@ const logLiveEvent = (type: string, data: any) => {
     
     // Validate that streamer.id is a string
     if (typeof streamer.id !== 'string' || streamer.id === '[object Object]') {
-      console.error('❌ [SELECT STREAM] Invalid stream ID:', streamer.id, streamer);
+      // Invalid stream ID
       addToast(ToastType.Error, "ID da stream inválido. Não foi possível entrar na live.");
       return;
     }
@@ -1142,7 +1142,7 @@ const logLiveEvent = (type: string, data: any) => {
     if (activeStream && liveSession) {
       // Validate that activeStream.id is a string
       if (typeof activeStream.id !== 'string' || activeStream.id === '[object Object]') {
-        console.error('❌ [END STREAM] Invalid stream ID:', activeStream.id, activeStream);
+        // Invalid stream ID
         addToast(ToastType.Error, "ID da stream inválido. Não foi possível encerrar a transmissão.");
         setActiveStream(null);
         setIsPKBattleActive(false);
@@ -1190,7 +1190,7 @@ const logLiveEvent = (type: string, data: any) => {
         
         // Verificar se o card foi removido com sucesso
         if (!removeResponse.success) {
-          console.warn('Card da live não foi removido:', removeResponse);
+          // Card da live não foi removido
         }
 
         // 3. Recarregar a lista de streams para atualizar os cards

@@ -27,20 +27,27 @@ router.post('/send', async (req: any, res) => {
             return res.status(400).json({ error: 'Saldo insuficiente' });
         }
         
-        // Atualizar saldos
-        fromUser.diamonds -= totalCost;
+        // 🔧 MELHOR PRÁTICA: Atualizar saldos com $inc (atômico)
+        await User.findOneAndUpdate(
+            { id: fromUserId },
+            { 
+                $inc: { diamonds: -totalCost, enviados: totalCost },
+                $set: { lastSeen: new Date().toISOString() }
+            }
+        );
         
         // Se for presente para stream, acumular diamantes na stream E no widget da streamer
         if (streamId && streamId !== 'unknown') {
-            // Atualizar diamonds da stream (para contadores internos)
+            // Atualizar diamonds da stream com $inc (atômico)
             await Streamer.findOneAndUpdate(
                 { id: streamId },
-                { $inc: { diamonds: totalCost } }
+                { $inc: { diamonds: totalCost } },
+                { upsert: true } // Criar se não existir
             );
             
-            // Atualizar widget da streamer (para persistir o contador)
+            // Atualizar widget da streamer com $inc (atômico)
             await Streamer.findOneAndUpdate(
-                { id: toUserId }, // Usar toUserId em vez de streamId
+                { id: toUserId }, 
                 { $inc: { diamonds: totalCost } },
                 { upsert: true } // Criar se não existir
             );
@@ -48,13 +55,15 @@ router.post('/send', async (req: any, res) => {
             console.log(`💎 [LIVE GIFT] ${totalCost} diamantes adicionados à live ${streamId} e widget da streamer ${toUserId}.`);
         }
 
-        // Atualizar perfil de envios e recebimentos (Enviados/Receptores) E earnings
-        fromUser.enviados = (fromUser.enviados || 0) + totalCost;
-        
-        // 🔧 CORREÇÃO: receptores deve ser igual a earnings (valor disponível para saque)
-        // Presentes para stream TAMBÉM adicionam aos earnings/receptores
-        toUser.earnings = (toUser.earnings || 0) + totalCost;
-        toUser.receptores = toUser.earnings; // Manter receptores = earnings
+        // 🔧 MELHOR PRÁTICA: Atualizar earnings/receptores com $inc (atômico)
+        await User.findOneAndUpdate(
+            { id: toUserId },
+            { 
+                $inc: { earnings: totalCost, receptores: totalCost },
+                $set: { lastSeen: new Date().toISOString() }
+            },
+            { upsert: true } // Criar se não existir
+        );
         
         if (!streamId || streamId === 'unknown') {
             console.log(`💰 [DIRECT GIFT] ${totalCost} diamantes adicionados aos earnings/receptores de ${toUser.name}.`);
@@ -100,22 +109,30 @@ router.post('/send', async (req: any, res) => {
         await fromUser.save();
         await toUser.save();
         
-        // Registrar transação
-        await GiftTransaction.create([{
-            id: `gift_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-            fromUserId,
-            fromUserName: fromUser.name,
-            fromUserAvatar: fromUser.avatarUrl,
-            toUserId,
-            toUserName: toUser.name,
-            streamId: streamId || 'unknown',
-            giftName: gift.name,
-            giftIcon: gift.icon,
-            giftPrice: giftPrice,
-            quantity: quantity,
-            totalValue: totalCost,
-            createdAt: new Date().toISOString()
-        }]);
+        // Registrar transação com upsert automático
+        const transactionId = `gift_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        await GiftTransaction.findOneAndUpdate(
+            { id: transactionId },
+            {
+                id: transactionId,
+                fromUserId,
+                fromUserName: fromUser.name,
+                fromUserAvatar: fromUser.avatarUrl,
+                toUserId,
+                toUserName: toUser.name,
+                streamId: streamId || 'unknown',
+                giftName: gift.name,
+                giftIcon: gift.icon,
+                giftPrice: giftPrice,
+                quantity: quantity,
+                totalValue: totalCost,
+                createdAt: new Date().toISOString()
+            },
+            { 
+                upsert: true, // Criar se não existir
+                new: true
+            }
+        );
         
         // Enviar notificações via WebSocket
         // 🚀 VERIFICAR SE O PRESENTE LIBERA ACESSO À SALA PRIVADA

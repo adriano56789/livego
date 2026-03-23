@@ -82,6 +82,8 @@ export interface IUser extends Document {
         type: 'Point';
         coordinates: number[];
     };
+    createdAt?: Date; // Timestamp automático do MongoDB
+    updatedAt?: Date; // Timestamp automático do MongoDB
 }
 
 const UserSchema = new Schema<IUser>({

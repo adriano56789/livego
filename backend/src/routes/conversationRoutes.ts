@@ -269,19 +269,24 @@ router.post('/', async (req, res) => {
             }
         }
 
-        // Criar nova conversa
+        // Criar nova conversa com upsert automático
         const participants = [userId, ...participantIds];
         const chatId = `chat_${type}_${userId}_${participantIds.join('_')}_${Date.now()}`;
 
-        const newChat = await Chat.create({
-            id: chatId,
-            participants,
-            type,
-            title: type === 'group' ? title : undefined,
-            isActive: true,
-            createdAt: new Date(),
-            updatedAt: new Date()
-        });
+        const newChat = await Chat.findOneAndUpdate(
+            { id: chatId },
+            {
+                id: chatId,
+                participants,
+                type,
+                title: type === 'group' ? title : undefined,
+                isActive: true
+            },
+            { 
+                upsert: true, // Criar se não existir
+                new: true
+            }
+        );
 
         console.log(`✅ Conversa criada: ${chatId}`);
 

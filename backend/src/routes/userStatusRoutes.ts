@@ -11,13 +11,19 @@ router.get('/user/:id/status', async (req: Request, res: Response) => {
         let userStatus = await UserStatus.findOne({ user_id: id });
         
         if (!userStatus) {
-            // Criar status padrão se não existir
-            userStatus = await UserStatus.create({
-                user_id: id,
-                is_online: false,
-                last_seen: new Date(),
-                updated_at: new Date()
-            });
+            // Criar status padrão se não existir com upsert automático
+            userStatus = await UserStatus.findOneAndUpdate(
+                { user_id: id },
+                {
+                    user_id: id,
+                    is_online: false,
+                    last_seen: new Date()
+                },
+                { 
+                    upsert: true, // Criar se não existir
+                    new: true
+                }
+            );
         }
 
         res.json({

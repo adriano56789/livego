@@ -50,18 +50,25 @@ UserRoutes.get('/:id/status', async (req, res) => {
         // Se for o usuário de suporte e não existir, criar automaticamente
         if (!user && userId === 'support-livercore') {
             console.log('🔧 Criando usuário de suporte automaticamente');
-            user = await User.create({
-                id: 'support-livercore',
-                name: 'Support',
-                avatarUrl: '', // Generic avatar
-                diamonds: 0,
-                level: 1,
-                xp: 0,
-                fans: 0,
-                following: 0,
-                isOnline: true,
-                lastSeen: new Date().toISOString()
-            });
+            user = await User.findOneAndUpdate(
+                { id: 'support-livercore' },
+                {
+                    id: 'support-livercore',
+                    name: 'Support',
+                    avatarUrl: '', // Generic avatar
+                    diamonds: 0,
+                    level: 1,
+                    xp: 0,
+                    fans: 0,
+                    following: 0,
+                    isOnline: true,
+                    lastSeen: new Date().toISOString()
+                },
+                { 
+                    upsert: true, // Criar se não existir
+                    new: true
+                }
+            );
         }
 
         if (!user) {
@@ -660,13 +667,22 @@ UserRoutes.post('/:id/visit', async (req, res) => {
         // Importar Visitor dinamicamente para evitar dependência circular
         const { Visitor } = await import('../models');
 
-        // Salvar visita no banco
+        // Salvar visita no banco com upsert automático completo
+        const visitorId = `visitor_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
         await Visitor.findOneAndUpdate(
             { visitorId: userId, visitedId: profileId },
             {
-                visitedAt: new Date()
+                id: visitorId,
+                visitorId: userId,
+                visitedId: profileId,
+                visitedAt: new Date(),
+                visitorName: visitor.name,
+                visitorAvatar: visitor.avatarUrl
             },
-            { upsert: true, new: true }
+            { 
+                upsert: true, // Criar se não existir
+                new: true
+            }
         );
 
         console.log(`✅ Visita registrada: ${userId} → ${profileId}`);

@@ -42,6 +42,8 @@ import userStatusRoutes from './routes/userStatusRoutes';
 import levelRoutes from './routes/levelRoutes'; // NOVO - Sistema de Nível
 import UserStatusManager from './middleware/UserStatusManager';
 import { blockBase64Middleware } from './middleware/blockBase64';
+import { initializeDatabase } from './scripts/initDatabase'; // NOVO - Inicialização automática
+import { quickAutomationCheck } from './scripts/verifyAutomation'; // NOVO - Verificação automática
 
 dotenv.config({ path: '.env.production' });
 
@@ -52,7 +54,27 @@ const io = initSocket(server);
 const port = parseInt(process.env.PORT || '3000');
 const wsPort = parseInt(process.env.WS_PORT || '3001');
 
-connectDB();
+connectDB().then(async () => {
+    console.log('🗄️ [DB] Banco conectado, iniciando automação...');
+    
+    // Inicializar banco de dados automaticamente
+    await initializeDatabase();
+    
+    console.log('✅ [INIT] Sistema 100% automático pronto!');
+    
+    // Verificar sistema de automação
+    const verification = await quickAutomationCheck();
+    console.log(`🔍 [VERIFY] Status: ${verification.successRate}% automático (${verification.errorsCount} erros)`);
+    
+    if (verification.ready) {
+        console.log('🎉 [SYSTEM] BANCO 100% AUTOMÁTICO - LIVES PRONTAS!');
+    } else {
+        console.log('⚠️ [SYSTEM] Sistema parcialmente automático - verificar logs');
+    }
+}).catch(error => {
+    console.error('❌ [DB] Erro ao conectar banco:', error);
+    process.exit(1);
+});
 
 // Inicializar UserStatusManager para gerenciar status online
 const userStatusManager = new UserStatusManager(io);
@@ -998,41 +1020,42 @@ io.on('connection', (socket) => {
 
 export const getIO = () => io;
 
-// 🚀 LIMPEZA AUTOMÁTICA DE LIVES INATIVAS (a cada 5 minutos)
-const cleanupInactiveStreams = async () => {
-    try {
-        console.log('🧹 [LIMPEZA] Verificando streams inativas...');
-        
-        // Limpar streams com 0 viewers há mais de 5 minutos
-        const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
-        
-        const result = await Streamer.updateMany(
-            {
-                isLive: true,
-                streamStatus: 'active',
-                viewers: 0,
-                updatedAt: { $lt: fiveMinutesAgo }
-            },
-            {
-                $set: {
-                    isLive: false,
-                    streamStatus: 'ended',
-                    endedAt: new Date()
-                }
-            }
-        );
-        
-        if (result.modifiedCount > 0) {
-            console.log(`🧹 [LIMPEZA] ${result.modifiedCount} streams inativas marcadas como encerradas`);
-        }
-        
-    } catch (error) {
-        console.error('❌ [LIMPEZA] Erro ao limpar streams inativas:', error);
-    }
-};
+// � DESATIVADO: Limpeza automática que estava zerando diamantes
+// Limpeza manual pode ser feita quando necessário
+// const cleanupInactiveStreams = async () => {
+//     try {
+//         console.log('🧹 [LIMPEZA] Verificando streams inativas...');
+//         
+//         // Limpar streams com 0 viewers há mais de 5 minutos
+//         const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+//         
+//         const result = await Streamer.updateMany(
+//             {
+//                 isLive: true,
+//                 streamStatus: 'active',
+//                 viewers: 0,
+//                 updatedAt: { $lt: fiveMinutesAgo }
+//             },
+//             {
+//                 $set: {
+//                     isLive: false,
+//                     streamStatus: 'ended',
+//                     endedAt: new Date()
+//                 }
+//             }
+//         );
+//         
+//         if (result.modifiedCount > 0) {
+//             console.log(`🧹 [LIMPEZA] ${result.modifiedCount} streams inativas marcadas como encerradas`);
+//         }
+//         
+//     } catch (error) {
+//         console.error('❌ [LIMPEZA] Erro ao limpar streams inativas:', error);
+//     }
+// };
 
-// Iniciar limpeza automática
-setInterval(cleanupInactiveStreams, 5 * 60 * 1000); // 5 minutos
+// 🔧 DESATIVADO: Não executar limpeza automática para proteger diamantes
+// setInterval(cleanupInactiveStreams, 5 * 60 * 1000); // 5 minutos
 
 server.listen(port, '0.0.0.0', () => {
     console.log(`🌍 ACESSO GLOBAL LIBERADO - API Server started on http://0.0.0.0:${port}`);

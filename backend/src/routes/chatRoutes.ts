@@ -182,15 +182,23 @@ router.post('/', async (req, res) => {
             }
         }
 
-        // Criar novo chat
-        const newChat = await Chat.create({
-            id: `chat_${type}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-            participants,
-            type,
-            title: type === 'group' ? title : undefined,
-            isActive: true,
-            metadata: type === 'group' ? { groupId: `group_${Date.now()}` } : {}
-        });
+        // Criar novo chat com upsert automático
+        const chatId = `chat_${type}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        const newChat = await Chat.findOneAndUpdate(
+            { id: chatId },
+            {
+                id: chatId,
+                participants,
+                type,
+                title: type === 'group' ? title : undefined,
+                isActive: true,
+                metadata: type === 'group' ? { groupId: `group_${Date.now()}` } : {}
+            },
+            { 
+                upsert: true, // Criar se não existir
+                new: true
+            }
+        );
 
         console.log(`✅ Chat criado: ${newChat.id}`);
 
@@ -227,17 +235,25 @@ router.post('/send', async (req, res) => {
         const messageType = imageUrl ? 'image' : 'text';
         const content = imageUrl || text;
 
-        // Criar nova mensagem
-        const newMessage = await ChatMessage.create({
-            id: tempId || `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-            conversationId,
-            senderId: from,
-            receiverId: to,
-            content: content,
-            messageType,
-            isRead: false,
-            sentAt: new Date()
-        });
+        // Criar nova mensagem com upsert automático
+        const messageId = tempId || `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        const newMessage = await ChatMessage.findOneAndUpdate(
+            { id: messageId },
+            {
+                id: messageId,
+                conversationId,
+                senderId: from,
+                receiverId: to,
+                content: content,
+                messageType,
+                isRead: false,
+                sentAt: new Date()
+            },
+            { 
+                upsert: true, // Criar se não existir
+                new: true
+            }
+        );
 
         // Buscar detalhes do remetente
         const sender = await User.findOne({ id: from }).select('id name avatarUrl');
@@ -316,17 +332,25 @@ router.post('/:id/messages', async (req, res) => {
             return res.status(404).json({ error: 'Chat não encontrado ou sem permissão' });
         }
 
-        // Criar nova mensagem
-        const newMessage = await ChatMessage.create({
-            id: `msg_${id}_${senderId}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-            conversationId: id,
-            senderId,
-            receiverId: receiverId || senderId, // Para grupos, usar o próprio senderId
-            content,
-            messageType,
-            isRead: false,
-            sentAt: new Date()
-        });
+        // Criar nova mensagem com upsert automático
+        const messageId = `msg_${id}_${senderId}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        const newMessage = await ChatMessage.findOneAndUpdate(
+            { id: messageId },
+            {
+                id: messageId,
+                conversationId: id,
+                senderId,
+                receiverId: receiverId || senderId, // Para grupos, usar o próprio senderId
+                content,
+                messageType,
+                isRead: false,
+                sentAt: new Date()
+            },
+            { 
+                upsert: true, // Criar se não existir
+                new: true
+            }
+        );
 
         // Atualizar última mensagem do chat
         await Chat.findOneAndUpdate(

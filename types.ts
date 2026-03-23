@@ -225,6 +225,7 @@ export interface EndStreamSummary {
   endTime: number;
   duration: number;
   viewers: number;
+  coins: number;
   followers: number;
   members: number;
   fans: number;

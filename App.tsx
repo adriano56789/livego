@@ -1173,6 +1173,7 @@ const logLiveEvent = (type: string, data: any) => {
         followers: liveSession.followers,
         members: liveSession.members,
         fans: liveSession.fans,
+        coins: liveSession.coins || 0,
         user: { name: activeStream.name, avatarUrl: activeStream.avatar }
       };
       setStreamSummaryData(summary);

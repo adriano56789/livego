@@ -1392,6 +1392,19 @@ router.post('/streams/:id/gift', async (req, res) => {
             }
         );
 
+        // Emitir atualização para a sala de transmissão com os 'receptores' reais
+        if (io && updatedReceiver) {
+            io.emit('live_coins_updated', {
+                streamId: req.params.id,
+                coins: totalValue,
+                totalCoins: updatedReceiver.receptores || 0,
+                timestamp: new Date().toISOString(),
+                fromUser: updatedSender?.name || 'Unknown',
+                giftName: giftName
+            });
+            console.log(`📡 [WEBSOCKET] live_coins_updated emitido para a sala ${req.params.id} com totalCoins: ${updatedReceiver.receptores}`);
+        }
+
         // Register gift transaction
         await GiftTransaction.create([{
             id: `gift_tx_${Date.now()}_${fromUserId}`,
@@ -1598,16 +1611,21 @@ router.get('/lives/:id', async (req, res) => {
             console.log(`❌ Streamer not found: ${id}`);
             return res.status(404).json({ error: 'Streamer not found' });
         }
+
+        // Recuperar o total de diamantes RECEBIDOS (receptores) do host, para alinhar com o ranking
+        const { User } = await import('../models');
+        const hostUser = await User.findOne({ id: streamer.hostId });
+        const finalDiamonds = hostUser ? (hostUser.receptores || 0) : 0;
         
-        console.log(`✅ Streamer found: ${streamer.name}, diamonds: ${streamer.diamonds || 0}`);
+        console.log(`✅ Streamer found: ${streamer.name}, total receptores (live diamonds): ${finalDiamonds}`);
         
-        // Retornar dados do streamer incluindo diamonds
+        // Retornar dados do streamer incluindo diamonds reais calculados
         res.json({
             id: streamer.id,
             name: streamer.name,
             avatar: streamer.avatar,
             viewers: streamer.viewers,
-            diamonds: streamer.diamonds || 0, // 🔧 GARANTIR QUE DIAMONDS SEJA RETORNADO
+            diamonds: finalDiamonds, // 🔧 GARANTIR QUE DIAMONDS REAIS SEJA RETORNADO
             isLive: streamer.isLive,
             country: streamer.country,
             location: streamer.location,

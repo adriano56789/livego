@@ -700,13 +700,15 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
                         });
                     }
 
-                    // Atualizar liveSession coins com diamonds contados nesta stream
-                    if (liveSession) {
+                    // Atualizar liveSession coins com valor real retornado pelo banco
+                    if (liveSession && updatedReceiver.receptores !== undefined) {
+                        updateLiveSession({ coins: updatedReceiver.receptores });
+                        console.log('✅ StreamRoom: Contador da live sincronizado com receptores reais', {
+                            receptores: updatedReceiver.receptores
+                        });
+                    } else if (liveSession) {
                         const addedValue = gift.price * quantity;
                         updateLiveSession({ coins: (liveSession.coins || 0) + addedValue });
-                        console.log('✅ StreamRoom: Contador da live atualizado localmente', {
-                            added: addedValue
-                        });
                     }
                 }
 

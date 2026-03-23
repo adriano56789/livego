@@ -554,8 +554,9 @@ export const api = {
     setUserOnline: (userId: string) => callApi<{ success: boolean; message: string }>('POST', `/api/user/${userId}/online`),
     setUserOffline: (userId: string) => callApi<{ success: boolean; message: string }>('POST', `/api/user/${userId}/offline`),
     updateUserStatus: (userId: string, isOnline: boolean) => callApi<{ success: boolean; message: string }>('PUT', `/api/user/${userId}/status`, { is_online: isOnline }),
-    getOnlineUsers: (limit = 50, offset = 0) => callApi<{ users: Array<{ user_id: string; last_seen: string; updated_at: string }>; total: number; limit: number; offset: number }>('GET', `/api/users/online?limit=${limit}&offset=${offset}`),
-    getBatchUserStatus: (userIds: string[]) => callApi<{ users: Array<{ user_id: string; is_online: boolean; last_seen: string; updated_at: string }>; total: number }>('POST', `/api/users/batch-status`, { user_ids: userIds })
+    getOnlineUsers: (limit = 50, offset = 0) => callApi<{ users: Array<{ user_id: string; last_seen: string; updated_at: string }>; total: number; limit: number; offset: number }>('GET', `/api/online?limit=${limit}&offset=${offset}`),
+    getStreamOnlineUsers: (streamId: string) => callApi<Array<User & { value: number }>>('GET', `/api/streams/${streamId}/online-users`),
+    getBatchUserStatus: (userIds: string[]) => callApi<{ users: Array<{ user_id: string; is_online: boolean; last_seen: string; updated_at: string }>; total: number }>('POST', `/api/batch-status`, { user_ids: userIds })
 };
 
 export { callApi };

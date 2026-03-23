@@ -360,7 +360,7 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
                 globalFetchControl.set(controlKey, true);
 
                 try {
-                    const users = await api.getOnlineUsers(currentUser.id, streamer.id);
+                    const users = await api.getStreamOnlineUsers(streamer.id);
                     if (users) {
                         setOnlineUsers(users);
                         updateLiveSession({ viewers: users.length });

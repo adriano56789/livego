@@ -68,7 +68,6 @@ const UserItem: React.FC<{ user: User & { value: number }; rank: number }> = ({ 
 
 const OnlineUsersModal: React.FC<OnlineUsersModalProps> = ({ onClose, streamId, userId, currentUser }) => {
     const [users, setUsers] = useState<(User & { value: number })[]>([]);
-    const [liveGifts, setLiveGifts] = useState<Record<string, number>>({}); // Rastreia presentes da live atual
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -77,9 +76,6 @@ const OnlineUsersModal: React.FC<OnlineUsersModalProps> = ({ onClose, streamId, 
         currentUser && u.id === currentUser.id ? { ...u, avatarUrl: currentUser.avatarUrl || u.avatarUrl } : u
     );
 
-    // Calcular total de diamantes enviados na live atual (não da API)
-    const totalDiamonds = Object.values(liveGifts).reduce((sum: number, value: number) => sum + (value || 0), 0);
-
     useEffect(() => {
         // Conectar à sala da stream para receber atualizações em tempo real
         socketService.joinRoom(streamId);
@@ -87,15 +83,9 @@ const OnlineUsersModal: React.FC<OnlineUsersModalProps> = ({ onClose, streamId, 
         // Handler para quando presente é enviado para a stream
         const handleGiftSent = async (data: { streamId: string; gift: { fromUserId: string; totalValue: number } }) => {
             if (data.streamId === streamId) {
-                // Atualizar controle de presentes da live atual
-                setLiveGifts(prev => ({
-                    ...prev,
-                    [data.gift.fromUserId]: (prev[data.gift.fromUserId] || 0) + (data.gift.totalValue || 0)
-                }));
-                
                 // Recarregar usuários da API para pegar valores atualizados
                 try {
-                    const updatedUsers = await api.getOnlineUsers(userId, streamId);
+                    const updatedUsers = await api.getStreamOnlineUsers(streamId);
                     if (Array.isArray(updatedUsers)) {
                         setUsers(updatedUsers);
                     }
@@ -108,18 +98,16 @@ const OnlineUsersModal: React.FC<OnlineUsersModalProps> = ({ onClose, streamId, 
         // Handler para quando live é encerrada (remover todos os usuários)
         const handleStreamEnded = (data: { streamId: string }) => {
             if (data.streamId === streamId) {
-                // Remover todos os usuários E limpar presentes da live atual
+                // Remover todos os usuários
                 setUsers([]);
-                setLiveGifts({});
             }
         };
 
         // Handler para quando usuário é forçado a sair da live
         const handleLiveStreamEnded = (data: { streamId: string }) => {
             if (data.streamId === streamId) {
-                // Limpar usuários E presentes quando a live termina
+                // Limpar usuários quando a live termina
                 setUsers([]);
-                setLiveGifts({});
             }
         };
 
@@ -135,25 +123,13 @@ const OnlineUsersModal: React.FC<OnlineUsersModalProps> = ({ onClose, streamId, 
                     throw new Error('ID da stream inválido');
                 }
                 
-                const data = await api.getOnlineUsers(userId, streamId);
+                const data = await api.getStreamOnlineUsers(streamId);
                 
                 console.log('🔍 [ONLINE USERS MODAL] API retornou:', data);
                 
                 if (Array.isArray(data)) {
-                    // Filtrar usuários válidos e remover duplicados por ID
-                    const validUsers = data.filter(user => 
-                        user && 
-                        typeof user === 'object' && 
-                        user.id && 
-                        user.name
-                    );
-                    
-                    // Remover duplicados mantendo apenas a primeira ocorrência de cada ID
-                    const uniqueUsers = validUsers.filter((user, index, self) => 
-                        index === self.findIndex((u) => u.id === user.id)
-                    );
-                    
-                    setUsers(uniqueUsers);
+                    // A API já retorna usuários únicos e válidos, não precisa filtrar duplicados
+                    setUsers(data);
                 } else {
                     setUsers([]);
                 }

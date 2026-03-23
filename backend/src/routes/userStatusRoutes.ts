@@ -130,8 +130,8 @@ router.put('/user/:id/status', async (req: Request, res: Response) => {
     }
 });
 
-// GET /users/online - Lista de usuários online
-router.get('/users/online', async (req: Request, res: Response) => {
+// GET /online - Lista de usuários online
+router.get('/online', async (req: Request, res: Response) => {
     try {
         const { limit = 50, offset = 0 } = req.query;
         
@@ -154,8 +154,8 @@ router.get('/users/online', async (req: Request, res: Response) => {
     }
 });
 
-// POST /users/batch-status - Obter status de múltiplos usuários
-router.post('/users/batch-status', async (req: Request, res: Response) => {
+// POST /batch-status - Obter status de múltiplos usuários
+router.post('/batch-status', async (req: Request, res: Response) => {
     try {
         const { user_ids } = req.body;
 

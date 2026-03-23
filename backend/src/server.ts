@@ -37,6 +37,7 @@ import manualRoutes from './routes/manualRoutes';
 import paymentRoutes from './routes/paymentRoutes';
 import webhookRoutes from './routes/webhookRoutes';
 import withdrawalRoutes from './routes/withdrawalRoutes';
+import transactionProtectionRoutes from './routes/transactionProtectionRoutes';
 import zoomRoutes from './routes/zoomRoutes';
 import userStatusRoutes from './routes/userStatusRoutes';
 import levelRoutes from './routes/levelRoutes'; // NOVO - Sistema de Nível
@@ -149,6 +150,7 @@ app.use('/api', manualRoutes); // Rotas do manual de transmissão
 app.use('/api/payments', paymentRoutes); // Rotas do Mercado Pago
 app.use('/api/webhooks', webhookRoutes); // Rotas de webhooks
 app.use('/api/withdrawals', withdrawalRoutes); // Rotas de saques via Pix
+app.use('/api/transaction-protection', transactionProtectionRoutes); // Rotas de proteção contra bloqueios abusivos
 app.use('/api/zoom', zoomRoutes); // Rotas de configurações de zoom
 app.use('/api/level', levelRoutes); // NOVO - Sistema de Nível
 app.use('/api', userStatusRoutes); // Rotas de status online do usuário

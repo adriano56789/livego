@@ -8,7 +8,7 @@ import { createWithUpsert } from '../scripts/initDatabase';
 export function autoUpsertMiddleware(model: any, uniqueField: string, dataField: string = 'body') {
     return async (req: Request, res: Response, next: NextFunction) => {
         try {
-            const data = req[dataField];
+            const data = req.body;
             
             // Se não há dados, continuar normalmente
             if (!data || typeof data !== 'object') {

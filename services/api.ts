@@ -556,7 +556,23 @@ export const api = {
     updateUserStatus: (userId: string, isOnline: boolean) => callApi<{ success: boolean; message: string }>('PUT', `/api/user/${userId}/status`, { is_online: isOnline }),
     getOnlineUsers: (limit = 50, offset = 0) => callApi<{ users: Array<{ user_id: string; last_seen: string; updated_at: string }>; total: number; limit: number; offset: number }>('GET', `/api/online?limit=${limit}&offset=${offset}`),
     getStreamOnlineUsers: (streamId: string) => callApi<Array<User & { value: number }>>('GET', `/api/streams/${streamId}/online-users`),
-    getBatchUserStatus: (userIds: string[]) => callApi<{ users: Array<{ user_id: string; is_online: boolean; last_seen: string; updated_at: string }>; total: number }>('POST', `/api/batch-status`, { user_ids: userIds })
+    getBatchUserStatus: (userIds: string[]) => callApi<{ users: Array<{ user_id: string; is_online: boolean; last_seen: string; updated_at: string }>; total: number }>('POST', `/api/batch-status`, { user_ids: userIds }),
+
+    // --- Transaction Protection (Anti-Blocking Abuse) ---
+    checkBlockStatus: (userId: string, targetUserId: string) => callApi<{ 
+        success: boolean; 
+        canBlock: boolean; 
+        reason: string; 
+        restrictions: string[]; 
+        message: string 
+    }>('GET', `/api/transaction-protection/check-block-status/${userId}/${targetUserId}`),
+
+    registerBlockAttempt: (userId: string, targetUserId: string, reason?: string, success?: boolean) => callApi<{ success: boolean }>('POST', '/api/transaction-protection/register-block-attempt', { 
+        userId, 
+        targetUserId, 
+        reason, 
+        success 
+    })
 };
 
 export { callApi };

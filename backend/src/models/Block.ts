@@ -12,8 +12,8 @@ export interface IBlock extends Document {
 
 const BlockSchema: Schema = new Schema({
     id: { type: String, required: true, unique: true },
-    blockerId: { type: String, required: true, ref: 'User' },
-    blockedId: { type: String, required: true, ref: 'User' },
+    blockerId: { type: String, required: true },
+    blockedId: { type: String, required: true },
     blockedAt: { type: Date, required: true, default: Date.now },
     isActive: { type: Boolean, required: true, default: true },
     unblockedAt: { type: Date },

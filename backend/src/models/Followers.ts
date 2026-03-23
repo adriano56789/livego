@@ -11,8 +11,8 @@ export interface IFollowers extends Document {
 
 const FollowersSchema: Schema = new Schema({
     id: { type: String, required: true, unique: true },
-    followerId: { type: String, required: true, ref: 'User' },
-    followingId: { type: String, required: true, ref: 'User' },
+    followerId: { type: String, required: true },
+    followingId: { type: String, required: true },
     followedAt: { type: Date, required: true, default: Date.now },
     isActive: { type: Boolean, required: true, default: true },
     unfollowedAt: { type: Date }

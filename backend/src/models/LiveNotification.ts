@@ -14,7 +14,7 @@ export interface ILiveNotification extends Document {
 
 const LiveNotificationSchema = new Schema<ILiveNotification>({
     id: { type: String, required: true, unique: true },
-    userId: { type: String, required: true, index: true },
+    userId: { type: String, required: true },
     streamerId: { type: String, required: true },
     streamerName: { type: String, required: true },
     streamerAvatar: { type: String, required: true },

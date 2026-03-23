@@ -27,10 +27,10 @@ router.get('/user/:id/status', async (req: Request, res: Response) => {
         }
 
         res.json({
-            user_id: userStatus.user_id,
-            is_online: userStatus.is_online,
-            last_seen: userStatus.last_seen,
-            updated_at: userStatus.updated_at
+            user_id: userStatus?.user_id || id,
+            is_online: userStatus?.is_online || false,
+            last_seen: userStatus?.last_seen,
+            updated_at: userStatus?.updatedAt || new Date()
         });
     } catch (error: any) {
         console.error('Erro ao buscar status do usuário:', error);
@@ -55,9 +55,9 @@ router.post('/user/:id/online', async (req: Request, res: Response) => {
         res.json({ 
             success: true, 
             message: 'Usuário marcado como online',
-            user_id: userStatus.user_id,
+            user_id: userStatus?.user_id || id,
             is_online: true,
-            updated_at: userStatus.updated_at
+            updated_at: userStatus?.updatedAt || new Date()
         });
 
     } catch (error: any) {
@@ -76,7 +76,7 @@ router.post('/user/:id/offline', async (req: Request, res: Response) => {
             { 
                 is_online: false,
                 last_seen: new Date(),
-                updated_at: new Date()
+                updatedAt: new Date()
             },
             { upsert: true, new: true }
         );
@@ -84,10 +84,10 @@ router.post('/user/:id/offline', async (req: Request, res: Response) => {
         res.json({ 
             success: true, 
             message: 'Usuário marcado como offline',
-            user_id: userStatus.user_id,
+            user_id: userStatus?.user_id || id,
             is_online: false,
-            last_seen: userStatus.last_seen,
-            updated_at: userStatus.updated_at
+            last_seen: userStatus?.last_seen,
+            updated_at: userStatus?.updatedAt || new Date()
         });
 
     } catch (error: any) {
@@ -124,10 +124,10 @@ router.put('/user/:id/status', async (req: Request, res: Response) => {
         res.json({ 
             success: true, 
             message: `Usuário marcado como ${is_online ? 'online' : 'offline'}`,
-            user_id: userStatus.user_id,
-            is_online: userStatus.is_online,
-            last_seen: userStatus.last_seen,
-            updated_at: userStatus.updated_at
+            user_id: userStatus?.user_id || id,
+            is_online: userStatus?.is_online || false,
+            last_seen: userStatus?.last_seen,
+            updated_at: userStatus?.updatedAt || new Date()
         });
 
     } catch (error: any) {
@@ -142,10 +142,10 @@ router.get('/online', async (req: Request, res: Response) => {
         const { limit = 50, offset = 0 } = req.query;
         
         const onlineUsers = await UserStatus.find({ is_online: true })
-            .sort({ updated_at: -1 })
+            .sort({ updatedAt: -1 })
             .limit(Number(limit))
             .skip(Number(offset))
-            .select('user_id last_seen updated_at');
+            .select('user_id last_seen updatedAt');
 
         res.json({
             users: onlineUsers,

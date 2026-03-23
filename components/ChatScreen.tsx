@@ -490,6 +490,8 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ user, onBack, isModal, currentU
             <BlockReportModal
                 isOpen={isActionsModalOpen}
                 onClose={() => setIsActionsModalOpen(false)}
+                currentUser={currentUser}
+                targetUser={user}
                 onUnfriend={user.isFollowed ? () => {
                     onFollowUser(user);
                     setIsActionsModalOpen(false);

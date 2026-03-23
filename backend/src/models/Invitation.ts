@@ -14,8 +14,8 @@ export interface IInvitation extends Document {
 
 const InvitationSchema: Schema = new Schema({
     id: { type: String, required: true, unique: true },
-    fromUserId: { type: String, required: true, index: true },
-    toUserId: { type: String, required: true, index: true },
+    fromUserId: { type: String, required: true },
+    toUserId: { type: String, required: true },
     type: { type: String, required: true },
     message: { type: String, default: '' },
     data: { type: Schema.Types.Mixed, default: {} },

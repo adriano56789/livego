@@ -11,8 +11,8 @@ export interface IFriendship extends Document {
 
 const FriendshipSchema = new Schema<IFriendship>({
     id: { type: String, required: true, unique: true },
-    userId1: { type: String, required: true, index: true },
-    userId2: { type: String, required: true, index: true },
+    userId1: { type: String, required: true },
+    userId2: { type: String, required: true },
     initiatedBy: { type: String, required: true },
     friendshipStartedAt: { type: Date, default: Date.now },
     isActive: { type: Boolean, default: true }

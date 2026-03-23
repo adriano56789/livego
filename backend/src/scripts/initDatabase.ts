@@ -173,13 +173,22 @@ export async function createWithUpsert<T>(
 ): Promise<T> {
     const filter = { [uniqueField]: data[uniqueField as keyof T] };
     
-    const result = await model.findOneAndUpdate(
-        filter,
-        { $setOnInsert: data },
-        { upsert: true, new: true }
-    );
+    // Primeiro tenta encontrar o documento
+    const existing = await model.findOne(filter);
     
-    return result;
+    if (existing) {
+        // Se existe, atualiza
+        const result = await model.findOneAndUpdate(
+            filter,
+            { $set: data },
+            { new: true }
+        );
+        return result;
+    } else {
+        // Se não existe, cria
+        const result = await model.create(data);
+        return result;
+    }
 }
 
 /**

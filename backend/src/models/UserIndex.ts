@@ -15,7 +15,7 @@ export interface UserIndex extends Document {
 
 const UserIndexSchema: Schema = new Schema({
     id: { type: String, required: true, unique: true },
-    userId: { type: String, required: true, unique: true, ref: 'User' },
+    userId: { type: String, required: true, ref: 'User' },
     identification: { type: String, required: true },
     name: { type: String, required: true },
     displayName: { type: String, required: true },

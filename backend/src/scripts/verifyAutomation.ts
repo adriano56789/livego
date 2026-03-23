@@ -170,7 +170,7 @@ export async function verifyAutomationSystem() {
         
         // Verificar gifts essenciais
         try {
-            const roseGift = await Gift.findOne({ id: 'gift_rose' });
+            const roseGift = await Gift.findOne({ name: 'Rosa' });
             if (roseGift) {
                 results.autoCreation.push('✅ Gifts essenciais: criados automaticamente');
             } else {

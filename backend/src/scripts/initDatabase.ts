@@ -11,6 +11,7 @@ import {
     UserStatus,
     Visitor
 } from '../models';
+import { cleanupConflictingIndexes } from './cleanupIndexes';
 
 /**
  * Script de Inicialização Automática do Banco de Dados
@@ -24,7 +25,6 @@ export async function initializeDatabase() {
         // 1. Criar gifts essenciais se não existirem
         const essentialGifts = [
             {
-                id: 'gift_rose',
                 name: 'Rosa',
                 price: 1,
                 icon: '🌹',
@@ -32,7 +32,6 @@ export async function initializeDatabase() {
                 triggersAutoFollow: false
             },
             {
-                id: 'gift_heart',
                 name: 'Coração',
                 price: 5,
                 icon: '❤️',
@@ -40,7 +39,6 @@ export async function initializeDatabase() {
                 triggersAutoFollow: false
             },
             {
-                id: 'gift_diamond',
                 name: 'Diamante',
                 price: 20,
                 icon: '💎',
@@ -48,7 +46,6 @@ export async function initializeDatabase() {
                 triggersAutoFollow: true
             },
             {
-                id: 'gift_crown',
                 name: 'Coroa',
                 price: 100,
                 icon: '👑',
@@ -59,7 +56,7 @@ export async function initializeDatabase() {
 
         for (const gift of essentialGifts) {
             await Gift.findOneAndUpdate(
-                { id: gift.id },
+                { name: gift.name },
                 gift,
                 { upsert: true, new: true }
             );

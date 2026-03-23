@@ -102,7 +102,7 @@ const BlockReportModal: React.FC<BlockReportModalProps> = ({
   };
 
   const getRestrictionTooltip = () => {
-    if (!blockStatus?.canBlock && blockStatus.restrictions.length > 0) {
+    if (!blockStatus?.canBlock && blockStatus?.restrictions && blockStatus.restrictions.length > 0) {
       const restrictionDetails = {
         'withdrawal_pending': 'Transações financeiras pendentes (saques em processamento)',
         'target_withdrawal_pending': 'O outro usuário tem transações pendentes',

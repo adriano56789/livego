@@ -14,7 +14,7 @@ export interface IVisitor extends Document {
 const VisitorSchema: Schema = new Schema({
     id: { type: String, required: true, unique: true },
     visitorId: { type: String, required: true },
-    visitedId: { type: String, required: true, index: true },
+    visitedId: { type: String, required: true },
     visitedAt: { type: Date, default: Date.now },
     visitorName: { type: String, default: null },
     visitorAvatar: { type: String, default: null }

@@ -9,7 +9,7 @@ export interface IUserStatus extends Document {
 }
 
 const UserStatusSchema = new Schema<IUserStatus>({
-  user_id: { type: String, required: true, unique: true },
+  user_id: { type: String, required: true },
   is_online: { type: Boolean, default: false },
   last_seen: { type: Date, default: Date.now }
 }, {

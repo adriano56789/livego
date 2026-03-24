@@ -62,16 +62,26 @@ router.post('/pix', FraudDetectionMiddleware.detectFraud, async (req, res) => {
             }
         };
 
-        // Criar pagamento no Mercado Pago usando SDK oficial v2
-        const { default: mercadopago, Payment } = require('mercadopago');
+        // Criar pagamento no Mercado Pago usando API REST diretamente
+        const axios = require('axios');
         
-        // Inicializar o SDK v2
-        const client = new mercadopago({
-            access_token: process.env.MERCADO_PAGO_ACCESS_TOKEN
-        });
+        // Verificar se está configurado para produção
+        if (!process.env.MERCADO_PAGO_ACCESS_TOKEN) {
+            throw new Error('Mercado Pago Access Token não configurado');
+        }
+        
+        // Validar token antes de continuar
+        if (process.env.MERCADO_PAGO_ACCESS_TOKEN.includes('TEST') || process.env.MERCADO_PAGO_ACCESS_TOKEN.length < 50) {
+            console.error('[PIX ERROR] Token inválido ou de teste detectado');
+            return res.status(500).json({ 
+                error: 'Configuração do Mercado Pago inválida',
+                details: 'Token de acesso inválido'
+            });
+        }
         
         console.log(`[PIX PRODUCTION] Criando PIX real para order ${orderId}: R$${order.amount} (${order.diamonds} diamantes)`);
-        console.log(`[DEBUG] Token prefix: ${process.env.MERCADO_PAGO_ACCESS_TOKEN?.substring(0, 20)}...`);
+        console.log(`[DEBUG] Token prefix: ${process.env.MERCADO_PAGO_ACCESS_TOKEN.substring(0, 20)}...`);
+        console.log(`[DEBUG] Token length: ${process.env.MERCADO_PAGO_ACCESS_TOKEN.length}`);
         
         try {
             const paymentData = {
@@ -91,10 +101,17 @@ router.post('/pix', FraudDetectionMiddleware.detectFraud, async (req, res) => {
                 }
             };
             
-            // Usar a API v2 correta
-            const payment = new Payment(client);
-            const result = await payment.create({ body: paymentData });
+            console.log('[MERCADO PAGO] Enviando requisição para API REST...');
             
+            const response = await axios.post('https://api.mercadopago.com/v1/payments', paymentData, {
+                headers: {
+                    'Authorization': `Bearer ${process.env.MERCADO_PAGO_ACCESS_TOKEN}`,
+                    'Content-Type': 'application/json',
+                    'X-Idempotency-Key': `pix_${orderId}_${Date.now()}`
+                }
+            });
+            
+            const result = response.data;
             console.log('[MERCADO PAGO SUCCESS] Pagamento criado:', result.id);
         
             // Extrair dados do PIX da resposta correta da API v2
@@ -143,8 +160,29 @@ router.post('/pix', FraudDetectionMiddleware.detectFraud, async (req, res) => {
             
             res.json(pixResponse);
         } catch (err: any) {
-            console.error('[PIX ERROR] Erro ao gerar PIX com SDK:', err);
-            res.status(500).json({ error: err.message });
+            console.error('[PIX ERROR] Erro ao gerar PIX:', err);
+            console.log('[DEBUG] Detalhes do erro:', {
+                message: err.message,
+                status: err.status,
+                responseStatus: err.response?.status,
+                responseData: err.response?.data,
+                error: err.error
+            });
+            
+            // Sem fallback - apenas retorna erro real para debugging
+            if (err.response?.data?.message?.includes('without key enabled')) {
+                return res.status(400).json({ 
+                    error: 'Conta Mercado Pago sem chave PIX configurada',
+                    details: 'Configure uma chave PIX na conta Mercado Pago para gerar pagamentos',
+                    mpError: err.response?.data
+                });
+            }
+            
+            res.status(500).json({ 
+                error: 'Erro ao gerar PIX',
+                details: err.message,
+                mpError: err.response?.data
+            });
         }
     } catch (err: any) {
         console.error('[PIX ERROR] Erro ao gerar PIX:', err);
@@ -165,20 +203,17 @@ router.post('/credit-card', FraudDetectionMiddleware.detectFraud, async (req, re
             return res.status(404).json({ error: 'Order not found' });
         }
 
-        // Gerar pagamento com cartão via Mercado Pago
-        const { default: mercadopago, Payment } = require('mercadopago');
+        // Gerar pagamento com cartão via Mercado Pago API REST
+        const axios = require('axios');
         
         // Verificar se está configurado para produção
         if (!process.env.MERCADO_PAGO_ACCESS_TOKEN) {
             throw new Error('Mercado Pago Access Token não configurado');
         }
         
-        // Inicializar o SDK v2
-        const client = new mercadopago({
-            access_token: process.env.MERCADO_PAGO_ACCESS_TOKEN
-        });
-        
         console.log(`[CREDIT CARD PRODUCTION] Processando cartão real para order ${orderId}: R$${order.amount} (${order.diamonds} diamantes)`);
+        console.log(`[DEBUG] Token prefix: ${process.env.MERCADO_PAGO_ACCESS_TOKEN.substring(0, 20)}...`);
+        console.log(`[DEBUG] Installments: ${installments}`);
         
         const cardData = {
             transaction_amount: order.amount,
@@ -191,23 +226,110 @@ router.post('/credit-card', FraudDetectionMiddleware.detectFraud, async (req, re
             payer: {
                 email: payerEmail,
                 first_name: payerName?.split(' ')[0] || 'Comprador',
-                last_name: payerName?.split(' ').slice(1).join(' ') || 'LiveGo'
+                last_name: payerName?.split(' ').slice(1).join(' ') || 'LiveGo',
+                identification: {
+                    type: 'CPF',
+                    number: req.body.payerCpf || '00000000000'
+                }
             }
         };
 
-        const payment = new Payment(client);
-        const result = await payment.create({ body: cardData });
+        console.log('[MERCADO PAGO] Enviando requisição de cartão para API REST...');
+
+        const response = await axios.post('https://api.mercadopago.com/v1/payments', cardData, {
+            headers: {
+                'Authorization': `Bearer ${process.env.MERCADO_PAGO_ACCESS_TOKEN}`,
+                'Content-Type': 'application/json',
+                'X-Idempotency-Key': `card_${orderId}_${Date.now()}`
+            }
+        });
+        
+        const result = response.data;
+        console.log('[MERCADO PAGO SUCCESS] Pagamento com cartão criado:', result.id);
+        console.log(`[CREDIT CARD SUCCESS] Status: ${result.status} | Order: ${orderId} | Valor: R$${order.amount}`);
+        
+        // Atualizar ordem com dados do pagamento
+        await Order.findOneAndUpdate(
+            { id: orderId },
+            {
+                externalReference: `purchase_${orderId}`,
+                mpPaymentId: result.id,
+                paymentStatus: result.status,
+                paymentMethod: 'credit_card',
+                paymentData: {
+                    status: result.status,
+                    status_detail: result.status_detail,
+                    payment_method_id: result.payment_method_id,
+                    payment_type_id: result.payment_type_id,
+                    installments: result.installments,
+                    card: {
+                        first_six_digits: result.card?.first_six_digits,
+                        last_four_digits: result.card?.last_four_digits,
+                        cardholder: result.card?.cardholder
+                    }
+                }
+            }
+        );
         
         res.json({ 
             success: true, 
             status: result.status,
+            status_detail: result.status_detail,
             orderId: orderId,
             mpPaymentId: result.id,
-            message: 'Pagamento processado'
+            paymentMethod: 'credit_card',
+            installments: result.installments,
+            cardInfo: {
+                firstSix: result.card?.first_six_digits,
+                lastFour: result.card?.last_four_digits,
+                cardholder: result.card?.cardholder?.name
+            },
+            message: result.status === 'approved' ? 'Pagamento aprovado' : 'Pagamento em processamento'
         });
     } catch (err: any) {
-        console.error(`[CREDIT CARD ERROR] Erro ao processar pagamento:`, err);
-        res.status(500).json({ error: err.message });
+        console.error('[CREDIT CARD ERROR] Erro ao processar pagamento:', err);
+        console.log('[DEBUG] Detalhes do erro:', {
+            message: err.message,
+            status: err.status,
+            responseStatus: err.response?.status,
+            responseData: err.response?.data,
+            error: err.error
+        });
+        
+        // Tratamento específico para erros comuns do cartão
+        if (err.response?.data) {
+            const mpError = err.response.data;
+            
+            if (mpError.message?.includes('card_token')) {
+                return res.status(400).json({ 
+                    error: 'Token do cartão inválido',
+                    details: 'Gere um novo token do cartão no frontend',
+                    mpError: mpError
+                });
+            }
+            
+            if (mpError.message?.includes('insufficient')) {
+                return res.status(400).json({ 
+                    error: 'Saldo insuficiente',
+                    details: 'Cartão sem limite disponível',
+                    mpError: mpError
+                });
+            }
+            
+            if (mpError.message?.includes('invalid')) {
+                return res.status(400).json({ 
+                    error: 'Dados do cartão inválidos',
+                    details: 'Verifique os dados do cartão',
+                    mpError: mpError
+                });
+            }
+        }
+        
+        res.status(500).json({ 
+            error: 'Erro ao processar pagamento com cartão',
+            details: err.message,
+            mpError: err.response?.data
+        });
     }
 });
 router.post('/confirm', FraudDetectionMiddleware.detectFraud, async (req, res) => {

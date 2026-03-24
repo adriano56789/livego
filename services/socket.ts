@@ -85,6 +85,25 @@ class SocketService {
         this.socket?.emit('leave_room', roomId);
     }
 
+    // --- Chat & Message Methods ---
+    sendChatMessage(from: string, to: string, text?: string, imageUrl?: string) {
+        this.getSocket()?.emit('send_chat_message', { from, to, text, imageUrl });
+    }
+
+    updateUserStatus(userId: string, isOnline: boolean) {
+        this.getSocket()?.emit('user_status_update', { userId, isOnline });
+    }
+
+    // --- Eventos para mensagens de chat
+    onNewChatMessage(callback: (message: any) => void) {
+        this.on('new_chat_message', callback);
+    }
+
+    onUserStatusChanged(callback: (data: any) => void) {
+        this.on('user_status_changed', callback);
+    }
+
+    // --- Métodos existentes (mantidos para compatibilidade) ---
     sendMessage(roomId: string, message: any) {
         this.socket?.emit('send_message', { roomId, message });
     }

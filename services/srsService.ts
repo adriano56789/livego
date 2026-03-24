@@ -2,12 +2,51 @@
  * SRS (Simple Realtime Server) Real Service
  * 
  * This service connects to a real SRS media server via HTTP API.
- * Replaces the mock implementation with actual WebRTC signaling.
+ * Replaces mock implementation with actual WebRTC signaling.
  */
 class SRSService {
-  private readonly SRS_API_BASE = 'http://72.60.249.175:1985';
+  private readonly getApiUrl = (): string => {
+    // Em desenvolvimento local, usa localhost
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+      return 'http://localhost:1985';
+    }
+    // Em produção, usa o servidor real
+    return 'http://72.60.249.175:1985';
+  };
+
+  private readonly getWebRTCHost = (): string => {
+    // Em desenvolvimento local, usa localhost
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+      return 'localhost';
+    }
+    // Em produção, usa o servidor real
+    return '72.60.249.175';
+  };
 
   constructor() {
+  }
+
+  // Métodos utilitários para construir URLs
+  getWebRTCPublishUrl(streamId: string): string {
+    return `webrtc://${this.getWebRTCHost()}/live/${streamId}`;
+  }
+
+  getWebRTCPlayUrl(streamId: string): string {
+    return `webrtc://${this.getWebRTCHost()}/live/${streamId}`;
+  }
+
+  getHlsUrl(streamId: string): string {
+    const baseUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+      ? 'http://localhost:8080/live' 
+      : 'http://72.60.249.175:8080/live';
+    return `${baseUrl}/${streamId}.m3u8`;
+  }
+
+  getFlvUrl(streamId: string): string {
+    const baseUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+      ? 'http://localhost:8080/live' 
+      : 'http://72.60.249.175:8080/live';
+    return `${baseUrl}/${streamId}.flv`;
   }
 
   /**
@@ -38,7 +77,7 @@ class SRSService {
   public async publish(streamUrl: string, offerSdp: string): Promise<{ code: number, sdp: string, sessionid: string }> {
     
     try {
-      const response = await fetch(`${this.SRS_API_BASE}/rtc/v1/publish`, {
+      const response = await fetch(`${this.getApiUrl()}/rtc/v1/publish`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -76,7 +115,7 @@ class SRSService {
   public async play(streamUrl: string, offerSdp: string): Promise<{ code: number, sdp: string, sessionid: string }> {
     
     try {
-      const response = await fetch(`${this.SRS_API_BASE}/rtc/v1/play`, {
+      const response = await fetch(`${this.getApiUrl()}/rtc/v1/play`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -114,7 +153,7 @@ class SRSService {
   public async stop(sessionId: string): Promise<{ code: number, desc: string }> {
     
     try {
-      const response = await fetch(`${this.SRS_API_BASE}/rtc/v1/stop`, {
+      const response = await fetch(`${this.getApiUrl()}/rtc/v1/stop`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -144,7 +183,7 @@ class SRSService {
    */
   public async getStreamStats(streamId: string) {
     try {
-      const response = await fetch(`${this.SRS_API_BASE}/api/v1/streams/${streamId}`);
+      const response = await fetch(`${this.getApiUrl()}/api/v1/streams/${streamId}`);
       
       if (!response.ok) {
         throw new Error(`SRS API Error: ${response.status} ${response.statusText}`);

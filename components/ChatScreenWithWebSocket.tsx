@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import ChatScreen from './ChatScreen';
-import { chatWebSocket } from '../services/chatWebSocket';
+import { socketService } from '../services/socket';
 
 interface ChatScreenWithWebSocketProps {
   user: any;
@@ -20,10 +20,10 @@ const ChatScreenWithWebSocket: React.FC<ChatScreenWithWebSocketProps> = (props) 
   useEffect(() => {
     // Conectar ao WebSocket quando o chat abrir
     const chatId = `chat_${props.currentUser.id}_${props.user.id}`;
-    chatWebSocket.joinChatRoom(chatId);
+    socketService.joinRoom(chatId);
     
     // Atualizar status online
-    chatWebSocket.updateStatus(props.currentUser.id, true);
+    socketService.updateUserStatus(props.currentUser.id, true);
     
     // Listener para novas mensagens
     const handleNewMessage = (event: CustomEvent) => {
@@ -40,7 +40,7 @@ const ChatScreenWithWebSocket: React.FC<ChatScreenWithWebSocketProps> = (props) 
     window.addEventListener('userStatusChanged', handleStatusChanged as EventListener);
     
     return () => {
-      chatWebSocket.leaveChatRoom(chatId);
+      socketService.leaveRoom(chatId);
       window.removeEventListener('newChatMessage', handleNewMessage as EventListener);
       window.removeEventListener('userStatusChanged', handleStatusChanged as EventListener);
     };

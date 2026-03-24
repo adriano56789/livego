@@ -1,4 +1,5 @@
 import { api } from './api';
+import { iceManager, ICEManagerService } from './iceManagerService';
 
 export type WebRTCState = 'idle' | 'connecting' | 'connected' | 'reconnecting' | 'failed';
 
@@ -11,29 +12,26 @@ export class WebRTCService {
   private currentStreamUrl: string | null = null;
   private currentStreamId: string | null = null;
 
-  // Configuração ICE com STUN/TURN do nosso servidor
-  // 🔧 SINCRONIZAÇÃO: Usar variáveis de ambiente corretas do .env.production
-  private readonly iceConfig: RTCIceServer[] = [
-    {
-      // STUN: Ajuda a descobrir o IP público do usuário
-      urls: [
-        import.meta.env?.VITE_STUN_URL || 'stun:72.60.249.175:3478',
-        'stun:stun.l.google.com:19302',  // Fallback STUN público do Google
-        'stun:stun1.l.google.com:19302'
-      ]
-    },
-    {
-      // TURN: Relay para contornar NAT/firewall (essencial para celulares)
-      urls: [
-        import.meta.env?.VITE_TURN_URL || 'turn:72.60.249.175:3478',
-        `turns:${(import.meta.env?.VITE_TURN_URL || 'turn:72.60.249.175:3478').replace('turn:', '')}?transport=tcp`
-      ],
-      username: import.meta.env?.VITE_TURN_USER || 'livego',
-      credential: import.meta.env?.VITE_TURN_PASS || 'livego123'
-    }
-  ];
+  // Configuração ICE usando o gerenciador unificado
+  private getIceConfig(): RTCConfiguration {
+    return iceManager.getICEConfig();
+  }
 
-  constructor() {}
+  constructor() {
+    this.initializeICE();
+  }
+
+  /**
+   * Inicializar gerenciador ICE
+   */
+  private async initializeICE(): Promise<void> {
+    try {
+      await iceManager.initialize();
+      console.log('✅ [WebRTC] ICE Manager inicializado');
+    } catch (error) {
+      console.error('❌ [WebRTC] Erro ao inicializar ICE Manager:', error);
+    }
+  }
 
   // --- HELPER: Format & Sanitize SDP ---
   private formatSDP(sdp: string): string {
@@ -60,12 +58,15 @@ export class WebRTCService {
 
   public async startPublish(streamId: string, streamKey: string, retryCount = 3): Promise<MediaStream> {
     this.currentStreamId = streamId;
-    // 🔧 SINCRONIZAÇÃO: Se streamId já é uma URL completa (webrtc://...), usá-la diretamente
-    // Caso contrário, construir a URL com a variável de ambiente
+    
+    // Construir URL baseada no ambiente
+    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    const webrtcBase = import.meta.env?.VITE_SRS_WEBRTC_URL || 
+      (isLocal ? 'webrtc://localhost/live' : 'webrtc://72.60.249.175/live');
+    
     if (streamId.startsWith('webrtc://')) {
       this.currentStreamUrl = streamId;
     } else {
-      const webrtcBase = import.meta.env?.VITE_SRS_WEBRTC_URL || 'webrtc://72.60.249.175/live';
       this.currentStreamUrl = `${webrtcBase}/${streamId}`;
     }
     this.state = 'connecting';
@@ -87,7 +88,7 @@ export class WebRTCService {
       this.cleanupPeerConnection();
       
       this.pc = new RTCPeerConnection({
-        iceServers: this.iceConfig,
+        ...this.getIceConfig(),
         bundlePolicy: 'max-bundle',
         rtcpMuxPolicy: 'require'
       });
@@ -161,11 +162,15 @@ export class WebRTCService {
 
   public async startPlay(streamId: string, retryCount = 3): Promise<MediaStream> {
      this.currentStreamId = streamId;
-     // 🔧 SINCRONIZAÇÃO: Se streamId já é uma URL completa (webrtc://...), usá-la diretamente
+     
+     // Construir URL baseada no ambiente
+     const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+     const webrtcBase = import.meta.env?.VITE_SRS_WEBRTC_URL || 
+       (isLocal ? 'webrtc://localhost/live' : 'webrtc://72.60.249.175/live');
+     
      if (streamId.startsWith('webrtc://')) {
        this.currentStreamUrl = streamId;
      } else {
-       const webrtcBase = import.meta.env?.VITE_SRS_WEBRTC_URL || 'webrtc://72.60.249.175/live';
        this.currentStreamUrl = `${webrtcBase}/${streamId}`;
      }
      this.state = 'connecting';
@@ -174,9 +179,9 @@ export class WebRTCService {
         this.cleanupPeerConnection();
         
         this.pc = new RTCPeerConnection({
-             iceServers: this.iceConfig,
-             bundlePolicy: 'max-bundle'
-        });
+        ...this.getIceConfig(),
+        bundlePolicy: 'max-bundle'
+      });
 
         this.pc.addTransceiver('audio', { direction: 'recvonly' });
         this.pc.addTransceiver('video', { direction: 'recvonly' });

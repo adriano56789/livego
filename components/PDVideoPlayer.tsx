@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { webRTCService } from '../services/webrtcService';
-import { SRS_ICE_CONFIG } from '../services/srsIceConfig';
-import { WEBRTC_ICE_CONFIG } from '../services/webrtcIceConfig';
+import { srsService } from '../services/srsService';
 import { RealIDGenerator } from '../services/RealIDGenerator';
 
 interface PDVideoPlayerProps {
@@ -104,7 +103,7 @@ const PDVideoPlayer: React.FC<PDVideoPlayerProps> = ({
         videoUrl = streamer.playbackUrl;
       } else {
         // Usar servidor SRS próprio
-        videoUrl = SRS_ICE_CONFIG.getWebRTCUrl(streamer.id);
+        videoUrl = srsService.getWebRTCPlayUrl(streamer.id);
       }
     }
 
@@ -164,7 +163,7 @@ const PDVideoPlayer: React.FC<PDVideoPlayerProps> = ({
       let hlsUrl = url;
       if (url.includes('.flv')) {
         // Usar servidor SRS próprio
-        hlsUrl = SRS_ICE_CONFIG.getHlsUrl(streamer.id);
+        hlsUrl = srsService.getHlsUrl(streamer.id);
       }
       
       console.log('PD Player - HLS URL:', hlsUrl);
@@ -252,7 +251,7 @@ const PDVideoPlayer: React.FC<PDVideoPlayerProps> = ({
       let webrtcUrl = url;
       if (url.includes('.flv')) {
         // Usar servidor SRS próprio
-        webrtcUrl = SRS_ICE_CONFIG.getWebRTCUrl(streamer.id);
+        webrtcUrl = srsService.getWebRTCPlayUrl(streamer.id);
       }
       
       console.log('PD Player - WebRTC URL:', webrtcUrl);
@@ -269,9 +268,10 @@ const PDVideoPlayer: React.FC<PDVideoPlayerProps> = ({
       }
       
       // Configuração com servidores próprios (sem Google)
+      // O webrtcService já usa as configurações ICE centralizadas
       const webRTCConfig = isMobile ? 
-        WEBRTC_ICE_CONFIG.getMobileIceConfig() : 
-        WEBRTC_ICE_CONFIG.getDesktopIceConfig();
+        { iceTransportPolicy: 'relay', bundlePolicy: 'max-bundle' } : 
+        { iceTransportPolicy: 'all', bundlePolicy: 'balanced' };
       
       const remoteStream = await webRTCService.startPlay(webrtcUrl);
       

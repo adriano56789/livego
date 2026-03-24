@@ -1,1 +1,226 @@
-import React, { useRef, useEffect, useState } from 'react';\nimport { webRTCService } from '../services/webrtcService.js';\nimport { beautyWebRTCIntegration } from '../services/BeautyWebRTCIntegration';\n\ninterface LiveVideoPlayerProps {\n  streamer: any;\n  currentUser: any;\n  isBroadcaster: boolean;\n  onVideoReady?: () => void;\n  onVideoError?: (error: string) => void;\n  className?: string;\n}\n\n/**\n * Componente otimizado de player de vídeo para LiveGo\n * Funciona tanto para broadcasting quanto para viewing\n */\nconst LiveVideoPlayer: React.FC<LiveVideoPlayerProps> = ({\n  streamer,\n  currentUser,\n  isBroadcaster,\n  onVideoReady,\n  onVideoError,\n  className = \"absolute inset-0 w-full h-full object-cover z-0\"\n}) => {\n  const videoRef = useRef<HTMLVideoElement>(null);\n  const [isVideoPlaying, setIsVideoPlaying] = useState(false);\n  const [isLoading, setIsLoading] = useState(true);\n\n  useEffect(() => {\n    const setupVideo = async () => {\n      const videoEl = videoRef.current;\n      if (!videoEl) return;\n\n      setIsLoading(true);\n      setIsVideoPlaying(false);\n\n      // Reset do elemento de vídeo\n      videoEl.pause();\n      videoEl.srcObject = null;\n      videoEl.removeAttribute('src');\n      videoEl.load();\n\n      try {\n        if (isBroadcaster) {\n          // BROADCASTER - Configurar câmera local\n          await setupBroadcasterVideo(videoEl);\n        } else {\n          // VIEWER - Configurar stream remoto\n          await setupViewerVideo(videoEl);\n        }\n      } catch (error) {\n        console.error('Erro no setup do vídeo:', error);\n        onVideoError?.('Falha ao configurar vídeo');\n        setIsLoading(false);\n      }\n    };\n\n    setupVideo();\n  }, [isBroadcaster, streamer.id]);\n\n  const setupBroadcasterVideo = async (videoEl: HTMLVideoElement) => {\n    // Obter stream local do WebRTCService\n    const localStream = webRTCService.getLocalStream();\n    \n    if (localStream) {\n      videoEl.srcObject = localStream;\n      videoEl.muted = true; // Evitar eco\n      videoEl.volume = 0;\n      \n      // Inicializar sistema de beleza\n      try {\n        await beautyWebRTCIntegration.initialize(localStream);\n      } catch (beautyError) {\n        console.warn('Sistema de beleza não disponível:', beautyError);\n      }\n    } else {\n      // Fallback: solicitar câmera diretamente\n      const stream = await navigator.mediaDevices.getUserMedia({ \n        video: true, \n        audio: true \n      });\n      videoEl.srcObject = stream;\n      videoEl.muted = true;\n    }\n\n    videoEl.onloadeddata = () => {\n      setIsVideoPlaying(true);\n      setIsLoading(false);\n      onVideoReady?.();\n      videoEl.play().catch(e => console.warn('Auto-play bloqueado:', e));\n    };\n  };\n\n  const setupViewerVideo = async (videoEl: HTMLVideoElement) => {\n    // Construir URL WebRTC para SRS\n    const srsWebrtcBase = import.meta.env?.VITE_SRS_WEBRTC_URL || 'webrtc://72.60.249.175/live';\n    const webrtcUrl = streamer.playbackUrl?.startsWith('webrtc://')\n      ? streamer.playbackUrl\n      : `${srsWebrtcBase}/${streamer.id}`;\n\n    try {\n      // Iniciar reprodução WebRTC\n      const remoteStream = await webRTCService.startPlay(webrtcUrl);\n      \n      if (remoteStream) {\n        videoEl.srcObject = remoteStream;\n        videoEl.muted = false;\n        videoEl.volume = 1.0;\n        \n        videoEl.onloadeddata = () => {\n          setIsVideoPlaying(true);\n          setIsLoading(false);\n          onVideoReady?.();\n          videoEl.play().catch(e => console.warn('Auto-play bloqueado:', e));\n        };\n        \n        // Verificar se o vídeo está funcionando\n        videoEl.onloadedmetadata = () => {\n          if (videoEl.videoWidth === 0) {\n            console.warn('Vídeo sem dimensões válidas');\n            onVideoError?.('Vídeo inválido');\n          }\n        };\n        \n        videoEl.onerror = (e) => {\n          console.error('Erro no elemento de vídeo:', e);\n          onVideoError?.('Erro na reprodução');\n        };\n      } else {\n        throw new Error('Stream remoto não disponível');\n      }\n    } catch (error) {\n      console.error('Falha no WebRTC:', error);\n      \n      // Tentar fallback com vídeo de demonstração\n      if (streamer.demoVideoUrl) {\n        videoEl.src = streamer.demoVideoUrl;\n        videoEl.loop = true;\n        videoEl.muted = false;\n        \n        videoEl.onloadeddata = () => {\n          setIsVideoPlaying(true);\n          setIsLoading(false);\n          onVideoReady?.();\n        };\n      } else {\n        setIsLoading(false);\n        onVideoError?.('Nenhuma fonte de vídeo disponível');\n      }\n    }\n  };\n\n  // Cleanup ao desmontar\n  useEffect(() => {\n    return () => {\n      // Parar processamento de beleza se ativo\n      if (beautyWebRTCIntegration.isBeautyActive()) {\n        beautyWebRTCIntegration.stopBeautyProcessing();\n      }\n      \n      // Limpar stream do vídeo\n      const videoEl = videoRef.current;\n      if (videoEl && videoEl.srcObject) {\n        const stream = videoEl.srcObject as MediaStream;\n        stream.getTracks().forEach(track => track.stop());\n      }\n    };\n  }, []);\n\n  return (\n    <div className=\"relative w-full h-full bg-black\">\n      {/* Indicador de loading */}\n      {isLoading && (\n        <div className=\"absolute inset-0 flex items-center justify-center bg-black/50 z-10\">\n          <div className=\"text-white text-center\">\n            <div className=\"animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto mb-2\"></div>\n            <p className=\"text-sm\">\n              {isBroadcaster ? 'Iniciando câmera...' : 'Carregando transmissão...'}\n            </p>\n          </div>\n        </div>\n      )}\n      \n      {/* Elemento de vídeo */}\n      <video\n        ref={videoRef}\n        className={className}\n        playsInline\n        muted={isBroadcaster}\n        autoPlay={isBroadcaster}\n        key={`${streamer.id}-${isBroadcaster}`}\n      />\n      \n      {/* Indicador de status */}\n      {!isVideoPlaying && !isLoading && (\n        <div className=\"absolute inset-0 flex items-center justify-center bg-black/70 z-10\">\n          <div className=\"text-white text-center\">\n            <p className=\"text-lg mb-2\">\n              {isBroadcaster ? '📹 Câmera pronta' : '📺 Aguardando transmissão'}\n            </p>\n            <p className=\"text-sm text-gray-300\">\n              {isBroadcaster \n                ? 'Sua transmissão está configurada' \n                : 'O streamer ainda não iniciou'}\n            </p>\n          </div>\n        </div>\n      )}\n    </div>\n  );\n};\n\nexport default LiveVideoPlayer;
+import React, { useRef, useEffect, useState } from 'react';
+import { webRTCService } from '../services/webrtcService.js';
+import { beautyWebRTCIntegration } from '../services/BeautyWebRTCIntegration';
+
+interface LiveVideoPlayerProps {
+  streamer: any;
+  currentUser: any;
+  isBroadcaster: boolean;
+  streamUrl?: string;
+  onVideoReady?: () => void;
+  onVideoError?: (error: string) => void;
+  className?: string;
+}
+
+/**
+ * Componente otimizado de player de vídeo para LiveGo
+ * Funciona tanto para broadcasting quanto para viewing
+ */
+const LiveVideoPlayer: React.FC<LiveVideoPlayerProps> = ({
+  streamer,
+  currentUser,
+  isBroadcaster,
+  streamUrl,
+  onVideoReady,
+  onVideoError,
+  className = "absolute inset-0 w-full h-full object-cover z-0"
+}) => {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [isVideoPlaying, setIsVideoPlaying] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const setupVideo = async () => {
+      const videoEl = videoRef.current;
+      if (!videoEl) return;
+
+      console.log(`Configurando vídeo para usuário: ${currentUser?.id || currentUser?.name || 'unknown'} | Broadcaster: ${isBroadcaster} | Stream: ${streamer.id}`);
+
+      setIsLoading(true);
+      setIsVideoPlaying(false);
+
+      // Reset do elemento de vídeo
+      videoEl.pause();
+      videoEl.srcObject = null;
+      videoEl.removeAttribute('src');
+      videoEl.load();
+
+      try {
+        if (isBroadcaster) {
+          // BROADCASTER - Configurar câmera local
+          await setupBroadcasterVideo(videoEl);
+        } else {
+          // VIEWER - Configurar stream remoto
+          await setupViewerVideo(videoEl);
+        }
+      } catch (error) {
+        console.error(`Erro no setup do vídeo para usuário ${currentUser?.id || currentUser?.name || 'unknown'}:`, error);
+        onVideoError?.('Falha ao configurar vídeo');
+        setIsLoading(false);
+      }
+    };
+
+    setupVideo();
+  }, [isBroadcaster, streamer.id, streamUrl, currentUser?.id]);
+
+  const setupBroadcasterVideo = async (videoEl: HTMLVideoElement) => {
+    // Obter stream local do WebRTCService
+    const localStream = webRTCService.getLocalStream();
+    
+    if (localStream) {
+      videoEl.srcObject = localStream;
+      videoEl.muted = true; // Evitar eco
+      videoEl.volume = 0;
+      
+      // Inicializar sistema de beleza para o usuário atual
+      try {
+        console.log(`Iniciando beauty integration para usuário: ${currentUser?.id || currentUser?.name || 'unknown'}`);
+        await beautyWebRTCIntegration.initialize(localStream);
+      } catch (beautyError) {
+        console.warn('Sistema de beleza não disponível:', beautyError);
+      }
+    } else {
+      // Fallback: solicitar câmera diretamente para o usuário atual
+      console.log(`Solicitando câmera para usuário: ${currentUser?.id || currentUser?.name || 'unknown'}`);
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: true, 
+        audio: true 
+      });
+      videoEl.srcObject = stream;
+      videoEl.muted = true;
+    }
+
+    videoEl.onloadeddata = () => {
+      setIsVideoPlaying(true);
+      setIsLoading(false);
+      onVideoReady?.();
+      videoEl.play().catch(e => console.warn('Auto-play bloqueado:', e));
+    };
+  };
+
+  const setupViewerVideo = async (videoEl: HTMLVideoElement) => {
+    // Usar streamUrl fornecida ou construir URL WebRTC para SRS
+    let webrtcUrl = streamUrl;
+    
+    if (!webrtcUrl) {
+      const srsWebrtcBase = import.meta.env?.VITE_SRS_WEBRTC_URL || 'webrtc://72.60.249.175/live';
+      webrtcUrl = streamer.playbackUrl?.startsWith('webrtc://')
+        ? streamer.playbackUrl
+        : `${srsWebrtcBase}/${streamer.id}`;
+    }
+
+    console.log(`Viewer ${currentUser?.id || currentUser?.name || 'unknown'} conectando à stream: ${streamer.id}`);
+
+    try {
+      // Iniciar reprodução WebRTC
+      const remoteStream = await webRTCService.startPlay(webrtcUrl);
+      
+      if (remoteStream) {
+        videoEl.srcObject = remoteStream;
+        videoEl.muted = false;
+        videoEl.volume = 1.0;
+        
+        videoEl.onloadeddata = () => {
+          setIsVideoPlaying(true);
+          setIsLoading(false);
+          onVideoReady?.();
+          videoEl.play().catch(e => console.warn('Auto-play bloqueado:', e));
+        };
+        
+        // Verificar se o vídeo está funcionando
+        videoEl.onloadedmetadata = () => {
+          if (videoEl.videoWidth === 0) {
+            console.warn('Vídeo sem dimensões válidas');
+            onVideoError?.('Vídeo inválido');
+          }
+        };
+        
+        videoEl.onerror = (e) => {
+          console.error('Erro no elemento de vídeo:', e);
+          onVideoError?.('Erro na reprodução');
+        };
+      } else {
+        throw new Error('Stream remoto não disponível');
+      }
+    } catch (error) {
+      console.error(`Falha no WebRTC para viewer ${currentUser?.id || currentUser?.name || 'unknown'}:`, error);
+      
+      // Tentar fallback com vídeo de demonstração
+      if (streamer.demoVideoUrl) {
+        videoEl.src = streamer.demoVideoUrl;
+        videoEl.loop = true;
+        videoEl.muted = false;
+        
+        videoEl.onloadeddata = () => {
+          setIsVideoPlaying(true);
+          setIsLoading(false);
+          onVideoReady?.();
+        };
+      } else {
+        setIsLoading(false);
+        onVideoError?.('Nenhuma fonte de vídeo disponível');
+      }
+    }
+  };
+
+  // Cleanup ao desmontar
+  useEffect(() => {
+    return () => {
+      // Parar processamento de beleza se ativo
+      if (beautyWebRTCIntegration.isBeautyActive()) {
+        beautyWebRTCIntegration.stopBeautyProcessing();
+      }
+      
+      // Limpar stream do vídeo
+      const videoEl = videoRef.current;
+      if (videoEl && videoEl.srcObject) {
+        const stream = videoEl.srcObject as MediaStream;
+        stream.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, []);
+
+  return (
+    <div className="relative w-full h-full bg-black">
+      {/* Indicador de loading */}
+      {isLoading && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-10">
+          <div className="text-white text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto mb-2"></div>
+            <p className="text-sm">
+              {isBroadcaster ? 'Iniciando câmera...' : 'Carregando transmissão...'}
+            </p>
+          </div>
+        </div>
+      )}
+      
+      {/* Elemento de vídeo */}
+      <video
+        ref={videoRef}
+        className={className}
+        playsInline
+        muted={isBroadcaster}
+        autoPlay={isBroadcaster}
+        key={`${streamer.id}-${isBroadcaster}`}
+      />
+      
+      {/* Indicador de status */}
+      {!isVideoPlaying && !isLoading && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/70 z-10">
+          <div className="text-white text-center">
+            <p className="text-lg mb-2">
+              {isBroadcaster ? '📹 Câmera pronta' : '📺 Aguardando transmissão'}
+            </p>
+            <p className="text-sm text-gray-300">
+              {isBroadcaster 
+                ? 'Sua transmissão está configurada' 
+                : 'O streamer ainda não iniciou'}
+            </p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default LiveVideoPlayer;

@@ -14,13 +14,17 @@ import android.widget.ProgressBar
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import com.livego.app.WebRTCConfig
-import com.livego.app.LiveVideoPlayer
+import androidx.media3.ui.PlayerView
+import androidx.media3.common.MediaItem
+import androidx.media3.common.Player
+import com.livego.app.ExoVideoPlayer
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var webView: WebView
     private lateinit var progressBar: ProgressBar
+    private lateinit var videoPlayerView: PlayerView
+    private var exoVideoPlayer: ExoVideoPlayer? = null
 
     companion object {
         private const val PERMISSION_REQUEST_CODE = 1001
@@ -38,8 +42,10 @@ class MainActivity : AppCompatActivity() {
 
         webView = findViewById(R.id.webView)
         progressBar = findViewById(R.id.progressBar)
+        videoPlayerView = findViewById(R.id.videoPlayerView)
 
         setupWebView()
+        setupExoPlayer()
         checkAndRequestPermissions()
     }
 
@@ -58,7 +64,6 @@ class MainActivity : AppCompatActivity() {
             
             // Suporte para tela cheia em vídeos de live
             override fun onShowCustomView(view: View?, callback: CustomViewCallback?) {
-                // Implementar tela cheia para transmissões
                 view?.let { customView ->
                     this@MainActivity.setContentView(customView)
                 }
@@ -68,6 +73,7 @@ class MainActivity : AppCompatActivity() {
                 // Restaurar layout normal ao sair da tela cheia
                 setContentView(R.layout.activity_main)
                 setupWebView() // Reconfigurar ao voltar
+                setupExoPlayer() // Reconfigurar player ao voltar
             }
             
             // Progresso de vídeo para lives
@@ -97,17 +103,8 @@ class MainActivity : AppCompatActivity() {
                 // Auto-play para vídeos de live
                 LiveVideoPlayer.autoplayVideos(webView)
                 
-                // Verificar se tem player de vídeo na página
-                LiveVideoPlayer.hasVideoPlayer(webView) { hasVideo ->
-                    if (hasVideo) {
-                        // Página tem player de vídeo - otimizado
-                        android.widget.Toast.makeText(
-                            this@MainActivity, 
-                            "🎥 Player de live detectado e otimizado", 
-                            android.widget.Toast.LENGTH_SHORT
-                        ).show()
-                    }
-                }
+                // Verificar se tem player de vídeo na página e configurar ExoPlayer
+                checkForVideoPlayer(url)
             }
             
             override fun shouldOverrideUrlLoading(view: WebView?, url: String?): Boolean {
@@ -314,8 +311,147 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
+        exoVideoPlayer?.release()
         webView.destroy()
         super.onDestroy()
+    }
+
+    /**
+     * Configura o ExoPlayer para reprodução de vídeo
+     */
+    private fun setupExoPlayer() {
+        exoVideoPlayer = ExoVideoPlayer(this)
+        
+        // Configurar listener para eventos do player
+        exoVideoPlayer?.setPlayerListener(object : Player.Listener {
+            override fun onPlaybackStateChanged(playbackState: Int) {
+                when (playbackState) {
+                    Player.STATE_READY -> {
+                        // Player pronto para reproduzir
+                        android.util.Log.d("ExoPlayer", "Player ready")
+                    }
+                    Player.STATE_BUFFERING -> {
+                        // Carregando conteúdo
+                        android.util.Log.d("ExoPlayer", "Buffering")
+                    }
+                    Player.STATE_ENDED -> {
+                        // Reprodução finalizada
+                        android.util.Log.d("ExoPlayer", "Playback ended")
+                    }
+                    Player.STATE_IDLE -> {
+                        // Player ocioso
+                        android.util.Log.d("ExoPlayer", "Player idle")
+                    }
+                }
+            }
+            
+            override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
+                // Tratar erros de reprodução
+                exoVideoPlayer?.handlePlaybackError(error.message ?: "Unknown error")
+            }
+        })
+    }
+
+    /**
+     * Verifica se página possui player de vídeo e configura ExoPlayer
+     */
+    private fun checkForVideoPlayer(url: String?) {
+        url?.let { pageUrl ->
+            // Detectar se é página de live/streaming
+            if (pageUrl.contains("/live/") || pageUrl.contains("stream")) {
+                
+                // Tentar extrair URL da stream da página
+                val streamUrl = extractStreamUrlFromPage(pageUrl)
+                if (streamUrl != null) {
+                    setupVideoPlayerForStream(streamUrl)
+                }
+            }
+        }
+    }
+
+    /**
+     * Configura o player de vídeo para stream específica
+     */
+    private fun setupVideoPlayerForStream(streamUrl: String) {
+        try {
+            // Inicializar player
+            exoVideoPlayer?.initializePlayer()
+            
+            // Configurar PlayerView
+            exoVideoPlayer?.setupPlayerView(videoPlayerView)
+            
+            // Determinar tipo de stream e iniciar reprodução
+            when {
+                ExoVideoPlayer.isWebRTCUrl(streamUrl) -> {
+                    android.util.Log.d("ExoPlayer", "Starting WebRTC stream: $streamUrl")
+                    exoVideoPlayer?.playWebRTCStream(streamUrl)
+                }
+                ExoVideoPlayer.isHLSUrl(streamUrl) -> {
+                    android.util.Log.d("ExoPlayer", "Starting HLS stream: $streamUrl")
+                    exoVideoPlayer?.playHLSStream(streamUrl)
+                }
+                else -> {
+                    // Tentar detectar automaticamente
+                    val formattedUrl = ExoVideoPlayer.formatStreamUrl(streamUrl)
+                    if (ExoVideoPlayer.isWebRTCUrl(formattedUrl)) {
+                        exoVideoPlayer?.playWebRTCStream(formattedUrl)
+                    } else {
+                        exoVideoPlayer?.playHLSStream(formattedUrl)
+                    }
+                }
+            }
+            
+            // Mostrar player de vídeo
+            showVideoPlayer()
+            
+            // Toast informativo
+            android.widget.Toast.makeText(
+                this,
+                "🎥 Player Exo ativado para live",
+                android.widget.Toast.LENGTH_SHORT
+            ).show()
+            
+        } catch (e: Exception) {
+            android.util.Log.e("ExoPlayer", "Error setting up video player", e)
+            android.widget.Toast.makeText(
+                this,
+                "❌ Erro ao configurar player de vídeo",
+                android.widget.Toast.LENGTH_SHORT
+            ).show()
+        }
+    }
+
+    /**
+     * Mostra o container do player de vídeo
+     */
+    private fun showVideoPlayer() {
+        videoPlayerView.visibility = View.VISIBLE
+    }
+
+    /**
+     * Esconde o container do player de vídeo
+     */
+    private fun hideVideoPlayer() {
+        videoPlayerView.visibility = View.GONE
+    }
+
+    /**
+     * Extrai URL da stream da página (implementação básica)
+     */
+    private fun extractStreamUrlFromPage(pageUrl: String): String? {
+        // Lógica simples para extrair URL - pode ser melhorada
+        return when {
+            pageUrl.contains("webrtc://") -> pageUrl
+            pageUrl.contains(".m3u8") -> pageUrl
+            pageUrl.contains("/live/") -> {
+                // Extrair ID da stream da URL
+                val streamId = pageUrl.substringAfterLast("/live/")
+                if (streamId.isNotEmpty()) {
+                    ExoVideoPlayer.formatStreamUrl("", streamId)
+                } else null
+            }
+            else -> null
+        }
     }
 
     /**

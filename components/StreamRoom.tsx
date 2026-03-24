@@ -24,6 +24,7 @@ import { socketService } from '../services/socket';
 import AvatarWithFrame from './ui/AvatarWithFrame';
 import { beautyWebRTCIntegration } from '../services/BeautyWebRTCIntegration';
 import LiveVideoPlayer from './LiveVideoPlayer';
+import PDVideoPlayer from './PDVideoPlayer';
 
 interface ChatMessageType {
     id: number;
@@ -480,16 +481,22 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
         }
     }, [messages]);
 
-    // Cleanup do sistema de beleza ao desmontar
+    // Cleanup do sistema de beleza e WebRTC ao desmontar
     useEffect(() => {
         return () => {
             // Parar processamento de beleza ao sair da sala
             if (beautyWebRTCIntegration.isBeautyActive()) {
                 beautyWebRTCIntegration.stopBeautyProcessing();
-                // Sistema de beleza limpo ao sair
+                console.log('Sistema de beleza limpo ao sair da sala');
+            }
+            
+            // Parar WebRTC service ao sair da sala
+            if (isBroadcaster) {
+                webRTCService.stop();
+                console.log('WebRTC service parado ao sair da sala');
             }
         };
-    }, []);
+    }, [isBroadcaster]);
 
     // activeScreen é controlado pela prop setActiveScreen do componente pai
 
@@ -731,6 +738,52 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
 
     const topContributors = onlineUsers.filter(u => u.value > 0).slice(0, 3);
 
+    // Obter URL da stream para o LiveVideoPlayer/PD Player
+    const getStreamUrl = () => {
+        console.log(` getStreamUrl - streamer.playbackUrl: ${streamer.playbackUrl}`);
+        console.log(` getStreamUrl - streamer.id: ${streamer.id}`);
+        
+        // Se tiver playbackUrl, usar preferencialmente
+        if (streamer.playbackUrl) {
+            // Se for FLV, converter para WebRTC/HLS para PD Player
+            if (streamer.playbackUrl.includes('.flv')) {
+                const srsWebrtcBase = import.meta.env?.VITE_SRS_WEBRTC_URL || 'webrtc://72.60.249.175/live';
+                const webrtcUrl = `${srsWebrtcBase}/${streamer.id}`;
+                const hlsUrl = `https://72.60.249.175/live/${streamer.id}.m3u8`;
+                
+                console.log(` getStreamUrl - Convertendo FLV para WebRTC: ${webrtcUrl}`);
+                console.log(` getStreamUrl - Convertendo FLV para HLS: ${hlsUrl}`);
+                
+                // Retornar WebRTC para PD Player (prioridade)
+                return webrtcUrl;
+            }
+            
+            return streamer.playbackUrl;
+        }
+        
+        // Se não tiver playbackUrl, construir baseado no streamerId
+        if (streamer.id) {
+            // Detectar tipo de stream baseado no servidor
+            const isSRS = streamer.playbackUrl?.includes('72.60.249.175') || 
+                          streamer.playbackUrl?.includes('livego.store');
+            
+            if (isSRS) {
+                // Stream SRS - usar WebRTC ou HLS baseado no formato
+                if (streamer.playbackUrl?.includes('.m3u8')) {
+                    return streamer.playbackUrl; // HLS
+                } else {
+                    return `webrtc://72.60.249.175/live/${streamer.id}`; // WebRTC
+                }
+            } else {
+                // Fallback para outros servidores
+                return `https://72.60.249.175/live/${streamer.id}.m3u8`;
+            }
+        }
+        
+        // Fallback final
+        return `webrtc://72.60.249.175/live/${streamer.id}`;
+    };
+
     return (
         <div className="absolute inset-0 bg-gray-900 text-white font-sans z-10"
             onMouseDown={(e) => handlePointerDown(e.clientX, e.clientY)}
@@ -771,17 +824,14 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
                     />
                 )}
 
-                {/* Live Video Player Component */}
-                <LiveVideoPlayer
+                {/* Video Player Component - Player universal para ambos host e espectadores */}
+                <PDVideoPlayer
                     streamer={streamer}
                     currentUser={currentUser}
-                    isBroadcaster={isBroadcaster}
-                    onVideoReady={() => {
-                        setIsVideoPlaying(true);
-                        // Manter lógica existente de video ready
-                    }}
+                    streamUrl={getStreamUrl()}
+                    onVideoReady={() => setIsVideoPlaying(true)}
                     onVideoError={(error) => {
-                        console.error('Video player error:', error);
+                        console.error('PD Player error:', error);
                         addToast('error', `Erro no vídeo: ${error}`);
                     }}
                 />

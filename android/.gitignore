@@ -1,0 +1,60 @@
+# Gitigonone - Ignorar arquivos de build e dependências
+
+# Gradle
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+!**/src/main/**/build/
+
+# Local configuration file (sdk path, etc)
+local.properties
+
+# Android Studio generated files and folders
+*.iml
+.idea/
+.DS_Store
+.externalNativeBuild
+.cxx/
+
+# Keystore files
+*.jks
+*.p8
+*.p12
+*.key
+*.keystore
+
+# Google Services (e.g. APIs or Firebase)
+google-services.json
+
+# Android Profiling
+*.hprof
+
+# APK
+*.apk
+*.aab
+
+# Logs
+*.log
+
+# Node modules (se usar WebView com node)
+node_modules/
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# IDE
+.vscode/
+*.swp
+*.swo
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Temporary files
+*.tmp
+*.temp

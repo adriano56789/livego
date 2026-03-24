@@ -2,12 +2,16 @@ import React, { useEffect, useRef, useState } from 'react';
 import { webRTCService } from '../services/webrtcService';
 import { SRS_ICE_CONFIG } from '../services/srsIceConfig';
 import { WEBRTC_ICE_CONFIG } from '../services/webrtcIceConfig';
+import { RealIDGenerator } from '../services/RealIDGenerator';
 
 interface PDVideoPlayerProps {
   streamer: {
     id: string;
     hostId: string;
     playbackUrl?: string;
+    displayName?: string;
+    realUserId?: string;
+    roomId?: string;
   };
   streamUrl?: string;
   className?: string;
@@ -32,6 +36,36 @@ const PDVideoPlayer: React.FC<PDVideoPlayerProps> = ({
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Gerar URLs usando sistema de IDs reais
+  const generateRealStreamURLs = () => {
+    // Verificar se é um stream real usando o sistema novo
+    const isValidStream = RealIDGenerator.isValidStreamID(streamer.id);
+    
+    if (!isValidStream) {
+      console.warn('PD Player - Stream ID inválido:', streamer.id);
+      return null;
+    }
+
+    // Extrair informações do streamId
+    const parsed = RealIDGenerator.parseStreamID(streamer.id);
+    if (!parsed) {
+      console.warn('PD Player - Não foi possível parsear stream ID:', streamer.id);
+      return null;
+    }
+
+    // Gerar URLs reais
+    const urls = RealIDGenerator.generateStreamURLs(streamer.id, streamer.displayName || 'Unknown');
+    
+    console.log('PD Player - Sistema de IDs Reais:');
+    console.log('  Stream ID:', streamer.id);
+    console.log('  User ID:', parsed.userId);
+    console.log('  Display Name:', streamer.displayName);
+    console.log('  Room ID:', streamer.roomId);
+    console.log('  URLs:', urls);
+    
+    return urls;
+  };
 
   useEffect(() => {
     const setupVideo = async () => {

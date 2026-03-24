@@ -1,0 +1,189 @@
+version: '3.8'
+
+services:
+  # SFU Master (WebRTC Principal)
+  srs-sfu-master:
+    image: ossrs/srs:5
+    container_name: livego-sfu-master
+    ports:
+      - "8000:8000/tcp"     # API
+      - "10080:10080/udp"   # WebRTC UDP
+      - "10081:10081/tcp"   # WebRTC TCP
+    environment:
+      - CANDIDATE=72.60.249.175
+      - WEBRTC=enabled
+      - MAX_CONNECTIONS=2000
+      - MAX_BITRATE=2000000
+      - SFU_MODE=master
+      - CLUSTER_ID=livego-sfu
+    volumes:
+      - ./srs-sfu-master.conf:/usr/local/srs/conf/srs.conf
+      - ./logs:/usr/local/srs/objs/logs
+    networks:
+      - livego-cluster
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '1.0'
+          memory: 1G
+    restart_policy:
+      condition: on-failure
+      delay: 5s
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/summaries"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # SFU Workers (Auto-scale)
+  srs-sfu-worker:
+    image: ossrs/srs:5
+    environment:
+      - CANDIDATE=72.60.249.175
+      - WEBRTC=enabled
+      - MAX_CONNECTIONS=1000
+      - MAX_BITRATE=1500000
+      - SFU_MODE=worker
+      - CLUSTER_ID=livego-sfu
+      - MASTER_SERVER=srs-sfu-master:8000
+    volumes:
+      - ./srs-sfu-worker.conf:/usr/local/srs/conf/srs.conf
+      - ./logs:/usr/local/srs/objs/logs
+    networks:
+      - livego-cluster
+    deploy:
+      replicas: 1  # Auto-scale via script
+      resources:
+        limits:
+          cpus: '1.5'
+          memory: 1.5G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    depends_on:
+      - srs-sfu-master
+
+  # Origin Server (HLS/LL-HLS)
+  srs-origin:
+    image: ossrs/srs:5
+    container_name: livego-srs-origin
+    ports:
+      - "1935:1935/tcp"     # RTMP ingest
+      - "8080:8080/tcp"     # HTTP API
+      - "8001:8001/tcp"     # HTTP HLS
+      - "8088:8088/tcp"     # HTTP FLV
+    environment:
+      - HLS_ENABLED=true
+      - LLHLS_ENABLED=true
+      - MAX_BITRATE=4000000
+      - SEGMENT_DURATION=2
+      - ORIGIN_MODE=true
+      - CLUSTER_ID=livego-origin
+    volumes:
+      - ./srs-origin.conf:/usr/local/srs/conf/srs.conf
+      - ./logs:/usr/local/srs/objs/logs
+      - ./hls-cache:/usr/local/srs/objs/hls
+    networks:
+      - livego-cluster
+    deploy:
+      replicas: 3
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '1.0'
+          memory: 1G
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/v1/summaries"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Edge Servers (CDN)
+  srs-edge-1:
+    image: ossrs/srs:5
+    ports:
+      - "9001:8001/tcp"     # HLS Edge 1
+      - "9088:8088/tcp"     # FLV Edge 1
+    environment:
+      - EDGE_MODE=true
+      - ORIGIN_SERVER=srs-origin:8080
+      - HLS_ENABLED=true
+      - LLHLS_ENABLED=true
+      - CACHE_DURATION=30
+      - EDGE_ID=edge-1
+      - CLUSTER_ID=livego-edge
+    volumes:
+      - ./srs-edge.conf:/usr/local/srs/conf/srs.conf
+      - ./edge-cache-1:/usr/local/srs/objs/hls
+    networks:
+      - livego-cluster
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    depends_on:
+      - srs-origin
+
+  srs-edge-2:
+    image: ossrs/srs:5
+    ports:
+      - "9002:8001/tcp"     # HLS Edge 2
+      - "9089:8088/tcp"     # FLV Edge 2
+    environment:
+      - EDGE_MODE=true
+      - ORIGIN_SERVER=srs-origin:8080
+      - HLS_ENABLED=true
+      - LLHLS_ENABLED=true
+      - CACHE_DURATION=30
+      - EDGE_ID=edge-2
+      - CLUSTER_ID=livego-edge
+    volumes:
+      - ./srs-edge.conf:/usr/local/srs/conf/srs.conf
+      - ./edge-cache-2:/usr/local/srs/objs/hls
+    networks:
+      - livego-cluster
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+    depends_on:
+      - srs-origin
+
+  # Load Balancer
+  nginx-lb:
+    image: nginx:alpine
+    container_name: livego-nginx-lb
+    ports:
+      - "80:80/tcp"
+      - "443:443/tcp"
+    volumes:
+      - ./nginx-lb.conf:/etc/nginx/nginx.conf
+      - ./ssl-certs:/etc/ssl/certs
+    networks:
+      - livego-cluster
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+    depends_on:
+      - srs-edge-1
+      - srs-edge-2
+
+networks:
+  livego-cluster:
+    external: true

@@ -250,14 +250,25 @@ router.post('/streams', async (req, res) => {
             });
         }
 
-        // Gerar ID único para stream
-        const streamId = `stream_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
-
-        // Buscar usuário para obter dados reais
+        // Buscar usuário para obter dados reais primeiro
         const user = await User.findOne({ id: hostId });
         if (!user) {
             return res.status(404).json({ error: 'Host user not found' });
         }
+
+        // Gerar IDs reais usando o sistema novo
+        const realUserId = `user_${hostId}`;
+        const timestamp = Date.now().toString(36);
+        const random = Math.random().toString(36).substr(2, 6);
+        const streamId = `stream_${realUserId}_${timestamp}_${random}`;
+        const roomId = `room_${realUserId}_${timestamp}_${random}`;
+        const displayName = `${user.name} (${realUserId})`;
+
+        console.log(`🎥 [STREAM CREATE] Criando stream com IDs reais:`);
+        console.log(`  User ID: ${realUserId}`);
+        console.log(`  Stream ID: ${streamId}`);
+        console.log(`  Room ID: ${roomId}`);
+        console.log(`  Display Name: ${displayName}`);
 
         // Usar dados reais do usuário
         const userAvatar = user.avatarUrl || '';
@@ -274,51 +285,51 @@ router.post('/streams', async (req, res) => {
 
         console.log(`🌍 [STREAM CREATE] País final: ${finalCountry} (enviado: ${country || 'none'}, usuário: ${userCountry})`);
 
-        // Criar stream com dados reais
-        const stream = await Streamer.create({
-            id: streamId,
-            hostId: hostId,
-            name: name.trim(),
+        // Criar novo streamer com IDs reais
+        const newStreamer = new Streamer({
+            id: streamId,                    // ID real do stream
+            hostId: realUserId,              // ID real do usuário
+            name: displayName,               // Nome + ID para identificação
             avatar: userAvatar,
-            location: finalLocation,
+            location: userCountry,
             time: 'Live Now',
-            message: `Ao vivo: ${name.trim()}`,
-            tags: ['live', category.toLowerCase()],
+            message: user.bio || '',
+            tags: ['live', 'streaming'],
             isHot: false,
-            icon: '',
-            country: finalCountry,
+            country: userCountry,
             viewers: 0,
             isPrivate: false,
-            quality: '720p',
+            quality: 'HD',
             demoVideoUrl: '',
-            // URLs reais do SRS
             rtmpIngestUrl: `${srsRtmpUrl}/${streamId}`,
             srtIngestUrl: '',
-            streamKey: streamId,
+            streamKey: streamId,             // Usar streamId como chave
             playbackUrl: `${srsHttpUrl}/live/${streamId}.flv`,
             webrtcUrl: `${srsWebRtcUrl}/rtc/v1/play/`,
-            // Status
+            roomId: roomId,                  // ID da sala
+            displayName: displayName,         // Nome para exibição
+            realUserId: realUserId,          // ID real do usuário
             isLive: true,
             startTime: new Date().toISOString(),
-            category: category.toLowerCase(),
+            streamStatus: 'active',
+            category: 'live',
             language: 'pt',
             maxViewers: 1000,
             recordingEnabled: false,
             chatEnabled: true,
             giftsEnabled: true,
-            streamStatus: 'active',
-            // Configurações técnicas
-            bitrate: '2000k',
-            fps: 30,
-            resolution: '1280x720',
-            audioCodec: 'AAC',
-            videoCodec: 'H264',
-            latency: 'low',
-            // Configurações adicionais
-            ...otherData,
-            createdAt: new Date(),
-            updatedAt: new Date()
+            diamonds: 0,
         });
+
+        // Configurações técnicas
+        const bitrate = '2000k';
+        const fps = 30;
+        const resolution = '1280x720';
+        const audioCodec = 'AAC';
+        const videoCodec = 'H264';
+
+        // Criar stream com dados reais
+        const stream = await Streamer.create(newStreamer);
 
         // Atualizar status do usuário para live
         await User.findOneAndUpdate(

@@ -202,3 +202,11 @@ cd android && ./build-webapp.sh
 - Performance: Otimizada e estável
 
 **Transmissões ao vivo agora funcionam perfeitamente no aplicativo Android e no website, usando exatamente a mesma infraestrutura e proporcionando a mesma experiência ao usuário!** 🎥📱🌐
+
+
+Scripts Criados:
+✅ deploy-escalavel.sh (Linux/Mac)
+✅ deploy-escalavel.bat (Windows)
+✅ turn-global.yml (TURN servers)
+✅ srs-cluster.yml (SRS cluster)
+✅ streamConfig.ts (Configurações)

@@ -22,16 +22,32 @@ const getCurrentUserId = () => {
         const userStr = localStorage.getItem('user');
         if (userStr) {
             const user = JSON.parse(userStr);
-            return user?.id;
+            if (user?.id) {
+                console.log('[API] User ID from localStorage:', user.id);
+                return user.id;
+            }
         }
 
         // Fallback para 'user_storage' (Zustand/Persist se houver)
         const userStorageStr = localStorage.getItem('user_storage');
         if (userStorageStr) {
             const userStorage = JSON.parse(userStorageStr);
-            return userStorage?.state?.user?.id || userStorage?.id;
+            const userId = userStorage?.state?.user?.id || userStorage?.id;
+            if (userId) {
+                console.log('[API] User ID from user_storage:', userId);
+                return userId;
+            }
         }
+
+        // Tentar do currentUser global (se existir)
+        if (typeof window !== 'undefined' && (window as any).currentUser?.id) {
+            console.log('[API] User ID from window.currentUser:', (window as any).currentUser.id);
+            return (window as any).currentUser.id;
+        }
+
+        console.error('[API] getCurrentUserId: No user ID found in any storage');
     } catch (e) {
+        console.error('[API] Error in getCurrentUserId:', e);
     }
     return null;
 };
@@ -247,19 +263,23 @@ export const api = {
 
         getTags: () => callApi<{ value: string }>('GET', '/api/perfil/tags'),
         updateTags: (value: string) => callApi<{ success: boolean }>('PUT', '/api/perfil/tags', { value }),
-
-        getProfession: () => callApi<{ value: string }>('GET', '/api/perfil/profissao'),
-        updateProfession: (value: string) => callApi<{ success: boolean }>('PUT', '/api/perfil/profissao', { value }),
     },
 
-
-    // --- Wallet & Transactions ---
-    buyDiamonds: (userId: string, amount: number, price: number) => callApi<{ success: boolean, user: User }>('POST', `/api/users/${userId}/buy-diamonds`, { amount, price }),
-    getPurchaseHistory: (userId: string) => callApi<PurchaseRecord[]>('GET', `/api/purchases/history/${userId}`),
-    getEarningsInfo: (userId: string) => callApi<{
-        withdrawal_method: boolean; available_diamonds: number; brl_value: number; conversion_rate: string; 
+    // --- Wallet & Earnings ---
+    getEarnings: (userId: string) => callApi<{
+        withdrawal_method: { method: string; details: any } | null;
+        available_diamonds: number; 
+        brl_value: number; 
+        conversion_rate: string;
+        diamonds_purchased: number;
+        earnings_withdrawn: number;
+        enviados: number;
+        receptores: number;
+        lastSeen: string;
+        createdAt: string;
     }>('GET', `/api/wallet/earnings/get/${userId}`),
     getFreshUserData: (userId: string) => callApi<User>('GET', `/api/users/${userId}`),
+    getCompleteUserData: (userId: string) => callApi<User>('GET', `/api/users/${userId}`),
     calculateWithdrawal: (amount: number) => {
         return callApi<{ diamonds: number; gross_brl: number; platform_fee_brl: number; net_brl: number; breakdown: { conversion: string; fee: string; final: string; } }>('POST', '/api/wallet/earnings/calculate', { amount });
     },
@@ -267,7 +287,13 @@ export const api = {
         return callApi<{ success: boolean, amount: number, newEarnings: number, brl_amount: number, platform_fee: number, message: string }>('POST', `/api/wallet/withdraw/${userId}`, { amount });
     },
     setWithdrawalMethod: (method: string, details: any) => {
-        return callApi<{ success: boolean, user: User }>('POST', `/api/wallet/earnings/method/set/${getCurrentUserId()}`, { method, details });
+        const userId = getCurrentUserId();
+        if (!userId) {
+            console.error('[API] setWithdrawalMethod: No userId available');
+            return Promise.reject(new Error('Usuário não encontrado. Faça login novamente.'));
+        }
+        console.log('[API] setWithdrawalMethod:', { userId, method, details });
+        return callApi<{ success: boolean, user: User }>('POST', `/api/wallet/earnings/method/set/${userId}`, { method, details });
     },
     
     // --- Gift Counters ---

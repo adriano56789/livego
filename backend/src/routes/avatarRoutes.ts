@@ -1,5 +1,5 @@
 import express from 'express';
-import { User } from '../models';
+import { User, PurchaseRecord } from '../models';
 
 const router = express.Router();
 
@@ -69,10 +69,66 @@ router.post('/users/:id/frames/buy', async (req, res) => {
       expirationDate: expirationDate.toISOString()
     });
 
-    // Deduzir diamonds
+    // Deduzir diamonds do comprador
     user.diamonds -= price;
 
+    // Adicionar diamonds à carteira ADM (avatar é meu produto)
+    const ADM_EMAIL = process.env.ADM_EMAIL || 'adrianomdk5@gmail.com';
+    const admUser = await User.findOneAndUpdate(
+      { email: ADM_EMAIL },
+      { $inc: { earnings: price } },
+      { new: true }
+    );
+
     await user.save();
+
+    // Registrar compra de avatar no histórico
+    await PurchaseRecord.create({
+      id: `avatar_${frameId}_${user.id}_${Date.now()}`,
+      userId: user.id,
+      type: 'avatar_purchase',
+      description: `Compra de avatar/frame ${frameId} - ${price} diamantes`,
+      amountBRL: 0, // Compra interna, não envolve dinheiro real
+      amountCoins: price,
+      status: 'Concluído',
+      timestamp: new Date()
+    });
+
+    // Registrar receita para ADM
+    if (admUser) {
+      await PurchaseRecord.create({
+        id: `avatar_fee_${frameId}_${user.id}_${Date.now()}`,
+        userId: admUser.id,
+        type: 'avatar_sale_income',
+        description: `Venda de avatar ${frameId} para ${user.name}: ${price} diamantes`,
+        amountBRL: 0,
+        amountCoins: price,
+        status: 'Concluído',
+        timestamp: new Date()
+      });
+    }
+
+    // Emitir WebSocket para atualização em tempo real
+    const io = req.app.get('io');
+    if (io) {
+      io.to(user.id).emit('avatar_purchased', {
+        userId: user.id,
+        frameId,
+        price,
+        newDiamonds: user.diamonds
+      });
+
+      // Notificar ADM sobre nova receita
+      if (admUser) {
+        io.to(admUser.id).emit('earnings_updated', {
+          userId: admUser.id,
+          earnings: admUser.earnings,
+          change: price,
+          source: 'avatar_sale',
+          fromUser: user.name
+        });
+      }
+    }
 
     res.json({ 
       success: true, 

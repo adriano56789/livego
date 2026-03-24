@@ -38,6 +38,7 @@ export interface IUser extends Document {
     diamonds: number;
     earnings: number;
     earnings_withdrawn: number;
+    diamonds_purchased: number;
     withdrawal_method?: { method: string; details: any };
     bio?: string;
     obras?: any[];
@@ -124,6 +125,7 @@ const UserSchema = new Schema<IUser>({
     diamonds: { type: Number, default: 0 },
     earnings: { type: Number, default: 0 },
     earnings_withdrawn: { type: Number, default: 0 },
+    diamonds_purchased: { type: Number, default: 0 },
     withdrawal_method: { type: Schema.Types.Mixed },
     bio: { type: String },
     obras: [{ type: Schema.Types.Mixed }],

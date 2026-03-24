@@ -59,15 +59,20 @@ const ConfigureWithdrawalMethodScreen: React.FC<ConfigureWithdrawalMethodScreenP
 
     setIsSaving(true);
     try {
-        const { success, user } = await api.setWithdrawalMethod(method, details);
-        if (success && user) {
-            updateUser(user);
+        const response = await api.setWithdrawalMethod(method, details);
+        console.log('[ConfigureWithdrawal] Response:', response);
+        
+        if (response.success) {
+            if (response.user) {
+                updateUser(response.user);
+            }
             addToast(ToastType.Success, "Método de saque salvo!");
             onClose();
         } else {
             throw new Error("Falha ao salvar método.");
         }
     } catch (error) {
+        console.error('[ConfigureWithdrawal] Error:', error);
         addToast(ToastType.Error, (error as Error).message);
     } finally {
         setIsSaving(false);

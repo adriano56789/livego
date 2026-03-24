@@ -32,7 +32,7 @@ const GanhosTab: React.FC<GanhosTabProps> = ({ onConfigure, currentUser, updateU
     const fetchEarningsInfo = useCallback(async () => {
         setIsLoading(true);
         try {
-            const data = await api.getEarningsInfo(currentUser.id);
+            const data = await api.getEarnings(currentUser.id);
             setEarningsInfo(data);
             
             // Se a API retornar withdrawal_method, atualizar o usuário
@@ -133,7 +133,7 @@ const GanhosTab: React.FC<GanhosTabProps> = ({ onConfigure, currentUser, updateU
                 // Atualizar dados do usuário após saque
                 const [freshUser, freshEarnings] = await Promise.all([
                     api.getCurrentUser(),
-                    api.getEarningsInfo(currentUser.id)
+                    api.getEarnings(currentUser.id)
                 ]);
                 
                 if (freshUser) {

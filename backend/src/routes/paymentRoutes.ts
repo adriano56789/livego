@@ -42,10 +42,22 @@ router.post('/webhook/purchase', async (req, res) => {
         order.confirmedAt = new Date();
         await order.save();
 
-        // Creditar diamantes para o usuário
+        // Creditar diamantes para o usuário (FLUXO 1: ENTRADA DE VALOR)
         const user = await User.findOneAndUpdate(
           { id: order.userId },
-          { $inc: { diamonds: order.diamonds } },
+          { 
+            $inc: { diamonds: order.diamonds },
+            $push: {
+              purchase_history: {
+                timestamp: new Date(),
+                amount: order.amount,
+                diamonds: order.diamonds,
+                paymentId: paymentId,
+                description: `Compra de ${order.diamonds} diamantes via Mercado Pago`,
+                status: 'completed'
+              }
+            }
+          },
           { new: true }
         );
 

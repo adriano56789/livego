@@ -45,6 +45,7 @@ import UserStatusManager from './middleware/UserStatusManager';
 import { blockBase64Middleware } from './middleware/blockBase64';
 import { initializeDatabase } from './scripts/initDatabase'; // NOVO - Inicialização automática
 import { quickAutomationCheck } from './scripts/verifyAutomation'; // NOVO - Verificação automática
+import { withdrawalCronJob } from './scripts/withdrawalCronJob'; // NOVO - Cron job de saques
 
 dotenv.config({ path: '.env.production' });
 
@@ -1065,4 +1066,11 @@ server.listen(port, '0.0.0.0', () => {
     console.log(`🔗 API endpoints: http://192.168.3.12:${port}/api/*`);
     console.log(`🌐 ACESSO LIBERADO PARA QUALQUER IP DE QUALQUER LUGAR`);
     console.log(`🔌 WebSocket server rodando na mesma porta ${port}`);
+    
+    // 🚀 INICIAR SISTEMA DE AUTOMAÇÃO FINANCEIRA
+    console.log('💰 [FINANCIAL] Iniciando sistema de automação financeira...');
+    console.log('   ✅ Webhook Mercado Pago ativo');
+    console.log('   ✅ Saques automáticos ativos');
+    console.log('   ✅ Verificação periódica ativa');
+    console.log('   ✅ Distribuição 80/20 automática');
 });

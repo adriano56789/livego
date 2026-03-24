@@ -1,13 +1,21 @@
-import React, { useRef, useEffect, useState } from 'react';
-import { webRTCService } from '../services/webrtcService.js';
+import React, { useEffect, useRef, useState } from 'react';
+import { webRTCService } from '../services/webrtcService';
+import { SRS_ICE_CONFIG } from '../services/srsIceConfig';
+import { WEBRTC_ICE_CONFIG } from '../services/webrtcIceConfig';
 
 interface PDVideoPlayerProps {
-  streamer: any;
-  currentUser: any;
+  streamer: {
+    id: string;
+    hostId: string;
+    playbackUrl?: string;
+  };
   streamUrl?: string;
+  className?: string;
   onVideoReady?: () => void;
   onVideoError?: (error: string) => void;
-  className?: string;
+  currentUser: {
+    id: string;
+  };
 }
 
 /**
@@ -16,11 +24,11 @@ interface PDVideoPlayerProps {
  */
 const PDVideoPlayer: React.FC<PDVideoPlayerProps> = ({
   streamer,
-  currentUser,
   streamUrl,
+  className = '',
   onVideoReady,
   onVideoError,
-  className = "absolute inset-0 w-full h-full object-cover z-0"
+  currentUser
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -54,15 +62,15 @@ const PDVideoPlayer: React.FC<PDVideoPlayerProps> = ({
   }, [streamer.id, streamUrl]);
 
   const setupVideoPlayer = async (videoEl: HTMLVideoElement) => {
-    // Construir URL
+    // Construir URL usando configurações SRS próprias
     let videoUrl = streamUrl;
     
     if (!videoUrl) {
       if (streamer.playbackUrl) {
         videoUrl = streamer.playbackUrl;
       } else {
-        const srsWebrtcBase = import.meta.env?.VITE_SRS_WEBRTC_URL || 'webrtc://72.60.249.175/live';
-        videoUrl = `${srsWebrtcBase}/${streamer.id}`;
+        // Usar servidor SRS próprio
+        videoUrl = SRS_ICE_CONFIG.getWebRTCUrl(streamer.id);
       }
     }
 
@@ -87,7 +95,7 @@ const PDVideoPlayer: React.FC<PDVideoPlayerProps> = ({
       }
     }
 
-    // Para espectadores ou fallback: tentar protocolos
+    // Para espectadores ou fallback: tentar protocolos com configurações próprias
     const protocols = [
       { name: 'HLS', fn: () => tryHLS(videoEl, videoUrl) },
       { name: 'WebRTC', fn: () => tryWebRTC(videoEl, videoUrl) },
@@ -115,34 +123,89 @@ const PDVideoPlayer: React.FC<PDVideoPlayerProps> = ({
     throw new Error('Nenhum protocolo funcionou');
   };
 
-  // Funções de protocolo corrigidas
+  // Funções de protocolo corrigidas para máxima compatibilidade - Servidores Próprios
   const tryHLS = async (videoEl: HTMLVideoElement, url: string): Promise<boolean> => {
     try {
       // Converter URL FLV para HLS se necessário
       let hlsUrl = url;
       if (url.includes('.flv')) {
-        hlsUrl = url.replace('.flv', '.m3u8').replace('http://localhost:8080', 'https://72.60.249.175');
+        // Usar servidor SRS próprio
+        hlsUrl = SRS_ICE_CONFIG.getHlsUrl(streamer.id);
       }
       
       console.log('PD Player - HLS URL:', hlsUrl);
-      videoEl.src = hlsUrl;
-      videoEl.muted = false;
       
-      await new Promise<void>((resolve, reject) => {
-        videoEl.onloadeddata = () => {
-          videoEl.play().catch(e => console.warn('Auto-play bloqueado:', e));
-          resolve();
-        };
-        
-        videoEl.onerror = (e) => {
-          console.error('HLS error:', e);
-          reject(new Error('Erro no elemento HLS'));
-        };
-        
-        setTimeout(() => reject(new Error('Timeout HLS')), 10000);
-      });
+      // Detectar suporte HLS nativo (Safari, iOS, Edge)
+      const canPlayHLSNatively = videoEl.canPlayType('application/vnd.apple.mpegurl') || 
+                               videoEl.canPlayType('application/x-mpegURL');
       
-      return true;
+      if (canPlayHLSNatively) {
+        console.log('PD Player - Usando HLS nativo');
+        videoEl.src = hlsUrl;
+        videoEl.muted = false;
+        
+        await new Promise<void>((resolve, reject) => {
+          videoEl.onloadeddata = () => {
+            videoEl.play().catch(e => console.warn('Auto-play bloqueado:', e));
+            resolve();
+          };
+          
+          videoEl.onerror = (e) => {
+            console.error('HLS nativo error:', e);
+            reject(new Error('Erro no HLS nativo'));
+          };
+          
+          setTimeout(() => reject(new Error('Timeout HLS')), 15000);
+        });
+        
+        return true;
+      }
+      
+      // HLS.js para Chrome, Firefox, Edge
+      if ((window as any).Hls) {
+        console.log('PD Player - Usando HLS.js');
+        const hls = new (window as any).Hls({
+          enableWorker: true,
+          lowLatencyMode: true,
+          maxBufferLength: 2,
+          maxMaxBufferLength: 4,
+          backBufferLength: 1,
+          maxBufferSize: 2 * 1000 * 1000, // 2 segundos
+          maxBufferHole: 0.5,
+          highBufferWatchdogPeriod: 2,
+          nudgeOffset: 0.1,
+          nudgeMaxOffset: 0.5,
+          maxFragLookUpTolerance: 0.25,
+          liveSyncDurationCount: 3,
+          liveMaxLatencyDurationCount: Infinity,
+          liveDurationInfinity: true,
+          preferManagedMediaSource: true,
+          debug: false
+        });
+        
+        hls.loadSource(hlsUrl);
+        hls.attachMedia(videoEl);
+        
+        await new Promise<void>((resolve, reject) => {
+          hls.on((window as any).Hls.Events.MANIFEST_PARSED, () => {
+            videoEl.play().catch(e => console.warn('Auto-play bloqueado:', e));
+            resolve();
+          });
+          
+          hls.on((window as any).Hls.Events.ERROR, (event, data) => {
+            console.error('HLS.js error:', data);
+            if (data.fatal) {
+              reject(new Error('Erro fatal no HLS.js'));
+            }
+          });
+          
+          setTimeout(() => reject(new Error('Timeout HLS.js')), 15000);
+        });
+        
+        return true;
+      }
+      
+      throw new Error('HLS não suportado');
     } catch (error) {
       console.warn('HLS falhou:', error);
       return false;
@@ -154,16 +217,42 @@ const PDVideoPlayer: React.FC<PDVideoPlayerProps> = ({
       // Converter URL FLV para WebRTC se necessário
       let webrtcUrl = url;
       if (url.includes('.flv')) {
-        webrtcUrl = url.replace('.flv', '').replace('http://localhost:8080/live/live', 'webrtc://72.60.249.175/live');
+        // Usar servidor SRS próprio
+        webrtcUrl = SRS_ICE_CONFIG.getWebRTCUrl(streamer.id);
       }
       
       console.log('PD Player - WebRTC URL:', webrtcUrl);
+      
+      // Verificar suporte WebRTC
+      const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      const isSupported = navigator.mediaDevices && navigator.mediaDevices.getUserMedia && 
+                          window.RTCPeerConnection || (window as any).webkitRTCPeerConnection || 
+                          (window as any).mozRTCPeerConnection;
+      
+      if (!isSupported) {
+        console.warn('WebRTC não suportado neste navegador');
+        return false;
+      }
+      
+      // Configuração com servidores próprios (sem Google)
+      const webRTCConfig = isMobile ? 
+        WEBRTC_ICE_CONFIG.getMobileIceConfig() : 
+        WEBRTC_ICE_CONFIG.getDesktopIceConfig();
+      
       const remoteStream = await webRTCService.startPlay(webrtcUrl);
       
       if (remoteStream) {
         videoEl.srcObject = remoteStream;
         videoEl.muted = false;
         videoEl.volume = 1.0;
+        
+        // Otimizações para mobile
+        if (isMobile) {
+          videoEl.setAttribute('playsinline', 'true');
+          videoEl.setAttribute('webkit-playsinline', 'true');
+          videoEl.setAttribute('x5-playsinline', 'true');
+          videoEl.setAttribute('x5-video-player-type', 'h5');
+        }
         
         videoEl.onloadeddata = () => {
           videoEl.play().catch(e => console.warn('Auto-play bloqueado:', e));
@@ -233,16 +322,21 @@ const PDVideoPlayer: React.FC<PDVideoPlayerProps> = ({
         </div>
       )}
 
-      {/* Elemento de vídeo - apenas o vídeo, sem poster */}
+      {/* Elemento de vídeo - preenche toda a tela sem faixas pretas */}
       <video
         ref={videoRef}
-        className={className}
+        className="absolute inset-0 w-full h-full object-cover"
         playsInline
         muted={currentUser.id === streamer.hostId}
         autoPlay={true}
-        controls={false} // Sem controles visíveis
+        controls={false}
         key={`pd-player-${streamer.id}`}
-        // Sem poster para não mostrar capa
+        style={{
+          width: '100%',
+          height: '100%',
+          objectFit: 'cover',
+          objectPosition: 'center'
+        }}
       />
     </div>
   );

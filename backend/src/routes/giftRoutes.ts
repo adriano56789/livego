@@ -20,7 +20,7 @@ router.post('/send', async (req: any, res) => {
         
         // Calcular valor total
         const giftPrice = gift?.price || 0;
-        const totalCost = giftPrice;
+        const totalCost = giftPrice * quantity;
         
         // Verificar saldo de diamantes
         if (fromUser.diamonds < totalCost) {
@@ -205,6 +205,8 @@ router.post('/send', async (req: any, res) => {
                     icon: gift.icon,
                     price: giftPrice
                 },
+                quantity: quantity,
+                totalValue: totalCost,
                 streamId,
                 timestamp: new Date().toISOString()
             });

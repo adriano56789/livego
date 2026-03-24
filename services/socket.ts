@@ -116,6 +116,11 @@ class SocketService {
         this.on('gift_sent_to_stream', callback);
     }
 
+    // Evento para quando um presente é recebido
+    onGiftReceived(callback: (data: { from: { id: string; name: string; avatarUrl: string }; gift: { id: string; name: string; icon: string; price: number }; quantity: number; totalValue: number; streamId: string; timestamp: string }) => void) {
+        this.on('gift_received', callback);
+    }
+
     // Evento para quando os contadores de moedas da live são atualizados
     onLiveCoinsUpdated(callback: (data: { streamId: string; coins: number; totalCoins: number }) => void) {
         this.on('live_coins_updated', callback);

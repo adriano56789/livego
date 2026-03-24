@@ -495,11 +495,57 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
         };
         socketService.on('receive_message', handleNewMessage);
 
-        const handleNewGift = (payload: GiftPayload) => {
+        const handleNewGift = (data: any) => {
+            // Converter dados do WebSocket para formato GiftPayload
+            const payload: GiftPayload = {
+                fromUser: {
+                    id: data.from.id,
+                    identification: data.from.id,
+                    name: data.from.name,
+                    avatarUrl: data.from.avatarUrl,
+                    coverUrl: '',
+                    photos: [],
+                    country: 'br',
+                    gender: 'not_specified' as const,
+                    level: 1,
+                    xp: 0,
+                    age: 18,
+                    location: 'Brasil',
+                    distance: 'desconhecida',
+                    fans: 0,
+                    following: 0,
+                    receptores: 0,
+                    enviados: 0,
+                    topFansAvatars: [],
+                    isLive: false,
+                    diamonds: 0,
+                    earnings: 0,
+                    earnings_withdrawn: 0,
+                    bio: '',
+                    obras: [],
+                    curtidas: [],
+                    ownedFrames: [],
+                    activeFrameId: null,
+                    frameExpiration: null,
+                },
+                toUser: {
+                    id: streamerUser?.id || streamer.id,
+                    name: streamerUser?.name || streamer.name
+                },
+                gift: {
+                    name: data.gift.name,
+                    icon: data.gift.icon,
+                    price: data.gift.price,
+                    category: 'Popular' as const
+                },
+                quantity: data.quantity || 1,
+                roomId: streamer.id
+            };
+
             if (payload.fromUser.id === currentUser.id) return; // Ignore self-sent
 
             if (liveSession) {
-                updateLiveSession({ coins: (liveSession.coins || 0) + (payload.gift.price || 0) });
+                updateLiveSession({ coins: (liveSession.coins || 0) + ((payload.gift.price || 0) * payload.quantity) });
             }
 
             postGiftChatMessage(payload);

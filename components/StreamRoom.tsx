@@ -23,6 +23,7 @@ import { webRTCService } from '../services/webrtcService.js';
 import { socketService } from '../services/socket';
 import AvatarWithFrame from './ui/AvatarWithFrame';
 import { beautyWebRTCIntegration } from '../services/BeautyWebRTCIntegration';
+import LiveVideoPlayer from './LiveVideoPlayer';
 
 interface ChatMessageType {
     id: number;
@@ -137,9 +138,6 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
     const [fullscreenGiftQueue, setFullscreenGiftQueue] = useState<GiftPayload[]>([]);
     const [currentFullscreenGift, setCurrentFullscreenGift] = useState<GiftPayload | null>(null);
 
-    // Video Ref for Stream Playback/Preview
-    const videoRef = useRef<HTMLVideoElement>(null);
-
     const isBroadcaster = streamer.hostId === currentUser.id;
 
     const isFollowed = useMemo(() => followingUsers.some(u => u.id === streamer.hostId), [followingUsers, streamer.hostId]);
@@ -201,130 +199,6 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
 
         swipeStart.current = null;
     };
-
-    // --- VIDEO HANDLING EFFECT ---
-    useEffect(() => {
-        setIsVideoPlaying(false); // Reset on stream change
-
-        const attachStream = async () => {
-            const videoEl = videoRef.current;
-            if (!videoEl) return;
-
-            // Reset source to avoid conflicts and prevent invalid source errors
-            videoEl.pause();
-            videoEl.srcObject = null;
-            videoEl.removeAttribute('src');
-            videoEl.load();
-
-            const onVideoReady = async () => {
-                setIsVideoPlaying(true);
-
-                // Inicializar sistema de beleza para broadcasters
-                if (isBroadcaster) {
-                    try {
-                        const localStream = webRTCService.getLocalStream();
-                        if (localStream) {
-                            // Inicializar integração de beleza com WebRTC
-                            await beautyWebRTCIntegration.initialize(localStream);
-                            // Sistema de beleza inicializado para broadcaster
-                        }
-                    } catch (error) {
-                        // Falha ao inicializar sistema de beleza
-                    }
-                }
-
-                videoEl.play().catch(e => {
-                    if (e.name !== 'AbortError') {
-                    }
-                });
-            };
-
-            if (isBroadcaster) {
-                // Scenario 1: I am the Host (Broadcaster)
-                // Get the local stream we initialized in GoLiveScreen via WebRTCService
-                const localStream = webRTCService.getLocalStream();
-                if (localStream) {
-                    videoEl.srcObject = localStream;
-                    // Important: Broadcasters must mute their own video element to prevent echo/feedback
-                    videoEl.muted = true;
-                    videoEl.volume = 0;
-                    videoEl.onloadeddata = onVideoReady;
-                } else {
-                    try {
-                        // Emergency fallback: request camera again if lost
-                        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-                        videoEl.srcObject = stream;
-                        videoEl.muted = true;
-                        videoEl.onloadeddata = onVideoReady;
-                    } catch (e) {
-                    }
-                }
-            } else {
-                // Scenario 2: I am a Viewer
-
-                try {
-                    // Construct the WebRTC URL for SRS
-                    // Assuming standard SRS format: http://<server>/rtc/v1/play/
-                    // But our service expects the full stream URL like: webrtc://<server>/live/<streamId>
-                    // Let's use the one from streamer object or construct it
-
-                    // 🔧 SINCRONIZAÇÃO: Usar variável de ambiente para URL do SRS (não hardcoded)
-                    // Prioridade: playbackUrl da stream > variável de ambiente > fallback
-                    const srsWebrtcBase = import.meta.env?.VITE_SRS_WEBRTC_URL || 'webrtc://72.60.249.175/live';
-                    const webrtcUrl = (streamer.playbackUrl && streamer.playbackUrl.startsWith('webrtc://'))
-                        ? streamer.playbackUrl
-                        : `${srsWebrtcBase}/${streamer.id}`;
-
-
-                    const remoteStream = await webRTCService.startPlay(webrtcUrl);
-
-                    if (remoteStream) {
-                        videoEl.srcObject = remoteStream;
-                        videoEl.muted = false;
-                        videoEl.volume = 1.0;
-                        videoEl.onloadeddata = onVideoReady;
-
-                        // ✅ DEBUG: Verificar video element
-                        videoEl.onloadedmetadata = () => {
-
-                            if (videoEl.videoWidth === 0) {
-                            }
-                        };
-
-                        videoEl.onerror = (e) => {
-                        };
-
-                        // Auto-play might be blocked, ensure we try
-                        try {
-                            await videoEl.play();
-                        } catch (e) {
-                        }
-                    } else {
-                        throw new Error("No remote stream returned");
-                    }
-                } catch (e) {
-                    // Continue with fallback without throwing to prevent breaking render
-                    try {
-                        if (streamer.demoVideoUrl) {
-                            videoEl.src = streamer.demoVideoUrl;
-                            videoEl.loop = true;
-                            videoEl.muted = false;
-                            videoEl.onloadeddata = onVideoReady;
-                        } else if (streamer.playbackUrl && streamer.playbackUrl.includes('.flv')) {
-                            // Implement flv.js player here if needed, or just log
-                        } else {
-                            // Final fallback: show cover image
-                            setIsVideoPlaying(false);
-                        }
-                    } catch (fallbackError) {
-                        setIsVideoPlaying(false);
-                    }
-                }
-            }
-        };
-
-        attachStream();
-    }, [isBroadcaster, streamer.id, streamer.demoVideoUrl]);
 
     useEffect(() => {
         // Add entry message for current user
@@ -897,14 +771,19 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
                     />
                 )}
 
-                {/* The Video Element - Removed autoPlay, handled in useEffect */}
-                <video
-                    ref={videoRef}
-                    className="absolute inset-0 w-full h-full object-cover z-0"
-                    playsInline
-                    key={streamer.id}
-                    // Mute if broadcaster to prevent echo, unmute for viewers
-                    muted={isBroadcaster}
+                {/* Live Video Player Component */}
+                <LiveVideoPlayer
+                    streamer={streamer}
+                    currentUser={currentUser}
+                    isBroadcaster={isBroadcaster}
+                    onVideoReady={() => {
+                        setIsVideoPlaying(true);
+                        // Manter lógica existente de video ready
+                    }}
+                    onVideoError={(error) => {
+                        console.error('Video player error:', error);
+                        addToast('error', `Erro no vídeo: ${error}`);
+                    }}
                 />
 
                 {/* Dark Gradient Overlay */}
@@ -1125,7 +1004,7 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
                 isAutoPrivateInviteEnabled={isAutoPrivateInviteEnabled}
                 onToggleAutoPrivateInvite={handleToggleAutoPrivateInvite}
             />
-            {isBeautyPanelOpen && <BeautyEffectsPanel onClose={() => setBeautyPanelOpen(false)} currentUser={currentUser} addToast={addToast} videoRef={videoRef} />}
+            {isBeautyPanelOpen && <BeautyEffectsPanel onClose={() => setBeautyPanelOpen(false)} currentUser={currentUser} addToast={addToast} />}
             <ResolutionPanel isOpen={isResolutionPanelOpen} onClose={() => setResolutionPanelOpen(false)} onSelectResolution={handleSelectResolution} currentResolution={currentResolution} />
             <CoHostModal isOpen={isCoHostModalOpen} onClose={() => setIsCoHostModalOpen(false)} onInvite={handleInvite} onOpenTimerSettings={handleOpenTimerSettings} currentUser={currentUser} addToast={addToast} streamId={streamer.id} />
             {isRankingOpen && <ContributionRankingModal onClose={() => setIsRankingOpen(false)} liveRanking={rankingData} currentUser={currentUser} />}

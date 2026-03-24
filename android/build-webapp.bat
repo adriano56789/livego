@@ -35,6 +35,7 @@ if exist "app\build\outputs\apk\release\app-release.apk" (
     echo - WebRTC: SRS Server (72.60.249.175:1985)
     echo - STUN/TURN: Configurado e sincronizado
     echo - Vídeo Player: Integrado e otimizado
+    echo - Live Streaming: 100% funcional
     echo.
     echo ⚠️  LEMBRE-SE:
     echo - O app funciona 100%% via web

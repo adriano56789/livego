@@ -41,10 +41,23 @@ router.post('/pix', async (req, res) => {
         }
 
         // Verificar método de saque configurado
-        if (!user.withdrawal_method || user.withdrawal_method.method !== 'pix') {
+        console.log(`[WITHDRAW] Debug - User withdrawal_method:`, JSON.stringify(user.withdrawal_method, null, 2));
+        
+        if (!user.withdrawal_method) {
             return res.status(400).json({ 
                 error: 'Método de saque não configurado',
                 details: 'Configure seu método de saque (Pix) no perfil'
+            });
+        }
+        
+        // Verificar se o método é Pix (case insensitive e null safe)
+        const method = user.withdrawal_method.method;
+        console.log(`[WITHDRAW] Debug - Extracted method:`, method, `Type:`, typeof method);
+        
+        if (!method || method.toString().toLowerCase() !== 'pix') {
+            return res.status(400).json({ 
+                error: 'Método de saque não suportado',
+                details: `Método atual: ${method || 'não configurado'}. Use Pix.`
             });
         }
 

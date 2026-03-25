@@ -32,28 +32,28 @@ const DiamanteTab: React.FC<{ onPurchase: (pkg: { diamonds: number; price: numbe
   const { t } = useTranslation();
   const [freshDiamonds, setFreshDiamonds] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchFreshData = async () => {
       if (!currentUser?.id) return;
 
       setIsLoading(true);
+      setError(null);
       try {
         const freshUser = await api.getFreshUserData(currentUser.id);
         
         if (freshUser && typeof freshUser.diamonds === 'number') {
           setFreshDiamonds(freshUser.diamonds);
         } else {
-          // Se API falhar, usar o valor do currentUser sem forçar 0
-          if (currentUser.diamonds !== undefined && currentUser.diamonds !== null) {
-            setFreshDiamonds(currentUser.diamonds);
-          }
+          // Se API falhar, não usar fallback - mostrar erro
+          setFreshDiamonds(null);
+          setError('Dados inválidos recebidos da API');
         }
       } catch (error) {
-        // Se der erro, usar o valor do currentUser sem forçar 0
-        if (currentUser.diamonds !== undefined && currentUser.diamonds !== null) {
-          setFreshDiamonds(currentUser.diamonds);
-        }
+        // Se der erro, não usar fallback - mostrar erro
+        setFreshDiamonds(null);
+        setError('Falha ao carregar dados. Tente novamente.');
       } finally {
         setIsLoading(false);
       }
@@ -62,32 +62,48 @@ const DiamanteTab: React.FC<{ onPurchase: (pkg: { diamonds: number; price: numbe
     fetchFreshData();
   }, [currentUser?.id]);
 
-  // NÃO USAR || 0 - isso zera o contador!
-  const displayDiamonds = freshDiamonds !== null ? freshDiamonds : (currentUser.diamonds ?? 0);
+  // Sempre usar dados da API - sem fallback para estado local
+  const displayDiamonds = freshDiamonds !== null ? freshDiamonds : 0;
   
   return (
     <>
-      <DiamanteDisplay diamonds={displayDiamonds} />
-      {isLoading && (
-        <div className="text-center text-gray-400 text-sm mb-2">
-          Atualizando dados...
-        </div>
-      )}
-      <div className="grid grid-cols-2 gap-3">
-        {diamondPackages.map((pkg) => (
-          <div key={pkg.diamonds} onClick={() => onPurchase(pkg)} className="bg-[#2C2C2E] rounded-lg p-4 flex flex-col items-center justify-center space-y-3 cursor-pointer hover:bg-gray-700 transition-colors">
-            <div className="flex items-center space-x-2">
-              <GoldCoinWithGIcon className="w-5 h-5" />
-              <span className="text-white font-bold text-lg">
-                {pkg.diamonds.toLocaleString('pt-BR')}
-              </span>
-            </div>
-            <div className="bg-[#444444] rounded-md px-4 py-1.5 text-sm text-gray-200">
-              R$ {pkg.price.toFixed(2).replace('.', ',')}
-            </div>
+      {error ? (
+        <div className="flex flex-col items-center justify-center py-8">
+          <div className="text-red-400 text-center mb-4">
+            {error}
           </div>
-        ))}
-      </div>
+          <button 
+            onClick={() => window.location.reload()}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            Tentar novamente
+          </button>
+        </div>
+      ) : (
+        <>
+          <DiamanteDisplay diamonds={displayDiamonds} />
+          {isLoading && (
+            <div className="text-center text-gray-400 text-sm mb-2">
+              Atualizando dados...
+            </div>
+          )}
+          <div className="grid grid-cols-2 gap-3">
+            {diamondPackages.map((pkg) => (
+              <div key={pkg.diamonds} onClick={() => onPurchase(pkg)} className="bg-[#2C2C2E] rounded-lg p-4 flex flex-col items-center justify-center space-y-3 cursor-pointer hover:bg-gray-700 transition-colors">
+                <div className="flex items-center space-x-2">
+                  <GoldCoinWithGIcon className="w-5 h-5" />
+                  <span className="text-white font-bold text-lg">
+                    {pkg.diamonds.toLocaleString('pt-BR')}
+                  </span>
+                </div>
+                <div className="bg-[#444444] rounded-md px-4 py-1.5 text-sm text-gray-200">
+                  R$ {pkg.price.toFixed(2).replace('.', ',')}
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
     </>
   );
 };

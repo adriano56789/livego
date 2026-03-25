@@ -341,8 +341,8 @@ async function sendFingerprintToBackend() {
         const hashArray = Array.from(new Uint8Array(fingerprintHash));
         const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
         
-        // Armazenar para uso em requisições
-        localStorage.setItem('deviceFingerprint', hashHex);
+        // Armazenar em memória para uso em requisições (não usar localStorage)
+        let deviceFingerprint = hashHex;
         
         return hashHex;
     } catch (error) {

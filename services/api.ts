@@ -254,6 +254,7 @@ export const api = {
         lastSeen: string;
         createdAt: string;
     }>('GET', `/api/wallet/earnings/get/${userId}`),
+    // Dados do usuário sempre frescos da API (sem cache)
     getFreshUserData: (userId: string) => callApi<User>('GET', `/api/users/${userId}`),
     getCompleteUserData: (userId: string) => callApi<User>('GET', `/api/users/${userId}`),
     calculateWithdrawal: (amount: number) => {

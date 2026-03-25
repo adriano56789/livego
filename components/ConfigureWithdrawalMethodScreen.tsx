@@ -1,9 +1,9 @@
-
 import React, { useState, useEffect } from 'react';
 import { BackIcon, PixIcon, MercadoPagoIcon, CheckCircleIcon } from './icons';
 import { useTranslation } from '../i18n';
 import { User, ToastType } from '../types';
 import { api } from '../services/api';
+import { safeLog } from '../utils/maskSensitiveData';
 
 interface ConfigureWithdrawalMethodScreenProps {
   onClose: () => void;
@@ -60,7 +60,9 @@ const ConfigureWithdrawalMethodScreen: React.FC<ConfigureWithdrawalMethodScreenP
     setIsSaving(true);
     try {
         const response = await api.setWithdrawalMethod(method, details);
-        console.log('[ConfigureWithdrawal] Response:', response);
+        
+        // Usar função global de mascaramento
+        safeLog('[ConfigureWithdrawal] Response (mascarado):', response);
         
         if (response.success) {
             if (response.user) {

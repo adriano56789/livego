@@ -5,6 +5,7 @@ import { User, ToastType } from '../types';
 import { api } from '../services/api';
 import { LoadingSpinner } from './Loading';
 import GanhosDisplay from './GanhosDisplay';
+import { safeError } from '../utils/maskSensitiveData';
 
 interface GanhosTabProps {
     onConfigure: () => void;
@@ -68,8 +69,7 @@ const GanhosTab: React.FC<GanhosTabProps> = ({ onConfigure, currentUser, updateU
             .catch((error) => {
                 // ⚠️ NÃO limpa estado em caso de erro
                 // Log seguro - mostra erro completo para debug, mas sem dados sensíveis
-                console.error('[GanhosTab] Erro ao calcular saque:', error.message || error);
-                console.error('[GanhosTab] Detalhes do erro:', error);
+                safeError('[GanhosTab] Erro ao calcular saque:', error);
             })
             .finally(() => setIsCalculating(false));
     }, [withdrawAmount]);

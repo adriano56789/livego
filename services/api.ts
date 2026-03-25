@@ -7,6 +7,7 @@
 import { User, Gift, Streamer, Message, RankedUser, Country, Conversation, NotificationSettings, BeautySettings, BeautyEffectsData, PurchaseRecord, EligibleUser, FeedPhoto, Obra, GoogleAccount, LiveSessionState, StreamHistoryEntry, Visitor, LevelInfo, Order, DiamondPackage, LiveNotification, Invitation, PixPaymentResponse, CreditCardPaymentRequest, SRSResponse, SRSPlayResponse, SRSStreamInfo } from '../types';
 
 import axios, { Method } from 'axios';
+import { safeLog, safeError } from '../utils/maskSensitiveData';
 
 
 
@@ -620,8 +621,8 @@ export const api = {
 
     calculateWithdrawal: (amount: number) => {
         // Log seguro - mostra valor para debug, mas sem dados sensíveis
-        console.log('[API] calculateWithdrawal called with amount:', amount);
-        console.log('[API] Calculating withdrawal for amount:', amount, 'diamonds');
+        safeLog('[API] calculateWithdrawal called with amount: ' + amount);
+        safeLog('[API] Calculating withdrawal for amount: ' + amount + ' diamonds');
         return callApi<{ diamonds: number; gross_brl: number; platform_fee_brl: number; net_brl: number; breakdown: { conversion: string; fee: string; final: string; } }>('POST', '/api/wallet/earnings/calculate', { amount });
     },
 
@@ -635,21 +636,17 @@ export const api = {
         const userId = getCurrentUserId();
         
         if (!userId) {
-            console.error('[API] setWithdrawalMethod: No userId available');
+            safeLog('[API] setWithdrawalMethod: No userId available');
             return Promise.reject(new Error('Usuário não encontrado. Faça login novamente.'));
         }
 
         // Log mascarado - userId e details sensíveis ocultos
-        console.log('[API] setWithdrawalMethod:', { 
-            userId: maskSensitiveData(userId), 
-            method, 
-            details: maskSensitiveData(details) 
-        });
+        safeLog('[API] setWithdrawalMethod:', { userId, method, details });
 
         return callApi<{ success: boolean, user: User }>('POST', `/api/wallet/earnings/method/set/${userId}`, { method, details });
     },
 
-    
+// ... (rest of the code remains the same)
 
     // --- Gift Counters ---
 

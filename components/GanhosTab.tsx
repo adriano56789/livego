@@ -202,6 +202,13 @@ const GanhosTab: React.FC<GanhosTabProps> = ({ onConfigure, currentUser, updateU
     // Verificar se está carregando para mostrar valores corretos
     const isLoadingCalculation = isCalculating && withdrawAmount && !isNaN(parseInt(withdrawAmount)) && parseInt(withdrawAmount) > 0;
     
+    // Debug logs
+    console.log('[DEBUG] isCalculating:', isCalculating);
+    console.log('[DEBUG] isLoadingCalculation:', isLoadingCalculation);
+    console.log('[DEBUG] calculation:', calculation);
+    console.log('[DEBUG] displayData:', displayData);
+    console.log('[DEBUG] shouldShowCalculation:', shouldShowCalculation);
+
     const isWithdrawButtonDisabled = isWithdrawing || isCalculating || !calculation || calculation.net_brl <= 0;
 
     if (isLoading) {

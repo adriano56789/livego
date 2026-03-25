@@ -68,7 +68,6 @@ const GanhosTab: React.FC<GanhosTabProps> = ({ onConfigure, currentUser, updateU
             })
             .catch((error) => {
                 // ⚠️ NÃO limpa estado em caso de erro
-                // Log seguro - mostra erro completo para debug, mas sem dados sensíveis
                 safeError('[GanhosTab] Erro ao calcular saque:', error);
             })
             .finally(() => setIsCalculating(false));
@@ -178,6 +177,14 @@ const GanhosTab: React.FC<GanhosTabProps> = ({ onConfigure, currentUser, updateU
             final: 'Valor a receber: R$0.00'
         }
     };
+    
+    // Se temos calculation, usar os valores reais da API
+    if (calculation) {
+        displayData.gross_brl = calculation.gross_brl;
+        displayData.platform_fee_brl = calculation.platform_fee_brl;
+        displayData.net_brl = calculation.net_brl;
+        displayData.breakdown = calculation.breakdown;
+    }
     
     // Verificar se está carregando para mostrar valores corretos
     const isLoadingCalculation = isCalculating && withdrawAmount && !isNaN(parseInt(withdrawAmount)) && parseInt(withdrawAmount) > 0;

@@ -1,9 +1,14 @@
 import React, { useState } from 'react';
 import { api } from '../services/api';
 
+interface User {
+  id: string;
+  name: string;
+  email: string;
+}
 
 interface LoginScreenProps {
-  onLogin: () => void;
+  onLogin: (user: User, token: string) => void;
 }
 
 const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
@@ -23,14 +28,16 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
       if (isRegistering) {
         // Registro
         const response = await api.register({ name, email, password });
-        if (response.success && response.token) {
-          onLogin();
+        // NÃO exibir resposta/token no console - segurança
+        if (response.success && response.token && response.user) {
+          onLogin(response.user, response.token);
         }
       } else {
         // Login
         const response = await api.login({ email, password });
-        if (response.success && response.token) {
-          onLogin();
+        // NÃO exibir resposta/token no console - segurança
+        if (response.success && response.token && response.user) {
+          onLogin(response.user, response.token);
         }
       }
     } catch (err: any) {

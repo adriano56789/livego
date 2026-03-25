@@ -1,6 +1,6 @@
 import express from 'express';
 import { User, Streamer, Gift, Message, PurchaseRecord, Order, Photo, Follow, Friendship, Followers, Block } from '../models';
-import { getUserIdFromToken } from '../middleware/auth';
+import { getUserIdFromToken, protect } from '../middleware/auth';
 import { standardizeUserResponse, standardizeUsersList } from '../utils/userResponse';
 import { blockProtection } from '../middleware/appOwnerProtection';
 
@@ -11,21 +11,16 @@ declare global {
     var io: any;
 }
 
-UserRoutes.get('/me', async (req, res) => {
+UserRoutes.get('/me', protect, async (req, res) => {
     try {
-        // Get token from header
-        const token = req.headers.authorization?.replace('Bearer ', '');
-        if (!token) {
-            return res.status(401).json({ error: 'No token provided' });
+        // Get user ID from authenticated request (middleware protect already decoded token)
+        const userId = (req as any).user?.id;
+        if (!userId) {
+            return res.status(401).json({ error: 'User ID not found in token' });
         }
 
-        // Verify JWT and get user ID
-        const jwt = require('jsonwebtoken');
-        const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret_key_change_me_in_prod';
-        const decoded = jwt.verify(token, JWT_SECRET);
-
         // Find user by ID from token (forçar leitura fresh do banco)
-        let user = await User.findOne({ id: decoded.id }).lean();
+        let user = await User.findOne({ id: userId }).lean();
         if (!user) {
             return res.status(404).json({ error: 'User not found' });
         }

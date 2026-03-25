@@ -42,6 +42,23 @@ const GanhosTab: React.FC<GanhosTabProps> = ({ onConfigure, currentUser, updateU
             if (data.withdrawal_method && !currentUser.withdrawal_method) {
                 updateUser({ ...currentUser, withdrawal_method: data.withdrawal_method });
             }
+            
+            // Auto-calcular para o valor máximo disponível
+            if (data.available_diamonds > 0) {
+                const amount = data.available_diamonds.toString();
+                setWithdrawAmount(amount);
+                
+                // Disparar cálculo imediatamente
+                setIsCalculating(true);
+                api.calculateWithdrawal(data.available_diamonds)
+                    .then((result) => {
+                        setCalculation(result);
+                    })
+                    .catch((error) => {
+                        safeError('[GanhosTab] Erro ao calcular saque automático:', error);
+                    })
+                    .finally(() => setIsCalculating(false));
+            }
         } catch (err) {
             addToast(ToastType.Error, (err as Error).message || "Falha ao carregar informações de ganhos.");
         } finally {
@@ -131,14 +148,7 @@ const GanhosTab: React.FC<GanhosTabProps> = ({ onConfigure, currentUser, updateU
                 return;
             }
 
-            // Log seguro - sem exibir chave PIX completa
-            const maskedPixKey = pixKey.includes('@') 
-                ? `*********@${pixKey.substring(pixKey.indexOf('@') + 1)}`
-                : pixKey.length > 4 
-                    ? pixKey.substring(0, 2) + '*'.repeat(pixKey.length - 4) + pixKey.substring(pixKey.length - 2)
-                    : '***';
-            
-            console.log(`[GanhosTab] Iniciando saque via Pix para chave mascarada: ${maskedPixKey}`);
+            // Iniciar saque via Pix
             const response = await api.withdrawViaPix(currentUser.id, withdrawalDetails.diamonds, pixKey, pixKeyType);
             
             if (response.success) {
@@ -177,7 +187,7 @@ const GanhosTab: React.FC<GanhosTabProps> = ({ onConfigure, currentUser, updateU
     const formatCurrency = (value: number | undefined) => `R$ ${(value ?? 0).toFixed(2).replace('.', ',')}`;
 
     // Só mostrar displayData se houver cálculo ou se o usuário já digitou um valor válido
-    const shouldShowCalculation = calculation || (withdrawAmount && !isNaN(parseInt(withdrawAmount)) && parseInt(withdrawAmount) > 0);
+    const shouldShowCalculation = Boolean(calculation) || (withdrawAmount && !isNaN(parseInt(withdrawAmount)) && parseInt(withdrawAmount) > 0);
     
     const displayData = calculation || {
         diamonds: (parseInt(withdrawAmount) || earningsInfo?.available_diamonds) ?? 0,
@@ -202,13 +212,6 @@ const GanhosTab: React.FC<GanhosTabProps> = ({ onConfigure, currentUser, updateU
     // Verificar se está carregando para mostrar valores corretos
     const isLoadingCalculation = isCalculating && withdrawAmount && !isNaN(parseInt(withdrawAmount)) && parseInt(withdrawAmount) > 0;
     
-    // Debug logs
-    console.log('[DEBUG] isCalculating:', isCalculating);
-    console.log('[DEBUG] isLoadingCalculation:', isLoadingCalculation);
-    console.log('[DEBUG] calculation:', calculation);
-    console.log('[DEBUG] displayData:', displayData);
-    console.log('[DEBUG] shouldShowCalculation:', shouldShowCalculation);
-
     const isWithdrawButtonDisabled = isWithdrawing || isCalculating || !calculation || calculation.net_brl <= 0;
 
     if (isLoading) {

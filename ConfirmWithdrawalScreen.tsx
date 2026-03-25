@@ -115,8 +115,7 @@ const ConfirmWithdrawalScreen: React.FC<ConfirmWithdrawalScreenProps> = ({
                 <div className="flex-1">
                     <h4 className="font-semibold text-yellow-400 mb-2">Informações Importantes</h4>
                     <ul className="text-sm text-gray-300 space-y-1">
-                        <li>• O saque será processado em até 1 dia útil</li>
-                        <li>• O valor líquido será creditado na sua conta</li>
+                        <li>• O saque é instantâneo — o valor será creditado em sua conta assim que confirmado</li>
                         <li>• Taxas de processamento já foram deduzidas</li>
                         <li>• Após confirmado, não será possível cancelar</li>
                     </ul>
@@ -128,7 +127,7 @@ const ConfirmWithdrawalScreen: React.FC<ConfirmWithdrawalScreenProps> = ({
         <div className="bg-[#1c1c1e] rounded-lg p-4">
             <p className="text-xs text-gray-400 leading-relaxed">
                 Ao confirmar este saque, você declara estar ciente e concordar com os termos e condições de saque da plataforma. 
-                Os valores exibidos já incluem todas as taxas aplicáveis.
+                Os valores apresentados já incluem todas as taxas aplicáveis.
             </p>
         </div>
       </main>

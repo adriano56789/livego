@@ -47,72 +47,73 @@ const ConfirmWithdrawalScreen: React.FC<ConfirmWithdrawalScreenProps> = ({
         </div>
       </header>
 
-      <main className="flex-grow overflow-y-auto p-4 space-y-4 no-scrollbar">
+      <main className="flex-grow overflow-y-auto p-4 space-y-6 no-scrollbar">
         {/* Resumo do Saque */}
         <div className="bg-[#1c1c1e] rounded-lg p-4">
-            <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-3 mb-4">
                 <YellowDiamondIcon className="w-8 h-8 text-yellow-400" />
                 <div>
                     <p className="font-bold text-white">{withdrawalDetails.diamonds} Diamantes</p>
                     <p className="text-sm text-gray-400">Valor do saque</p>
                 </div>
             </div>
-            <div className="space-y-2 text-sm mt-3 pt-3 border-t border-gray-700">
-                <div className="flex justify-between">
-                <span className="text-gray-400">Valor Bruto</span>
-                <span className="text-white font-semibold">{formatCurrency(withdrawalDetails.gross_brl)}</span>
+            
+            <div className="space-y-3 text-sm">
+                <div className="flex justify-between items-center">
+                    <span className="text-gray-400">Valor Bruto (BRL)</span>
+                    <span className="text-white font-semibold">{formatCurrency(withdrawalDetails.gross_brl)}</span>
                 </div>
-                <div className="flex justify-between">
-                <span className="text-gray-400">Taxa da Plataforma (20%)</span>
-                <span className="text-white font-semibold">-{formatCurrency(withdrawalDetails.platform_fee_brl)}</span>
+                <div className="flex justify-between items-center">
+                    <span className="text-gray-400">Taxa da Plataforma (20%)</span>
+                    <span className="text-red-400 font-semibold">-{formatCurrency(withdrawalDetails.platform_fee_brl)}</span>
                 </div>
-            </div>
-            <div className="flex justify-between font-bold text-base mt-3 pt-3 border-t border-gray-700">
-                <span className="text-white">Valor a Receber</span>
-                <span className="text-green-500">{formatCurrency(withdrawalDetails.net_brl)}</span>
+                <div className="flex justify-between font-bold text-base pt-3 border-t border-gray-700">
+                    <span className="text-white">Valor a Receber</span>
+                    <span className="text-green-500">{formatCurrency(withdrawalDetails.net_brl)}</span>
+                </div>
             </div>
         </div>
 
         {/* Método de Saque */}
         <div className="bg-[#1c1c1e] rounded-lg p-4">
-            <h3 className="font-bold text-white mb-3">Método de Saque</h3>
+            <h3 className="font-bold text-white mb-4">Método de Saque</h3>
             <div className="flex items-center space-x-3">
                 {withdrawalDetails.method.toLowerCase() === 'pix' ? (
                     <>
-                        <div className="w-12 h-12 bg-green-600 rounded-full flex items-center justify-center">
+                        <div className="w-12 h-12 bg-green-600 rounded-full flex items-center justify-center flex-shrink-0">
                             <span className="text-white font-bold text-lg">PIX</span>
                         </div>
-                        <div>
+                        <div className="flex-1">
                             <p className="font-semibold text-white">PIX</p>
                             <p className="text-sm text-gray-400">Transferência Instantânea</p>
                         </div>
                     </>
                 ) : (
                     <>
-                        <BankIcon className="w-12 h-12 text-blue-400" />
-                        <div>
+                        <BankIcon className="w-12 h-12 text-blue-400 flex-shrink-0" />
+                        <div className="flex-1">
                             <p className="font-semibold text-white">{withdrawalDetails.method.toUpperCase()}</p>
                             <p className="text-sm text-gray-400">Transferência Bancária</p>
                         </div>
                     </>
                 )}
             </div>
-            <div className="mt-3 p-3 bg-[#2c2c2e] rounded-md">
+            <div className="mt-4 p-3 bg-[#2c2c2e] rounded-md">
                 <p className="text-sm text-gray-300 mb-1">Dados para recebimento:</p>
-                <p className="text-white font-medium">{withdrawalDetails.methodDetails}</p>
+                <p className="text-white font-medium break-all">{withdrawalDetails.methodDetails}</p>
             </div>
         </div>
 
         {/* Informações Importantes */}
         <div className="bg-yellow-900/30 border border-yellow-600/50 rounded-lg p-4">
             <div className="flex items-start space-x-2">
-                <div className="w-5 h-5 text-yellow-400 mt-0.5">
+                <div className="w-5 h-5 text-yellow-400 mt-0.5 flex-shrink-0">
                     <svg fill="currentColor" viewBox="0 0 20 20">
                         <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
                     </svg>
                 </div>
                 <div className="flex-1">
-                    <h4 className="font-semibold text-yellow-400 mb-1">Informações Importantes</h4>
+                    <h4 className="font-semibold text-yellow-400 mb-2">Informações Importantes</h4>
                     <ul className="text-sm text-gray-300 space-y-1">
                         <li>• O saque será processado em até 1 dia útil</li>
                         <li>• O valor líquido será creditado na sua conta</li>
@@ -127,10 +128,9 @@ const ConfirmWithdrawalScreen: React.FC<ConfirmWithdrawalScreenProps> = ({
         <div className="bg-[#1c1c1e] rounded-lg p-4">
             <p className="text-xs text-gray-400 leading-relaxed">
                 Ao confirmar este saque, você declara estar ciente e concordar com os termos e condições de saque da plataforma. 
-                O valor será processado de acordo com o método selecionado e estará sujeito às políticas de processamento financeiro.
+                Os valores exibidos já incluem todas as taxas aplicáveis.
             </p>
         </div>
-
       </main>
 
       <footer className="p-4 flex-shrink-0 space-y-3">

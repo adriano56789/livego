@@ -189,37 +189,36 @@ const AppContent: React.FC = () => {
   const [liveNotification, setLiveNotification] = useState<ExtendedLiveNotification | null>(null);
   const [privateInviteData, setPrivateInviteData] = useState<InviteData | null>(null);
 
-  const [streamers, setStreamers] = useState<Streamer[]>(INITIAL_DATA.streamers);
+  // Dados críticos devem vir sempre da API - não usar estado estático
+  const [streamers, setStreamers] = useState<Streamer[]>([]);
   const [isLoadingStreamers, setIsLoadingStreamers] = useState(false);
-  const [countries, setCountries] = useState<Country[]>(INITIAL_DATA.countries);
-  const [allUsers, setAllUsers] = useState<User[]>(INITIAL_DATA.allUsers);
-  const [conversations, setConversations] = useState<Conversation[]>(INITIAL_DATA.conversations);
-  const [friends, setFriends] = useState<User[]>(INITIAL_DATA.friends);
-  const [followingUsers, setFollowingUsers] = useState<User[]>(INITIAL_DATA.followingUsers);
-  const [fans, setFans] = useState<User[]>(INITIAL_DATA.fans);
+  const [countries, setCountries] = useState<Country[]>([]);
+  const [allUsers, setAllUsers] = useState<User[]>([]);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [friends, setFriends] = useState<User[]>([]);
+  const [followingUsers, setFollowingUsers] = useState<User[]>([]);
+  const [fans, setFans] = useState<User[]>([]);
   const [allGifts, setAllGifts] = useState<Gift[]>([]);
-  const [reminderStreamers, setReminderStreamers] = useState<Streamer[]>(INITIAL_DATA.reminderStreamers);
+  const [reminderStreamers, setReminderStreamers] = useState<Streamer[]>([]);
   const [selectedCountry, setSelectedCountry] = useState<string>('ICON_GLOBE');
   const [activeCategory, setActiveCategory] = useState('popular');
 
-  // Restaurar sessão automaticamente ao recarregar a página
-  // **SESSÃO PERSISTENTE**: Usuário continua logado ao atualizar a página
-  // Só desloga se não houver token ou se token for inválido
+  // Sempre buscar dados da API - não usar localStorage
   useEffect(() => {
     const restoreSession = async () => {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        setIsLoadingCurrentUser(false);
-        return;
-      }
+      setIsLoadingCurrentUser(true);
       try {
+        // Tentar buscar usuário atual da API
         const user = await api.getCurrentUser();
-        setCurrentUser(user);
-        setIsAuthenticated(true);
+        if (user) {
+          setCurrentUser(user);
+          setIsAuthenticated(true);
+        } else {
+          setIsAuthenticated(false);
+          setCurrentUser(null);
+        }
       } catch {
-        // Token inválido ou expirado — limpar sessão
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
+        // Usuário não autenticado
         setIsAuthenticated(false);
         setCurrentUser(null);
       } finally {
@@ -428,9 +427,7 @@ const AppContent: React.FC = () => {
 
   const handleLogout = async () => {
     simpleEventManager.disconnect();
-    // Limpar todos os dados da sessão
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+    // Limpar estado - não usar localStorage
     setIsAuthenticated(false);
     setCurrentUser(null);
     setActiveScreen('main');
@@ -952,17 +949,18 @@ const logLiveEvent = (type: string, data: any) => {
   const handleLogin = async () => {
     setIsLoadingCurrentUser(true);
     try {
-      const token = localStorage.getItem('token');
-      if (token) {
-        // Sempre buscar dados atualizados do banco de dados
-        const user = await api.getCurrentUser();
+      // Sempre buscar dados atualizados do banco de dados
+      const user = await api.getCurrentUser();
+      if (user) {
         setCurrentUser(user);
         setIsAuthenticated(true);
       } else {
-        setIsAuthenticated(true);
+        setIsAuthenticated(false);
+        setCurrentUser(null);
       }
     } catch {
-      setIsAuthenticated(true);
+      setIsAuthenticated(false);
+      setCurrentUser(null);
     } finally {
       setIsLoadingCurrentUser(false);
     }

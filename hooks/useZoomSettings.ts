@@ -7,21 +7,13 @@ export const useZoomSettings = (userId?: string) => {
 
         const loadAndApplyZoom = async () => {
             try {
-                // Primeiro tentar do localStorage (para carregamento rápido)
-                const savedZoom = localStorage.getItem('userZoom');
-                if (savedZoom) {
-                    const zoomLevel = parseInt(savedZoom);
-                    applyZoomToDocument(zoomLevel);
-                }
-
-                // Depois carregar do backend e aplicar se for diferente
+                // Sempre buscar do backend - não usar localStorage
                 const settings = await api.getZoomSettings(userId);
                 if (settings && settings.zoomLevel) {
-                    const backendZoom = settings.zoomLevel.toString();
-                    if (localStorage.getItem('userZoom') !== backendZoom) {
-                        applyZoomToDocument(settings.zoomLevel);
-                        localStorage.setItem('userZoom', settings.zoomLevel.toString());
-                    }
+                    applyZoomToDocument(settings.zoomLevel);
+                } else {
+                    // Fallback para 100% se não houver configuração
+                    applyZoomToDocument(100);
                 }
             } catch (error) {
                 console.error('Erro ao carregar configurações de zoom:', error);
@@ -31,20 +23,6 @@ export const useZoomSettings = (userId?: string) => {
         };
 
         loadAndApplyZoom();
-
-        // Listener para mudanças no localStorage (para sincronização entre abas)
-        const handleStorageChange = (e: StorageEvent) => {
-            if (e.key === 'userZoom' && e.newValue) {
-                applyZoomToDocument(parseInt(e.newValue));
-            }
-        };
-
-        window.addEventListener('storage', handleStorageChange);
-
-        // Cleanup
-        return () => {
-            window.removeEventListener('storage', handleStorageChange);
-        };
     }, [userId]);
 };
 
@@ -57,7 +35,6 @@ const applyZoomToDocument = (level: number) => {
     document.documentElement.style.overflow = 'hidden';
 };
 
-export const resetZoom = () => {
+export const resetZoom = () => {  
     applyZoomToDocument(100);
-    localStorage.removeItem('userZoom');
 };

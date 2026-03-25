@@ -325,4 +325,30 @@ router.post('/google/disconnect', async (req, res) => {
     }
 });
 
+// @route POST /api/auth/validate
+router.post('/validate', async (req, res) => {
+    try {
+        const authHeader = req.headers.authorization;
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+            return res.json({ valid: false });
+        }
+
+        const token = authHeader.substring(7);
+        try {
+            const decoded = jwt.verify(token, JWT_SECRET) as any;
+            const user = await User.findOne({ id: decoded.id });
+
+            if (!user) {
+                return res.json({ valid: false });
+            }
+
+            res.json({ valid: true, user: standardizeUserResponse(user) });
+        } catch (tokenError) {
+            return res.json({ valid: false });
+        }
+    } catch (error: any) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 export default router;

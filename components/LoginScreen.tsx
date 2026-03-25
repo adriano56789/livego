@@ -24,16 +24,12 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
         // Registro
         const response = await api.register({ name, email, password });
         if (response.success && response.token) {
-          localStorage.setItem('token', response.token);
-          localStorage.setItem('user', JSON.stringify(response.user));
           onLogin();
         }
       } else {
         // Login
         const response = await api.login({ email, password });
         if (response.success && response.token) {
-          localStorage.setItem('token', response.token);
-          localStorage.setItem('user', JSON.stringify(response.user));
           onLogin();
         }
       }

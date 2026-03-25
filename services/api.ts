@@ -18,38 +18,18 @@ const API_BASE_URL = getApiBaseUrl();
 
 const getCurrentUserId = () => {
     try {
-        // Tentar obter do localStorage 'user' (LoginScreen)
-        const userStr = localStorage.getItem('user');
-        if (userStr) {
-            const user = JSON.parse(userStr);
-            if (user?.id) {
-                console.log('[API] User ID from localStorage:', user.id);
-                return user.id;
-            }
-        }
-
-        // Fallback para 'user_storage' (Zustand/Persist se houver)
-        const userStorageStr = localStorage.getItem('user_storage');
-        if (userStorageStr) {
-            const userStorage = JSON.parse(userStorageStr);
-            const userId = userStorage?.state?.user?.id || userStorage?.id;
-            if (userId) {
-                console.log('[API] User ID from user_storage:', userId);
-                return userId;
-            }
-        }
-
-        // Tentar do currentUser global (se existir)
+        // Tentar do currentUser global (estado do React)
         if (typeof window !== 'undefined' && (window as any).currentUser?.id) {
             console.log('[API] User ID from window.currentUser:', (window as any).currentUser.id);
             return (window as any).currentUser.id;
         }
 
-        console.error('[API] getCurrentUserId: No user ID found in any storage');
+        console.error('[API] getCurrentUserId: No user ID available');
+        return null;
     } catch (e) {
         console.error('[API] Error in getCurrentUserId:', e);
+        return null;
     }
-    return null;
 };
 
 const inFlightRequests = new Map<string, Promise<any>>();
@@ -68,14 +48,10 @@ const callApi = async <T>(method: string, path: string, body?: any, customBaseUr
 
     const requestPromise = (async () => {
         try {
-            const token = localStorage.getItem('token');
+            // Token deve ser gerenciado de forma segura - não usar localStorage
             const headers: Record<string, string> = {
                 'Content-Type': 'application/json'
             };
-
-            if (token) {
-                headers['Authorization'] = `Bearer ${token}`;
-            }
 
             // Evitar 304 Not Modified — forçar o browser a sempre buscar dados frescos
             if (method === 'GET') {
@@ -482,7 +458,6 @@ export const api = {
 
     // Upload de avatar (arquivo) - retorna URL persistida, evita bloqueio de Base64
     uploadAvatar: async (userId: string, file: File): Promise<{ success: boolean; avatarUrl: string }> => {
-        const token = localStorage.getItem('token');
         const formData = new FormData();
         formData.append('avatar', file);
         // USAR VPS PARA PRODUÇÃO 100%
@@ -490,7 +465,7 @@ export const api = {
             method: 'POST',
             url: `https://api.livego.store/api/upload/avatar/${userId}`,
             data: formData,
-            headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+            headers: {},
         });
         return response.data;
     },

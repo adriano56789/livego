@@ -42,9 +42,6 @@ const ZoomSettingsScreen: React.FC<ZoomSettingsScreenProps> = ({ onBack, current
         document.documentElement.style.width = `${100 / zoomFactor}%`;
         document.documentElement.style.height = `${100 / zoomFactor}%`;
         document.documentElement.style.overflow = 'hidden';
-        
-        // Salvar no localStorage para persistência
-        localStorage.setItem('userZoom', level.toString());
     };
 
     const updateZoom = async (newLevel: number) => {

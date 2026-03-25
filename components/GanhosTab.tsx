@@ -6,6 +6,7 @@ import { api } from '../services/api';
 import { LoadingSpinner } from './Loading';
 import GanhosDisplay from './GanhosDisplay';
 import { safeError } from '../utils/maskSensitiveData';
+import ConfirmWithdrawalScreen from '../ConfirmWithdrawalScreen';
 
 interface GanhosTabProps {
     onConfigure: () => void;
@@ -29,6 +30,7 @@ const GanhosTab: React.FC<GanhosTabProps> = ({ onConfigure, currentUser, updateU
     const [isLoading, setIsLoading] = useState(true);
     const [isCalculating, setIsCalculating] = useState(false);
     const [isWithdrawing, setIsWithdrawing] = useState(false);
+    const [showConfirmation, setShowConfirmation] = useState(false);
 
     const fetchEarningsInfo = useCallback(async () => {
         setIsLoading(true);
@@ -79,7 +81,7 @@ const GanhosTab: React.FC<GanhosTabProps> = ({ onConfigure, currentUser, updateU
         }
     };
 
-    const handleConfirmWithdraw = async () => {
+    const handleConfirmWithdraw = () => {
         const amount = parseFloat(withdrawAmount);
         if (isNaN(amount) || amount <= 0 || !earningsInfo || amount > earningsInfo.available_diamonds) {
             addToast(ToastType.Error, "Valor de saque inválido.");
@@ -92,6 +94,16 @@ const GanhosTab: React.FC<GanhosTabProps> = ({ onConfigure, currentUser, updateU
             return;
         }
 
+        if (!calculation) {
+            addToast(ToastType.Error, "Aguarde o cálculo dos valores.");
+            return;
+        }
+
+        // Mostrar modal de confirmação
+        setShowConfirmation(true);
+    };
+
+    const handleWithdrawalConfirmed = async (withdrawalDetails: { diamonds: number; gross_brl: number; platform_fee_brl: number; net_brl: number; method: string; methodDetails: string }) => {
         setIsWithdrawing(true);
         try {
             const withdrawalMethod = earningsInfo?.withdrawal_method || currentUser.withdrawal_method;
@@ -127,11 +139,11 @@ const GanhosTab: React.FC<GanhosTabProps> = ({ onConfigure, currentUser, updateU
                     : '***';
             
             console.log(`[GanhosTab] Iniciando saque via Pix para chave mascarada: ${maskedPixKey}`);
-            const response = await api.withdrawViaPix(currentUser.id, amount, pixKey, pixKeyType);
+            const response = await api.withdrawViaPix(currentUser.id, withdrawalDetails.diamonds, pixKey, pixKeyType);
             
             if (response.success) {
                 addToast(ToastType.Success, 
-                    `Saque de R$ ${amount.toFixed(2)} iniciado! ` +
+                    `Saque de R$ ${withdrawalDetails.net_brl.toFixed(2)} iniciado! ` +
                     `O dinheiro será transferido em até 1 dia útil. ` +
                     `ID da transferência: ${response.transferId}`
                 );
@@ -151,6 +163,7 @@ const GanhosTab: React.FC<GanhosTabProps> = ({ onConfigure, currentUser, updateU
                 
                 setWithdrawAmount('');
                 setCalculation(null);
+                setShowConfirmation(false);
             } else {
                 throw new Error(response.error || "Falha na solicitação de saque.");
             }
@@ -301,6 +314,39 @@ const GanhosTab: React.FC<GanhosTabProps> = ({ onConfigure, currentUser, updateU
                     {isWithdrawing ? "Processando..." : t('wallet.confirmWithdraw')}
                 </button>
             </div>
+
+            {/* Modal de Confirmação de Saque */}
+            {showConfirmation && calculation && (
+                <ConfirmWithdrawalScreen
+                    onClose={() => setShowConfirmation(false)}
+                    withdrawalDetails={{
+                        diamonds: calculation.diamonds,
+                        gross_brl: calculation.gross_brl,
+                        platform_fee_brl: calculation.platform_fee_brl,
+                        net_brl: calculation.net_brl,
+                        method: (earningsInfo?.withdrawal_method || currentUser.withdrawal_method)?.method || 'pix',
+                        methodDetails: (() => {
+                            const method = earningsInfo?.withdrawal_method || currentUser.withdrawal_method;
+                            if (method?.method === 'pix' && method.details.pixKey) {
+                                const pixKey = method.details.pixKey;
+                                if (pixKey.includes('@')) {
+                                    const emailMatch = pixKey.match(/([a-zA-Z0-9._-]+)@([a-zA-Z0-9.-]+)/);
+                                    if (emailMatch) {
+                                        const domain = emailMatch[2];
+                                        return `*********@${domain}`;
+                                    }
+                                } else if (pixKey.length > 4) {
+                                    return pixKey.substring(0, 2) + '*'.repeat(pixKey.length - 4) + pixKey.substring(pixKey.length - 2);
+                                }
+                            }
+                            return '***';
+                        })()
+                    }}
+                    onConfirmWithdrawal={handleWithdrawalConfirmed}
+                    isProcessing={isWithdrawing}
+                    addToast={addToast}
+                />
+            )}
         </div>
     );
 };

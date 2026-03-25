@@ -782,6 +782,10 @@ const AppContent: React.FC = () => {
 
       setCurrentUser(updatedUser);
 
+      // Sincronizar com window para API ter acesso
+
+      (window as any).currentUser = updatedUser;
+
     }
 
     if (viewingProfile?.id === updatedUser.id) {
@@ -869,6 +873,10 @@ const AppContent: React.FC = () => {
     setIsAuthenticated(false);
 
     setCurrentUser(null);
+
+    // Limpar window.currentUser também
+
+    (window as any).currentUser = null;
 
     setActiveScreen('main');
 
@@ -1924,6 +1932,10 @@ const logLiveEvent = (type: string, data: any) => {
 
         setCurrentUser(freshUser);
 
+        // Sincronizar com window para API ter acesso
+
+        (window as any).currentUser = freshUser;
+
         setIsAuthenticated(true);
 
       } else {
@@ -1931,6 +1943,10 @@ const logLiveEvent = (type: string, data: any) => {
         // Fallback para usuário recebido do login
 
         setCurrentUser(user);
+
+        // Sincronizar com window para API ter acesso
+
+        (window as any).currentUser = user;
 
         setIsAuthenticated(true);
 

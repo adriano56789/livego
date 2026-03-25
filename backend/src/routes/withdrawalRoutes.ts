@@ -63,9 +63,21 @@ router.post('/pix', async (req, res) => {
 
         // Inicializar SDK do Mercado Pago
         const { default: mercadopago } = require('mercadopago');
-        const client = new mercadopago({
+        
+        if (!process.env.MERCADO_PAGO_ACCESS_TOKEN) {
+            console.error('[WITHDRAWAL ERROR] MERCADO_PAGO_ACCESS_TOKEN não configurado');
+            return res.status(500).json({ 
+                error: 'Erro de configuração',
+                details: 'Token do Mercado Pago não configurado'
+            });
+        }
+
+        const client = new mercadopago.MercadoPagoConfig({
             access_token: process.env.MERCADO_PAGO_ACCESS_TOKEN
         });
+
+        // Para transferências, precisamos do cliente de transferências
+        const transferClient = new mercadopago.Transfer(client);
 
         // Calcular valores (80% para streamer, 20% para app)
         const streamerAmount = amount * 0.8; // 80% para o streamer
@@ -84,7 +96,9 @@ router.post('/pix', async (req, res) => {
         };
 
         // Realizar transferência para o streamer
-        const streamerTransfer = await client.transfer.create({ body: streamerTransferData });
+        const streamerTransfer = await transferClient.create({
+            body: streamerTransferData
+        });
         console.log(`[WITHDRAWAL SUCCESS] Transferência streamer criada: ${streamerTransfer.id}`);
 
         // Criar transferência para o app (20% - comissão)
@@ -98,7 +112,9 @@ router.post('/pix', async (req, res) => {
         };
 
         // Realizar transferência para o app
-        const appTransfer = await client.transfer.create({ body: appTransferData });
+        const appTransfer = await transferClient.create({
+            body: appTransferData
+        });
         console.log(`[WITHDRAWAL SUCCESS] Transferência app criada: ${appTransfer.id}`);
 
         // Deduzir saldo total do usuário

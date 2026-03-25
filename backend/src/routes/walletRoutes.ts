@@ -49,6 +49,11 @@ router.post('/earnings/calculate', async (req, res) => {
         const platform_fee_brl = brl_amount * 0.20;
         const net_brl = brl_amount - platform_fee_brl;
         
+        console.log(`[CALCULATE] Valores do saque:`);
+        console.log(`[CALCULATE] - Valor bruto: R$ ${brl_amount.toFixed(2)}`);
+        console.log(`[CALCULATE] - Taxa plataforma (20%): R$ ${platform_fee_brl.toFixed(2)}`);
+        console.log(`[CALCULATE] - Valor líquido: R$ ${net_brl.toFixed(2)}`);
+        
         res.json({
             diamonds: amount,
             gross_brl: brl_amount,
@@ -56,7 +61,7 @@ router.post('/earnings/calculate', async (req, res) => {
             net_brl,
             breakdown: {
                 conversion: `${amount} diamantes = R$ ${brl_amount.toFixed(2)}`,
-                fee: `Taxa plataforma (20%): R$ ${platform_fee_brl.toFixed(2)}`,
+                fee: `Taxa da plataforma (20%): R$ ${platform_fee_brl.toFixed(2)}`,
                 final: `Valor líquido: R$ ${net_brl.toFixed(2)}`
             }
         });

@@ -561,9 +561,8 @@ export const api = {
     getCompleteUserData: (userId: string) => callApi<User>('GET', `/api/users/${userId}`),
 
     calculateWithdrawal: (amount: number) => {
-
+        console.log('[API] calculateWithdrawal called with amount:', amount);
         return callApi<{ diamonds: number; gross_brl: number; platform_fee_brl: number; net_brl: number; breakdown: { conversion: string; fee: string; final: string; } }>('POST', '/api/wallet/earnings/calculate', { amount });
-
     },
 
     confirmWithdrawal: (userId: string, amount: number) => {

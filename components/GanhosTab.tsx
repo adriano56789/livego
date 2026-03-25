@@ -55,20 +55,18 @@ const GanhosTab: React.FC<GanhosTabProps> = ({ onConfigure, currentUser, updateU
     // Calculate withdrawal value in real-time as user types
     useEffect(() => {
         const amount = parseInt(withdrawAmount);
+        console.log('[GanhosTab] useEffect triggered, amount:', amount, 'withdrawAmount:', withdrawAmount);
         
         if (!isNaN(amount) && amount > 0) {
             setIsCalculating(true);
-            const timer = setTimeout(() => {
-                api.calculateWithdrawal(amount)
-                    .then((result) => {
-                        setCalculation(result);
-                    })
-                    .catch((error) => {
-                        setCalculation(null);
-                    })
-                    .finally(() => setIsCalculating(false));
-            }, 300); // Debounce
-            return () => clearTimeout(timer);
+            api.calculateWithdrawal(amount)
+                .then((result) => {
+                    setCalculation(result);
+                })
+                .catch((error) => {
+                    setCalculation(null);
+                })
+                .finally(() => setIsCalculating(false));
         } else {
             setCalculation(null);
         }

@@ -56,11 +56,17 @@ const PDVideoPlayer: React.FC<PDVideoPlayerProps> = ({
     // Gerar URLs reais
     const urls = RealIDGenerator.generateStreamURLs(streamer.id, streamer.displayName || 'Unknown');
     
+    // Função para mascarar IDs em logs
+    const maskId = (id: string) => {
+      if (!id || typeof id !== 'string') return '***';
+      return id.length > 4 ? id.substring(0, 2) + '*'.repeat(id.length - 4) + id.substring(id.length - 2) : '***';
+    };
+    
     console.log('PD Player - Sistema de IDs Reais:');
-    console.log('  Stream ID:', streamer.id);
-    console.log('  User ID:', parsed.userId);
+    console.log('  Stream ID:', maskId(streamer.id));
+    console.log('  User ID:', maskId(parsed.userId));
     console.log('  Display Name:', streamer.displayName);
-    console.log('  Room ID:', streamer.roomId);
+    console.log('  Room ID:', maskId(streamer.roomId));
     console.log('  URLs:', urls);
     
     return urls;

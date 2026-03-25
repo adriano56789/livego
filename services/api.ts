@@ -68,34 +68,92 @@ export const clearAuthToken = () => {
 
 
 
+// Função para mascarar dados sensíveis em logs
+const maskSensitiveData = (data: any): any => {
+    if (!data) return data;
+    
+    // Se for string, verificar se contém dados sensíveis
+    if (typeof data === 'string') {
+        // Mascarar email - ocultar completamente o nome do usuário
+        if (data.includes('@')) {
+            const emailMatch = data.match(/([a-zA-Z0-9._-]+)@([a-zA-Z0-9.-]+)/);
+            if (emailMatch) {
+                const domain = emailMatch[2];
+                return `*********@${domain}`;
+            }
+        }
+        
+        // Mascarar userId (padrão: sequência de números)
+        const userIdMatch = data.match(/\b(\d{8,})\b/);
+        if (userIdMatch) {
+            const userId = userIdMatch[1];
+            return data.replace(userId, userId.substring(0, 2) + '*'.repeat(userId.length - 2));
+        }
+        
+        return data;
+    }
+    
+    // Se for objeto, mascarar campos específicos
+    if (typeof data === 'object') {
+        const masked = { ...data };
+        
+        // Mascarar campos sensíveis
+        if (masked.userId) {
+            masked.userId = typeof masked.userId === 'string' && masked.userId.length > 2 
+                ? masked.userId.substring(0, 2) + '*'.repeat(masked.userId.length - 2)
+                : '***';
+        }
+        
+        if (masked.email) {
+            const emailMatch = masked.email.match(/([a-zA-Z0-9._-]+)@([a-zA-Z0-9.-]+)/);
+            if (emailMatch) {
+                const domain = emailMatch[2];
+                masked.email = `*********@${domain}`;
+            }
+        }
+        
+        if (masked.pixKey || masked.pix_key) {
+            const key = masked.pixKey || masked.pix_key;
+            if (typeof key === 'string' && key.includes('@')) {
+                const emailMatch = key.match(/([a-zA-Z0-9._-]+)@([a-zA-Z0-9.-]+)/);
+                if (emailMatch) {
+                    const domain = emailMatch[2];
+                    const maskedKey = `*********@${domain}`;
+                    if (masked.pixKey) masked.pixKey = maskedKey;
+                    if (masked.pix_key) masked.pix_key = maskedKey;
+                }
+            } else {
+                // Para chaves que não são email (CPF, telefone, etc)
+                const maskedKey = typeof key === 'string' && key.length > 4 
+                    ? key.substring(0, 2) + '*'.repeat(key.length - 4) + key.substring(key.length - 2)
+                    : '***';
+                if (masked.pixKey) masked.pixKey = maskedKey;
+                if (masked.pix_key) masked.pix_key = maskedKey;
+            }
+        }
+        
+        return masked;
+    }
+    
+    return data;
+};
+
 const getCurrentUserId = () => {
-
     try {
-
         // Tentar do currentUser global (estado do React)
-
         if (typeof window !== 'undefined' && (window as any).currentUser?.id) {
-
-            console.log('[API] User ID from window.currentUser:', (window as any).currentUser.id);
-
-            return (window as any).currentUser.id;
-
+            // Log mascarado
+            const userId = (window as any).currentUser.id;
+            console.log('[API] User ID from window.currentUser:', maskSensitiveData(userId));
+            return userId;
         }
 
-
-
         console.error('[API] getCurrentUserId: No user ID available');
-
         return null;
-
     } catch (e) {
-
         console.error('[API] Error in getCurrentUserId:', e);
-
         return null;
-
     }
-
 };
 
 
@@ -561,7 +619,9 @@ export const api = {
     getCompleteUserData: (userId: string) => callApi<User>('GET', `/api/users/${userId}`),
 
     calculateWithdrawal: (amount: number) => {
+        // Log seguro - mostra valor para debug, mas sem dados sensíveis
         console.log('[API] calculateWithdrawal called with amount:', amount);
+        console.log('[API] Calculating withdrawal for amount:', amount, 'diamonds');
         return callApi<{ diamonds: number; gross_brl: number; platform_fee_brl: number; net_brl: number; breakdown: { conversion: string; fee: string; final: string; } }>('POST', '/api/wallet/earnings/calculate', { amount });
     },
 
@@ -572,21 +632,21 @@ export const api = {
     },
 
     setWithdrawalMethod: (method: string, details: any) => {
-
         const userId = getCurrentUserId();
-
+        
         if (!userId) {
-
             console.error('[API] setWithdrawalMethod: No userId available');
-
             return Promise.reject(new Error('Usuário não encontrado. Faça login novamente.'));
-
         }
 
-        console.log('[API] setWithdrawalMethod:', { userId, method, details });
+        // Log mascarado - userId e details sensíveis ocultos
+        console.log('[API] setWithdrawalMethod:', { 
+            userId: maskSensitiveData(userId), 
+            method, 
+            details: maskSensitiveData(details) 
+        });
 
         return callApi<{ success: boolean, user: User }>('POST', `/api/wallet/earnings/method/set/${userId}`, { method, details });
-
     },
 
     

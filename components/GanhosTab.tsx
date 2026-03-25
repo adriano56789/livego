@@ -47,7 +47,6 @@ const GanhosTab: React.FC<GanhosTabProps> = ({ onConfigure, currentUser, updateU
     }, [currentUser.id, currentUser, updateUser, addToast]);
 
     // Fetch on mount and when user's earnings change (e.g., received a gift)
-    // 🔧 CORREÇÃO: Removido currentUser.earnings para evitar loop infinito
     useEffect(() => {
         fetchEarningsInfo();
     }, [fetchEarningsInfo]);
@@ -55,21 +54,24 @@ const GanhosTab: React.FC<GanhosTabProps> = ({ onConfigure, currentUser, updateU
     // Calculate withdrawal value in real-time as user types
     useEffect(() => {
         const amount = parseInt(withdrawAmount);
-        console.log('[GanhosTab] useEffect triggered, amount:', amount, 'withdrawAmount:', withdrawAmount);
         
-        if (!isNaN(amount) && amount > 0) {
-            setIsCalculating(true);
-            api.calculateWithdrawal(amount)
-                .then((result) => {
-                    setCalculation(result);
-                })
-                .catch((error) => {
-                    setCalculation(null);
-                })
-                .finally(() => setIsCalculating(false));
-        } else {
-            setCalculation(null);
+        // ⚠️ NÃO processa vazio ou inválido
+        if (!withdrawAmount || isNaN(amount) || amount <= 0) {
+            return;
         }
+
+        setIsCalculating(true);
+        api.calculateWithdrawal(amount)
+            .then((result) => {
+                setCalculation(result);
+            })
+            .catch((error) => {
+                // ⚠️ NÃO limpa estado em caso de erro
+                // Log seguro - mostra erro completo para debug, mas sem dados sensíveis
+                console.error('[GanhosTab] Erro ao calcular saque:', error.message || error);
+                console.error('[GanhosTab] Detalhes do erro:', error);
+            })
+            .finally(() => setIsCalculating(false));
     }, [withdrawAmount]);
 
     const handleMaxClick = () => {
@@ -118,13 +120,20 @@ const GanhosTab: React.FC<GanhosTabProps> = ({ onConfigure, currentUser, updateU
                 return;
             }
 
-            // Realizar saque via Pix (cash-out) do Mercado Pago
+            // Log seguro - sem exibir chave PIX completa
+            const maskedPixKey = pixKey.includes('@') 
+                ? `*********@${pixKey.substring(pixKey.indexOf('@') + 1)}`
+                : pixKey.length > 4 
+                    ? pixKey.substring(0, 2) + '*'.repeat(pixKey.length - 4) + pixKey.substring(pixKey.length - 2)
+                    : '***';
+            
+            console.log(`[GanhosTab] Iniciando saque via Pix para chave mascarada: ${maskedPixKey}`);
             const response = await api.withdrawViaPix(currentUser.id, amount, pixKey, pixKeyType);
             
             if (response.success) {
                 addToast(ToastType.Success, 
                     `Saque de R$ ${amount.toFixed(2)} iniciado! ` +
-                    `O dinheiro será transferido para ${pixKey} em até 1 dia útil. ` +
+                    `O dinheiro será transferido em até 1 dia útil. ` +
                     `ID da transferência: ${response.transferId}`
                 );
                 

@@ -1,7 +1,7 @@
 import React from 'react';
-import { BackIcon, BankIcon, CreditCardIcon, YellowDiamondIcon } from './icons';
-import { ToastType } from '../types';
-import { useTranslation } from '../i18n';
+import { BackIcon, BankIcon, CreditCardIcon, YellowDiamondIcon } from './components/icons';
+import { ToastType } from './types';
+import { useTranslation } from './i18n';
 
 interface ConfirmWithdrawalScreenProps {
   onClose: () => void;
@@ -13,7 +13,14 @@ interface ConfirmWithdrawalScreenProps {
     method: string;
     methodDetails: string;
   };
-  onConfirmWithdrawal: (details: typeof ConfirmWithdrawalScreenProps.withdrawalDetails) => void;
+  onConfirmWithdrawal: (details: {
+    diamonds: number;
+    gross_brl: number;
+    platform_fee_brl: number;
+    net_brl: number;
+    method: string;
+    methodDetails: string;
+  }) => void;
   isProcessing: boolean;
   addToast: (type: ToastType, message: string) => void;
 }

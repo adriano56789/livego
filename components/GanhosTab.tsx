@@ -237,7 +237,43 @@ const GanhosTab: React.FC<GanhosTabProps> = ({ onConfigure, currentUser, updateU
                 <button onClick={onConfigure} className="w-full flex justify-between items-center bg-[#2C2C2E] p-4 rounded-lg hover:bg-gray-700/50 transition-colors">
                     <span className="text-white">
                         {(earningsInfo?.withdrawal_method || currentUser.withdrawal_method) ? 
-                            `${(earningsInfo?.withdrawal_method || currentUser.withdrawal_method).method.toUpperCase()}: ${(earningsInfo?.withdrawal_method || currentUser.withdrawal_method).method === 'mercado_pago' ? (earningsInfo?.withdrawal_method || currentUser.withdrawal_method).details.email : (earningsInfo?.withdrawal_method || currentUser.withdrawal_method).details.pixKey}` 
+                            (() => {
+                                const method = (earningsInfo?.withdrawal_method || currentUser.withdrawal_method);
+                                const methodName = method.method.toUpperCase();
+                                let maskedDetails = '';
+                                
+                                if (method.method === 'mercado_pago' && method.details.email) {
+                                    // Mascarar email do Mercado Pago
+                                    const email = method.details.email;
+                                    const emailMatch = email.match(/([a-zA-Z0-9._-]+)@([a-zA-Z0-9.-]+)/);
+                                    if (emailMatch) {
+                                        const domain = emailMatch[2];
+                                        maskedDetails = `*********@${domain}`;
+                                    } else {
+                                        maskedDetails = '***';
+                                    }
+                                } else if (method.method === 'pix' && method.details.pixKey) {
+                                    // Mascarar chave PIX
+                                    const pixKey = method.details.pixKey;
+                                    if (pixKey.includes('@')) {
+                                        // Email PIX
+                                        const emailMatch = pixKey.match(/([a-zA-Z0-9._-]+)@([a-zA-Z0-9.-]+)/);
+                                        if (emailMatch) {
+                                            const domain = emailMatch[2];
+                                            maskedDetails = `*********@${domain}`;
+                                        } else {
+                                            maskedDetails = '***';
+                                        }
+                                    } else if (pixKey.length > 4) {
+                                        // CPF, telefone, etc
+                                        maskedDetails = pixKey.substring(0, 2) + '*'.repeat(pixKey.length - 4) + pixKey.substring(pixKey.length - 2);
+                                    } else {
+                                        maskedDetails = '***';
+                                    }
+                                }
+                                
+                                return `${methodName}: ${maskedDetails}`;
+                            })()
                             : t('wallet.configureMethod')
                         }
                     </span>

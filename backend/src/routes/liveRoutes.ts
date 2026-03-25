@@ -230,7 +230,7 @@ router.post('/streams', async (req, res) => {
                         ...updatedStream.toObject(),
                         publishUrl: `${process.env.SRS_WEBRTC_URL || 'http://localhost:9000'}/rtc/v1/publish/`,
                         playUrl: `${process.env.SRS_WEBRTC_URL || 'http://localhost:9000'}/rtc/v1/play/`,
-                        streamUrl: `webrtc://livego.store:8000/live/${updatedStream.id}`
+                        streamUrl: `wss://livego.store:8000/live/${updatedStream.id}`
                     },
                     reactivated: true
                 });
@@ -244,7 +244,7 @@ router.post('/streams', async (req, res) => {
                     ...existingStream.toObject(),
                     publishUrl: `${process.env.SRS_WEBRTC_URL || 'http://localhost:9000'}/rtc/v1/publish/`,
                     playUrl: `${process.env.SRS_WEBRTC_URL || 'http://localhost:9000'}/rtc/v1/play/`,
-                    streamUrl: `webrtc://livego.store:8000/live/${existingStream.id}`
+                    streamUrl: `wss://livego.store:8000/live/${existingStream.id}`
                 },
                 existing: true
             });
@@ -351,7 +351,7 @@ router.post('/streams', async (req, res) => {
                 // URLs para WebRTC
                 publishUrl: `${srsWebRtcUrl}/rtc/v1/publish/`,
                 playUrl: `${srsWebRtcUrl}/rtc/v1/play/`,
-                streamUrl: `webrtc://livego.store:8000/live/${streamId}`
+                streamUrl: `wss://livego.store:8000/live/${streamId}`
             }
         });
     } catch (error: any) {
@@ -1507,7 +1507,7 @@ const SRS_API_URL = process.env.SRS_API_URL || 'http://72.60.249.175:1985';
 
 import { validateStreamKey } from '../middleware/streamAuth';
 
-router.post('/rtc/v1/publish', validateStreamKey, async (req, res) => {
+router.post('/streams/rtc/v1/publish', validateStreamKey, async (req, res) => {
     try {
         const { streamUrl, sdp } = req.body;
         const stream = req.stream; // Stream validada pelo middleware
@@ -1542,7 +1542,7 @@ router.post('/rtc/v1/publish', validateStreamKey, async (req, res) => {
     }
 });
 
-router.post('/rtc/v1/play', async (req, res) => {
+router.post('/streams/rtc/v1/play', async (req, res) => {
     try {
         const { streamUrl, sdp } = req.body;
         console.log(`[SRS Proxy] Playing from ${streamUrl}`);
@@ -1561,7 +1561,7 @@ router.post('/rtc/v1/play', async (req, res) => {
     }
 });
 
-router.delete('/rtc/v1/stop', async (req, res) => {
+router.delete('/streams/rtc/v1/stop', async (req, res) => {
     // Note: SRS typically manages stop via stream disconnects or specific API calls. For now we acknowledge.
     res.json({ code: 0, sdp: '', sessionid: '' });
 });

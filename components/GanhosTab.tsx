@@ -157,13 +157,16 @@ const GanhosTab: React.FC<GanhosTabProps> = ({ onConfigure, currentUser, updateU
 
     const formatCurrency = (value: number | undefined) => `R$ ${(value ?? 0).toFixed(2).replace('.', ',')}`;
 
+    // Só mostrar displayData se houver cálculo ou se o usuário já digitou um valor válido
+    const shouldShowCalculation = calculation || (withdrawAmount && !isNaN(parseInt(withdrawAmount)) && parseInt(withdrawAmount) > 0);
+    
     const displayData = calculation || {
-        diamonds: earningsInfo?.available_diamonds ?? 0,
-        gross_brl: earningsInfo?.brl_value ?? 0,
+        diamonds: (parseInt(withdrawAmount) || earningsInfo?.available_diamonds) ?? 0,
+        gross_brl: 0,
         platform_fee_brl: 0,
-        net_brl: earningsInfo?.brl_value ?? 0,
+        net_brl: 0,
         breakdown: {
-            conversion: `${earningsInfo?.available_diamonds ?? 0} diamantes = R$${(earningsInfo?.brl_value ?? 0).toFixed(2)}`,
+            conversion: `${(parseInt(withdrawAmount) || earningsInfo?.available_diamonds) ?? 0} diamantes = R$0.00`,
             fee: 'Taxa da plataforma (20%): R$0.00',
             final: 'Valor a receber: R$0.00'
         }
@@ -204,18 +207,22 @@ const GanhosTab: React.FC<GanhosTabProps> = ({ onConfigure, currentUser, updateU
             </div>
 
             <div className="space-y-3 text-sm">
-                <div className="flex justify-between items-center">
-                    <span className="text-gray-400">{t('wallet.grossValue')}</span>
-                    <span className="text-white">{isCalculating && withdrawAmount ? '...' : formatCurrency(displayData.gross_brl)}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                    <span className="text-gray-400">{t('wallet.platformFee')}</span>
-                    <span className="text-gray-400">- {isCalculating && withdrawAmount ? '...' : formatCurrency(displayData.platform_fee_brl)}</span>
-                </div>
-                <div className="flex justify-between items-center font-bold text-base">
-                    <span className="text-white">{t('wallet.netValue')}</span>
-                    <span className="text-green-500">{isCalculating && withdrawAmount ? '...' : formatCurrency(displayData.net_brl)}</span>
-                </div>
+                {shouldShowCalculation && (
+                    <>
+                        <div className="flex justify-between items-center">
+                            <span className="text-gray-400">{t('wallet.grossValue')}</span>
+                            <span className="text-white">{isCalculating && withdrawAmount ? '...' : formatCurrency(displayData.gross_brl)}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                            <span className="text-gray-400">{t('wallet.platformFee')}</span>
+                            <span className="text-gray-400">- {isCalculating && withdrawAmount ? '...' : formatCurrency(displayData.platform_fee_brl)}</span>
+                        </div>
+                        <div className="flex justify-between items-center font-bold text-base">
+                            <span className="text-white">{t('wallet.netValue')}</span>
+                            <span className="text-green-500">{isCalculating && withdrawAmount ? '...' : formatCurrency(displayData.net_brl)}</span>
+                        </div>
+                    </>
+                )}
             </div>
 
             <div className="space-y-3">

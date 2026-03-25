@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import OnlineUsersModal from './live/OnlineUsersModal';
 import ChatMessage from './live/ChatMessage';
@@ -24,7 +23,7 @@ import { socketService } from '../services/socket';
 import AvatarWithFrame from './ui/AvatarWithFrame';
 import { beautyWebRTCIntegration } from '../services/BeautyWebRTCIntegration';
 import LiveVideoPlayer from './LiveVideoPlayer';
-import PDVideoPlayer from './PDVideoPlayer';
+import WebViewStreamPlayer from './WebViewStreamPlayer';
 
 interface ChatMessageType {
     id: number;
@@ -738,50 +737,12 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
 
     const topContributors = onlineUsers.filter(u => u.value > 0).slice(0, 3);
 
-    // Obter URL da stream para o LiveVideoPlayer/PD Player
+    // Obter URL da stream para o WebViewStreamPlayer
     const getStreamUrl = () => {
-        console.log(` getStreamUrl - streamer.playbackUrl: ${streamer.playbackUrl}`);
-        console.log(` getStreamUrl - streamer.id: ${streamer.id}`);
-        
-        // Se tiver playbackUrl, usar preferencialmente
-        if (streamer.playbackUrl) {
-            // Se for FLV, converter para WebRTC/HLS para PD Player
-            if (streamer.playbackUrl.includes('.flv')) {
-                const srsWebrtcBase = import.meta.env?.VITE_SRS_WEBRTC_URL || 'webrtc://72.60.249.175/live';
-                const webrtcUrl = `${srsWebrtcBase}/${streamer.id}`;
-                const hlsUrl = `https://72.60.249.175/live/${streamer.id}.m3u8`;
-                
-                console.log(` getStreamUrl - Convertendo FLV para WebRTC: ${webrtcUrl}`);
-                console.log(` getStreamUrl - Convertendo FLV para HLS: ${hlsUrl}`);
-                
-                // Retornar WebRTC para PD Player (prioridade)
-                return webrtcUrl;
-            }
-            
-            return streamer.playbackUrl;
-        }
-        
-        // Se não tiver playbackUrl, construir baseado no streamerId
-        if (streamer.id) {
-            // Detectar tipo de stream baseado no servidor
-            const isSRS = streamer.playbackUrl?.includes('72.60.249.175') || 
-                          streamer.playbackUrl?.includes('livego.store');
-            
-            if (isSRS) {
-                // Stream SRS - usar WebRTC ou HLS baseado no formato
-                if (streamer.playbackUrl?.includes('.m3u8')) {
-                    return streamer.playbackUrl; // HLS
-                } else {
-                    return `webrtc://72.60.249.175/live/${streamer.id}`; // WebRTC
-                }
-            } else {
-                // Fallback para outros servidores
-                return `https://72.60.249.175/live/${streamer.id}.m3u8`;
-            }
-        }
-        
-        // Fallback final
-        return `webrtc://72.60.249.175/live/${streamer.id}`;
+        // Retornar HLS direto do SRS
+        const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        const baseUrl = isLocal ? 'http://localhost:8000/live' : 'https://livego.store:8000/live';
+        return `${baseUrl}/${streamer.id}.m3u8`;
     };
 
     return (
@@ -824,8 +785,8 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
                     />
                 )}
 
-                {/* Video Player Component - Player universal para ambos host e espectadores */}
-                <PDVideoPlayer
+                {/* Video Player Component - Player otimizado para WebView */}
+                <WebViewStreamPlayer
                     streamer={streamer}
                     currentUser={currentUser}
                     streamUrl={getStreamUrl()}

@@ -28,11 +28,11 @@ class SRSService {
 
   // Métodos utilitários para construir URLs
   getWebRTCPublishUrl(streamId: string): string {
-    return `webrtc://${this.getWebRTCHost()}/live/${streamId}`;
+    return `wss://${this.getWebRTCHost()}:8000/live/${streamId}`;
   }
 
   getWebRTCPlayUrl(streamId: string): string {
-    return `webrtc://${this.getWebRTCHost()}/live/${streamId}`;
+    return `wss://${this.getWebRTCHost()}:8000/live/${streamId}`;
   }
 
   getHlsUrl(streamId: string): string {

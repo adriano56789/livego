@@ -62,7 +62,7 @@ export class WebRTCService {
     // Construir URL baseada no ambiente
     const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
     const webrtcBase = import.meta.env?.VITE_SRS_WEBRTC_URL || 
-      (isLocal ? 'webrtc://localhost/live' : 'webrtc://72.60.249.175/live');
+      (isLocal ? 'webrtc://localhost:8000/live' : 'webrtc://72.60.249.175:8000/live');
     
     if (streamId.startsWith('webrtc://')) {
       this.currentStreamUrl = streamId;
@@ -166,7 +166,7 @@ export class WebRTCService {
      // Construir URL baseada no ambiente
      const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
      const webrtcBase = import.meta.env?.VITE_SRS_WEBRTC_URL || 
-       (isLocal ? 'webrtc://localhost/live' : 'webrtc://72.60.249.175/live');
+       (isLocal ? 'webrtc://localhost:8000/live' : 'webrtc://72.60.249.175:8000/live');
      
      if (streamId.startsWith('webrtc://')) {
        this.currentStreamUrl = streamId;

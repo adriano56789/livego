@@ -215,7 +215,7 @@ const GoLiveScreen: React.FC<GoLiveScreenProps> = ({ isOpen, onClose, onStartStr
             }
 
             // 🔧 SINCRONIZAÇÃO: Usar variável de ambiente para URL do SRS (não hardcoded)
-            const srsWebrtcBase = import.meta.env?.VITE_SRS_WEBRTC_URL || 'webrtc://72.60.249.175/live';
+            const srsWebrtcBase = import.meta.env?.VITE_SRS_WEBRTC_URL || 'wss://72.60.249.175:8000/live';
             const streamUrl = `${srsWebrtcBase}/${streamId}`;
             
             // ✅ Obter streamKey real do draft

@@ -894,11 +894,11 @@ export const api = {
 
     // ... (rest of the code remains the same)
 
-    publishWebRTC: (streamUrl: string, sdp: string, streamKey?: string) => callApi<SRSResponse>('POST', '/api/rtc/v1/publish', { streamUrl, sdp, streamKey }),
+    publishWebRTC: (streamUrl: string, sdp: string, streamKey?: string) => callApi<SRSResponse>('POST', '/api/streams/rtc/v1/publish', { streamUrl, sdp, streamKey }),
 
-    playWebRTC: (streamUrl: string, sdp: string) => callApi<SRSPlayResponse>('POST', '/api/rtc/v1/play', { streamUrl, sdp }),
+    playWebRTC: (streamUrl: string, sdp: string) => callApi<SRSPlayResponse>('POST', '/api/streams/rtc/v1/play', { streamUrl, sdp }),
 
-    stopWebRTC: (streamUrl: string) => callApi<SRSResponse>('DELETE', '/api/rtc/v1/stop', { streamUrl }),
+    stopWebRTC: (streamUrl: string) => callApi<SRSResponse>('DELETE', '/api/streams/rtc/v1/stop', { streamUrl }),
 
     getStreamInfo: (streamId: string) => callApi<SRSStreamInfo>('GET', `/api/v1/streams/${streamId}`),
 

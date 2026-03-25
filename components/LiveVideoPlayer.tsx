@@ -103,8 +103,8 @@ const LiveVideoPlayer: React.FC<LiveVideoPlayerProps> = ({
     let webrtcUrl = streamUrl;
     
     if (!webrtcUrl) {
-      const srsWebrtcBase = import.meta.env?.VITE_SRS_WEBRTC_URL || 'webrtc://72.60.249.175/live';
-      webrtcUrl = streamer.playbackUrl?.startsWith('webrtc://')
+      const srsWebrtcBase = import.meta.env?.VITE_SRS_WEBRTC_URL || 'wss://72.60.249.175:8000/live';
+      webrtcUrl = streamer.playbackUrl?.startsWith('wss://')
         ? streamer.playbackUrl
         : `${srsWebrtcBase}/${streamer.id}`;
     }

@@ -179,6 +179,9 @@ const GanhosTab: React.FC<GanhosTabProps> = ({ onConfigure, currentUser, updateU
         }
     };
     
+    // Verificar se está carregando para mostrar valores corretos
+    const isLoadingCalculation = isCalculating && withdrawAmount && !isNaN(parseInt(withdrawAmount)) && parseInt(withdrawAmount) > 0;
+    
     const isWithdrawButtonDisabled = isWithdrawing || isCalculating || !calculation || calculation.net_brl <= 0;
 
     if (isLoading) {
@@ -218,15 +221,15 @@ const GanhosTab: React.FC<GanhosTabProps> = ({ onConfigure, currentUser, updateU
                     <>
                         <div className="flex justify-between items-center">
                             <span className="text-gray-400">{t('wallet.grossValue')}</span>
-                            <span className="text-white">{isCalculating && withdrawAmount ? '...' : formatCurrency(displayData.gross_brl)}</span>
+                            <span className="text-white">{isLoadingCalculation ? '...' : formatCurrency(displayData.gross_brl)}</span>
                         </div>
                         <div className="flex justify-between items-center">
                             <span className="text-gray-400">{t('wallet.platformFee')}</span>
-                            <span className="text-gray-400">- {isCalculating && withdrawAmount ? '...' : formatCurrency(displayData.platform_fee_brl)}</span>
+                            <span className="text-gray-400">- {isLoadingCalculation ? '...' : formatCurrency(displayData.platform_fee_brl)}</span>
                         </div>
                         <div className="flex justify-between items-center font-bold text-base">
                             <span className="text-white">{t('wallet.netValue')}</span>
-                            <span className="text-green-500">{isCalculating && withdrawAmount ? '...' : formatCurrency(displayData.net_brl)}</span>
+                            <span className="text-green-500">{isLoadingCalculation ? '...' : formatCurrency(displayData.net_brl)}</span>
                         </div>
                     </>
                 )}

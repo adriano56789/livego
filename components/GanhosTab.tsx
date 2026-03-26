@@ -76,7 +76,7 @@ const GanhosTab: React.FC<GanhosTabProps> = ({ onConfigure, currentUser, updateU
         fetchEarningsInfo();
     }, [fetchEarningsInfo]);
 
-    // Calculate withdrawal value in real-time as user types
+    // Calculate withdrawal value in real-time as user types (com debounce)
     useEffect(() => {
         const amount = parseInt(withdrawAmount);
         
@@ -85,16 +85,22 @@ const GanhosTab: React.FC<GanhosTabProps> = ({ onConfigure, currentUser, updateU
             return;
         }
 
-        setIsCalculating(true);
-        api.calculateWithdrawal(amount)
-            .then((result) => {
-                setCalculation(result);
-            })
-            .catch((error) => {
-                // ⚠️ NÃO limpa estado em caso de erro
-                safeError('[GanhosTab] Erro ao calcular saque:', error);
-            })
-            .finally(() => setIsCalculating(false));
+        // Debounce: esperar 500ms antes de calcular
+        const timeoutId = setTimeout(() => {
+            setIsCalculating(true);
+            api.calculateWithdrawal(amount)
+                .then((result) => {
+                    setCalculation(result);
+                })
+                .catch((error) => {
+                    // ⚠️ NÃO limpa estado em caso de erro
+                    safeError('[GanhosTab] Erro ao calcular saque:', error);
+                })
+                .finally(() => setIsCalculating(false));
+        }, 500);
+
+        // Limpar timeout se o valor mudar novamente
+        return () => clearTimeout(timeoutId);
     }, [withdrawAmount]);
 
     const handleMaxClick = () => {
@@ -197,13 +203,13 @@ const GanhosTab: React.FC<GanhosTabProps> = ({ onConfigure, currentUser, updateU
     // Usar valores do backend (calculation) ou fallback para valores básicos
     const displayData = calculation || {
         diamonds: earningsInfo?.available_diamonds ?? 0,
-        gross_brl: earningsInfo?.brlValue ?? 0,
-        platform_fee_brl: earningsInfo?.brlValue ? (earningsInfo.brlValue * 0.20) : 0,
-        net_brl: earningsInfo?.brlValue ? (earningsInfo.brlValue * 0.80) : 0,
+        gross_brl: earningsInfo?.brl_value ?? 0,
+        platform_fee_brl: earningsInfo?.brl_value ? (earningsInfo.brl_value * 0.20) : 0,
+        net_brl: earningsInfo?.brl_value ? (earningsInfo.brl_value * 0.80) : 0,
         breakdown: {
-            conversion: `${earningsInfo?.available_diamonds ?? 0} diamantes = R$ ${(earningsInfo?.brlValue ?? 0).toFixed(2).replace('.', ',')}`,
-            fee: `Taxa da plataforma (20%): R$ ${earningsInfo?.brlValue ? (earningsInfo.brlValue * 0.20).toFixed(2).replace('.', ',') : '0,00'}`,
-            final: `Valor a receber: R$ ${earningsInfo?.brlValue ? (earningsInfo.brlValue * 0.80).toFixed(2).replace('.', ',') : '0,00'}`
+            conversion: `${earningsInfo?.available_diamonds ?? 0} diamantes = R$ ${(earningsInfo?.brl_value ?? 0).toFixed(2).replace('.', ',')}`,
+            fee: `Taxa da plataforma (20%): R$ ${earningsInfo?.brl_value ? (earningsInfo.brl_value * 0.20).toFixed(2).replace('.', ',') : '0,00'}`,
+            final: `Valor a receber: R$ ${earningsInfo?.brl_value ? (earningsInfo.brl_value * 0.80).toFixed(2).replace('.', ',') : '0,00'}`
         }
     };
     

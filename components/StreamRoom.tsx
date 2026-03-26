@@ -801,26 +801,15 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
 
     // Obter URL da stream para o WebViewStreamPlayer
     const getStreamUrl = () => {
-        // 🎥 LÓGICA CORRIGIDA: Dono assistindo de outro dispositivo
-        // Se o usuário é o dono da live mas a transmissão já está ativa (outro dispositivo),
-        // ele deve assistir como viewer normal (HLS)
-        if (isBroadcaster && (streamer.isLive || (liveSession && liveSession.isLive))) {
-            console.log('🎥 Dono da live entrando para assistir de outro dispositivo');
-            // Dono da live entrando para assistir de outro dispositivo
-            // Retornar HLS como viewer normal
-            const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-            const baseUrl = isLocal ? 'http://localhost:8080/live' : 'https://livego.store:8080/live';
-            return `${baseUrl}/${streamer.id}.m3u8`;
-        }
-        
-        // 🎥 ORIGINAL: Para broadcaster no dispositivo de transmissão
-        // O WebViewStreamPlayer vai capturar a câmera e fazer WebRTC
+        // 🎥 LÓGICA DEFINITIVA: Dono da live sempre vê sua própria câmera
+        // Se o usuário é o dono da transmissão (isBroadcaster=true)
+        // SEMPRE mostrar a câmera dele, mesmo em outro dispositivo
         if (isBroadcaster) {
-            console.log('🎥 Broadcaster no dispositivo de transmissão - capturando câmera');
-            return undefined; // Deixar o WebViewStreamPlayer configurar a câmera
+            console.log('🎥 Dono da live - mostrando própria câmera (WebRTC)');
+            return undefined; // WebViewStreamPlayer vai capturar a câmera local
         }
         
-        // Para viewers, retornar HLS do SRS
+        // 👥 Para viewers (não donos): mostrar transmissão ou capa de fundo
         const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
         const baseUrl = isLocal ? 'http://localhost:8080/live' : 'https://livego.store:8080/live';
         return `${baseUrl}/${streamer.id}.m3u8`;

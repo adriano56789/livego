@@ -47,16 +47,11 @@ const WebViewStreamPlayer: React.FC<WebViewStreamPlayerProps> = ({
 
     const setupStream = async () => {
       try {
-        // 🎥 LÓGICA CORRIGIDA: Dono assistindo de outro dispositivo
-        // Se isBroadcaster=true mas recebeu streamUrl HLS, tratar como viewer
-        if (isBroadcaster && streamUrl && streamUrl.includes('.m3u8')) {
-          console.log('🎥 Dono da live assistindo de outro dispositivo - tratando como viewer');
-          await setupViewerStream(videoEl);
-        } else if (isBroadcaster) {
-          // Caso normal: broadcaster no dispositivo de transmissão
+        if (isBroadcaster) {
+          // 🎥 Dono da live: sempre capturar câmera local
           await setupBroadcasterStream(videoEl);
         } else {
-          // Viewer normal
+          // 👥 Viewer: assistir transmissão HLS
           await setupViewerStream(videoEl);
         }
       } catch (err) {
@@ -73,33 +68,54 @@ const WebViewStreamPlayer: React.FC<WebViewStreamPlayerProps> = ({
       
       // Verificar suporte a getUserMedia
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        throw new Error('Câmera não suportada neste WebView');
+        throw new Error('Câmera não suportada neste navegador. Use Chrome, Firefox, Edge ou Safari.');
       }
 
-      // 🎥 CORREÇÃO: Sempre tentar capturar a câmera ao entrar ao vivo
+      // 🎥 SEMPRE tentar capturar a câmera ao entrar ao vivo
       try {
         console.log('📷 Solicitando acesso à câmera e microfone...');
         
-        // Solicitar permissão e capturar mídia
-        const mediaStream = await navigator.mediaDevices.getUserMedia({
+        // Configurações robustas para todos os navegadores
+        const constraints = {
           video: {
-            width: { ideal: 1280 },
-            height: { ideal: 720 },
-            facingMode: 'user'
+            width: { ideal: 1280, max: 1920 },
+            height: { ideal: 720, max: 1080 },
+            facingMode: 'user',
+            // Configurações para melhor compatibilidade
+            frameRate: { ideal: 30, max: 60 }
           },
           audio: {
             echoCancellation: true,
             noiseSuppression: true,
-            autoGainControl: true
+            autoGainControl: true,
+            // Configurações para melhor compatibilidade
+            sampleRate: 44100,
+            channelCount: 1
           }
+        };
+
+        // Solicitar permissão e capturar mídia
+        const mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
+
+        console.log('✅ Câmera capturada com sucesso:', {
+          videoTracks: mediaStream.getVideoTracks().length,
+          audioTracks: mediaStream.getAudioTracks().length,
+          active: mediaStream.active
         });
 
-        console.log('✅ Câmera capturada com sucesso:', mediaStream.getVideoTracks().length, 'tracks');
+        // Verificar se os tracks estão ativos
+        const videoTrack = mediaStream.getVideoTracks()[0];
+        const audioTrack = mediaStream.getAudioTracks()[0];
+        
+        if (!videoTrack || !videoTrack.enabled) {
+          throw new Error('Câmera não disponível ou foi bloqueada');
+        }
 
         // Exibir preview local
         videoEl.srcObject = mediaStream;
+        videoEl.muted = true; // Sempre mutado para broadcaster (evitar eco)
         
-        // Iniciar WebRTC para envio
+        // Iniciar WebRTC para envio (opcional, não falhar se não funcionar)
         try {
           const { webRTCService } = await import('../services/webrtcService.js');
           const webrtcUrl = getWebRTCUrl();
@@ -112,7 +128,25 @@ const WebViewStreamPlayer: React.FC<WebViewStreamPlayerProps> = ({
         } catch (webrtcError) {
           console.warn('⚠️ WebRTC falhou, usando apenas preview local:', webrtcError);
           // Continuar com preview local mesmo sem WebRTC
+          setIsConnected(true); // Conectado localmente
         }
+
+        // Aguardar vídeo estar pronto
+        await new Promise((resolve, reject) => {
+          const timeout = setTimeout(() => {
+            reject(new Error('Timeout ao carregar vídeo da câmera'));
+          }, 10000);
+
+          videoEl.addEventListener('loadeddata', () => {
+            clearTimeout(timeout);
+            resolve(true);
+          }, { once: true });
+
+          videoEl.addEventListener('error', () => {
+            clearTimeout(timeout);
+            reject(new Error('Erro ao carregar vídeo da câmera'));
+          }, { once: true });
+        });
 
         await videoEl.play();
         setIsLoading(false);
@@ -120,6 +154,20 @@ const WebViewStreamPlayer: React.FC<WebViewStreamPlayerProps> = ({
         
       } catch (mediaError) {
         console.error('❌ Erro ao capturar mídia:', mediaError);
+        
+        // Mensagens de erro específicas
+        if (mediaError instanceof Error) {
+          if (mediaError.name === 'NotAllowedError') {
+            throw new Error('Permissão negada. Permita o acesso à câmera nas configurações do navegador.');
+          } else if (mediaError.name === 'NotFoundError') {
+            throw new Error('Nenhuma câmera encontrada. Verifique se há uma câmera conectada.');
+          } else if (mediaError.name === 'NotReadableError') {
+            throw new Error('Câmera já está em uso por outro aplicativo.');
+          } else if (mediaError.name === 'OverconstrainedError') {
+            throw new Error('Câmera não suporta as configurações solicitadas.');
+          }
+        }
+        
         throw new Error(`Falha ao acessar câmera: ${mediaError instanceof Error ? mediaError.message : 'Erro desconhecido'}`);
       }
     };
@@ -134,29 +182,49 @@ const WebViewStreamPlayer: React.FC<WebViewStreamPlayerProps> = ({
         throw new Error('URL de streaming não encontrada');
       }
 
-      // Estratégia de fallback para WebView
+      // Estratégia de compatibilidade total para todos os navegadores
       let playbackSuccess = false;
 
-      // 1. Tentar HLS.js
+      // 1. HLS.js para Chrome, Firefox, Edge (não-iOS)
       try {
         if (Hls.isSupported()) {
-          console.log('📺 Usando HLS.js');
+          console.log('📺 Usando HLS.js (Chrome/Firefox/Edge)');
           
           const hls = new Hls({
             debug: false,
             enableWorker: true,
-            lowLatencyMode: true,
+            lowLatencyMode: false, // Desabilitar para melhor compatibilidade
             maxBufferLength: 30,
             maxMaxBufferLength: 600,
+            // Configurações robustas para compatibilidade
+            maxFragLookUpTolerance: 0.25,
+            liveSyncDurationCount: 3,
+            liveMaxLatencyDurationCount: Infinity,
+            preferManagedMediaSource: true,
           });
 
           hls.loadSource(hlsUrl);
           hls.attachMedia(videoEl);
 
           await new Promise((resolve, reject) => {
-            hls.on(Hls.Events.MANIFEST_PARSED, resolve);
-            hls.on(Hls.Events.ERROR, reject);
-            setTimeout(reject, 10000); // Timeout 10s
+            const timeout = setTimeout(() => {
+              hls.destroy();
+              reject(new Error('Timeout HLS.js'));
+            }, 15000); // 15s timeout
+
+            hls.on(Hls.Events.MANIFEST_PARSED, () => {
+              clearTimeout(timeout);
+              resolve(true);
+            });
+            
+            hls.on(Hls.Events.ERROR, (event, data) => {
+              console.warn('⚠️ HLS.js Error:', data);
+              if (data.fatal) {
+                clearTimeout(timeout);
+                hls.destroy();
+                reject(new Error('HLS.js fatal error'));
+              }
+            });
           });
 
           await videoEl.play();
@@ -168,11 +236,29 @@ const WebViewStreamPlayer: React.FC<WebViewStreamPlayerProps> = ({
         console.warn('⚠️ HLS.js falhou:', hlsError);
       }
 
-      // 2. Tentar HLS nativo (Safari/iOS)
+      // 2. HLS nativo para Safari, iOS, Chrome Mobile
       if (!playbackSuccess && videoEl.canPlayType('application/vnd.apple.mpegurl')) {
         try {
-          console.log('📺 Tentando HLS nativo');
+          console.log('📺 Usando HLS nativo (Safari/iOS)');
           videoEl.src = hlsUrl;
+          
+          // Aguardar o vídeo estar pronto
+          await new Promise((resolve, reject) => {
+            const timeout = setTimeout(() => {
+              reject(new Error('Timeout HLS nativo'));
+            }, 15000);
+
+            videoEl.addEventListener('loadeddata', () => {
+              clearTimeout(timeout);
+              resolve(true);
+            }, { once: true });
+
+            videoEl.addEventListener('error', () => {
+              clearTimeout(timeout);
+              reject(new Error('Erro carregando HLS nativo'));
+            }, { once: true });
+          });
+
           await videoEl.play();
           playbackSuccess = true;
           setIsConnected(true);
@@ -182,25 +268,40 @@ const WebViewStreamPlayer: React.FC<WebViewStreamPlayerProps> = ({
         }
       }
 
-      // 3. Tentar streaming direto como fallback
+      // 3. Fallback para MP4 direto se disponível
       if (!playbackSuccess) {
         try {
-          console.log('📺 Tentando streaming direto');
-          const directUrl = getDirectStreamUrl();
-          if (directUrl) {
-            videoEl.src = directUrl;
-            await videoEl.play();
-            playbackSuccess = true;
-            setIsConnected(true);
-            console.log('✅ Streaming direto funcionando');
-          }
-        } catch (directError) {
-          console.warn('⚠️ Streaming direto falhou:', directError);
+          console.log('📺 Tentando fallback MP4');
+          const mp4Url = hlsUrl.replace('.m3u8', '.mp4');
+          videoEl.src = mp4Url;
+          
+          await new Promise((resolve, reject) => {
+            const timeout = setTimeout(() => {
+              reject(new Error('Timeout MP4'));
+            }, 10000);
+
+            videoEl.addEventListener('loadeddata', () => {
+              clearTimeout(timeout);
+              resolve(true);
+            }, { once: true });
+
+            videoEl.addEventListener('error', () => {
+              clearTimeout(timeout);
+              reject(new Error('Erro carregando MP4'));
+            }, { once: true });
+          });
+
+          await videoEl.play();
+          playbackSuccess = true;
+          setIsConnected(true);
+          console.log('✅ MP4 fallback funcionando');
+        } catch (mp4Error) {
+          console.warn('⚠️ MP4 fallback falhou:', mp4Error);
         }
       }
 
       if (!playbackSuccess) {
-        throw new Error('Nenhum método de reprodução funcionou neste WebView');
+        throw new Error('Nenhum método de reprodução funcionou neste navegador. Verifique se a transmissão está ativa.');
       }
 
       setIsLoading(false);
@@ -316,24 +417,17 @@ const WebViewStreamPlayer: React.FC<WebViewStreamPlayerProps> = ({
       />
       
       {/* Status indicators */}
-      {isBroadcaster && !streamUrl?.includes('.m3u8') && (
-        <div className="absolute top-3 left-3 bg-red-600 text-white px-2 py-1 rounded-full text-xs font-semibold">
-          <div className="w-1.5 h-1.5 bg-white rounded-full mr-1 inline-block animate-pulse"></div>
-          AO VIVO
-        </div>
-      )}
-      
-      {isBroadcaster && streamUrl?.includes('.m3u8') && (
-        <div className="absolute top-3 left-3 bg-blue-600 text-white px-2 py-1 rounded-full text-xs font-semibold">
-          <div className="w-1.5 h-1.5 bg-white rounded-full mr-1 inline-block"></div>
-          ASSISTINDO
+      {isBroadcaster && (
+        <div className="absolute top-3 left-3 bg-red-600 text-white px-3 py-1.5 rounded-full text-xs font-semibold shadow-lg">
+          <div className="w-2 h-2 bg-white rounded-full mr-2 inline-block animate-pulse"></div>
+          AO VIVO - SUA CÂMERA
         </div>
       )}
       
       {!isBroadcaster && isConnected && (
-        <div className="absolute top-3 right-3 bg-green-600 text-white px-2 py-1 rounded-full text-xs font-semibold">
-          <div className="w-1.5 h-1.5 bg-white rounded-full mr-1 inline-block"></div>
-          ONLINE
+        <div className="absolute top-3 right-3 bg-green-600 text-white px-3 py-1.5 rounded-full text-xs font-semibold shadow-lg">
+          <div className="w-2 h-2 bg-white rounded-full mr-2 inline-block"></div>
+          ASSISTINDO
         </div>
       )}
       

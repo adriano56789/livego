@@ -149,49 +149,51 @@ const BlockReportModal: React.FC<BlockReportModalProps> = ({
                 )}
 
                 <div className="bg-[#2a2a2c] rounded-xl overflow-hidden">
-                    {onDeleteMessages && (
-                        <>
-                            <button 
-                                onClick={onDeleteMessages} 
-                                className="w-full py-3 text-orange-500 text-center text-lg font-bold hover:bg-gray-700/50 transition-colors"
-                            >
-                                🗑️ Apagar Mensagens
-                            </button>
-                            <div className="h-px bg-gray-600/50"></div>
-                        </>
-                    )}
-                    {onUnfriend && (
-                       <>
+                    <div className="flex flex-col space-y-2">
+                        {onDeleteMessages && (
+                            <>
+                                <button 
+                                    onClick={onDeleteMessages} 
+                                    className="w-full py-3 text-orange-500 text-center text-lg font-bold hover:bg-gray-700/50 transition-colors"
+                                >
+                                    🗑️ Apagar Mensagens
+                                </button>
+                                <div className="h-px bg-gray-600/50"></div>
+                            </>
+                        )}
+                        {onUnfriend && (
+                            <>
+                                <button 
+                                    onClick={onUnfriend} 
+                                    className="w-full py-3 text-red-500 text-center text-lg font-bold hover:bg-gray-700/50 transition-colors"
+                                >
+                                    {t('common.unfriend')}
+                                </button>
+                                <div className="h-px bg-gray-600/50"></div>
+                            </>
+                        )}
                         <button 
-                            onClick={onUnfriend} 
-                            className="w-full py-3 text-red-500 text-center text-lg font-bold hover:bg-gray-700/50 transition-colors"
+                            onClick={handleBlock}
+                            disabled={!blockStatus?.canBlock || isLoading}
+                            className={`w-full py-3 text-center text-lg font-bold transition-all ${
+                                !blockStatus?.canBlock || isLoading
+                                    ? 'bg-gray-700 text-gray-400 cursor-not-allowed'
+                                    : 'text-red-500 hover:bg-gray-700/50'
+                            }`}
+                            title={getRestrictionTooltip()}
                         >
-                            {t('common.unfriend')}
+                            {getBlockButtonContent()}
                         </button>
                         <div className="h-px bg-gray-600/50"></div>
-                       </>
-                    )}
-                    <button 
-                        onClick={handleBlock}
-                        disabled={!blockStatus?.canBlock || isLoading}
-                        className={`w-full py-3 text-center text-lg font-bold transition-all ${
-                            !blockStatus?.canBlock || isLoading
-                                ? 'bg-gray-700 text-gray-400 cursor-not-allowed'
-                                : 'text-red-500 hover:bg-gray-700/50'
-                        }`}
-                        title={getRestrictionTooltip()}
-                    >
-                        {getBlockButtonContent()}
-                    </button>
-                    <div className="h-px bg-gray-600/50"></div>
-                    <button 
-                        onClick={onReport} 
-                        className="w-full py-3 text-white text-center text-lg font-bold hover:bg-gray-700/50 transition-colors"
-                    >
-                        {t('common.report')}
-                    </button>
+                        <button 
+                            onClick={onReport} 
+                            className="w-full py-3 text-white text-center text-lg font-bold hover:bg-gray-700/50 transition-colors"
+                        >
+                            {t('common.report')}
+                        </button>
+                    </div>
                 </div>
-                <div className="bg-[#2a2a2c] rounded-xl">
+                <div className="bg-[#2a2a2c] rounded-xl overflow-hidden">
                     <button 
                         onClick={onClose} 
                         className="w-full py-3 text-white text-center text-lg font-bold hover:bg-gray-700/50 transition-colors"

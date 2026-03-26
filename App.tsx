@@ -28,7 +28,25 @@ const ErrorBoundary: React.FC<ErrorBoundaryProps> = ({ children }) => {
     };
 
     const rejectionHandler = (event: PromiseRejectionEvent) => {
-      handleError(new Error(event.reason));
+      try {
+        // Tratar caso onde event.reason pode ser undefined
+        const reason = event.reason || 'Unknown promise rejection';
+        const errorMessage = typeof reason === 'string' ? reason : String(reason);
+        
+        // Ignorar erros específicos de extensões
+        if (errorMessage.includes('useCache') || 
+            errorMessage.includes('Receiving end does not exist') ||
+            errorMessage.includes('content.js')) {
+          console.warn('Ignorando erro de extensão:', errorMessage);
+          event.preventDefault();
+          return;
+        }
+
+        handleError(new Error(errorMessage));
+      } catch (handlerError) {
+        console.error('Erro no rejectionHandler:', handlerError);
+        handleError(new Error('Erro ao processar rejeição de promise'));
+      }
       event.preventDefault();
     };
 

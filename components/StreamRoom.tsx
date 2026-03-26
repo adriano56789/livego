@@ -322,27 +322,38 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
     }, [streamer.id, currentUser.id]); // Removido onlineUsersInterval das dependências
 
     const postGiftChatMessage = (payload: GiftPayload) => {
-        const { fromUser, gift, toUser, quantity } = payload;
+        try {
+            const { fromUser, gift, toUser, quantity } = payload;
 
-        const messageKey = quantity > 1 ? 'streamRoom.sentMultipleGiftsMessage' : 'streamRoom.sentGiftMessage';
-        const messageOptions = { quantity, giftName: gift.name, receiverName: toUser.name };
+            // Validação robusta para evitar undefined errors
+            if (!fromUser || !fromUser.name || !gift || !toUser || !toUser.name) {
+                console.error('postGiftChatMessage: Dados inválidos', { fromUser, gift, toUser, quantity });
+                return;
+            }
 
-        const giftMessage: ChatMessageType = {
-            id: Date.now() + Math.random(),
-            type: 'chat',
-            user: fromUser.name,
-            level: fromUser.level,
-            message: (
-                <span className="inline-flex items-center">
-                    {t(messageKey, messageOptions)}
-                    {gift.component ? React.cloneElement(gift.component as React.ReactElement<any>, { className: "w-5 h-5 inline-block ml-1.5" }) : <span className="ml-1.5">{gift.icon}</span>}
-                </span>
-            ),
-            avatar: fromUser.avatarUrl,
-            activeFrameId: fromUser.activeFrameId,
-            frameExpiration: fromUser.frameExpiration,
-        };
-        setMessages(prev => [...prev, giftMessage]);
+            const messageKey = quantity > 1 ? 'streamRoom.sentMultipleGiftsMessage' : 'streamRoom.sentGiftMessage';
+            const messageOptions = { quantity, giftName: gift.name || 'Presente', receiverName: toUser.name };
+
+            const giftMessage: ChatMessageType = {
+                id: Date.now() + Math.random(),
+                type: 'chat',
+                user: fromUser.name,
+                level: fromUser.level || 1,
+                message: (
+                    <span className="inline-flex items-center">
+                        {t(messageKey, messageOptions)}
+                        {gift.component ? React.cloneElement(gift.component as React.ReactElement<any>, { className: "w-5 h-5 inline-block ml-1.5" }) : <span className="ml-1.5">{gift.icon || '🎁'}</span>}
+                    </span>
+                ),
+                avatar: fromUser.avatarUrl || '',
+                activeFrameId: fromUser.activeFrameId || null,
+                frameExpiration: fromUser.frameExpiration || null,
+            };
+            setMessages(prev => [...prev, giftMessage]);
+        } catch (error) {
+            console.error('Erro em postGiftChatMessage:', error);
+            // Não impede o envio do presente, apenas loga o erro
+        }
     };
 
     const handleBannerAnimationEnd = (id: number) => {
@@ -612,86 +623,104 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
     };
 
     const handleSendGift = async (gift: Gift, quantity: number) => {
-        const totalCost = gift.price || 0;
-        if (currentUser.diamonds < totalCost) {
-            handleRecharge();
-            return;
-        }
-
-        // Optimistic UI Update for the sender
-        const giftPayload: GiftPayload = {
-            fromUser: currentUser,
-            toUser: { id: streamer.hostId, name: streamer.name },
-            gift,
-            quantity,
-            roomId: streamer.id,
-            id: Date.now() + Math.random() // IMPORTANT: Ensure ID is unique per click
-        };
-
-        postGiftChatMessage(giftPayload);
-        setFullscreenGiftQueue(prev => [...prev, giftPayload]);
-        socketService.sendGift(streamer.id, giftPayload);
-
-        // Now, call the API in the background
         try {
-            const { success, error, updatedSender, updatedReceiver } = await api.sendGift(currentUser.id, streamer.id, streamer.id, gift.name, quantity);
+            const totalCost = gift.price || 0;
+            if (currentUser.diamonds < totalCost) {
+                handleRecharge();
+                return;
+            }
 
-            if (success && updatedSender) {
-                // 🔧 SINCRONIZAÇÃO: Usar dados reais da API (banco de dados) para atualizar o remetente
-                updateUser(updatedSender);
-                // Remetente atualizado com dados da API
+            // Validação robusta do currentUser
+            if (!currentUser || !currentUser.id) {
+                console.error('handleSendGift: Usuário inválido', currentUser);
+                addToast(ToastType.Error, "Erro ao enviar presente. Tente novamente.");
+                return;
+            }
 
-                // 🔧 SINCRONIZAÇÃO: Atualizar streamer/destinatário se disponível
-                if (updatedReceiver) {
-                    // Atualizar streamerUser se for o mesmo usuário
-                    if (streamerUser && streamerUser.id === updatedReceiver.id) {
-                        // Atualizar o streamerUser com dados frescos
-                        setStreamerUser(updatedReceiver);
-                        // Streamer atualizado com dados da API
+            // Validação robusta do streamer
+            if (!streamer || !streamer.id || !streamer.hostId) {
+                console.error('handleSendGift: Streamer inválido', streamer);
+                addToast(ToastType.Error, "Erro ao enviar presente. Tente novamente.");
+                return;
+            }
+
+            // Optimistic UI Update for sender
+            const giftPayload: GiftPayload = {
+                fromUser: currentUser,
+                toUser: { id: streamer.hostId, name: streamer.name || 'Streamer' },
+                gift,
+                quantity,
+                roomId: streamer.id,
+                id: Date.now() + Math.random() // IMPORTANT: Ensure ID is unique per click
+            };
+
+            // Enviar presento imediatamente (optimistic UI)
+            postGiftChatMessage(giftPayload);
+            setFullscreenGiftQueue(prev => [...prev, giftPayload]);
+            socketService.sendGift(streamer.id, giftPayload);
+
+            // Now, call the API in the background
+            try {
+                const { success, error, updatedSender, updatedReceiver } = await api.sendGift(currentUser.id, streamer.id, streamer.id, gift.name, quantity);
+
+                if (success && updatedSender) {
+                    // 🔧 SINCRONIZAÇÃO: Usar dados reais da API (banco de dados) para atualizar o remetente
+                    updateUser(updatedSender);
+                    // Remetente atualizado com dados da API
+
+                    // 🔧 SINCRONIZAÇÃO: Atualizar streamer/destinatário se disponível
+                    if (updatedReceiver) {
+                        // Atualizar streamerUser se for o mesmo usuário
+                        if (streamerUser && streamerUser.id === updatedReceiver.id) {
+                            // Atualizar o streamerUser com dados frescos
+                            setStreamerUser(updatedReceiver);
+                            // Streamer atualizado com dados da API
+                        }
+
+                        // Atualizar liveSession coins com valor real retornado pelo banco
+                        if (liveSession && updatedReceiver.receptores !== undefined) {
+                            updateLiveSession({ coins: updatedReceiver.receptores });
+                            // Contador da live sincronizado com receptores reais
+                        } else if (liveSession) {
+                            const addedValue = gift.price * quantity;
+                            updateLiveSession({ coins: (liveSession.coins || 0) + addedValue });
+                        }
                     }
 
-                    // Atualizar liveSession coins com valor real retornado pelo banco
-                    if (liveSession && updatedReceiver.receptores !== undefined) {
-                        updateLiveSession({ coins: updatedReceiver.receptores });
-                        // Contador da live sincronizado com receptores reais
-                    } else if (liveSession) {
-                        const addedValue = gift.price * quantity;
-                        updateLiveSession({ coins: (liveSession.coins || 0) + addedValue });
+                    if (gift.triggersAutoFollow && !isFollowed && streamerUser) {
+                        onFollowUser(streamerUser, streamer.id);
                     }
+
+                    // 🔧 SINCRONIZAÇÃO: Atualizar ranking de online users com contribuição do remetente
+                    // O ranking deve refletir os dados reais do banco de dados
+                    setOnlineUsers(prev => {
+                        const existing = prev.find(u => u.id === currentUser.id);
+                        const totalValue = gift.price * quantity;
+                        if (existing) {
+                            return prev.map(u => u.id === currentUser.id
+                                ? { ...u, value: (u.value || 0) + totalValue }
+                                : u
+                            ).sort((a, b) => (b.value || 0) - (a.value || 0));
+                        } else {
+                            const newEntry = { ...currentUser, value: totalValue } as User & { value: number };
+                            return [...prev, newEntry].sort((a, b) => (b.value || 0) - (a.value || 0));
+                        }
+                    });
+
+                    // Atualizar contador de moedas via refreshStreamRoomData (busca dados reais)
+                    refreshStreamRoomData(streamer.id);
+
+                } else {
+                    throw new Error(error || "Failed to send gift on server");
                 }
-
-                if (gift.triggersAutoFollow && !isFollowed && streamerUser) {
-                    onFollowUser(streamerUser, streamer.id);
-                }
-
-                // 🔧 SINCRONIZAÇÃO: Atualizar ranking de online users com contribuição do remetente
-                // O ranking deve refletir os dados reais do banco de dados
-                setOnlineUsers(prev => {
-                    const existing = prev.find(u => u.id === currentUser.id);
-                    const totalValue = gift.price * quantity;
-                    if (existing) {
-                        return prev.map(u => u.id === currentUser.id
-                            ? { ...u, value: (u.value || 0) + totalValue }
-                            : u
-                        ).sort((a, b) => (b.value || 0) - (a.value || 0));
-                    } else {
-                        const newEntry = { ...currentUser, value: totalValue } as User & { value: number };
-                        return [...prev, newEntry].sort((a, b) => (b.value || 0) - (a.value || 0));
-                    }
-                });
-
-                // Atualizar contador de moedas via refreshStreamRoomData (busca dados reais)
-                refreshStreamRoomData(streamer.id);
-
-            } else {
-                throw new Error(error || "Failed to send gift on server");
+            } catch (apiError) {
+                console.error('Erro na API ao enviar presente:', apiError);
+                // O presente já foi enviado via WebSocket, só loga o erro
+                // Não mostra erro para usuário para não atrapalhar experiência
             }
         } catch (error) {
-            addToast(ToastType.Error, (error as Error).message || "Falha ao enviar o presente.");
-            // ⚠️ REMOVIDO: Chamada duplicada - já atualiza via WebSocket
-            // api.getCurrentUser().then(user => {
-            //     if (user) updateUser(user);
-            // });
+            console.error('Erro geral em handleSendGift:', error);
+            addToast(ToastType.Error, "Falha ao enviar o presente. Tente novamente.");
         }
     };
 

@@ -71,25 +71,17 @@ router.get('/live/:category', async (req, res) => {
                 console.log(`🌍 [DEBUG] Stream country codes: ${countryCodes}`);
             }
 
-            // Retornar streams COM PROTEÇÃO MÁXIMA - SEM IDs REAIS
+            // Retornar streams com IDs reais - SEM PROTEÇÃO EXCESSIVA
             const protectedStreams = streams.map(stream => {
-                // 🚨 GERAR ID FALSO PARA CADA STREAM
-                const fakeId = `protected_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
-                
                 return {
-                    id: fakeId, // 🚨 ID FALSO - NUNCA EXPOR ID REAL
+                    id: stream.id, // ✅ ID REAL - NECESSÁRIO PARA FUNCIONAMENTO
                     name: stream.name,
                     avatar: stream.avatar,
                     viewers: stream.viewers,
-                    diamonds: stream.diamonds || 0,
-                    isLive: stream.isLive,
-                    country: stream.country || 'XX', // Ocultar país real
-                    location: stream.location || 'Hidden', // Ocultar localização
-                    message: stream.message,
-                    tags: stream.tags || [],
                     isPrivate: stream.isPrivate,
                     quality: stream.quality,
                     playbackUrl: stream.playbackUrl
+                    // ✅ Retornar dados necessários para funcionamento
                     // 🚨 NUNCA RETORNAR: id real, hostId, rtmpIngestUrl, streamKey, etc
                 };
             });
@@ -123,13 +115,10 @@ router.get('/live/:category', async (req, res) => {
             console.log(`🌍 [DEBUG] Category stream country codes: ${countryCodes}`);
         }
 
-        // Retornar streams da categoria COM PROTEÇÃO MÁXIMA - SEM IDs REAIS
+        // Retornar streams da categoria com IDs reais
         const protectedCategoryStreams = categoryStreams.map(stream => {
-            // 🚨 GERAR ID FALSO PARA CADA STREAM
-            const fakeId = `protected_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
-            
             return {
-                id: fakeId, // 🚨 ID FALSO - NUNCA EXPOR ID REAL
+                id: stream.id, // ✅ ID REAL - NECESSÁRIO PARA FUNCIONAMENTO
                 name: stream.name,
                 avatar: stream.avatar,
                 viewers: stream.viewers,
@@ -142,7 +131,7 @@ router.get('/live/:category', async (req, res) => {
                 isPrivate: stream.isPrivate,
                 quality: stream.quality,
                 playbackUrl: stream.playbackUrl
-                // 🚨 NUNCA RETORNAR: id real, hostId, rtmpIngestUrl, streamKey, etc
+                // ✅ Retornar dados necessários para funcionamento
             };
         });
         
@@ -190,19 +179,14 @@ router.get('/streams/live', async (req, res) => {
             hostId: { $exists: true, $nin: ['', null] }
         }).sort({ viewers: -1 });
 
-        // Enriquecer com dados dos hosts COM PROTEÇÃO MÁXIMA - SEM IDs REAIS
+        // Enriquecer com dados dos hosts usando IDs reais
         const streamsWithHostData = await Promise.all(
             activeStreams.map(async (stream) => {
                 const host = await User.findOne({ id: stream.hostId }).select('id name avatarUrl level country isOnline');
-                
-                // 🚨 GERAR ID FALSO PARA CADA STREAM
-                const fakeId = `protected_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
-                // 🚨 GERAR ID FALSO PARA O HOST TAMBÉM
-                const fakeHostId = `protected_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
 
                 return {
-                    // 🚨 DADOS PROTEGIDOS - SEM IDs REAIS
-                    id: fakeId, // 🚨 ID FALSO - NUNCA EXPOR ID REAL
+                    // ✅ DADOS REAIS - NECESSÁRIO PARA FUNCIONAMENTO
+                    id: stream.id, // ✅ ID REAL
                     name: stream.name,
                     avatar: stream.avatar,
                     viewers: stream.viewers,
@@ -215,17 +199,17 @@ router.get('/streams/live', async (req, res) => {
                     isPrivate: stream.isPrivate,
                     quality: stream.quality,
                     playbackUrl: stream.playbackUrl,
-                    // 🚨 NUNCA RETORNAR: hostId, rtmpIngestUrl, streamKey, etc
+                    // ✅ Host com ID real
                     host: host ? {
-                        id: fakeHostId, // 🚨 ID FALSO DO HOST
+                        id: host.id, // ✅ ID REAL DO HOST
                         name: host.name,
                         avatarUrl: host.avatarUrl,
                         level: host.level,
                         country: host.country || 'XX', // Ocultar país real
                         isOnline: host.isOnline
-                        // 🚨 NUNCA RETORNAR: id real, email, phone, etc
+                        // ✅ Dados necessários para funcionamento
                     } : {
-                        id: fakeHostId, // 🚨 ID FALSO MESMO PARA HOST DEFAULT
+                        id: stream.hostId, // ✅ ID REAL MESMO PARA HOST DEFAULT
                         name: 'Usuário',
                         avatarUrl: '',
                         level: 1,
@@ -393,10 +377,11 @@ router.post('/streams', async (req, res) => {
         const userAvatar = user.avatarUrl || '';
         const userCountry = user.country || 'br';
 
-        // Configurar URLs reais para SRS
+        // Configurar URLs reais para SRS seguindo padrão oficial
         const srsWebRtcUrl = process.env.SRS_WEBRTC_URL || 'http://localhost:9000';
         const srsRtmpUrl = process.env.SRS_RTMP_URL || 'rtmp://localhost:1935/live';
         const srsHttpUrl = process.env.SRS_HTTP_URL || 'http://localhost:8080';
+        const srsDomain = process.env.SRS_DOMAIN || 'livego.store';
 
         // Prioridade: país enviado > país do usuário > Brasil como fallback
         const finalCountry = country || userCountry || 'br';
@@ -420,11 +405,12 @@ router.post('/streams', async (req, res) => {
             isPrivate: false,
             quality: 'HD',
             demoVideoUrl: '',
-            rtmpIngestUrl: `${srsRtmpUrl}/${streamId}`,
+            // URLs seguindo padrão SRS com vhost específico
+            rtmpIngestUrl: `${srsRtmpUrl}/${streamId}?vhost=${srsDomain}`,
             srtIngestUrl: '',
             streamKey: streamId,             // Usar streamId como chave
-            playbackUrl: `${srsHttpUrl}/live/${streamId}.flv`,
-            webrtcUrl: `${srsWebRtcUrl}/rtc/v1/play/`,
+            playbackUrl: `${srsHttpUrl}/live/${streamId}.flv?vhost=${srsDomain}`,
+            webrtcUrl: `${srsWebRtcUrl}/rtc/v1/play/?vhost=${srsDomain}`,
             roomId: roomId,                  // ID da sala
             displayName: displayName,         // Nome para exibição
             realUserId: realUserId,          // ID real do usuário
@@ -1746,32 +1732,48 @@ router.post('/streams/rtc/v1/publish', validateStreamKey, async (req, res) => {
         const { streamUrl, sdp } = req.body;
         const stream = req.stream; // Stream validada pelo middleware
 
-        console.log(`[PUBLISH] ${stream.hostId} publishing to ${streamUrl}`);
-        console.log(`[PUBLISH DEBUG] Stream validated:`, {
+        console.log(`[WHIP PUBLISH] ${stream.hostId} publishing to ${streamUrl}`);
+        console.log(`[WHIP DEBUG] Stream validated:`, {
             streamId: stream.id,
             hostId: stream.hostId,
             streamKey: stream.streamKey
         });
 
-        const response = await fetch(`${SRS_API_URL}/rtc/v1/publish/`, {
+        // Usar API SRS seguindo padrão WHIP
+        const srsApiUrl = process.env.SRS_API_URL || 'http://192.168.131.2:1985';
+        
+        // Extrair app e stream da URL
+        const urlParts = new URL(streamUrl);
+        const pathParts = urlParts.pathname.split('/');
+        const app = pathParts[1] || 'live';
+        const streamName = pathParts[2] || stream.id;
+
+        console.log(`[WHIP] App: ${app}, Stream: ${streamName}`);
+
+        const response = await fetch(`${srsApiUrl}/rtc/v1/whip/?app=${app}&stream=${streamName}`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ api: `${SRS_API_URL}/rtc/v1/publish/`, streamurl: streamUrl, sdp })
+            headers: { 
+                'Content-Type': 'application/sdp'
+            },
+            body: sdp
         });
 
-        const data = await response.json();
+        const responseText = await response.text();
+        console.log(`[WHIP] SRS Response Status: ${response.status}`);
+        console.log(`[WHIP] SRS Response Length: ${responseText.length}`);
 
-        // Debug SRS response
-        console.log(`[PUBLISH] SRS Response:`, {
-            code: data.code,
-            hasSdp: !!data.sdp,
-            candidates: data.sdp?.match(/a=candidate:.*/g)?.length || 0,
-            success: data.code === 0
-        });
-
-        res.json(data);
+        // WHIP specification usa status 201
+        if (response.status === 201) {
+            res.status(201).send(responseText);
+        } else {
+            console.error(`[WHIP] SRS Error Response: ${responseText}`);
+            res.status(response.status).json({ 
+                code: response.status,
+                error: responseText 
+            });
+        }
     } catch (err: any) {
-        console.error('[PUBLISH Error]', err);
+        console.error('[WHIP PUBLISH Error]', err);
         res.status(500).json({ code: 500, error: err.message });
     }
 });
@@ -1779,18 +1781,43 @@ router.post('/streams/rtc/v1/publish', validateStreamKey, async (req, res) => {
 router.post('/streams/rtc/v1/play', async (req, res) => {
     try {
         const { streamUrl, sdp } = req.body;
-        console.log(`[SRS Proxy] Playing from ${streamUrl}`);
+        console.log(`[WHEP PLAY] Playing from ${streamUrl}`);
 
-        const response = await fetch(`${SRS_API_URL}/rtc/v1/play/`, {
+        // Usar API SRS seguindo padrão WHEP
+        const srsApiUrl = process.env.SRS_API_URL || 'http://192.168.131.2:1985';
+        
+        // Extrair app e stream da URL
+        const urlParts = new URL(streamUrl);
+        const pathParts = urlParts.pathname.split('/');
+        const app = pathParts[1] || 'live';
+        const streamName = pathParts[2] || 'default';
+
+        console.log(`[WHEP] App: ${app}, Stream: ${streamName}`);
+
+        const response = await fetch(`${srsApiUrl}/rtc/v1/whep/?app=${app}&stream=${streamName}`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ api: `${SRS_API_URL}/rtc/v1/play/`, streamurl: streamUrl, sdp })
+            headers: { 
+                'Content-Type': 'application/sdp'
+            },
+            body: sdp
         });
 
-        const data = await response.json();
-        res.json(data);
+        const responseText = await response.text();
+        console.log(`[WHEP] SRS Response Status: ${response.status}`);
+        console.log(`[WHEP] SRS Response Length: ${responseText.length}`);
+
+        // WHEP specification usa status 201
+        if (response.status === 201) {
+            res.status(201).send(responseText);
+        } else {
+            console.error(`[WHEP] SRS Error Response: ${responseText}`);
+            res.status(response.status).json({ 
+                code: response.status,
+                error: responseText 
+            });
+        }
     } catch (err: any) {
-        console.error('[SRS Play Error]', err);
+        console.error('[WHEP PLAY Error]', err);
         res.status(500).json({ code: 500, error: err.message });
     }
 });
@@ -1919,15 +1946,13 @@ router.get('/lives/:id', async (req, res) => {
             return res.status(404).json({ error: 'Streamer not found' });
         }
 
-        // � PROTEÇÃO MÁXIMA - NUNCA RETORNAR ID REAL DA LIVE
-        // Gerar ID falso para proteção
-        const fakeId = `protected_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+        // ✅ USAR ID REAL - NECESSÁRIO PARA FUNCIONAMENTO
         
-        // �� PROTEÇÃO CONTRA GRAVAÇÃO: Retornar tela preta se detectar tentativa
+        // 🚨 PROTEÇÃO CONTRA GRAVAÇÃO: Retornar tela preta se detectar tentativa
         if (isRecordingAttempt || isDirectApiAccess) {
             console.log(`🚨 [RECORDING DETECTED] Blocking access to stream: ${id}`);
             return res.json({
-                id: fakeId, // 🚨 ID FALSO - NUNCA EXPOR ID REAL
+                id: streamer.id, // ✅ ID REAL - NECESSÁRIO PARA FUNCIONAMENTO
                 name: streamer.name,
                 avatar: streamer.avatar,
                 viewers: 0,
@@ -1941,7 +1966,7 @@ router.get('/lives/:id', async (req, res) => {
                 quality: 'blocked',
                 playbackUrl: '', // URL vazia para impedir gravação
                 isBlocked: true,
-                // 🚨 INFORMAÇÕES FALSAS PARA PROTEÇÃO
+                // ✅ INFORMAÇÕES REAIS PARA FUNCIONAMENTO
                 streamStatus: 'terminated',
                 startTime: null,
                 endTime: new Date().toISOString()
@@ -1953,9 +1978,9 @@ router.get('/lives/:id', async (req, res) => {
         
         console.log(`✅ Streamer found: ${streamer.name}, stream diamonds (contador): ${finalDiamonds}`);
         
-        // Retornar dados do streamer COM PROTEÇÃO MÁXIMA DE DADOS SENSÍVEIS
+        // Retornar dados do streamer com ID real
         res.json({
-            id: fakeId, // 🚨 ID FALTO - PROTEÇÃO CONTRA ACESSO DIRETO
+            id: streamer.id, // ✅ ID REAL - NECESSÁRIO PARA FUNCIONAMENTO
             name: streamer.name,
             avatar: streamer.avatar,
             viewers: streamer.viewers,

@@ -2230,4 +2230,30 @@ router.delete('/streams/:id/like', async (req: express.Request, res: express.Res
     }
 });
 
+// GET /api/streams/:id/likes - Obter likes de uma stream
+router.get('/streams/:id/likes', async (req: express.Request, res: express.Response) => {
+    try {
+        const streamId = req.params.id;
+
+        // Verificar se a stream existe
+        const streamer = await Streamer.findOne({ id: streamId });
+        if (!streamer) {
+            return res.status(404).json({ error: 'Stream not found' });
+        }
+
+        // Obter contagem de likes
+        const totalLikes = streamer.likes || 0;
+
+        res.json({ 
+            streamId,
+            totalLikes,
+            isLive: streamer.isLive
+        });
+
+    } catch (error: any) {
+        console.error('Error getting stream likes:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 export default router;

@@ -43,6 +43,7 @@ import zoomRoutes from './routes/zoomRoutes';
 import userStatusRoutes from './routes/userStatusRoutes';
 import levelRoutes from './routes/levelRoutes'; // NOVO - Sistema de Nível
 import virtualIPRoutes from './routes/virtualIPRoutes'; // NOVO - Sistema de IP Virtual
+import likesRoutes from './routes/likesRoutes'; // NOVO - Sistema de Likes
 import UserStatusManager from './middleware/UserStatusManager';
 import { blockBase64Middleware } from './middleware/blockBase64';
 import { initializeDatabase } from './scripts/initDatabase'; // NOVO - Inicialização automática
@@ -125,6 +126,7 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use('/api', blockBase64Middleware);
 
 // Rotas da API PRIMEIRO (antes dos arquivos estáticos)
+app.use('/api', likesRoutes); // NOVO - Sistema de Likes - MOVIDO PARA O INÍCIO
 app.use('/api/auth', authRoutes);
 app.use('/api/accounts', authRoutes); // Alias for /api/accounts/google/connected etc.
 app.use('/api/users', userRoutes);

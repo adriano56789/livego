@@ -52,10 +52,11 @@ const WebViewStreamPlayer: React.FC<WebViewStreamPlayerProps> = ({
     const setupStream = async () => {
       try {
         if (isBroadcaster) {
-          // 🎥 Dono da live: sempre capturar câmera local
+          // Dono da live: SEMPRE capturar câmera imediatamente
+          console.log(' Dono da live detectado - iniciando câmera imediatamente...');
           await setupBroadcasterStream(videoEl);
         } else {
-          // 👥 Viewer: assistir transmissão HLS
+          // Viewer: assistir transmissão HLS
           await setupViewerStream(videoEl);
         }
       } catch (err) {
@@ -67,8 +68,11 @@ const WebViewStreamPlayer: React.FC<WebViewStreamPlayerProps> = ({
       }
     };
 
+    // INICIAR STREAM IMEDIATAMENTE (sem delay)
+    setupStream();
+
     const setupBroadcasterStream = async (videoEl: HTMLVideoElement) => {
-      console.log('📹 Configurando broadcaster para WebView...');
+      console.log(' Configurando broadcaster para WebView...');
       
       // Verificar suporte a getUserMedia
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -111,20 +115,29 @@ const WebViewStreamPlayer: React.FC<WebViewStreamPlayerProps> = ({
           throw new Error('Câmera não disponível ou foi bloqueada');
         }
 
-        // Exibir preview local
+        // Exibir preview local IMEDIATAMENTE (sem esperar por nada)
         videoEl.srcObject = mediaStream;
         videoEl.muted = true; // Sempre mutado para broadcaster (evitar eco)
+        
+        // Forçar o vídeo a aparecer imediatamente
+        videoEl.play().catch(err => {
+          console.warn('⚠️ Autoplay bloqueado, mas vídeo está configurado:', err);
+        });
+        
+        // 🚀 BROADCASTER: Vídeo está funcionando localmente imediatamente
+        setIsLoading(false);
+        onVideoReady?.();
         
         // Guardar referência para cleanup
         mediaStreamRef.current = mediaStream;
         
-        // 🚀 ESTRATÉGIA DE FALLBACK GARANTINDO TRANSMISSÃO
+        // ESTRATÉGIA DE FALLBACK GARANTINDO TRANSMISSÃO
         let streamingSuccess = false;
         let fallbackUsed = false;
         
         // 1. Tentar WebRTC primeiro (melhor qualidade)
         try {
-          console.log('🔗 Tentando WebRTC (melhor qualidade)...');
+          console.log(' Tentando WebRTC (melhor qualidade)...');
           const { webRTCService } = await import('../services/webrtcService.js');
           const webrtcUrl = getWebRTCUrl();
           // Removido log sensível com URL WebRTC
@@ -134,20 +147,20 @@ const WebViewStreamPlayer: React.FC<WebViewStreamPlayerProps> = ({
           setIsConnected(true);
           // WebRTC funcionando - transmissão ativa para espectadores
         } catch (webrtcError) {
-          console.warn('⚠️ WebRTC falhou, ativando modo de compatibilidade:', webrtcError);
+          console.warn(' WebRTC falhou, ativando modo de compatibilidade:', webrtcError);
           fallbackUsed = true;
           setIsCompatibilityMode(true);
           
           // 2. Fallback: Garantir que HLS funcione para espectadores
           // Mesmo que WebRTC falhe, vamos garantir que o stream esteja disponível via HLS
           try {
-            console.log('🔄 Ativando fallback HLS para espectadores...');
+            console.log(' Ativando fallback HLS para espectadores...');
             await activateHLSFallback(streamer.streamKey || streamer.id);
             streamingSuccess = true;
             setIsConnected(true);
             // Fallback HLS ativado - espectadores devem conseguir assistir via HLS
           } catch (fallbackError) {
-            console.error('❌ Fallback HLS falhou:', fallbackError);
+            console.error(' Fallback HLS falhou:', fallbackError);
             
             // 3. Último recurso: Apenas preview local com aviso claro
             // Usando apenas preview local - espectadores não verão
@@ -176,11 +189,11 @@ const WebViewStreamPlayer: React.FC<WebViewStreamPlayerProps> = ({
         setIsLoading(false);
         onVideoReady?.();
         
-        // 🚨 AVISO SE FALLBACK ESTIVER ATIVO
+        // AVISO SE FALLBACK ESTIVER ATIVO
         if (fallbackUsed) {
-          console.warn('🚨 ATENÇÃO: WebRTC falhou, mas fallback HLS está ativo.');
-          console.warn('📺 Espectadores devem conseguir assistir via HLS normal');
-          console.warn('🔄 Se espectadores não conseguirem ver, recarregue a página');
+          console.warn(' ATENÇÃO: WebRTC falhou, mas fallback HLS está ativo.');
+          console.warn(' Espectadores devem conseguir assistir via HLS normal');
+          console.warn(' Se espectadores não conseguirem ver, recarregue a página');
           
           // Notificar usuário sobre fallback (não erro, apenas informativo)
           if (onVideoError) {
@@ -189,7 +202,7 @@ const WebViewStreamPlayer: React.FC<WebViewStreamPlayerProps> = ({
         }
         
       } catch (mediaError) {
-        console.error('❌ Erro ao capturar mídia:', mediaError);
+        console.error(' Erro ao capturar mídia:', mediaError);
         
         // Mensagens de erro específicas
         if (mediaError instanceof Error) {
@@ -208,11 +221,11 @@ const WebViewStreamPlayer: React.FC<WebViewStreamPlayerProps> = ({
       }
     };
 
-    // � FUNÇÃO DE FALLBACK HLS GARANTIDO
+    // FUNÇÃO DE FALLBACK HLS GARANTIDO
     const activateHLSFallback = async (streamKey: string): Promise<void> => {
       return new Promise((resolve, reject) => {
         try {
-          console.log('📺 Ativando fallback HLS para stream:', streamKey);
+          console.log(' Ativando fallback HLS para stream:', streamKey);
           
           // Estratégia: Notificar backend que WebRTC falhou
           // Backend pode então garantir que HLS está ativo via SRS
@@ -231,14 +244,14 @@ const WebViewStreamPlayer: React.FC<WebViewStreamPlayerProps> = ({
               });
               
               if (response.ok) {
-                console.log('✅ Backend notificado sobre fallback HLS');
+                console.log(' Backend notificado sobre fallback HLS');
                 resolve();
               } else {
-                console.warn('⚠️ Backend não respondeu ao fallback, mas HLS deve funcionar');
+                console.warn(' Backend não respondeu ao fallback, mas HLS deve funcionar');
                 resolve(); // Não falhar, HLS pode funcionar mesmo sem notificação
               }
             } catch (error) {
-              console.warn('⚠️ Erro ao notificar backend, mas HLS deve funcionar:', error);
+              console.warn(' Erro ao notificar backend, mas HLS deve funcionar:', error);
               resolve(); // Não falhar, HLS pode funcionar mesmo sem notificação
             }
           };
@@ -253,7 +266,7 @@ const WebViewStreamPlayer: React.FC<WebViewStreamPlayerProps> = ({
     };
 
     const setupViewerStream = async (videoEl: HTMLVideoElement) => {
-      console.log('👀 Configurando viewer para WebView...');
+      console.log(' Configurando viewer para WebView...');
       
       const hlsUrl = getHLSUrl();
         // Removido log sensível com URL HLS
@@ -268,7 +281,7 @@ const WebViewStreamPlayer: React.FC<WebViewStreamPlayerProps> = ({
       // 1. HLS.js para Chrome, Firefox, Edge (não-iOS)
       try {
         if (Hls.isSupported()) {
-          console.log('📺 Usando HLS.js (Chrome/Firefox/Edge)');
+          console.log(' Usando HLS.js (Chrome/Firefox/Edge)');
           
           const hls = new Hls({
             debug: false,
@@ -305,7 +318,7 @@ const WebViewStreamPlayer: React.FC<WebViewStreamPlayerProps> = ({
             });
             
             hls.on(Hls.Events.ERROR, (event, data) => {
-              console.warn('⚠️ HLS.js Error:', data);
+              console.warn(' HLS.js Error:', data);
               if (data.fatal) {
                 clearTimeout(timeout);
                 hls.destroy();
@@ -320,13 +333,13 @@ const WebViewStreamPlayer: React.FC<WebViewStreamPlayerProps> = ({
           // HLS.js funcionando
         }
       } catch (hlsError) {
-        console.warn('⚠️ HLS.js falhou:', hlsError);
+        console.warn(' HLS.js falhou:', hlsError);
       }
 
       // 2. HLS nativo para Safari, iOS, Chrome Mobile
       if (!playbackSuccess && videoEl.canPlayType('application/vnd.apple.mpegurl')) {
         try {
-          console.log('📺 Usando HLS nativo (Safari/iOS)');
+          console.log(' Usando HLS nativo (Safari/iOS)');
           videoEl.src = hlsUrl;
           
           // Aguardar o vídeo estar pronto
@@ -351,14 +364,14 @@ const WebViewStreamPlayer: React.FC<WebViewStreamPlayerProps> = ({
           setIsConnected(true);
           // HLS nativo funcionando
         } catch (nativeError) {
-          console.warn('⚠️ HLS nativo falhou:', nativeError);
+          console.warn(' HLS nativo falhou:', nativeError);
         }
       }
 
       // 3. Fallback para MP4 direto se disponível (última opção)
       if (!playbackSuccess) {
         try {
-          console.log('📺 Tentando fallback MP4 (último recurso)');
+          console.log(' Tentando fallback MP4 (último recurso)');
           const mp4Url = hlsUrl.replace('.m3u8', '.mp4');
           videoEl.src = mp4Url;
           
@@ -383,7 +396,7 @@ const WebViewStreamPlayer: React.FC<WebViewStreamPlayerProps> = ({
           setIsConnected(true);
           // MP4 fallback funcionando (último recurso)
         } catch (mp4Error) {
-          console.warn('⚠️ MP4 fallback falhou:', mp4Error);
+          console.warn(' MP4 fallback falhou:', mp4Error);
         }
       }
 
@@ -395,7 +408,7 @@ const WebViewStreamPlayer: React.FC<WebViewStreamPlayerProps> = ({
       onVideoReady?.();
     };
 
-    // 📏 FUNÇÃO DE MEDIÇÃO DE LATÊNCIA HLS
+    // FUNÇÃO DE MEDIÇÃO DE LATÊNCIA HLS
     const startLatencyMeasurement = (hls: Hls) => {
       if (!isBroadcaster) return; // Apenas broadcaster precisa saber da latência
       

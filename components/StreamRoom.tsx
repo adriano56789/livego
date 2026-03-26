@@ -131,6 +131,10 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
     const [onlineUsers, setOnlineUsers] = useState<(User & { value: number })[]>([]);
     const previousOnlineUsersRef = useRef<(User & { value: number })[]>([]);
 
+    // Estado para likes da transmissão
+    const [likes, setLikes] = useState(0);
+    const [isLiked, setIsLiked] = useState(false);
+
     // State to track if video is actually playing to hide the cover image
     const [isVideoPlaying, setIsVideoPlaying] = useState(false);
 
@@ -211,6 +215,18 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
         };
         setMessages([currentUserEntryMessage]);
 
+        // Buscar likes iniciais da transmissão
+        const fetchInitialLikes = async () => {
+            try {
+                const likesData = await api.getStreamLikes(streamer.id);
+                if (likesData) {
+                    setLikes(likesData.totalLikes || 0);
+                }
+            } catch (error) {
+                console.error('Erro ao buscar likes iniciais:', error);
+            }
+        };
+
         // Variável de controle para evitar chamadas duplicadas
         let hasJoined = false;
         let hasLeft = false;
@@ -254,6 +270,7 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
         // Executar uma vez no início
         joinStreamOnce();
         fetchInitialUsers();
+        fetchInitialLikes();
 
         // REMOVIDO: Polling automático de usuários online
         // A busca agora ocorre apenas em eventos reais (entrada/saída via WebSocket)
@@ -299,6 +316,30 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
             updateLiveSession({ viewers: data.count });
         });
 
+        // Escutar likes em tempo real
+        const handleStreamLiked = (data: { streamId: string; totalLikes: number; userId: string }) => {
+            if (data.streamId === streamer.id) {
+                setLikes(data.totalLikes);
+                // Se o próprio usuário deu like, atualizar estado
+                if (data.userId === currentUser.id) {
+                    setIsLiked(true);
+                }
+            }
+        };
+
+        const handleStreamUnliked = (data: { streamId: string; totalLikes: number; userId: string }) => {
+            if (data.streamId === streamer.id) {
+                setLikes(data.totalLikes);
+                // Se o próprio usuário removeu like, atualizar estado
+                if (data.userId === currentUser.id) {
+                    setIsLiked(false);
+                }
+            }
+        };
+
+        socketService.on('stream_liked', handleStreamLiked);
+        socketService.on('stream_unliked', handleStreamUnliked);
+
         return () => {
             // Marcar que está saindo para evitar múltiplas chamadas
             hasLeft = true;
@@ -307,6 +348,8 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
             socketService.off('user_joined_stream');
             socketService.off('user_left_stream');
             socketService.off('viewers_count_updated');
+            socketService.off('stream_liked', handleStreamLiked);
+            socketService.off('stream_unliked', handleStreamUnliked);
 
             // Marcar usuário como offline ao sair da stream (apenas uma vez)
             if (hasJoined && !hasLeft) {
@@ -517,6 +560,28 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
     const handleFollowChatUser = (userToFollow: User) => {
         onFollowUser(userToFollow, streamer.id);
         setFollowedUsers(prev => new Set(prev).add(userToFollow.id));
+    };
+
+    const handleLike = async () => {
+        try {
+            if (isLiked) {
+                // Remover like
+                const response = await api.unlikeStream(streamer.id, currentUser.id);
+                if (response?.success) {
+                    setLikes(response.totalLikes);
+                    setIsLiked(false);
+                }
+            } else {
+                // Dar like
+                const response = await api.likeStream(streamer.id, currentUser.id);
+                if (response?.success) {
+                    setLikes(response.totalLikes);
+                    setIsLiked(true);
+                }
+            }
+        } catch (error) {
+            console.error('Erro ao dar like:', error);
+        }
     };
 
     useEffect(() => {
@@ -840,8 +905,8 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
 
             {/* 1. Video Layer (Bottom) */}
             <div className="absolute inset-0 z-0 bg-black">
-                {/* Fallback Image - Visible only if video is NOT playing */}
-                {!isVideoPlaying && (
+                {/* Fallback Image - Visible only for viewers when video is NOT playing */}
+                {!isBroadcaster && !isVideoPlaying && (
                     <img
                         src={streamerUser?.coverUrl || streamerUser?.avatarUrl || streamer.avatar}
                         key={streamerUser?.coverUrl || streamerUser?.avatarUrl || streamer.avatar}
@@ -934,10 +999,25 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
                                         return coins.toLocaleString();
                                     })()}</span>
                                 </button>
-                                <div className="flex items-center bg-black/40 rounded-full px-2 py-1 space-x-1 text-xs">
-                                    <HeartIcon className="w-4 h-4 text-white" />
-                                    <span className="text-white font-semibold">5.8K</span>
-                                </div>
+                                <button 
+                                    onClick={(e) => { e.stopPropagation(); handleLike(); }} 
+                                    className={`flex items-center bg-black/40 rounded-full px-2 py-1 space-x-1 text-xs cursor-pointer transition-all duration-200 ${
+                                        isLiked ? 'bg-red-500/30' : 'hover:bg-black/60'
+                                    }`}
+                                >
+                                    <HeartIcon className={`w-4 h-4 transition-colors duration-200 ${
+                                        isLiked ? 'text-red-500 fill-current' : 'text-white'
+                                    }`} />
+                                    <span className="text-white font-semibold">
+                                        {(() => {
+                                            const likesCount = likes || 0;
+                                            if (likesCount >= 1000) {
+                                                return (likesCount / 1000).toFixed(1) + 'K';
+                                            }
+                                            return likesCount.toString();
+                                        })()}
+                                    </span>
+                                </button>
                                 {isBroadcaster && (
                                     <button
                                         onClick={(e) => { e.stopPropagation(); handleTogglePrivacy(); }}

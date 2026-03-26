@@ -803,6 +803,16 @@ export const api = {
         }
     },
 
+    getStreamLikes: async (streamId: string) => {
+        try {
+            const response = await callApi<{ streamId: string; totalLikes: number; isLive: boolean }>('GET', `/api/streams/${streamId}/likes`);
+            return response;
+        } catch (error) {
+            console.error('Error getting stream likes:', error);
+            throw error;
+        }
+    },
+
 
     // --- Live Stream & Online Users ---
 

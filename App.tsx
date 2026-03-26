@@ -1,6 +1,78 @@
 
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, ReactNode } from 'react';
+
+// Error Boundary funcional como alternativa
+interface ErrorBoundaryState {
+  hasError: boolean;
+  error?: Error;
+}
+
+interface ErrorBoundaryProps {
+  children: ReactNode;
+}
+
+const ErrorBoundary: React.FC<ErrorBoundaryProps> = ({ children }) => {
+  const [errorState, setErrorState] = useState<ErrorBoundaryState>({ hasError: false });
+
+  useEffect(() => {
+    const handleError = (error: Error) => {
+      console.error('Error caught by boundary:', error);
+      setErrorState({ hasError: true, error });
+    };
+
+    // Configurar tratamento de erros globais
+    const errorHandler = (event: ErrorEvent) => {
+      handleError(new Error(event.message));
+      event.preventDefault();
+    };
+
+    const rejectionHandler = (event: PromiseRejectionEvent) => {
+      handleError(new Error(event.reason));
+      event.preventDefault();
+    };
+
+    window.addEventListener('error', errorHandler);
+    window.addEventListener('unhandledrejection', rejectionHandler);
+
+    return () => {
+      window.removeEventListener('error', errorHandler);
+      window.removeEventListener('unhandledrejection', rejectionHandler);
+    };
+  }, []);
+
+  if (errorState.hasError) {
+    return (
+      <div style={{ padding: '20px', textAlign: 'center' }}>
+        <h2>Algo deu errado</h2>
+        <p>Recarregue a página para continuar.</p>
+        <button onClick={() => window.location.reload()}>
+          Recarregar
+        </button>
+      </div>
+    );
+  }
+
+  return <>{children}</>;
+};
+
+// Adicionar tratamento de erros globais para extensões (fora do ErrorBoundary)
+window.addEventListener('error', (event) => {
+  // Ignorar erros de extensões de navegador
+  if (event.filename && (event.filename.includes('content.js') || event.filename.includes('polyfill.js'))) {
+    event.preventDefault();
+    return false;
+  }
+});
+
+window.addEventListener('unhandledrejection', (event) => {
+  // Ignorar rejeições de extensões
+  if (event.reason && typeof event.reason === 'string' && 
+      (event.reason.includes('useCache') || event.reason.includes('Receiving end does not exist'))) {
+    event.preventDefault();
+    return false;
+  }
+});
 
 import LoginScreen from './components/LoginScreen';
 
@@ -418,6 +490,17 @@ const AppContent: React.FC = () => {
 
       try {
 
+        // Verificar se há token antes de tentar restaurar sessão
+        const { getAuthToken } = await import('./services/api');
+        const token = getAuthToken();
+        
+        if (!token) {
+          // Não há token, não tentar restaurar sessão
+          setIsAuthenticated(false);
+          setCurrentUser(null);
+          return;
+        }
+
         // Tentar buscar usuário atual da API
 
         const user = await api.getCurrentUser();
@@ -480,7 +563,7 @@ const AppContent: React.FC = () => {
 
     }
 
-  }, [isAuthenticated, currentUser?.id, setUserOnline]);
+  }, [isAuthenticated, currentUser?.id]);
 
 
 
@@ -536,7 +619,7 @@ const AppContent: React.FC = () => {
 
     };
 
-  }, [currentUser?.id, isAuthenticated, setUserOnline, setUserOffline]);
+  }, [currentUser?.id, isAuthenticated]);
 
 
 
@@ -3473,13 +3556,11 @@ const logLiveEvent = (type: string, data: any) => {
 const App: React.FC = () => {
 
   return (
-
-    <LanguageProvider>
-
-      <AppContent />
-
-    </LanguageProvider>
-
+    <ErrorBoundary>
+      <LanguageProvider>
+        <AppContent />
+      </LanguageProvider>
+    </ErrorBoundary>
   );
 
 };

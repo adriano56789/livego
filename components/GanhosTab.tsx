@@ -47,17 +47,6 @@ const GanhosTab: React.FC<GanhosTabProps> = ({ onConfigure, currentUser, updateU
             if (data.available_diamonds > 0) {
                 const amount = data.available_diamonds.toString();
                 setWithdrawAmount(amount);
-                
-                // Disparar cálculo imediatamente
-                setIsCalculating(true);
-                api.calculateWithdrawal(data.available_diamonds)
-                    .then((result) => {
-                        setCalculation(result);
-                    })
-                    .catch((error) => {
-                        safeError('[GanhosTab] Erro ao calcular saque automático:', error);
-                    })
-                    .finally(() => setIsCalculating(false));
             } else {
                 // Se não tiver diamantes, limpar valores
                 setWithdrawAmount('');
@@ -70,10 +59,10 @@ const GanhosTab: React.FC<GanhosTabProps> = ({ onConfigure, currentUser, updateU
         }
     }, [currentUser.id, currentUser, updateUser, addToast]);
 
-    // Fetch on mount and when user's earnings change (e.g., received a gift)
+    // Fetch apenas no mount - atualizações via WebSocket
     useEffect(() => {
         fetchEarningsInfo();
-    }, [fetchEarningsInfo]);
+    }, []);
 
     // Calculate withdrawal value in real-time as user types (com debounce)
     useEffect(() => {
@@ -174,14 +163,8 @@ const GanhosTab: React.FC<GanhosTabProps> = ({ onConfigure, currentUser, updateU
                 );
                 
                 // Atualizar dados do usuário após saque
-                const [freshUser, freshEarnings] = await Promise.all([
-                    api.getCurrentUser(),
-                    api.getEarnings(currentUser.id)
-                ]);
+                const freshEarnings = await api.getEarnings(currentUser.id);
                 
-                if (freshUser) {
-                    updateUser(freshUser);
-                }
                 if (freshEarnings) {
                     setEarningsInfo(freshEarnings);
                 }
@@ -223,14 +206,6 @@ const GanhosTab: React.FC<GanhosTabProps> = ({ onConfigure, currentUser, updateU
         displayData.platform_fee_brl = calculation.platform_fee_brl;
         displayData.net_brl = calculation.net_brl;
         displayData.breakdown = calculation.breakdown;
-        
-        // Debug temporário para verificar valores do backend
-        console.log('[DEBUG] Backend calculation:', {
-            diamonds: calculation.diamonds,
-            gross_brl: calculation.gross_brl,
-            platform_fee_brl: calculation.platform_fee_brl,
-            net_brl: calculation.net_brl
-        });
     }
     
     // Verificar se está carregando para mostrar valores corretos
@@ -249,7 +224,8 @@ const GanhosTab: React.FC<GanhosTabProps> = ({ onConfigure, currentUser, updateU
     return (
         <div className="space-y-6">
             {(() => {
-                const earningsValue = earningsInfo?.available_diamonds ?? currentUser?.earnings ?? 0;
+                // Sempre usar dados da API - não usar fallback para estado local
+                const earningsValue = earningsInfo?.available_diamonds ?? 0;
                 return <GanhosDisplay earnings={earningsValue} />;
             })()}
             

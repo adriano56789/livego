@@ -35,32 +35,16 @@ const DiamanteTab: React.FC<{ onPurchase: (pkg: { diamonds: number; price: numbe
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchFreshData = async () => {
-      if (!currentUser?.id) return;
-
-      setIsLoading(true);
+    // Dados do usuário já vêm via props - não precisa buscar API
+    if (currentUser?.diamonds !== undefined && typeof currentUser.diamonds === 'number') {
+      setFreshDiamonds(currentUser.diamonds);
       setError(null);
-      try {
-        const freshUser = await api.getFreshUserData(currentUser.id);
-        
-        if (freshUser && typeof freshUser.diamonds === 'number') {
-          setFreshDiamonds(freshUser.diamonds);
-        } else {
-          // Se API falhar, não usar fallback - mostrar erro
-          setFreshDiamonds(null);
-          setError('Dados inválidos recebidos da API');
-        }
-      } catch (error) {
-        // Se der erro, não usar fallback - mostrar erro
-        setFreshDiamonds(null);
-        setError('Falha ao carregar dados. Tente novamente.');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchFreshData();
-  }, [currentUser?.id]);
+    } else {
+      setFreshDiamonds(null);
+      setError('Dados do usuário não disponíveis');
+    }
+    setIsLoading(false);
+  }, [currentUser?.diamonds]);
 
   // Sempre usar dados da API - sem fallback para estado local
   const displayDiamonds = freshDiamonds !== null ? freshDiamonds : 0;

@@ -56,12 +56,14 @@ const VisitorsScreen: React.FC<VisitorsScreenProps> = ({ onBack, onViewProfile, 
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
+        if (!currentUser?.id) return;
+        
         setIsLoading(true);
         api.getVisitors(currentUser.id)
             .then(data => setVisitors(data || []))
             .catch(() => addToast(ToastType.Error, 'Falha ao carregar visitantes.'))
             .finally(() => setIsLoading(false));
-    }, [currentUser.id, addToast]);
+    }, [addToast]);
     
     const handleClear = async () => {
         try {

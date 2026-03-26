@@ -47,11 +47,11 @@ export const useUserStatus = (userId?: string) => {
             if (socket?.connected) {
                 socket.emit('user_online', { userId });
             }
-            loadUserStatus(); // Recarregar status
+            // ⚠️ REMOVIDO: loadUserStatus() já é chamado no useEffect principal
         } catch (error) {
             console.error('Erro ao marcar usuário como online:', error);
         }
-    }, [userId, loadUserStatus]);
+    }, [userId]);
 
     // Marcar usuário como offline
     const setUserOffline = useCallback(async () => {
@@ -63,11 +63,11 @@ export const useUserStatus = (userId?: string) => {
             if (socket?.connected) {
                 socket.emit('user_offline', { userId });
             }
-            loadUserStatus(); // Recarregar status
+            // ⚠️ REMOVIDO: loadUserStatus() já é chamado no useEffect principal
         } catch (error) {
             console.error('Erro ao marcar usuário como offline:', error);
         }
-    }, [userId, loadUserStatus]);
+    }, [userId]);
 
     // Atualizar status (unificado)
     const updateUserStatus = useCallback(async (isOnline: boolean) => {
@@ -79,11 +79,11 @@ export const useUserStatus = (userId?: string) => {
             if (socket?.connected) {
                 socket.emit(isOnline ? 'user_online' : 'user_offline', { userId });
             }
-            loadUserStatus(); // Recarregar status
+            // ⚠️ REMOVIDO: loadUserStatus() já é chamado no useEffect principal
         } catch (error) {
             console.error('Erro ao atualizar status do usuário:', error);
         }
-    }, [userId, loadUserStatus]);
+    }, [userId]);
 
     // Carregar status quando o userId mudar
     useEffect(() => {

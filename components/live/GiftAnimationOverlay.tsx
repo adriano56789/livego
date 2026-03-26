@@ -2,8 +2,16 @@ import React, { useEffect } from 'react';
 import { Gift, User } from '../../types';
 
 export interface GiftPayload {
-    fromUser: User;
-    toUser: { id: string; name: string; };
+    fromUser: User & { 
+        id: string; 
+        name: string; 
+        avatarUrl?: string; 
+        level?: number;
+    };
+    toUser: { 
+        id: string; 
+        name: string; 
+    };
     gift: Gift;
     quantity: number;
     roomId: string;

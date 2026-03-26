@@ -22,6 +22,7 @@ import chatRoutes from './routes/chatRoutes';
 import profilePhotoRoutes from './routes/profilePhotoRoutes';
 import conversationRoutes from './routes/conversationRoutes';
 import searchRoutes from './routes/searchRoutes';
+import photoRoutes from './routes/photoRoutes';
 import messageRoutes from './routes/messageRoutes';
 import statusRoutes from './routes/statusRoutes';
 import followersRoutes from './routes/followersRoutes';
@@ -166,6 +167,7 @@ app.use('/api', settingsRoutes); // handles /api/settings, /api/notifications/se
 app.use('/api', liveRoutes); // handles /api/live, /api/streams, /api/rtc, /api/lives
 app.use('/api/pk', pkRoutes);
 app.use('/api/interactions', interactionRoutes); // handles /api/interactions/presents, /api/interactions/streams
+app.use('/api/photos', photoRoutes); // handles /api/photos/:id/like
 
 // Fallback para API - retornar 404 para endpoints não encontrados
 app.use('/api/*', (req, res) => {

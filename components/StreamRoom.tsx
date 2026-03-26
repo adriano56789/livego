@@ -376,33 +376,72 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
             const payload: GiftPayload = {
                 fromUser: {
                     id: data.from.id,
-                    identification: data.from.id,
+                    identification: data.from.identification || data.from.id,
                     name: data.from.name,
                     avatarUrl: data.from.avatarUrl,
-                    coverUrl: '',
-                    photos: [],
-                    country: 'br',
-                    gender: 'not_specified' as const,
-                    level: 1,
-                    xp: 0,
-                    age: 18,
-                    location: 'Brasil',
-                    distance: 'desconhecida',
+                    coverUrl: data.from.coverUrl,
+                    photos: data.from.photos,
+                    country: data.from.country,
+                    age: data.from.age,
+                    gender: data.from.gender,
+                    level: data.from.level || 1,
+                    xp: data.from.xp,
+                    rank: data.from.rank,
+                    location: data.from.location,
+                    distance: data.from.distance,
+                    fans: data.from.fans || 0,
+                    following: data.from.following || 0,
+                    receptores: data.from.receptores || 0,
+                    enviados: data.from.enviados || 0,
+                    topFansAvatars: data.from.topFansAvatars,
+                    isLive: data.from.isLive,
+                    isFollowed: data.from.isFollowed,
+                    isFriend: data.from.isFriend,
+                    isOnline: data.from.isOnline,
+                    lastSeen: data.from.lastSeen,
+                    currentStreamId: data.from.currentStreamId,
+                    diamonds: data.from.diamonds || 0,
+                    earnings: data.from.earnings || 0,
+                    earnings_withdrawn: data.from.earnings_withdrawn || 0,
+                    withdrawal_method: data.from.withdrawal_method,
+                    bio: data.from.bio,
+                    obras: data.from.obras,
+                    curtidas: data.from.curtidas,
+                    birthday: data.from.birthday,
+                    residence: data.from.residence,
+                    emotional_status: data.from.emotional_status,
+                    tags: data.from.tags,
+                    profession: data.from.profession,
+                    isVIP: data.from.isVIP,
+                    vipSubscriptionDate: data.from.vipSubscriptionDate,
+                    vipExpirationDate: data.from.vipExpirationDate,
+                    isAvatarProtected: data.from.isAvatarProtected,
+                    activeFrameId: data.from.activeFrameId,
+                    ownedFrames: data.from.ownedFrames || [],
+                    chatPermission: data.from.chatPermission,
+                    pipEnabled: data.from.pipEnabled,
+                    locationPermission: data.from.locationPermission,
+                    showActivityStatus: data.from.showActivityStatus,
+                    showLocation: data.from.showLocation,
+                    privateStreamSettings: data.from.privateStreamSettings,
+                    platformEarnings: data.from.platformEarnings,
+                    adminWithdrawalMethod: data.from.adminWithdrawalMethod,
+                    frameExpiration: data.from.frameExpiration,
+                    geoLocation: data.from.geoLocation
                 },
                 toUser: { 
                     id: data.toUser.id, 
                     name: data.toUser.name 
                 },
                 gift: {
-                    id: data.gift.id,
                     name: data.gift.name,
-                    icon: data.gift.icon,
                     price: data.gift.price,
-                    rarity: data.gift.rarity || 'common',
-                    animation: data.gift.animation
+                    icon: data.gift.icon,
+                    category: data.gift.category || 'Popular'
                 },
                 quantity: data.quantity,
-                roomId: streamer.id
+                roomId: streamer.id,
+                id: Date.now() + Math.random() // ID único para este gift
             };
 
             // Adicionar à fila de animação (nova fila para GiftQueueManager)
@@ -649,11 +688,10 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
             }
         } catch (error) {
             addToast(ToastType.Error, (error as Error).message || "Falha ao enviar o presente.");
-            // Fetch the latest user data to revert diamond count on failure
-            api.getCurrentUser().then(user => {
-                if (user) updateUser(user);
-            });
-            // Note: A more advanced implementation might add a "failed" state to the optimistic chat message.
+            // ⚠️ REMOVIDO: Chamada duplicada - já atualiza via WebSocket
+            // api.getCurrentUser().then(user => {
+            //     if (user) updateUser(user);
+            // });
         }
     };
 

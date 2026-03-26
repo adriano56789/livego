@@ -138,11 +138,16 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ user, onBack, isModal, currentU
     const [isLoading, setIsLoading] = useState(true);
     const [userStatus, setUserStatus] = useState<{ isOnline?: boolean; lastSeen?: string } | null>(null);
     const [selectedImage, setSelectedImage] = useState<string | null>(null);
+    const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
     const chatEndRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const { t } = useTranslation();
     const chatKey = useMemo(() => `chat_${currentUser.id}_${user.id}`, [currentUser.id, user.id]);
     const [isActionsModalOpen, setIsActionsModalOpen] = useState(false);
+    
+    // Cache local para evitar requisições duplicadas
+    const cacheRef = useRef<Map<string, { data: any; timestamp: number }>>(new Map());
+    const CACHE_DURATION = 5 * 60 * 1000; // 5 minutos
 
     const formatLastSeen = (timestamp?: string) => {
         if (!timestamp) return 'Offline';
@@ -158,13 +163,39 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ user, onBack, isModal, currentU
 
     const fetchInitialData = useCallback(async () => {
         setIsLoading(true);
+        
+        // Verificar cache primeiro
+        const cacheKey = `chat_data_${user.id}`;
+        const cached = cacheRef.current.get(cacheKey);
+        const now = Date.now();
+        
+        if (cached && (now - cached.timestamp) < CACHE_DURATION) {
+            // Usar dados em cache
+            setMessages(cached.data.messages || []);
+            setUserStatus(cached.data.status);
+            setIsLoading(false);
+            return;
+        }
+        
         try {
             const [fetchedMessages, status] = await Promise.all([
                 api.getChatMessages(user.id),
                 api.getUserStatus(user.id)
             ]);
-            setMessages(fetchedMessages || []);
-            setUserStatus(status);
+            
+            const data = {
+                messages: fetchedMessages || [],
+                status
+            };
+            
+            // Salvar no cache
+            cacheRef.current.set(cacheKey, {
+                data,
+                timestamp: now
+            });
+            
+            setMessages(data.messages);
+            setUserStatus(data.status);
         } catch (error) {
         } finally {
             setIsLoading(false);
@@ -173,7 +204,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ user, onBack, isModal, currentU
 
     useEffect(() => {
         fetchInitialData();
-    }, [fetchInitialData]);
+    }, [user.id]); // Removido fetchInitialData das dependências para evitar loop infinito
 
     useEffect(() => {
         const handleNewMessage = (message: Message & { tempId?: string }) => {
@@ -236,6 +267,10 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ user, onBack, isModal, currentU
     const handleImageSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (file && file.type.startsWith('image/')) {
+            // Armazenar o arquivo para upload
+            setSelectedImageFile(file);
+            
+            // Criar preview para exibição
             const reader = new FileReader();
             reader.onload = (e) => {
                 setSelectedImage(e.target?.result as string);
@@ -247,13 +282,13 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ user, onBack, isModal, currentU
 
     const handleSendMessage = async () => {
         const hasText = newMessage.trim() !== '';
-        const hasImage = !!selectedImage;
+        const hasImage = !!selectedImageFile;
         const sendingMessage = messages.some(m => m.status === 'sending');
 
         if ((!hasText && !hasImage) || sendingMessage) return;
 
         const textToSend = newMessage;
-        const imageToSend = selectedImage;
+        const imageFile = selectedImageFile;
 
         const tempId = `temp_${Date.now()}`;
         const optimisticMessage: Message = {
@@ -262,7 +297,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ user, onBack, isModal, currentU
             from: currentUser.id,
             to: user.id,
             text: textToSend,
-            imageUrl: imageToSend || undefined,
+            imageUrl: selectedImage || undefined,
             timestamp: new Date().toISOString(),
             status: 'sending' as 'sent', // Casting for type compatibility until status is widened
         };
@@ -270,6 +305,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ user, onBack, isModal, currentU
         setMessages(prev => [...prev, optimisticMessage]);
         setNewMessage('');
         setSelectedImage(null);
+        setSelectedImageFile(null);
 
         const isMobile = window.innerWidth <= 768;
         if (isMobile) {
@@ -280,15 +316,11 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ user, onBack, isModal, currentU
 
         try {
             let finalImageUrl: string | undefined = undefined;
-            if (imageToSend) {
-                // Convert the data URL to base64 string for the API
-                const base64Data = imageToSend.includes('base64,')
-                    ? imageToSend.split('base64,')[1]
-                    : imageToSend;
-
-                const uploadResponse = await api.uploadChatPhoto(user.id, base64Data) as { url: string };
-                if (uploadResponse?.url) {
-                    finalImageUrl = uploadResponse.url;
+            if (imageFile) {
+                // Usar nova API de upload com FormData
+                const uploadResponse = await api.uploadChatImage(imageFile) as { success: boolean; imageUrl: string };
+                if (uploadResponse?.success && uploadResponse?.imageUrl) {
+                    finalImageUrl = uploadResponse.imageUrl;
                 } else {
                     throw new Error("Image upload failed");
                 }
@@ -364,8 +396,10 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ user, onBack, isModal, currentU
     const handleViewImage = (clickedUrl: string) => {
         
         // Criar photoFeed apenas com a imagem clicada para performance
+        // Usar ID único baseado na URL para consistência
+        const photoId = `chat_${clickedUrl.split('/').pop()?.split('.')[0] || Date.now()}`;
         const photoFeed: FeedPhoto[] = [{
-            id: 'current-image',
+            id: photoId,
             photoUrl: clickedUrl,
             user: currentUser,
             likes: 0,
@@ -442,9 +476,12 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ user, onBack, isModal, currentU
                         <div className="relative p-2 mb-2 w-fit">
                             <img src={selectedImage} alt="Preview" className="max-h-24 rounded-lg" />
                             <button
-                                onClick={() => setSelectedImage(null)}
-                                className="absolute -top-1 -right-1 bg-black/50 text-white rounded-full p-0.5"
-                            >
+                            onClick={() => {
+                                setSelectedImage(null);
+                                setSelectedImageFile(null);
+                            }}
+                            className="absolute -top-1 -right-1 bg-black/50 text-white rounded-full p-0.5"
+                        >
                                 <CloseIcon className="w-4 h-4" />
                             </button>
                         </div>
@@ -476,7 +513,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ user, onBack, isModal, currentU
                         <button
                             onClick={handleSendMessage}
                             className="bg-purple-600 text-white rounded-full hover:bg-purple-700 transition-colors flex items-center justify-center w-11 h-11 flex-shrink-0 disabled:bg-gray-600 disabled:cursor-not-allowed"
-                            disabled={(!newMessage.trim() && !selectedImage) || messages.some(m => m.status === 'sending')}
+                            disabled={(!newMessage.trim() && !selectedImageFile) || messages.some(m => m.status === 'sending')}
                         >
                             {messages.some(m => m.status === 'sending') ? (
                                 <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white"></div>

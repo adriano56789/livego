@@ -221,14 +221,51 @@ router.post('/', async (req, res) => {
 router.post('/send', async (req, res) => {
     try {
         console.log('🔍 Body recebido:', JSON.stringify(req.body, null, 2));
+        console.log('📏 Tamanho do payload:', JSON.stringify(req.body).length, 'bytes');
 
         const { from, to, text, imageUrl, tempId } = req.body;
 
-        if (!from || !to || (!text && !imageUrl)) {
-            return res.status(400).json({ error: 'from, to e text ou imageUrl são obrigatórios' });
+        // Validações detalhadas
+        if (!from) {
+            console.log('❌ Campo "from" faltando');
+            return res.status(400).json({ error: 'Campo "from" é obrigatório' });
+        }
+        
+        if (!to) {
+            console.log('❌ Campo "to" faltando');
+            return res.status(400).json({ error: 'Campo "to" é obrigatório' });
+        }
+        
+        if (!text && !imageUrl) {
+            console.log('❌ Campos "text" e "imageUrl" faltando');
+            return res.status(400).json({ error: 'Campo "text" ou "imageUrl" é obrigatório' });
         }
 
-        console.log(`📨 Enviando mensagem de ${from} para ${to}: ${text || '[imagem]'}`);
+        // Validar tamanho do conteúdo
+        if (text && text.length > 10000) {
+            console.log('❌ Texto muito longo:', text.length, 'caracteres');
+            return res.status(400).json({ error: 'Texto muito longo (máximo 10.000 caracteres)' });
+        }
+
+        // Se for imagem Base64 muito grande, tentar reduzir
+        if (imageUrl && imageUrl.length > 50000) {
+            console.log('⚠️ Imagem Base64 muito grande, detectando tipo:', imageUrl.length, 'caracteres');
+            
+            // Verificar se é uma imagem colada (data:image)
+            if (imageUrl.startsWith('data:image')) {
+                console.log('🔄 Imagem colada detectada, sugerindo upload correto');
+                return res.status(400).json({ 
+                    error: 'Imagem muito grande para colar no chat. Use o botão de upload 📤 para enviar imagens corretamente.',
+                    suggestion: 'Clique no botão de imagem ao lado do campo de texto para enviar arquivos.',
+                    code: 'IMAGE_TOO_LARGE_PASTE'
+                });
+            } else {
+                console.log('❌ Imagem muito grande:', imageUrl.length, 'caracteres');
+                return res.status(400).json({ error: 'Imagem muito grande (máximo 50.000 caracteres)' });
+            }
+        }
+
+        console.log(`📨 Enviando mensagem de ${from} para ${to}: ${text ? text.substring(0, 50) + '...' : '[imagem]'}`);
 
         // Criar ID da conversa (ordenado para manter consistência)
         const conversationId = `chat_private_${[from, to].sort().join('_')}`;

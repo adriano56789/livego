@@ -37,6 +37,7 @@ export interface IStreamer extends Document {
     privateGiftId?: string; // ID do presente necessário para acessar sala privada
     isAutoPrivateInviteEnabled?: boolean; // Auto-convite para sala privada ativado
     diamonds?: number; // Diamantes acumulados durante a live
+    likes?: number; // Likes da transmissão
     createdAt?: Date; // Timestamp automático do MongoDB
     updatedAt?: Date; // Timestamp automático do MongoDB
 }
@@ -78,6 +79,7 @@ const StreamerSchema = new Schema<IStreamer>({
     privateGiftId: { type: String, default: '' }, // ID do presente necessário para acessar sala privada
     isAutoPrivateInviteEnabled: { type: Boolean, default: false }, // Auto-convite para sala privada ativado
     diamonds: { type: Number, default: 0 }, // Diamantes acumulados durante a live
+    likes: { type: Number, default: 0 }, // Likes da transmissão
 }, {
     timestamps: true, // createdAt e updatedAt automáticos
     toJSON: {

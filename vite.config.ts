@@ -31,6 +31,19 @@ export default defineConfig(({ mode }) => {
         // REMOVE o alias @
         // '@': path.resolve(__dirname, '.'),
       }
-    }
+    },
+    // Adicionar configurações para evitar erros de comunicação
+    define: {
+      global: 'globalThis',
+    },
+    optimizeDeps: {
+      include: ['react', 'react-dom'],
+    },
+    // Evitar problemas com extensões de navegador
+    build: {
+      rollupOptions: {
+        external: [],
+      },
+    },
   };
 });

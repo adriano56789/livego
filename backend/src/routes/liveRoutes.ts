@@ -1,6 +1,7 @@
 import express from 'express';
 import { Streamer, User, Gift, GiftTransaction } from '../models';
 import { getUserIdFromToken } from '../middleware/auth';
+import StreamLike from '../models/StreamLike';
 
 const router = express.Router();
 
@@ -360,8 +361,35 @@ router.post('/streams', async (req, res) => {
     }
 });
 router.put('/streams/:id', async (req, res) => {
-    const stream = await Streamer.findOneAndUpdate({ id: req.params.id }, req.body, { new: true });
-    res.json(stream);
+    try {
+        const { id } = req.params;
+        const updateData = req.body;
+        
+        // Verificar se stream existe
+        const existingStream = await Streamer.findOne({ id });
+        if (!existingStream) {
+            return res.status(404).json({ error: 'Stream not found' });
+        }
+        
+        // Atualizar stream
+        const stream = await Streamer.findOneAndUpdate(
+            { id }, 
+            updateData, 
+            { new: true, runValidators: true }
+        );
+        
+        if (!stream) {
+            return res.status(400).json({ error: 'Failed to update stream' });
+        }
+        
+        res.json(stream);
+    } catch (error: any) {
+        console.error('Error updating stream:', error);
+        res.status(400).json({ 
+            error: (error as Error).message || 'Bad request',
+            details: (error as any).errors || null
+        });
+    }
 });
 router.patch('/streams/:id', async (req, res) => {
     const stream = await Streamer.findOneAndUpdate({ id: req.params.id }, req.body, { new: true });
@@ -1810,6 +1838,122 @@ router.get('/live/new', async (req, res) => {
         res.json(newStreams);
     } catch (error: any) {
         console.error('Error fetching new streams:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// POST /api/streams/:id/like - Dar like em uma stream
+router.post('/streams/:id/like', async (req: express.Request, res: express.Response) => {
+    try {
+        const streamId = req.params.id;
+        const userId = req.body.userId;
+
+        if (!userId) {
+            return res.status(400).json({ error: 'userId is required' });
+        }
+
+        // Verificar se stream existe
+        const stream = await Streamer.findOne({ id: streamId });
+        if (!stream) {
+            return res.status(404).json({ error: 'Stream not found' });
+        }
+
+        // Verificar se já deu like
+        const existingLike = await StreamLike.findOne({ streamId, userId });
+        if (existingLike) {
+            return res.status(400).json({ error: 'Already liked' });
+        }
+
+        // Criar novo like
+        const like = new StreamLike({
+            streamId,
+            userId,
+            timestamp: new Date().toISOString()
+        });
+
+        await like.save();
+
+        // Incrementar contador de likes da stream
+        await Streamer.updateOne(
+            { id: streamId },
+            { $inc: { likes: 1 } }
+        );
+
+        // Obter contagem atualizada
+        const updatedStream = await Streamer.findOne({ id: streamId });
+        const totalLikes = updatedStream?.likes || 0;
+
+        // Emitir evento WebSocket em tempo real
+        const io = req.app.get('io');
+        if (io) {
+            io.to(`stream_${streamId}`).emit('stream_liked', {
+                streamId,
+                userId,
+                totalLikes,
+                timestamp: new Date().toISOString()
+            });
+        }
+
+        res.json({ 
+            success: true, 
+            totalLikes,
+            liked: true
+        });
+
+    } catch (error: any) {
+        console.error('Error liking stream:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// DELETE /api/streams/:id/like - Remover like de uma stream
+router.delete('/streams/:id/like', async (req: express.Request, res: express.Response) => {
+    try {
+        const streamId = req.params.id;
+        const userId = req.body.userId;
+
+        if (!userId) {
+            return res.status(400).json({ error: 'userId is required' });
+        }
+
+        // Verificar se o like existe
+        const like = await StreamLike.findOne({ streamId, userId });
+        if (!like) {
+            return res.status(404).json({ error: 'Like not found' });
+        }
+
+        // Remover like
+        await StreamLike.deleteOne({ streamId, userId });
+
+        // Decrementar contador de likes da stream
+        await Streamer.updateOne(
+            { id: streamId },
+            { $inc: { likes: -1 } }
+        );
+
+        // Obter contagem atualizada
+        const updatedStream = await Streamer.findOne({ id: streamId });
+        const totalLikes = updatedStream?.likes || 0;
+
+        // Emitir evento WebSocket em tempo real
+        const io = req.app.get('io');
+        if (io) {
+            io.to(`stream_${streamId}`).emit('stream_unliked', {
+                streamId,
+                userId,
+                totalLikes,
+                timestamp: new Date().toISOString()
+            });
+        }
+
+        res.json({ 
+            success: true, 
+            totalLikes,
+            liked: false
+        });
+
+    } catch (error: any) {
+        console.error('Error unliking stream:', error);
         res.status(500).json({ error: error.message });
     }
 });

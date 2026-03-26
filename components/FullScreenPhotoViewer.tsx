@@ -36,7 +36,9 @@ const MediaItem: React.FC<{
 
     onViewProfile: (user: User) => void;
 
-}> = ({ photo, state, onLike, onViewProfile }) => {
+    isLiking?: boolean;
+
+}> = ({ photo, state, onLike, onViewProfile, isLiking = false }) => {
 
     // Robust video check
 
@@ -141,13 +143,21 @@ const MediaItem: React.FC<{
                     </button>
 
                     <div className="flex flex-col items-center space-y-1">
-                        <button onClick={() => onLike(photo.id)} className="p-2 rounded-full hover:bg-white/10 transition-colors">
-                            <HeartIcon 
-                                className={`w-8 h-8 transition-colors ${state.isLiked ? 'text-red-500' : 'text-white'}`} 
-                                fill={state.isLiked ? 'currentColor' : 'none'} 
-                                stroke="currentColor" 
-                                strokeWidth={2} 
-                            />
+                        <button 
+                            onClick={() => onLike(photo.id)} 
+                            className="p-2 rounded-full hover:bg-white/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            disabled={isLiking}
+                        >
+                            {isLiking ? (
+                                <div className="w-8 h-8 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+                            ) : (
+                                <HeartIcon 
+                                    className={`w-8 h-8 transition-colors ${state.isLiked ? 'text-red-500' : 'text-white'}`} 
+                                    fill={state.isLiked ? 'currentColor' : 'none'} 
+                                    stroke="currentColor" 
+                                    strokeWidth={2} 
+                                />
+                            )}
                         </button>
                         <span className="text-white font-medium text-sm drop-shadow-md">{state.likes.toLocaleString()}</span>
                     </div>
@@ -168,8 +178,11 @@ const FullScreenPhotoViewer: React.FC<FullScreenPhotoViewerProps> = ({ photos, i
 
   const [photoStates, setPhotoStates] = useState(new Map(photos.map(p => [p.id, { likes: p.likes, isLiked: p.isLiked }])));
 
+  const [likingPhotos, setLikingPhotos] = useState<Set<string>>(new Set()); // Track which photos are being liked
+
   const containerRef = useRef<HTMLDivElement>(null);
   const scrollPositionRef = useRef<number>(0); // Salvar posição original do scroll
+  const debounceTimersRef = useRef<Map<string, NodeJS.Timeout>>(new Map()); // Debounce timers
 
   // Salvar posição do scroll ao abrir
   useEffect(() => {
@@ -184,7 +197,7 @@ const FullScreenPhotoViewer: React.FC<FullScreenPhotoViewerProps> = ({ photos, i
     };
   }, []);
 
-  // Use layout effect to ensure scrolling happens before paint if possible to avoid flicker
+  // Use layout effect para garantir scroll antes do paint e evitar duplicação
   useEffect(() => {
     if (containerRef.current && photos[validIndex]) {
       // Encontrar o container interno com flex
@@ -197,45 +210,56 @@ const FullScreenPhotoViewer: React.FC<FullScreenPhotoViewerProps> = ({ photos, i
         containerRef.current.scrollLeft = targetScrollLeft;
       }
     }
-  }, [validIndex]); // Run when index changes
-
-  // Garantir scroll correto após renderização completa
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (containerRef.current && photos[validIndex]) {
-        const containerWidth = containerRef.current.clientWidth;
-        const targetScrollLeft = validIndex * containerWidth;
-        containerRef.current.scrollLeft = targetScrollLeft;
-      }
-    }, 100);
-
-    return () => clearTimeout(timer);
-  }, [validIndex, photos.length]);
+  }, [validIndex, photos.length]); // Adicionado photos.length para garantir atualização quando as fotos mudam
 
   const handleLike = async (photoId: string) => {
-    const currentState = photoStates.get(photoId);
-    if (!currentState) return;
+    const photo = photos.find(p => p.id === photoId);
+    if (!photo || likingPhotos.has(photoId)) return; // Prevent multiple clicks
 
-    // Optimistic UI update
+    // Clear existing timer for this photo
+    const existingTimer = debounceTimersRef.current.get(photoId);
+    if (existingTimer) {
+      clearTimeout(existingTimer);
+    }
+
+    // Set loading state
+    setLikingPhotos(prev => new Set(prev).add(photoId));
+
+    const currentState = photoStates.get(photoId) || { likes: photo.likes, isLiked: photo.isLiked };
     const newIsLiked = !currentState.isLiked;
     const newLikes = newIsLiked ? currentState.likes + 1 : currentState.likes - 1;
+    
+    // Optimistic update
     setPhotoStates(new Map(photoStates.set(photoId, { likes: newLikes, isLiked: newIsLiked })));
 
-    // API call to persist the like
-    try {
-      const response = await api.likePhoto(photoId);
-      if (response.success) {
-        onPhotoLiked(); // Notify parent of the change
-        // Sync with server state just in case there's a mismatch
-        setPhotoStates(new Map(photoStates.set(photoId, { likes: response.likes, isLiked: response.isLiked })));
-      } else {
+    // Debounce API call
+    const timer = setTimeout(async () => {
+      try {
+        const response = await api.likePhoto(photoId, undefined, photo.photoUrl);
+        if (response.success) {
+          onPhotoLiked(); // Notify parent of the change
+          // Sync with server state
+          setPhotoStates(new Map(photoStates.set(photoId, { likes: response.likes, isLiked: response.isLiked })));
+        } else {
+          // Revert UI on failure
+          setPhotoStates(new Map(photoStates.set(photoId, currentState)));
+        }
+      } catch (error) {
         // Revert UI on failure
         setPhotoStates(new Map(photoStates.set(photoId, currentState)));
+      } finally {
+        // Clear loading state
+        setLikingPhotos(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(photoId);
+          return newSet;
+        });
+        // Clear timer
+        debounceTimersRef.current.delete(photoId);
       }
-    } catch (error) {
-      // Revert UI on failure
-      setPhotoStates(new Map(photoStates.set(photoId, currentState)));
-    }
+    }, 300); // 300ms debounce
+
+    debounceTimersRef.current.set(photoId, timer);
   };
 
   return (
@@ -252,6 +276,7 @@ const FullScreenPhotoViewer: React.FC<FullScreenPhotoViewerProps> = ({ photos, i
         <div className="flex h-full">
           {photos.map((photo) => {
             const state = photoStates.get(photo.id) || { likes: photo.likes, isLiked: photo.isLiked };
+            const isLiking = likingPhotos.has(photo.id);
             return (
               <div key={photo.id} className="w-full h-full flex-shrink-0 snap-center">
                 <MediaItem 
@@ -259,6 +284,7 @@ const FullScreenPhotoViewer: React.FC<FullScreenPhotoViewerProps> = ({ photos, i
                   state={state} 
                   onLike={handleLike} 
                   onViewProfile={onViewProfile} 
+                  isLiking={isLiking}
                 />
               </div>
             );

@@ -51,7 +51,9 @@ const TopFansScreen: React.FC<{ onBack: () => void; onViewProfile: (user: User) 
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        api.getRankingForPeriod('monthly', currentUser?.id)
+        if (!currentUser?.id) return;
+        
+        api.getRankingForPeriod('monthly', currentUser.id)
             .then(data => {
                 setFans(data || []);
                 setIsLoading(false);

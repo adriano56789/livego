@@ -164,155 +164,62 @@ const inFlightRequests = new Map<string, Promise<any>>();
 
 
 /**
-
  * Core API Caller
-
  * Performs real HTTP requests to the backend.
-
  */
-
-const callApi = async <T>(method: string, path: string, body?: any, customBaseUrl?: string): Promise<T> => {
-
-    const requestKey = `${method}:${path}:${JSON.stringify(body || {})}`;
-
-
-
-    if (method === 'GET' && inFlightRequests.has(requestKey)) {
-
-        return inFlightRequests.get(requestKey) as Promise<T>;
-
-    }
-
-
-
-
-
-    const requestPromise = (async () => {
-
-        try {
-
-            // Token deve ser gerenciado de forma segura - não usar localStorage
-
-            const headers: Record<string, string> = {
-
-                'Content-Type': 'application/json'
-
-            };
-
-
-
-            // Adicionar token Authorization se disponível
-
-            if (authToken) {
-
-                headers['Authorization'] = `Bearer ${authToken}`;
-
+const callApi = async <T = any>(method: Method, url: string, data?: any, customHeaders?: Record<string, string>): Promise<T> => {
+    try {
+        const config: any = {
+            method,
+            url: `${API_BASE_URL}${url}`,
+            headers: {
+                'Content-Type': 'application/json',
+                ...(customHeaders || {}),
+                ...(authToken && { Authorization: `Bearer ${authToken}` })
             }
+        };
 
-
-
-            // Evitar 304 Not Modified — forçar o browser a sempre buscar dados frescos
-
-            if (method === 'GET') {
-
-                headers['Cache-Control'] = 'no-cache';
-
-                headers['Pragma'] = 'no-cache';
-
-            }
-
-
-
-            const baseUrl = customBaseUrl || API_BASE_URL;
-
-
-
-            const response = await axios({
-
-                method: method as Method,
-
-                url: `${baseUrl}${path}`,
-
-                headers,
-
-                data: body,
-
-                params: method === 'GET' && body ? body : undefined
-
-            });
-
-
-
-            // Check for HTML response
-
-            const contentType = response.headers['content-type'];
-
-            if (contentType && contentType.includes('text/html')) {
-
-                throw new Error('API returned HTML instead of JSON');
-
-            }
-
-            if (typeof response.data === 'string' && response.data.trim().startsWith('<')) {
-
-                throw new Error('API returned HTML-like string instead of JSON');
-
-            }
-
-
-
-            // Tratar status 304 Not Modified - dados não modificados
-
-            if (response.status === 304) {
-
-                return response.data as T;
-
-            }
-
-
-
-            return response.data as T;
-
-        } catch (error: any) {
-
-
-
-            // Tratar status 304 Not Modified mesmo no bloco catch
-
-            if (error.response?.status === 304) {
-
-                return error.response?.data as T;
-
-            }
-
-
-
-            throw new Error(error.response?.data?.error || `HTTP Error ${error.response?.status || 'Unknown'}`);
-
-        } finally {
-
-            if (method === 'GET') {
-
-                inFlightRequests.delete(requestKey);
-
-            }
-
+        if (data && (method === 'POST' || method === 'PUT' || method === 'PATCH')) {
+            config.data = data;
         }
 
-    })();
+        const response = await axios(config);
+        
+        // Check for HTML response
+        const contentType = response.headers['content-type'];
+        if (contentType && contentType.includes('text/html')) {
+            throw new Error('API returned HTML instead of JSON');
+        }
 
+        if (typeof response.data === 'string' && response.data.trim().startsWith('<')) {
+            throw new Error('API returned HTML-like string instead of JSON');
+        }
 
+        // Tratar status 304 Not Modified - dados não modificados
+        if (response.status === 304) {
+            return response.data as T;
+        }
 
-    if (method === 'GET') {
+        return response.data as T;
+    } catch (error: any) {
+        // Ignorar erros específicos de extensões
+        if (error.message && 
+            (error.message.includes('useCache') || 
+             error.message.includes('Receiving end does not exist') ||
+             error.message.includes('content.js'))) {
+            console.warn('Ignorando erro de extensão:', error.message);
+            throw error;
+        }
 
-        inFlightRequests.set(requestKey, requestPromise);
-
+        // Tratamento padrão de outros erros
+        if (error.response?.status === 401) {
+            // Token expirado ou inválido
+            clearAuthToken();
+            window.location.href = '/login';
+        }
+        
+        throw error;
     }
-
-
-
-    return requestPromise;
-
 };
 
 
@@ -874,6 +781,29 @@ export const api = {
 
 
 
+    // --- Stream Likes ---
+
+    likeStream: async (streamId: string, userId: string) => {
+        try {
+            const response = await callApi<{ success: boolean; totalLikes: number; liked: boolean }>('POST', `/api/streams/${streamId}/like`, { userId });
+            return response;
+        } catch (error) {
+            console.error('Error liking stream:', error);
+            throw error;
+        }
+    },
+
+    unlikeStream: async (streamId: string, userId: string) => {
+        try {
+            const response = await callApi<{ success: boolean; totalLikes: number; liked: boolean }>('DELETE', `/api/streams/${streamId}/like`, { userId });
+            return response;
+        } catch (error) {
+            console.error('Error unliking stream:', error);
+            throw error;
+        }
+    },
+
+
     // --- Live Stream & Online Users ---
 
     joinStream: async (streamId: string, userId: string) => {
@@ -1010,9 +940,22 @@ export const api = {
 
     getPhotoFeed: () => callApi<FeedPhoto[]>('GET', '/api/interactions/feed/photos'),
 
-    likePhoto: (photoId: string, userId?: string) => callApi<{ success: boolean; likes: number; isLiked: boolean; }>('POST', `/api/photos/${photoId}/like`, { userId: userId || getCurrentUserId() }),
+    likePhoto: (photoId: string, userId?: string, photoUrl?: string) => callApi<{ success: boolean; likes: number; isLiked: boolean; }>('POST', `/api/photos/${photoId}/like`, { userId: userId || getCurrentUserId(), photoUrl }),
 
     uploadChatPhoto: (userId: string, base64Image: string) => callApi<{ success: boolean; url: string; photo: { id: string; url: string; } }>('POST', `/api/interactions/photos/upload/${userId}`, { image: base64Image }),
+
+    // NOVO: Upload de imagem para chat usando FormData
+    uploadChatImage: (file: File) => {
+        const formData = new FormData();
+        formData.append('image', file);
+        
+        return axios.post(`${API_BASE_URL}/api/upload/chat`, formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data',
+                ...(authToken && { Authorization: `Bearer ${authToken}` })
+            }
+        }).then(response => response.data);
+    },
 
 
 

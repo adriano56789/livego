@@ -4,8 +4,8 @@ import { Request, Response, NextFunction } from 'express';
 export const blockBase64Middleware = (req: Request, res: Response, next: NextFunction) => {
     const body = req.body;
     
-    // Permitir Base64 na rota de upload de fotos do chat
-    if (req.path.includes('/interactions/photos/upload')) {
+    // Permitir Base64 nas rotas de upload e chat
+    if (req.path.includes('/interactions/photos/upload') || req.path.includes('/chats/send')) {
         return next();
     }
     

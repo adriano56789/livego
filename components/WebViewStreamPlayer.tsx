@@ -47,9 +47,16 @@ const WebViewStreamPlayer: React.FC<WebViewStreamPlayerProps> = ({
 
     const setupStream = async () => {
       try {
-        if (isBroadcaster) {
+        // 🎥 LÓGICA CORRIGIDA: Dono assistindo de outro dispositivo
+        // Se isBroadcaster=true mas recebeu streamUrl HLS, tratar como viewer
+        if (isBroadcaster && streamUrl && streamUrl.includes('.m3u8')) {
+          console.log('🎥 Dono da live assistindo de outro dispositivo - tratando como viewer');
+          await setupViewerStream(videoEl);
+        } else if (isBroadcaster) {
+          // Caso normal: broadcaster no dispositivo de transmissão
           await setupBroadcasterStream(videoEl);
         } else {
+          // Viewer normal
           await setupViewerStream(videoEl);
         }
       } catch (err) {
@@ -309,10 +316,17 @@ const WebViewStreamPlayer: React.FC<WebViewStreamPlayerProps> = ({
       />
       
       {/* Status indicators */}
-      {isBroadcaster && (
+      {isBroadcaster && !streamUrl?.includes('.m3u8') && (
         <div className="absolute top-3 left-3 bg-red-600 text-white px-2 py-1 rounded-full text-xs font-semibold">
           <div className="w-1.5 h-1.5 bg-white rounded-full mr-1 inline-block animate-pulse"></div>
           AO VIVO
+        </div>
+      )}
+      
+      {isBroadcaster && streamUrl?.includes('.m3u8') && (
+        <div className="absolute top-3 left-3 bg-blue-600 text-white px-2 py-1 rounded-full text-xs font-semibold">
+          <div className="w-1.5 h-1.5 bg-white rounded-full mr-1 inline-block"></div>
+          ASSISTINDO
         </div>
       )}
       

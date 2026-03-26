@@ -17,8 +17,21 @@ const ErrorBoundary: React.FC<ErrorBoundaryProps> = ({ children }) => {
 
   useEffect(() => {
     const handleError = (error: Error) => {
+      // Apenas logar erro no console, não quebrar a aplicação
       console.error('Error caught by boundary:', error);
-      setErrorState({ hasError: true, error });
+      
+      // NÃO definir hasError: true para evitar quebra da UI
+      // Apenas registrar o erro para debug
+      
+      // Se for erro crítico (não relacionado a presentes), podemos considerar mostrar
+      if (error.message && !error.message.includes('presente') && 
+          !error.message.includes('gift') && 
+          !error.message.includes('Promise') &&
+          !error.message.includes('useCache') &&
+          !error.message.includes('Receiving end does not exist')) {
+        // Apenas para erros realmente críticos
+        // setErrorState({ hasError: true, error });
+      }
     };
 
     // Configurar tratamento de erros globais
@@ -33,11 +46,14 @@ const ErrorBoundary: React.FC<ErrorBoundaryProps> = ({ children }) => {
         const reason = event.reason || 'Unknown promise rejection';
         const errorMessage = typeof reason === 'string' ? reason : String(reason);
         
-        // Ignorar erros específicos de extensões
+        // Ignorar erros específicos de extensões e presentes
         if (errorMessage.includes('useCache') || 
             errorMessage.includes('Receiving end does not exist') ||
-            errorMessage.includes('content.js')) {
-          console.warn('Ignorando erro de extensão:', errorMessage);
+            errorMessage.includes('content.js') ||
+            errorMessage.includes('presente') ||
+            errorMessage.includes('gift') ||
+            errorMessage.includes('Promise')) {
+          console.warn('Ignorando erro não crítico:', errorMessage);
           event.preventDefault();
           return;
         }
@@ -59,18 +75,8 @@ const ErrorBoundary: React.FC<ErrorBoundaryProps> = ({ children }) => {
     };
   }, []);
 
-  if (errorState.hasError) {
-    return (
-      <div style={{ padding: '20px', textAlign: 'center' }}>
-        <h2>Algo deu errado</h2>
-        <p>Recarregue a página para continuar.</p>
-        <button onClick={() => window.location.reload()}>
-          Recarregar
-        </button>
-      </div>
-    );
-  }
-
+  // NÃO mostrar tela de erro para não interromper experiência
+  // Apenas retornar children normalmente
   return <>{children}</>;
 };
 

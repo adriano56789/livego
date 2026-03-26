@@ -8,9 +8,9 @@ export function standardizeUserResponse(user: any): any {
     if (!user) {
         // Retorna estrutura padrão vazia se não houver usuário
         return {
-            id: `protected_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`, // 🚨 ID FALSO
+            id: null, // ID real nulo se não houver usuário
             name: "",
-            identification: "", // 🚨 IDENTIFICAÇÃO OCULTA
+            identification: "",
             avatarUrl: "",
             coverUrl: "",
             age: 0,
@@ -38,19 +38,16 @@ export function standardizeUserResponse(user: any): any {
             visitors: []
         };
     }
-
-    // 🚨 GERAR ID FALSO PARA PROTEÇÃO MÁXIMA
-    const fakeId = `protected_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
     
     // Garante que todos os campos obrigatórios existam com valores padrão
-    // 🚨 PROTEÇÃO MÁXIMA DE DADOS SENSÍVEIS
+    // Usando ID REAL do usuário - não mais ID falso
     return {
-        // Campos básicos COM PROTEÇÃO MÁXIMA
-        id: fakeId, // 🚨 ID FALSO - NUNCA RETORNAR ID REAL
+        // Campos básicos com ID REAL
+        id: user._id || user.id, // ✅ ID REAL DO USUÁRIO
         name: user.name || "",
-        identification: "", // 🚨 NUNCA RETORNAR IDENTIFICAÇÃO REAL
-        avatarUrl: user.avatarUrl || "",
-        coverUrl: user.coverUrl || "",
+        identification: user.identification || "", // ✅ PRESERVAR DADO REAL DO BANCO
+        avatarUrl: user.avatarUrl || "", // ✅ PRESERVAR DADO REAL DO BANCO
+        coverUrl: user.coverUrl || "", // ✅ PRESERVAR DADO REAL DO BANCO
         age: user.age || 0,
         gender: user.gender || "not_specified",
         level: user.level || 1,
@@ -104,8 +101,8 @@ export function standardizeUserResponse(user: any): any {
                 'email', 'phone', 'password', 'withdrawal_method', 
                 'location', 'ip', 'sessionId', 'token', 'refreshToken',
                 'followersList', 'followingList', 'friendsList', 'blockedUsers',
-                'messages', 'notifications', 'visitors', 'identification',
-                'id' // 🚨 NUNCA RETORNAR ID REAL
+                'messages', 'notifications', 'visitors'
+                // ✅ ID removido da lista negra - agora retornamos ID real
             ];
             
             if (!sensitiveFields.includes(key) && ![

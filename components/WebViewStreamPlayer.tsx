@@ -28,12 +28,16 @@ const WebViewStreamPlayer: React.FC<WebViewStreamPlayerProps> = ({
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isConnected, setIsConnected] = useState(false);
+  const [latency, setLatency] = useState<number | null>(null);
+  const [isCompatibilityMode, setIsCompatibilityMode] = useState(false);
+  const mediaStreamRef = useRef<MediaStream | null>(null);
+  const hlsInstanceRef = useRef<Hls | null>(null);
 
   useEffect(() => {
     const videoEl = videoRef.current;
     if (!videoEl) return;
 
-    console.log(`📱 WebViewStreamPlayer: Usuário=${currentUser?.id} | Broadcaster=${isBroadcaster}`);
+    // Removido log sensível com informações do usuário
 
     setIsLoading(true);
     setError(null);
@@ -97,11 +101,7 @@ const WebViewStreamPlayer: React.FC<WebViewStreamPlayerProps> = ({
         // Solicitar permissão e capturar mídia
         const mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
 
-        console.log('✅ Câmera capturada com sucesso:', {
-          videoTracks: mediaStream.getVideoTracks().length,
-          audioTracks: mediaStream.getAudioTracks().length,
-          active: mediaStream.active
-        });
+        // Removido log sensível com informações da mídia
 
         // Verificar se os tracks estão ativos
         const videoTrack = mediaStream.getVideoTracks()[0];
@@ -115,6 +115,9 @@ const WebViewStreamPlayer: React.FC<WebViewStreamPlayerProps> = ({
         videoEl.srcObject = mediaStream;
         videoEl.muted = true; // Sempre mutado para broadcaster (evitar eco)
         
+        // Guardar referência para cleanup
+        mediaStreamRef.current = mediaStream;
+        
         // 🚀 ESTRATÉGIA DE FALLBACK GARANTINDO TRANSMISSÃO
         let streamingSuccess = false;
         let fallbackUsed = false;
@@ -124,15 +127,16 @@ const WebViewStreamPlayer: React.FC<WebViewStreamPlayerProps> = ({
           console.log('🔗 Tentando WebRTC (melhor qualidade)...');
           const { webRTCService } = await import('../services/webrtcService.js');
           const webrtcUrl = getWebRTCUrl();
-          console.log('🔗 WebRTC URL:', webrtcUrl);
+          // Removido log sensível com URL WebRTC
           
           await webRTCService.startPublish(webrtcUrl, streamer.streamKey || streamer.id, mediaStream);
           streamingSuccess = true;
           setIsConnected(true);
-          console.log('✅ WebRTC funcionando - transmissão ativa para espectadores');
+          // WebRTC funcionando - transmissão ativa para espectadores
         } catch (webrtcError) {
           console.warn('⚠️ WebRTC falhou, ativando modo de compatibilidade:', webrtcError);
           fallbackUsed = true;
+          setIsCompatibilityMode(true);
           
           // 2. Fallback: Garantir que HLS funcione para espectadores
           // Mesmo que WebRTC falhe, vamos garantir que o stream esteja disponível via HLS
@@ -141,12 +145,12 @@ const WebViewStreamPlayer: React.FC<WebViewStreamPlayerProps> = ({
             await activateHLSFallback(streamer.streamKey || streamer.id);
             streamingSuccess = true;
             setIsConnected(true);
-            console.log('✅ Fallback HLS ativado - espectadores devem conseguir assistir via HLS');
+            // Fallback HLS ativado - espectadores devem conseguir assistir via HLS
           } catch (fallbackError) {
             console.error('❌ Fallback HLS falhou:', fallbackError);
             
             // 3. Último recurso: Apenas preview local com aviso claro
-            console.warn('⚠️ Usando apenas preview local - espectadores não verão');
+            // Usando apenas preview local - espectadores não verão
             setIsConnected(true); // Conectado localmente apenas
           }
         }
@@ -252,7 +256,7 @@ const WebViewStreamPlayer: React.FC<WebViewStreamPlayerProps> = ({
       console.log('👀 Configurando viewer para WebView...');
       
       const hlsUrl = getHLSUrl();
-      console.log('🔗 HLS URL:', hlsUrl);
+        // Removido log sensível com URL HLS
       
       if (!hlsUrl) {
         throw new Error('URL de streaming não encontrada');
@@ -278,6 +282,9 @@ const WebViewStreamPlayer: React.FC<WebViewStreamPlayerProps> = ({
             liveMaxLatencyDurationCount: Infinity,
             preferManagedMediaSource: true,
           });
+          
+          // Guardar referência para cleanup e medição de latência
+          hlsInstanceRef.current = hls;
 
           hls.loadSource(hlsUrl);
           hls.attachMedia(videoEl);
@@ -290,6 +297,10 @@ const WebViewStreamPlayer: React.FC<WebViewStreamPlayerProps> = ({
 
             hls.on(Hls.Events.MANIFEST_PARSED, () => {
               clearTimeout(timeout);
+              
+              // Iniciar medição de latência HLS
+              startLatencyMeasurement(hls);
+              
               resolve(true);
             });
             
@@ -306,7 +317,7 @@ const WebViewStreamPlayer: React.FC<WebViewStreamPlayerProps> = ({
           await videoEl.play();
           playbackSuccess = true;
           setIsConnected(true);
-          console.log('✅ HLS.js funcionando');
+          // HLS.js funcionando
         }
       } catch (hlsError) {
         console.warn('⚠️ HLS.js falhou:', hlsError);
@@ -338,16 +349,16 @@ const WebViewStreamPlayer: React.FC<WebViewStreamPlayerProps> = ({
           await videoEl.play();
           playbackSuccess = true;
           setIsConnected(true);
-          console.log('✅ HLS nativo funcionando');
+          // HLS nativo funcionando
         } catch (nativeError) {
           console.warn('⚠️ HLS nativo falhou:', nativeError);
         }
       }
 
-      // 3. Fallback para MP4 direto se disponível
+      // 3. Fallback para MP4 direto se disponível (última opção)
       if (!playbackSuccess) {
         try {
-          console.log('📺 Tentando fallback MP4');
+          console.log('📺 Tentando fallback MP4 (último recurso)');
           const mp4Url = hlsUrl.replace('.m3u8', '.mp4');
           videoEl.src = mp4Url;
           
@@ -370,18 +381,70 @@ const WebViewStreamPlayer: React.FC<WebViewStreamPlayerProps> = ({
           await videoEl.play();
           playbackSuccess = true;
           setIsConnected(true);
-          console.log('✅ MP4 fallback funcionando');
+          // MP4 fallback funcionando (último recurso)
         } catch (mp4Error) {
           console.warn('⚠️ MP4 fallback falhou:', mp4Error);
         }
       }
 
       if (!playbackSuccess) {
-        throw new Error('Nenhum método de reprodução funcionou neste navegador. Verifique se a transmissão está ativa.');
+        throw new Error('Nenhum método de reprodução funcionou. Tente recarregar a página ou verifique se a transmissão está ativa.');
       }
 
       setIsLoading(false);
       onVideoReady?.();
+    };
+
+    // 📏 FUNÇÃO DE MEDIÇÃO DE LATÊNCIA HLS
+    const startLatencyMeasurement = (hls: Hls) => {
+      if (!isBroadcaster) return; // Apenas broadcaster precisa saber da latência
+      
+      let latencyCheckInterval: NodeJS.Timeout;
+      
+      const measureLatency = async () => {
+        try {
+          // Obter estatísticas do HLS
+          const stats = await hls.levels;
+          if (stats && stats.length > 0) {
+            // Estimar latência baseada no buffer e fragment duration
+            const currentLevel = hls.currentLevel;
+            if (currentLevel >= 0 && stats[currentLevel]) {
+              const level = stats[currentLevel];
+              const fragmentDuration = level.details?.fragments[0]?.duration || 2;
+              
+              // Latência aproximada = buffer length + fragment duration
+              const bufferLength = videoEl.buffered.length > 0 ? 
+                videoEl.buffered.end(videoEl.buffered.length - 1) - videoEl.currentTime : 0;
+              
+              const estimatedLatency = Math.round((bufferLength + fragmentDuration) * 1000);
+              setLatency(estimatedLatency);
+              
+              // Alertar se latência for muito alta (acima de 10 segundos)
+              if (estimatedLatency > 10000) {
+                console.warn(`⚠️ Alta latência detectada: ${estimatedLatency}ms`);
+                if (onVideoError) {
+                  onVideoError(`Alta latência detectada: ${Math.round(estimatedLatency/1000)}s de atraso para espectadores`);
+                }
+              }
+            }
+          }
+        } catch (error) {
+          // Ignorar erros na medição
+        }
+      };
+      
+      // Medir a cada 5 segundos
+      latencyCheckInterval = setInterval(measureLatency, 5000);
+      
+      // Medição inicial
+      setTimeout(measureLatency, 2000);
+      
+      // Cleanup no unmount
+      return () => {
+        if (latencyCheckInterval) {
+          clearInterval(latencyCheckInterval);
+        }
+      };
     };
 
     const getWebRTCUrl = (): string => {
@@ -401,6 +464,7 @@ const WebViewStreamPlayer: React.FC<WebViewStreamPlayerProps> = ({
       const isLocal = window.location.hostname === 'localhost';
       // HLS vem do servidor HTTP do SRS na porta 8080
       const baseUrl = isLocal ? 'http://localhost:8080/live' : 'http://72.60.249.175:8080/live';
+      // 🔐 SEGURANÇA: Usar ID em vez de streamKey na URL pública
       return `${baseUrl}/${streamer.id}.m3u8`;
     };
 
@@ -414,28 +478,58 @@ const WebViewStreamPlayer: React.FC<WebViewStreamPlayerProps> = ({
 
     setupStream();
 
-    // Cleanup
+    // Cleanup completo e robusto
     return () => {
-      console.log('🧹 Limpando WebViewStreamPlayer...');
+      // Limpando WebViewStreamPlayer...
       
-      // Parar tracks de mídia
-      if (videoEl.srcObject) {
-        const stream = videoEl.srcObject as MediaStream;
-        stream.getTracks().forEach(track => track.stop());
+      // 1. Parar e limpar mídia local (broadcaster)
+      if (mediaStreamRef.current) {
+        mediaStreamRef.current.getTracks().forEach(track => {
+          track.stop(); // Parar track completamente
+          track.enabled = false; // Desabilitar
+        });
+        mediaStreamRef.current = null;
       }
       
-      // Parar WebRTC
+      // 2. Limpar mídia do elemento de vídeo
+      if (videoEl.srcObject) {
+        const stream = videoEl.srcObject as MediaStream;
+        stream.getTracks().forEach(track => {
+          track.stop(); // Garantir que todos os tracks estejam parados
+          track.enabled = false;
+        });
+        videoEl.srcObject = null;
+      }
+      
+      // 3. Destruir instância HLS (viewer)
+      if (hlsInstanceRef.current) {
+        try {
+          hlsInstanceRef.current.destroy();
+        } catch (e) {
+          // Ignorar erros ao destruir
+        }
+        hlsInstanceRef.current = null;
+      }
+      
+      // 4. Parar WebRTC (broadcaster)
       if (isBroadcaster) {
         import('../services/webrtcService.js').then(({ webRTCService }) => {
-          webRTCService.stop();
+          try {
+            webRTCService.stop();
+          } catch (e) {
+            // Ignorar erros ao parar
+          }
         });
       }
       
-      // Reset vídeo
+      // 5. Reset completo do elemento de vídeo
       videoEl.pause();
-      videoEl.srcObject = null;
       videoEl.removeAttribute('src');
       videoEl.load();
+      
+      // 6. Limpar estados
+      setLatency(null);
+      setIsCompatibilityMode(false);
     };
   }, [streamer, currentUser, isBroadcaster, onVideoReady, onVideoError]);
 
@@ -487,26 +581,40 @@ const WebViewStreamPlayer: React.FC<WebViewStreamPlayerProps> = ({
           onVideoError?.('Erro ao reproduzir vídeo');
         }}
         onLoadedMetadata={() => {
-          console.log('✅ Vídeo carregado');
+          // Vídeo carregado
           setIsLoading(false);
         }}
       />
       
       {/* Status indicators */}
       {isBroadcaster && (
-        <div className="absolute top-3 left-3 bg-red-600 text-white px-3 py-1.5 rounded-full text-xs font-semibold shadow-lg">
-          <div className="w-2 h-2 bg-white rounded-full mr-2 inline-block animate-pulse"></div>
-          AO VIVO - SUA CÂMERA
-        </div>
+        <>
+          <div className="absolute top-3 left-3 bg-red-600 text-white px-3 py-1.5 rounded-full text-xs font-semibold shadow-lg">
+            <div className="w-2 h-2 bg-white rounded-full mr-2 inline-block animate-pulse"></div>
+            AO VIVO - SUA CÂMARA
+          </div>
+          
+          {/* Indicador de latência para broadcaster */}
+          {latency && (
+            <div className={`absolute top-16 left-3 px-3 py-1.5 rounded-full text-xs font-semibold shadow-lg ${
+              latency > 10000 ? 'bg-red-600 text-white' : 'bg-yellow-600 text-white'
+            }`}>
+              <div className="w-2 h-2 bg-white rounded-full mr-2 inline-block"></div>
+              ATRASO: {Math.round(latency/1000)}s
+            </div>
+          )}
+          
+          {/* Indicador de modo de compatibilidade */}
+          {isCompatibilityMode && (
+            <div className="absolute top-28 left-3 bg-orange-600 text-white px-3 py-1.5 rounded-full text-xs font-semibold shadow-lg">
+              <div className="w-2 h-2 bg-white rounded-full mr-2 inline-block animate-pulse"></div>
+              MODO COMPATIBILIDADE
+            </div>
+          )}
+        </>
       )}
       
-      {isBroadcaster && error && error.includes('compatibilidade') && (
-        <div className="absolute top-16 left-3 bg-yellow-600 text-white px-3 py-1.5 rounded-full text-xs font-semibold shadow-lg">
-          <div className="w-2 h-2 bg-white rounded-full mr-2 inline-block"></div>
-            MODO COMPATIBILIDADE
-        </div>
-      )}
-      
+      {/* Indicador para viewer */}
       {!isBroadcaster && isConnected && (
         <div className="absolute top-3 right-3 bg-green-600 text-white px-3 py-1.5 rounded-full text-xs font-semibold shadow-lg">
           <div className="w-2 h-2 bg-white rounded-full mr-2 inline-block"></div>

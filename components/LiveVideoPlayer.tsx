@@ -112,8 +112,14 @@ const LiveVideoPlayer: React.FC<LiveVideoPlayerProps> = ({
     console.log(`Viewer ${currentUser?.id || currentUser?.name || 'unknown'} conectando à stream: ${streamer.id}`);
 
     try {
-      // Iniciar reprodução WebRTC
-      const remoteStream = await webRTCService.startPlay(webrtcUrl);
+      // Iniciar reprodução WebRTC WHEP com streamerId real
+      const streamerId = streamer?.id;
+      if (!streamerId) {
+        throw new Error('ID do streamer não encontrado');
+      }
+      
+      console.log(`Iniciando WebRTC WHEP para streamerId: ${streamerId}`);
+      const remoteStream = await webRTCService.startPlay(streamerId);
       
       if (remoteStream) {
         videoEl.srcObject = remoteStream;

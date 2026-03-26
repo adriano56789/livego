@@ -45,6 +45,7 @@ import levelRoutes from './routes/levelRoutes'; // NOVO - Sistema de Nível
 import virtualIPRoutes from './routes/virtualIPRoutes'; // NOVO - Sistema de IP Virtual
 import likesRoutes from './routes/likesRoutes'; // NOVO - Sistema de Likes
 import srsRoutes from './routes/srsRoutes'; // NOVO - API HTTP do SRS
+import webrtcRoutes from './routes/webrtcRoutes'; // NOVO - WebRTC WHIP/WHEP
 import UserStatusManager from './middleware/UserStatusManager';
 import { blockBase64Middleware } from './middleware/blockBase64';
 import { initializeDatabase } from './scripts/initDatabase'; // NOVO - Inicialização automática
@@ -163,6 +164,7 @@ app.use('/api', userStatusRoutes); // Rotas de status online do usuário
 app.use('/api/virtual-ip', virtualIPRoutes); // NOVO - Sistema de IP Virtual
 app.use('/api/virtual-room', virtualIPRoutes); // NOVO - Sistema de Salas Virtuais
 app.use('/api/srs', srsRoutes); // NOVO - API HTTP do SRS
+app.use('/api/webrtc', webrtcRoutes); // NOVO - WebRTC WHIP/WHEP
 // Disponibilizar io para as rotas
 app.set('io', io);
 

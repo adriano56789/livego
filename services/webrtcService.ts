@@ -55,21 +55,11 @@ export class WebRTCService {
       return newLines.join('\r\n') + '\r\n';
   }
 
-  // --- PUBLISH FLOW ---
+  // --- PUBLISH FLOW (WHIP) ---
 
-  public async startPublish(streamUrl: string, streamKey: string, mediaStream?: MediaStream, retryCount: number = 3): Promise<MediaStream> {
-    this.currentStreamId = streamKey;
+  public async startPublish(userId: string, mediaStream?: MediaStream, retryCount: number = 3): Promise<MediaStream> {
+    this.currentStreamId = userId;
     
-    // Construir URL baseada no ambiente
-    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-    const webrtcBase = import.meta.env?.VITE_SRS_WEBRTC_URL || 
-      (isLocal ? 'webrtc://localhost:8000/live' : 'webrtc://72.60.249.175:8000/live');
-    
-    if (streamUrl.startsWith('webrtc://')) {
-      this.currentStreamUrl = streamUrl;
-    } else {
-      this.currentStreamUrl = `${webrtcBase}/${streamKey}`;
-    }
     this.state = 'connecting';
     
     try {
@@ -131,9 +121,8 @@ export class WebRTCService {
       const finalOfferSdp = this.pc.localDescription?.sdp;
       if (!finalOfferSdp) throw new Error('Falha ao gerar SDP offer');
 
-
-      // 5. Enviar para nosso backend SRS
-      const response = await api.publishWebRTC(this.currentStreamUrl, finalOfferSdp, streamKey);
+      // 5. Enviar para backend usando WHIP (userId real)
+      const response = await api.publishWebRTC(userId, finalOfferSdp);
       
       if (response && response.code === 0 && response.sdp) {
           if (!this.pc) throw new Error('Conexão fechada durante negociação');
@@ -148,7 +137,7 @@ export class WebRTCService {
           this.state = 'connected';
           this.startStatsMonitoring();
       } else {
-          throw new Error('Falha no handshake SRS');
+          throw new Error('Falha no handshake WHIP');
       }
 
       return this.localStream;
@@ -156,7 +145,7 @@ export class WebRTCService {
     } catch (error) {
       if (retryCount > 0) {
           await new Promise(r => setTimeout(r, 2000));
-          return this.startPublish(streamUrl, streamKey, mediaStream, retryCount - 1);
+          return this.startPublish(userId, mediaStream, retryCount - 1);
       }
       this.state = 'failed';
       this.stop();
@@ -164,21 +153,11 @@ export class WebRTCService {
     }
   }
 
-  // --- PLAYBACK FLOW ---
+  // --- PLAYBACK FLOW (WHEP) ---
 
   public async startPlay(streamId: string, retryCount = 3): Promise<MediaStream> {
      this.currentStreamId = streamId;
      
-     // Construir URL baseada no ambiente
-     const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-     const webrtcBase = import.meta.env?.VITE_SRS_WEBRTC_URL || 
-       (isLocal ? 'webrtc://localhost:8000/live' : 'webrtc://72.60.249.175:8000/live');
-     
-     if (streamId.startsWith('webrtc://')) {
-       this.currentStreamUrl = streamId;
-     } else {
-       this.currentStreamUrl = `${webrtcBase}/${streamId}`;
-     }
      this.state = 'connecting';
      
      try {
@@ -216,8 +195,8 @@ export class WebRTCService {
         const finalOffer = this.pc.localDescription?.sdp;
         if (!finalOffer) throw new Error('Falha ao gerar SDP offer para playback');
 
-        // Enviar para nosso backend SRS
-        const response = await api.playWebRTC(this.currentStreamUrl, finalOffer);
+        // Enviar para backend usando WHEP (streamId real)
+        const response = await api.playWebRTC(streamId, finalOffer);
         
         if (response && response.code === 0 && response.sdp) {
              if (!this.pc) throw new Error('Conexão fechada durante negociação');
@@ -232,7 +211,7 @@ export class WebRTCService {
              this.state = 'connected';
              this.startStatsMonitoring();
         } else {
-             throw new Error('Falha no handshake SRS para playback');
+             throw new Error('Falha no handshake WHEP');
         }
 
         return this.remoteStream!;

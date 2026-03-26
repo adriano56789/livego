@@ -890,9 +890,8 @@ export const api = {
 
     // ... (rest of the code remains the same)
 
-    publishWebRTC: (streamUrl: string, sdp: string, streamKey?: string) => callApi<SRSResponse>('POST', '/api/streams/rtc/v1/publish', { streamUrl, sdp, streamKey }),
-
-    playWebRTC: (streamUrl: string, sdp: string) => callApi<SRSPlayResponse>('POST', '/api/streams/rtc/v1/play', { streamUrl, sdp }),
+    publishWebRTC: (userId: string, sdp: string) => callApi<any>('POST', '/api/webrtc/publish', { userId, sdp }),
+    playWebRTC: (streamId: string, sdp: string) => callApi<any>('POST', '/api/webrtc/play', { streamId, sdp }),
 
     stopWebRTC: (streamUrl: string) => callApi<SRSResponse>('DELETE', '/api/streams/rtc/v1/stop', { streamUrl }),
 

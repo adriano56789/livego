@@ -75,8 +75,14 @@ const WebVideoPlayer: React.FC<WebVideoPlayerProps> = ({
       const webrtcUrl = getWebRTCUrl();
       console.log('🔗 WebRTC URL:', webrtcUrl);
       
-      // Iniciar captura de câmera e envio via WebRTC
-      const mediaStream = await webRTCService.startPublish(webrtcUrl, streamer.streamKey || streamer.id);
+      // Iniciar captura de câmera e envio via WebRTC WHIP
+      const userId = currentUser?.id || streamer?.id;
+      if (!userId) {
+        throw new Error('ID do usuário não encontrado');
+      }
+      
+      console.log('🔗 Iniciando WebRTC WHIP para userId:', userId);
+      const mediaStream = await webRTCService.startPublish(userId);
       
       // Exibir preview local
       videoEl.srcObject = mediaStream;

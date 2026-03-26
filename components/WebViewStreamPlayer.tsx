@@ -135,17 +135,23 @@ const WebViewStreamPlayer: React.FC<WebViewStreamPlayerProps> = ({
         let streamingSuccess = false;
         let fallbackUsed = false;
         
-        // 1. Tentar WebRTC primeiro (melhor qualidade)
+        // 1. Tentar WebRTC WHIP primeiro (melhor qualidade)
         try {
-          console.log(' Tentando WebRTC (melhor qualidade)...');
+          console.log(' Tentando WebRTC WHIP (melhor qualidade)...');
           const { webRTCService } = await import('../services/webrtcService.js');
-          const webrtcUrl = getWebRTCUrl();
-          // Removido log sensível com URL WebRTC
           
-          await webRTCService.startPublish(webrtcUrl, streamer.streamKey || streamer.id, mediaStream);
+          // Usar userId real para WHIP (padrão SRS: app=live&stream={userId})
+          const userId = currentUser?.id || streamer?.id;
+          if (!userId) {
+            throw new Error('ID do usuário não encontrado');
+          }
+          
+          console.log(` Iniciando WebRTC WHIP para userId: ${userId}`);
+          
+          await webRTCService.startPublish(userId, mediaStream);
           streamingSuccess = true;
           setIsConnected(true);
-          // WebRTC funcionando - transmissão ativa para espectadores
+          console.log(' WebRTC WHIP funcionando - transmissão ativa para espectadores');
         } catch (webrtcError) {
           console.warn(' WebRTC falhou, ativando modo de compatibilidade:', webrtcError);
           fallbackUsed = true;

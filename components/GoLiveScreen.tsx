@@ -209,26 +209,26 @@ const GoLiveScreen: React.FC<GoLiveScreenProps> = ({ isOpen, onClose, onStartStr
 
     const startWebRTCPublish = async (streamId: string): Promise<MediaStream | null> => {
         try {
+            // ✅ Usar WHIP com userId real (padrão SRS)
+            const userId = currentUser?.id;
+            if (!userId) {
+                throw new Error('ID do usuário não encontrado');
+            }
+            
+            console.log('Iniciando WebRTC WHIP para userId:', userId);
+            
             if (videoRef.current && videoRef.current.srcObject) {
                 const prevStream = videoRef.current.srcObject as MediaStream;
                 prevStream.getTracks().forEach(t => t.stop());
             }
-
-            // 🔧 SINCRONIZAÇÃO: Usar variável de ambiente para URL do SRS (não hardcoded)
-            const srsWebrtcBase = import.meta.env?.VITE_SRS_WEBRTC_URL || 'wss://72.60.249.175:8000/live';
-            const streamUrl = `${srsWebrtcBase}/${streamId}`;
             
-            // ✅ Obter streamKey real do draft
-            const streamKey = draftStream?.streamKey || streamId;
+            const mediaStream = await webRTCService.startPublish(userId);
             
-            
-            const mediaStream = await webRTCService.startPublish(streamUrl, streamKey);
-
             if (videoRef.current) {
                 videoRef.current.srcObject = mediaStream;
             }
-
-            addToast(ToastType.Success, "Conexão WebRTC estabelecida via TURN!");
+            
+            addToast(ToastType.Success, "Conexão WebRTC estabelecida via WHIP!");
             isStartingStream.current = true;
             return mediaStream;
         } catch (rtcError) {

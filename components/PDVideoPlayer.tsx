@@ -279,7 +279,14 @@ const PDVideoPlayer: React.FC<PDVideoPlayerProps> = ({
         { iceTransportPolicy: 'relay', bundlePolicy: 'max-bundle' } : 
         { iceTransportPolicy: 'all', bundlePolicy: 'balanced' };
       
-      const remoteStream = await webRTCService.startPlay(webrtcUrl);
+      // Usar WHEP com streamerId real (padrão SRS)
+      const streamerId = streamer?.id;
+      if (!streamerId) {
+        throw new Error('ID do streamer não encontrado');
+      }
+      
+      console.log('🔗 Iniciando WebRTC WHEP para streamerId:', streamerId);
+      const remoteStream = await webRTCService.startPlay(streamerId);
       
       if (remoteStream) {
         videoEl.srcObject = remoteStream;

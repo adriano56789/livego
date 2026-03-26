@@ -1,20 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
     <!-- Base application theme. -->
-    <style name="Theme.LiveGo" parent="Theme.Material3.DayNight">
-        <!-- Primary brand color. -->
-        <item name="colorPrimary">@color/purple_500</item>
+    <style name="Theme.Livenza" parent="Theme.Material3.DayNight">
+        <!-- Primary brand color - Livenza -->
+        <item name="colorPrimary">#FF6B35</item>
         <item name="colorOnPrimary">@color/white</item>
         <!-- Secondary brand color. -->
-        <item name="colorSecondary">@color/teal_200</item>
+        <item name="colorSecondary">#FF8C42</item>
         <item name="colorOnSecondary">@color/black</item>
         <!-- Status bar color. -->
-        <item name="android:statusBarColor" tools:targetApi="l">?attr/colorPrimaryVariant</item>
+        <item name="android:statusBarColor" tools:targetApi="l">#FF6B35</item>
         <!-- Customize your theme here. -->
+        <item name="android:navigationBarColor">#FF6B35</item>
+        <item name="android:windowLightStatusBar">true</item>
     </style>
 
-    <style name="Theme.LiveGo.NoActionBar">
+    <style name="Theme.Livenza.NoActionBar">
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
+        <item name="android:statusBarColor">#FF6B35</item>
+        <item name="android:navigationBarColor">#FF6B35</item>
     </style>
 </resources>

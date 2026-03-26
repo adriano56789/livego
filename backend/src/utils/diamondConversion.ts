@@ -13,13 +13,19 @@ export const PLATFORM_FEE_RATE = 0.20;
 
 /**
  * Calcular valor em BRL baseado nos diamantes usando a tabela de pacotes
- * Calcula baseado em pacotes completos + proporção do pacote parcial
+ * Prioriza pacotes exatos, depois calcula por combinação de pacotes
  */
 export const calculateBRLFromDiamonds = (diamonds: number): number => {
     if (diamonds <= 0) return 0;
     
-    // Encontrar pacotes em ordem crescente para cálculo correto
-    const sortedPackages = [...DIAMOND_PACKAGES].sort((a, b) => a.diamonds - b.diamonds);
+    // Primeiro, verificar se há um pacote exato
+    const exactPackage = DIAMOND_PACKAGES.find(pkg => pkg.diamonds === diamonds);
+    if (exactPackage) {
+        return exactPackage.brl;
+    }
+    
+    // Se não houver pacote exato, calcular por combinação de pacotes (do maior para o menor)
+    const sortedPackages = [...DIAMOND_PACKAGES].sort((a, b) => b.diamonds - a.diamonds);
     
     let remainingDiamonds = diamonds;
     let totalBRL = 0;
@@ -37,7 +43,7 @@ export const calculateBRLFromDiamonds = (diamonds: number): number => {
     
     // Se ainda restarem diamantes, usar o menor pacote para o restante
     if (remainingDiamonds > 0 && sortedPackages.length > 0) {
-        const smallestPackage = sortedPackages[0];
+        const smallestPackage = sortedPackages[sortedPackages.length - 1];
         const ratePerDiamond = smallestPackage.brl / smallestPackage.diamonds;
         totalBRL += remainingDiamonds * ratePerDiamond;
     }

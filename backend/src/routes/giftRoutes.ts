@@ -253,8 +253,8 @@ async function processGiftSend(fromUserId: string, toUserId: string, giftId: str
                         name: gift.name,
                         icon: gift.icon,
                         price: giftPrice,
-                        rarity: gift.rarity || 'common',
-                        animation: gift.animation || null
+                        rarity: (gift as any).rarity || 'common',
+                        animation: (gift as any).animation || null
                     },
                     quantity: quantity,
                     totalValue: totalCost,

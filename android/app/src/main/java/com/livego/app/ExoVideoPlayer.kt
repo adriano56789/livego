@@ -6,20 +6,9 @@ import android.view.View
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.exoplayer.dash.DashMediaSource
+import androidx.media3.exoplayer.hls.HlsMediaSource
 import androidx.media3.ui.PlayerView
 import androidx.media3.datasource.DefaultDataSource
-import androidx.media3.datasource.DefaultHttpDataSource
-import androidx.media3.exoplayer.hls.HlsMediaSource
-import androidx.media3.exoplayer.DefaultLoadControl
-import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
-import androidx.media3.exoplayer.trackselection.AdaptiveTrackSelection
-import androidx.media3.exoplayer.upstream.BandwidthMeter
-import androidx.media3.exoplayer.upstream.DefaultBandwidthMeter
-import androidx.media3.exoplayer.source.MediaSource
-import androidx.media3.exoplayer.source.MergingMediaSource
-import androidx.media3.exoplayer.source.SingleSampleMediaSource
-import androidx.media3.extractor.DefaultExtractorsFactory
 
 /**
  * Player de vídeo otimizado para streaming WebRTC/HLS usando Media3 ExoPlayer
@@ -30,41 +19,12 @@ class ExoVideoPlayer(private val context: Context) {
     private var exoPlayer: ExoPlayer? = null
     private var playerView: PlayerView? = null
     private var isPlaying = false
-    private var bandwidthMeter: BandwidthMeter? = null
     
     /**
-     * Inicializa o player de vídeo com suporte a multi-bitrate
+     * Inicializa o player de vídeo
      */
     fun initializePlayer(): ExoPlayer {
-        // Configurar BandwidthMeter para adaptação de qualidade
-        bandwidthMeter = DefaultBandwidthMeter.Builder(context).build()
-        
-        // Configurar TrackSelector com suporte a adaptive streaming
-        val trackSelectorParameters = DefaultTrackSelector.Parameters.Builder(context)
-            .setMaxVideoSizeSd() // Limitar a SD para melhor performance
-            .setAllowVideoMixedMimeTypeAdaptiveness(true) // Permitir adaptação entre codecs
-            .setAllowVideoNonSeamlessAdaptiveness(true) // Permitir adaptação não-seamless
-            .setTunnelingEnabled(false) // Desabilitar tunneling para melhor compatibilidade
-            .build()
-        
-        val trackSelector = DefaultTrackSelector(context, trackSelectorParameters)
-        
-        // Configurar LoadControl para buffering otimizado
-        val loadControl = DefaultLoadControl.Builder()
-            .setBufferDurationsMs(
-                DefaultLoadControl.DEFAULT_MIN_BUFFER_MS,
-                30000, // 30s max buffer (aumentado para melhor estabilidade)
-                DefaultLoadControl.DEFAULT_BUFFER_FOR_PLAYBACK_MS,
-                DefaultLoadControl.DEFAULT_BUFFER_FOR_PLAYBACK_AFTER_REBUFFER_MS
-            )
-            .build()
-        
-        exoPlayer = ExoPlayer.Builder(context)
-            .setLoadControl(loadControl)
-            .setTrackSelector(trackSelector)
-            .setBandwidthMeter(bandwidthMeter!!)
-            .build()
-            
+        exoPlayer = ExoPlayer.Builder(context).build()
         return exoPlayer!!
     }
     
@@ -97,7 +57,7 @@ class ExoVideoPlayer(private val context: Context) {
     fun playHLSStream(hlsUrl: String) {
         exoPlayer?.let { player ->
             try {
-                android.util.Log.d("ExoVideoPlayer", "Tocando HLS Multi-bitrate: $hlsUrl")
+                android.util.Log.d("ExoVideoPlayer", "Tocando HLS Multi-bitrate: " + hlsUrl)
                 
                 // Tentar master playlist para multi-bitrate primeiro
                 val masterUrl = if (hlsUrl.contains(".m3u8") && !hlsUrl.contains("master")) {
@@ -106,7 +66,7 @@ class ExoVideoPlayer(private val context: Context) {
                     hlsUrl
                 }
                 
-                android.util.Log.d("ExoVideoPlayer", "URL Master: $masterUrl")
+                android.util.Log.d("ExoVideoPlayer", "URL Master: " + masterUrl)
                 
                 val dataSourceFactory = DefaultDataSource.Factory(context)
                 val hlsMediaSource = HlsMediaSource.Factory(dataSourceFactory)
@@ -117,16 +77,13 @@ class ExoVideoPlayer(private val context: Context) {
                 player.playWhenReady = true
                 isPlaying = true
                 
-                // Configurar listener para monitorar mudanças de qualidade
-                setupQualityMonitoring(player)
-                
                 android.util.Log.d("ExoVideoPlayer", "HLS multi-bitrate player iniciado com sucesso")
             } catch (e: Exception) {
-                android.util.Log.e("ExoVideoPlayer", "Erro ao reproduzir HLS multi-bitrate: $hlsUrl", e)
+                android.util.Log.e("ExoVideoPlayer", "Erro ao reproduzir HLS multi-bitrate: " + hlsUrl, e)
                 
                 // Fallback para single-bitrate
                 try {
-                    android.util.Log.d("ExoVideoPlayer", "Tentando fallback para single-bitrate: $hlsUrl")
+                    android.util.Log.d("ExoVideoPlayer", "Tentando fallback para single-bitrate: " + hlsUrl)
                     val dataSourceFactory = DefaultDataSource.Factory(context)
                     val hlsMediaSource = HlsMediaSource.Factory(dataSourceFactory)
                         .createMediaSource(MediaItem.fromUri(Uri.parse(hlsUrl)))
@@ -138,59 +95,11 @@ class ExoVideoPlayer(private val context: Context) {
                     
                     android.util.Log.d("ExoVideoPlayer", "HLS single-bitrate fallback iniciado")
                 } catch (fallbackError: Exception) {
-                    android.util.Log.e("ExoVideoPlayer", "Erro no fallback HLS: $hlsUrl", fallbackError)
+                    android.util.Log.e("ExoVideoPlayer", "Erro no fallback HLS: " + hlsUrl, fallbackError)
                     e.printStackTrace()
                 }
             }
         }
-    }
-    
-    /**
-     * Configura monitoramento de qualidade adaptativa
-     */
-    private fun setupQualityMonitoring(player: ExoPlayer) {
-        player.addListener(object : Player.Listener {
-            override fun onPlaybackStateChanged(playbackState: Int) {
-                when (playbackState) {
-                    Player.STATE_READY -> {
-                        // Obter informações da qualidade atual
-                        val currentTrack = player.currentTrackGroup
-                        val bandwidth = bandwidthMeter?.bitrateEstimate ?: 0L
-                        
-                        android.util.Log.d("ExoVideoPlayer", "🎯 Qualidade atual:")
-                        android.util.Log.d("ExoVideoPlayer", "   Track: ${currentTrack?.format}")
-                        android.util.Log.d("ExoVideoPlayer", "   Bandwidth: ${bandwidth / 1000}kbps")
-                        android.util.Log.d("ExoVideoPlayer", "   Resolução: ${currentTrack?.format?.height}p")
-                    }
-                    Player.STATE_BUFFERING -> {
-                        android.util.Log.d("ExoVideoPlayer", "🔄 Buffering...")
-                    }
-                    Player.STATE_ENDED -> {
-                        android.util.Log.d("ExoVideoPlayer", "🏁 Reprodução finalizada")
-                    }
-                    else -> {}
-                }
-            }
-            
-            override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
-                android.util.Log.e("ExoVideoPlayer", "❌ Erro de reprodução: ${error.message}")
-            }
-        })
-    }
-    
-    /**
-     * Obtém informações da qualidade atual
-     */
-    fun getCurrentQualityInfo(): Map<String, Any> {
-        val track = exoPlayer?.currentTrackGroup
-        val bandwidth = bandwidthMeter?.bitrateEstimate ?: 0L
-        
-        return mapOf(
-            "resolution" to "${track?.format?.height ?: 0}p",
-            "bitrate" to "${bandwidth / 1000}kbps",
-            "codec" to (track?.format?.codecs ?: "unknown"),
-            "fps" to (track?.format?.frameRate ?: 0.0f)
-        )
     }
     
     /**
@@ -204,7 +113,8 @@ class ExoVideoPlayer(private val context: Context) {
      * Verifica se URL é HLS
      */
     fun isHLSUrl(url: String): Boolean {
-        return url.endsWith(".m3u8") || url.contains("hls") || url.contains("/live/")
+        return url.endsWith(".m3u8") || url.contains(".m3u8") || 
+               url.startsWith("http") && (url.contains("playlist") || url.contains("hls"))
     }
     
     /**
@@ -276,7 +186,7 @@ class ExoVideoPlayer(private val context: Context) {
      */
     fun handlePlaybackError(error: String) {
         // Log de erro para debugging
-        android.util.Log.e("ExoVideoPlayer", "Playback error: $error")
+        android.util.Log.e("ExoVideoPlayer", "Playback error: " + error)
         
         // Tentar reiniciar reprodução automaticamente
         exoPlayer?.let { player ->
@@ -315,9 +225,9 @@ class ExoVideoPlayer(private val context: Context) {
                     when {
                         streamId.contains("live") -> {
                             // Para HLS, tentar master playlist primeiro
-                            "https://72.60.249.175:8080/live/$streamId/master.m3u8"
+                            "https://72.60.249.175:8080/live/" + streamId + "/master.m3u8"
                         }
-                        else -> "webrtc://72.60.249.175:8000/live/$streamId"
+                        else -> "webrtc://72.60.249.175:8000/live/" + streamId
                     }
                 }
                 else -> url
@@ -331,3 +241,4 @@ class ExoVideoPlayer(private val context: Context) {
             return isHLSUrl(url) && (url.contains("master") || url.contains("/live/"))
         }
     }
+}

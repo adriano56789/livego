@@ -4,8 +4,31 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <path android:fillColor="#3DDC84"
-          android:pathData="M0,0h108v108h-108z"/>
-    <path android:fillColor="#00000000"
-          android:pathData="M9,0L9,108L99,108L99,0L9,0ZM93,6L93,102L15,102L15,6L93,6Z"/>
+    
+    <!-- Background circle -->
+    <path
+        android:fillColor="#FF6B35"
+        android:pathData="M54,54m-50,0a50,50 0,1,0 100,0a50,50 0,1,0 -100,0"/>
+    
+    <!-- Camera icon -->
+    <path
+        android:fillColor="@android:color/white"
+        android:pathData="M54,30c-2.76,0 -5,2.24 -5,5s2.24,5 5,5 5,-2.24 5,-5 -2.24,-5 -5,-5zM54,25c-1.66,0 -3,1.34 -3,3s1.34,3 3,3 3,-1.34 3,-3 -1.34,-3 -3,-3zM54,20c-0.55,0 -1,0.45 -1,1s0.45,1 1,1 1,-0.45 1,-1 -0.45,-1 -1,-1zM54,15c-0.55,0 -1,0.45 -1,1s0.45,1 1,1 1,-0.45 1,-1 -0.45,-1 -1,-1z"/>
+    
+    <!-- Broadcast waves -->
+    <path
+        android:fillColor="@android:color/white"
+        android:pathData="M35,45c-1.1,0 -2,0.9 -2,2s0.9,2 2,2 2,-0.9 2,-2 -0.9,-2 -2,-2zM35,50c-1.1,0 -2,0.9 -2,2s0.9,2 2,2 2,-0.9 2,-2 -0.9,-2 -2,-2zM35,55c-1.1,0 -2,0.9 -2,2s0.9,2 2,2 2,-0.9 2,-2 -0.9,-2 -2,-2zM73,45c1.1,0 2,0.9 2,2s-0.9,2 -2,2 -2,-0.9 -2,-2 0.9,-2 2,-2zM73,50c1.1,0 2,0.9 2,2s-0.9,2 -2,2 -2,-0.9 -2,-2 0.9,-2 2,-2zM73,55c1.1,0 2,0.9 2,2s-0.9,2 -2,2 -2,-0.9 -2,-2 0.9,-2 2,-2z"/>
+    
+    <!-- Live indicator -->
+    <circle
+        android:fillColor="@android:color/white"
+        android:cx="54"
+        android:cy="70"
+        android:r="3"/>
+    
+    <!-- Livenza text (simplified) -->
+    <path
+        android:fillColor="@android:color/white"
+        android:pathData="M40,85h28v2H40v-2zM40,88h28v2H40v-2zM40,91h28v2H40v-2z"/>
 </vector>

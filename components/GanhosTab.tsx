@@ -43,7 +43,7 @@ const GanhosTab: React.FC<GanhosTabProps> = ({ onConfigure, currentUser, updateU
                 updateUser({ ...currentUser, withdrawal_method: data.withdrawal_method });
             }
             
-            // Auto-calcular para o valor máximo disponível
+            // Auto-calcular para o valor máximo disponível SEMPRE que carregar
             if (data.available_diamonds > 0) {
                 const amount = data.available_diamonds.toString();
                 setWithdrawAmount(amount);
@@ -53,11 +53,16 @@ const GanhosTab: React.FC<GanhosTabProps> = ({ onConfigure, currentUser, updateU
                 api.calculateWithdrawal(data.available_diamonds)
                     .then((result) => {
                         setCalculation(result);
+                        console.log('[GanhosTab] Cálculo automático carregado:', result);
                     })
                     .catch((error) => {
                         safeError('[GanhosTab] Erro ao calcular saque automático:', error);
                     })
                     .finally(() => setIsCalculating(false));
+            } else {
+                // Se não tiver diamantes, limpar valores
+                setWithdrawAmount('');
+                setCalculation(null);
             }
         } catch (err) {
             addToast(ToastType.Error, (err as Error).message || "Falha ao carregar informações de ganhos.");
@@ -186,22 +191,23 @@ const GanhosTab: React.FC<GanhosTabProps> = ({ onConfigure, currentUser, updateU
 
     const formatCurrency = (value: number | undefined) => `R$ ${(value ?? 0).toFixed(2).replace('.', ',')}`;
 
-    // Só mostrar displayData se houver cálculo ou se o usuário já digitou um valor válido
-    const shouldShowCalculation = Boolean(calculation) || (withdrawAmount && !isNaN(parseInt(withdrawAmount)) && parseInt(withdrawAmount) > 0);
+    // Sempre mostrar cálculo se houver earningsInfo (mesmo carregando)
+    const shouldShowCalculation = earningsInfo && earningsInfo.available_diamonds > 0;
     
+    // Usar valores do backend (calculation) ou fallback para valores básicos
     const displayData = calculation || {
-        diamonds: (parseInt(withdrawAmount) || earningsInfo?.available_diamonds) ?? 0,
-        gross_brl: 0,
-        platform_fee_brl: 0,
-        net_brl: 0,
+        diamonds: earningsInfo?.available_diamonds ?? 0,
+        gross_brl: earningsInfo?.brlValue ?? 0,
+        platform_fee_brl: earningsInfo?.brlValue ? (earningsInfo.brlValue * 0.20) : 0,
+        net_brl: earningsInfo?.brlValue ? (earningsInfo.brlValue * 0.80) : 0,
         breakdown: {
-            conversion: `${(parseInt(withdrawAmount) || earningsInfo?.available_diamonds) ?? 0} diamantes = R$0.00`,
-            fee: 'Taxa da plataforma (20%): R$0.00',
-            final: 'Valor a receber: R$0.00'
+            conversion: `${earningsInfo?.available_diamonds ?? 0} diamantes = R$ ${(earningsInfo?.brlValue ?? 0).toFixed(2).replace('.', ',')}`,
+            fee: `Taxa da plataforma (20%): R$ ${earningsInfo?.brlValue ? (earningsInfo.brlValue * 0.20).toFixed(2).replace('.', ',') : '0,00'}`,
+            final: `Valor a receber: R$ ${earningsInfo?.brlValue ? (earningsInfo.brlValue * 0.80).toFixed(2).replace('.', ',') : '0,00'}`
         }
     };
     
-    // Se temos calculation, usar os valores reais da API
+    // Se temos calculation do backend, usar os valores reais da API
     if (calculation) {
         displayData.gross_brl = calculation.gross_brl;
         displayData.platform_fee_brl = calculation.platform_fee_brl;

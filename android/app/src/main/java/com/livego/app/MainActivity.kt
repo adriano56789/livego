@@ -18,6 +18,10 @@ import androidx.media3.ui.PlayerView
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import com.livego.app.ExoVideoPlayer
+import com.livego.app.PDVOverlayManager
+import androidx.cardview.widget.CardView
+import androidx.constraintlayout.widget.ConstraintLayout
+import android.widget.TextView
 
 class MainActivity : AppCompatActivity() {
 
@@ -25,6 +29,14 @@ class MainActivity : AppCompatActivity() {
     private lateinit var progressBar: ProgressBar
     private lateinit var videoPlayerView: PlayerView
     private var exoVideoPlayer: ExoVideoPlayer? = null
+    private var pdvOverlayManager: PDVOverlayManager? = null
+    
+    // Views do PDV
+    private lateinit var pdvOverlay: ConstraintLayout
+    private lateinit var donationButton: CardView
+    private lateinit var donationCounter: CardView
+    private lateinit var donationCount: TextView
+    private lateinit var liveIndicator: CardView
 
     companion object {
         private const val PERMISSION_REQUEST_CODE = 1001
@@ -59,9 +71,17 @@ class MainActivity : AppCompatActivity() {
         webView = findViewById(R.id.webView)
         progressBar = findViewById(R.id.progressBar)
         videoPlayerView = findViewById(R.id.videoPlayerView)
+        
+        // Inicializar views do PDV
+        pdvOverlay = findViewById(R.id.pdvOverlay)
+        donationButton = findViewById(R.id.donationButton)
+        donationCounter = findViewById(R.id.donationCounter)
+        donationCount = findViewById(R.id.donationCount)
+        liveIndicator = findViewById(R.id.liveIndicator)
 
         setupWebView()
         setupExoPlayer()
+        setupPDVOverlay()
         checkAndRequestPermissions()
     }
 
@@ -96,6 +116,7 @@ class MainActivity : AppCompatActivity() {
                 setContentView(R.layout.activity_main)
                 setupWebView() // Reconfigurar ao voltar
                 setupExoPlayer() // Reconfigurar player ao voltar
+                setupPDVOverlay() // Reconfigurar PDV ao voltar
             }
             
             // Progresso de vídeo para lives
@@ -105,11 +126,14 @@ class MainActivity : AppCompatActivity() {
             }
         }
         
-        // Configurar WebViewClient para manter navegação interna
+        // Configurar WebViewClient para manter navegação interna e detectar lives
         webView.webViewClient = object : WebViewClient() {
             override fun onPageStarted(view: WebView?, url: String?, favicon: android.graphics.Bitmap?) {
                 super.onPageStarted(view, url, favicon)
                 progressBar.visibility = View.VISIBLE
+                
+                // Verificar se é uma página de live ao começar carregamento
+                url?.let { checkForLiveStream(it) }
             }
 
             override fun onPageFinished(view: WebView?, url: String?) {
@@ -131,8 +155,28 @@ class MainActivity : AppCompatActivity() {
             
             override fun shouldOverrideUrlLoading(view: WebView?, url: String?): Boolean {
                 // Manter tudo dentro do WebView
-                url?.let { view?.loadUrl(it) }
+                url?.let { 
+                    view?.loadUrl(it)
+                    // Verificar se nova URL é uma live
+                    checkForLiveStream(it)
+                    
+                    // Se não for mais uma live, limpar o player
+                    if (!isLiveStreamUrl(it)) {
+                        clearVideoPlayer()
+                    }
+                }
                 return true
+            }
+            
+            /**
+             * Verifica se URL é de live
+             */
+            private fun isLiveStreamUrl(url: String): Boolean {
+                return url.contains("/live/") || 
+                       url.contains("stream") || 
+                       url.contains("live/") ||
+                       url.contains("watch") ||
+                       url.contains("broadcast")
             }
         }
 
@@ -342,8 +386,49 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * Configura o overlay PDV
+     */
+    private fun setupPDVOverlay() {
+        pdvOverlayManager = PDVOverlayManager.create(this)
+        pdvOverlayManager?.initialize(
+            pdvOverlay,
+            donationButton,
+            donationCounter,
+            donationCount,
+            liveIndicator
+        )
+        
+        // Configurar listener para doações
+        pdvOverlayManager?.setOnDonationClickListener {
+            handleDonationClick()
+        }
+        
+        android.util.Log.d("MainActivity", "PDV Overlay configurado")
+    }
+    
+    /**
+     * Manipula clique no botão de doação
+     */
+    private fun handleDonationClick() {
+        android.util.Log.d("MainActivity", "Doação solicitada")
+        
+        // Aqui você pode integrar com seu sistema de pagamentos
+        // Por enquanto, apenas simula uma doação
+        pdvOverlayManager?.addDonation()
+        pdvOverlayManager?.showDonationSuccessAnimation()
+        
+        // Mostrar toast de exemplo
+        android.widget.Toast.makeText(
+            this,
+            "🎉 Doação recebida! Obrigado pelo apoio!",
+            android.widget.Toast.LENGTH_SHORT
+        ).show()
+    }
+
     override fun onDestroy() {
         exoVideoPlayer?.release()
+        pdvOverlayManager?.release()
         webView.destroy()
         super.onDestroy()
     }
@@ -402,6 +487,87 @@ class MainActivity : AppCompatActivity() {
     }
 
     /**
+     * Verifica se a página atual é uma live e configura o player automaticamente
+     */
+    private fun checkForLiveStream(url: String) {
+        android.util.Log.d("MainActivity", "Verificando se é live: $url")
+        
+        // Padrões de URL que indicam live/streaming
+        val isLiveStream = url.contains("/live/") || 
+                           url.contains("stream") || 
+                           url.contains("live/") ||
+                           url.contains("watch") ||
+                           url.contains("broadcast")
+        
+        if (isLiveStream) {
+            android.util.Log.d("MainActivity", "Live detectada, preparando player automático")
+            
+            // Extrair stream ID da URL
+            val streamId = extractStreamIdFromUrl(url)
+            if (streamId != null) {
+                // Construir URL HLS automaticamente
+                val streamUrl = buildStreamUrl(streamId)
+                android.util.Log.d("MainActivity", "Stream URL construída: $streamUrl")
+                
+                // Configurar player automaticamente após um pequeno delay
+                webView.postDelayed({
+                    setupVideoPlayerForStream(streamUrl)
+                }, 1000) // 1 segundo de delay para garantir que a página carregou
+            }
+        }
+    }
+    
+    /**
+     * Extrai stream ID da URL
+     */
+    private fun extractStreamIdFromUrl(url: String): String? {
+        return try {
+            when {
+                url.contains("/live/") -> {
+                    val parts = url.split("/live/")
+                    if (parts.size > 1) {
+                        val afterLive = parts[1]
+                        afterLive.split("?")[0].split("/")[0] // Remove query params e paths extras
+                    } else null
+                }
+                url.contains("stream=") -> {
+                    val regex = Regex("stream=([^&]+)")
+                    val match = regex.find(url)
+                    match?.groupValues?.get(1)
+                }
+                url.contains("/watch/") -> {
+                    val parts = url.split("/watch/")
+                    if (parts.size > 1) {
+                        parts[1].split("?")[0].split("/")[0]
+                    } else null
+                }
+                else -> null
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("MainActivity", "Erro ao extrair stream ID: $e")
+            null
+        }
+    }
+    
+    /**
+     * Constrói URL HLS para o stream ID
+     */
+    private fun buildStreamUrl(streamId: String): String {
+        // Detectar se é ambiente local ou produção baseado na URL atual
+        val currentUrl = webView.url ?: ""
+        val isLocal = currentUrl.contains("localhost") || currentUrl.contains("127.0.0.1") || currentUrl.contains("192.168.")
+        
+        val baseUrl = if (isLocal) {
+            "http://localhost:8080/live/$streamId/master.m3u8"
+        } else {
+            "https://livego.store:8080/live/$streamId/master.m3u8"
+        }
+        
+        android.util.Log.d("MainActivity", "URL base: $baseUrl (local: $isLocal)")
+        return baseUrl
+    }
+
+    /**
      * Configura o player de vídeo para stream específica
      */
     private fun setupVideoPlayerForStream(streamUrl: String) {
@@ -429,15 +595,11 @@ class MainActivity : AppCompatActivity() {
                     exoVideoPlayer?.playHLSStream(streamUrl)
                     showVideoPlayer()
                     
-                    // Mostrar informações de qualidade
-                    val qualityInfo = exoVideoPlayer?.getCurrentQualityInfo()
-                    android.util.Log.d("MainActivity", "🎯 Qualidade inicial: $qualityInfo")
+                    // Mostrar PDV overlay para HLS
+                    pdvOverlayManager?.showOverlay()
+                    pdvOverlayManager?.setLiveStatus(true)
                     
-                    android.widget.Toast.makeText(
-                        this,
-                        "🎥 HLS Multi-bitrate ativo",
-                        android.widget.Toast.LENGTH_SHORT
-                    ).show()
+                    android.util.Log.d("MainActivity", "🎥 HLS Multi-bitrate com PDV ativo")
                 }
                 else -> {
                     android.util.Log.d("MainActivity", "Stream não reconhecido, tentando HLS: $streamUrl")
@@ -446,6 +608,10 @@ class MainActivity : AppCompatActivity() {
                     exoVideoPlayer?.setupPlayerView(videoPlayerView)
                     exoVideoPlayer?.playHLSStream(streamUrl)
                     showVideoPlayer()
+                    
+                    // Mostrar PDV overlay para fallback
+                    pdvOverlayManager?.showOverlay()
+                    pdvOverlayManager?.setLiveStatus(true)
                 }
             }
             
@@ -464,6 +630,7 @@ class MainActivity : AppCompatActivity() {
      */
     private fun showVideoPlayer() {
         videoPlayerView.visibility = View.VISIBLE
+        android.util.Log.d("MainActivity", "Player de vídeo visível")
     }
 
     /**
@@ -471,6 +638,17 @@ class MainActivity : AppCompatActivity() {
      */
     private fun hideVideoPlayer() {
         videoPlayerView.visibility = View.GONE
+        pdvOverlayManager?.hideOverlay()
+        android.util.Log.d("MainActivity", "Player de vídeo escondido")
+    }
+    
+    /**
+     * Limpa o player quando sai de uma live
+     */
+    private fun clearVideoPlayer() {
+        exoVideoPlayer?.release()
+        hideVideoPlayer()
+        android.util.Log.d("MainActivity", "Player limpo")
     }
 
     /**

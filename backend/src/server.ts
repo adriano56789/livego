@@ -41,6 +41,7 @@ import transactionProtectionRoutes from './routes/transactionProtectionRoutes';
 import zoomRoutes from './routes/zoomRoutes';
 import userStatusRoutes from './routes/userStatusRoutes';
 import levelRoutes from './routes/levelRoutes'; // NOVO - Sistema de Nível
+import virtualIPRoutes from './routes/virtualIPRoutes'; // NOVO - Sistema de IP Virtual
 import UserStatusManager from './middleware/UserStatusManager';
 import { blockBase64Middleware } from './middleware/blockBase64';
 import { initializeDatabase } from './scripts/initDatabase'; // NOVO - Inicialização automática
@@ -155,6 +156,8 @@ app.use('/api/transaction-protection', transactionProtectionRoutes); // Rotas de
 app.use('/api/zoom', zoomRoutes); // Rotas de configurações de zoom
 app.use('/api/level', levelRoutes); // NOVO - Sistema de Nível
 app.use('/api', userStatusRoutes); // Rotas de status online do usuário
+app.use('/api/virtual-ip', virtualIPRoutes); // NOVO - Sistema de IP Virtual
+app.use('/api/virtual-room', virtualIPRoutes); // NOVO - Sistema de Salas Virtuais
 // Disponibilizar io para as rotas
 app.set('io', io);
 
@@ -189,6 +192,9 @@ app.get('*', (req, res) => {
 });
 
 // --- WebSocket Logic ---
+// Importar o gerenciador de IPs virtuais
+import { virtualIPManager } from './services/VirtualIPManager';
+
 // Map baseado em userId para evitar duplicatas e controlar múltiplas conexões
 const onlineUsers = new Map<string, {
     userId: string;
@@ -202,6 +208,12 @@ const socketToUser = new Map<string, string>();
 
 io.on('connection', (socket) => {
     console.log(`🔌 New WebSocket connection: ${socket.id}`);
+    
+    // Obter IP real do cliente
+    const realIP = socket.handshake.address || 
+                   socket.handshake.headers['x-forwarded-for'] || 
+                   socket.handshake.headers['x-real-ip'] || 
+                   'unknown';
 
     socket.on('join_stream', async (data: { userId: string; streamId: string }) => {
         try {
@@ -225,10 +237,25 @@ io.on('connection', (socket) => {
 
             console.log(`👤 Usuário ${userId} entrando na stream ${streamId} via WebSocket (socket: ${socket.id})`);
 
-            // Mapear socket para usuário
+            // 🔥 NOVO: Registrar usuário com IP virtual
+            const virtualUser = virtualIPManager.registerUser(userId, realIP as string, socket.id);
+            console.log(`🌐 IP Virtual atribuído: ${virtualUser.virtualIP} (IP real: ${realIP})`);
+
+            // Verificar se existe sala virtual para esta stream
+            let virtualRoom = virtualIPManager.getRoomByStreamId(streamId);
+            if (!virtualRoom) {
+                // Criar sala virtual se não existir
+                virtualRoom = virtualIPManager.createRoom(streamId, userId);
+                console.log(`🏠 Sala virtual criada: ${virtualRoom.roomCode} para stream ${streamId}`);
+            }
+
+            // Entrar na sala virtual
+            virtualIPManager.joinRoom(userId, virtualRoom.roomId);
+
+            // Mapear socket para usuário (sistema legado)
             socketToUser.set(socket.id, userId);
 
-            // Verificar se usuário já está online
+            // Verificar se usuário já está online (sistema legado)
             let userEntry = onlineUsers.get(userId);
             const isFirstConnection = !userEntry;
             const isChangingStream = userEntry && userEntry.streamId !== streamId;
@@ -255,7 +282,7 @@ io.on('connection', (socket) => {
                 userEntry.lastSeen = new Date();
             }
 
-            // Entrar na sala do Socket.IO
+            // Entrar na sala do Socket.IO (legado)
             socket.join(streamId);
 
             // Atualizar status no banco (apenas na primeira conexão ou mudança de stream)
@@ -268,13 +295,16 @@ io.on('connection', (socket) => {
                 });
             }
 
-            // DESABILITADO: Eventos user_joined/user_left causando spam
-            // Apenas online_users_updated é suficiente para atualizar UI
-            // if (isFirstConnection || isChangingStream) {
-            //     socket.to(streamId).emit('user_joined', { userId, streamId });
-            // }
+            // 🔥 NOVO: Enviar lista de participantes com IPs virtuais
+            const participants = virtualIPManager.getRoomParticipants(virtualRoom.roomId);
+            io.to(streamId).emit('virtual_participants_updated', {
+                streamId,
+                roomCode: virtualRoom.roomCode,
+                participants,
+                count: participants.length
+            });
 
-            // Enviar lista atualizada de usuários online para todos na stream
+            // Enviar lista atualizada de usuários online (legado)
             const onlineUsersInStream = Array.from(onlineUsers.values())
                 .filter(user => user.streamId === streamId)
                 .map(user => ({ userId: user.userId, lastSeen: user.lastSeen }));
@@ -285,7 +315,7 @@ io.on('connection', (socket) => {
                 count: onlineUsersInStream.length
             });
 
-            console.log(`✅ Usuário ${userId} conectado à stream ${streamId} (sockets: ${userEntry.socketIds.size})`);
+            console.log(`✅ Usuário ${userId} conectado à stream ${streamId} (sockets: ${userEntry.socketIds.size}) - IP Virtual: ${virtualUser.virtualIP}`);
         } catch (error) {
             console.error('❌ Erro ao entrar na stream via WebSocket:', error);
         }
@@ -304,11 +334,32 @@ io.on('connection', (socket) => {
             // Verificar se este socket está realmente associado a este usuário
             const currentUserId = socketToUser.get(socket.id);
             if (currentUserId !== userId) {
-                console.warn(`� Socket ${socket.id} não está associado ao usuário ${userId} - IGNORANDO`);
+                console.warn(`⚠️ Socket ${socket.id} não está associado ao usuário ${userId} - IGNORANDO`);
                 return;
             }
 
-            console.log(`�👤 Usuário ${userId} saindo da stream ${streamId} via WebSocket (socket: ${socket.id})`);
+            console.log(`👤 Usuário ${userId} saindo da stream ${streamId} via WebSocket (socket: ${socket.id})`);
+
+            // 🔥 NOVO: Remover da sala virtual
+            const virtualRoom = virtualIPManager.getRoomByStreamId(streamId);
+            if (virtualRoom) {
+                virtualIPManager.leaveRoom(userId, virtualRoom.roomId);
+                
+                // Enviar lista atualizada de participantes com IPs virtuais
+                const participants = virtualIPManager.getRoomParticipants(virtualRoom.roomId);
+                io.to(streamId).emit('virtual_participants_updated', {
+                    streamId,
+                    roomCode: virtualRoom.roomCode,
+                    participants,
+                    count: participants.length
+                });
+            }
+
+            // 🔥 NOVO: Remover socket do usuário virtual
+            const userRemoved = virtualIPManager.removeSocket(userId, socket.id);
+            if (userRemoved) {
+                console.log(`🗑️ Usuário ${userId} removido completamente do sistema virtual`);
+            }
 
             const userEntry = onlineUsers.get(userId);
             if (!userEntry) {
@@ -352,11 +403,7 @@ io.on('connection', (socket) => {
                 lastSeen: new Date().toISOString()
             });
 
-            // DESABILITADO: Evento user_left causando spam
-            // Apenas online_users_updated é suficiente para atualizar UI
-            // socket.to(streamId).emit('user_left', { userId, streamId });
-
-            // Enviar lista atualizada de usuários online
+            // Enviar lista atualizada de usuários online (legado)
             const onlineUsersInStream = Array.from(onlineUsers.values())
                 .filter(user => user.streamId === streamId)
                 .map(user => ({ userId: user.userId, lastSeen: user.lastSeen }));
@@ -389,6 +436,33 @@ io.on('connection', (socket) => {
             const userId = socketToUser.get(socket.id);
 
             if (userId) {
+                // 🔥 NOVO: Remover do sistema virtual
+                const virtualUser = virtualIPManager.getUser(userId);
+                if (virtualUser) {
+                    // Remover da sala virtual se estiver em alguma
+                    if (virtualUser.currentRoom) {
+                        const virtualRoom = virtualIPManager.getRoom(virtualUser.currentRoom);
+                        if (virtualRoom) {
+                            virtualIPManager.leaveRoom(userId, virtualRoom.roomId);
+                            
+                            // Notificar sobre saída da sala virtual
+                            const participants = virtualIPManager.getRoomParticipants(virtualRoom.roomId);
+                            io.to(virtualRoom.streamId).emit('virtual_participants_updated', {
+                                streamId: virtualRoom.streamId,
+                                roomCode: virtualRoom.roomCode,
+                                participants,
+                                count: participants.length
+                            });
+                        }
+                    }
+
+                    // Remover socket do usuário virtual
+                    const userRemoved = virtualIPManager.removeSocket(userId, socket.id);
+                    if (userRemoved) {
+                        console.log(`🗑️ Usuário ${userId} removido completamente do sistema virtual`);
+                    }
+                }
+
                 // Marcar usuário como offline no banco
                 const { User } = await import('./models/index');
                 await User.findOneAndUpdate(
@@ -772,6 +846,36 @@ io.on('connection', (socket) => {
             console.log(`🤝 Nova amizade: ${data.userId1} <-> ${data.userId2} (iniciado por ${data.initiatedBy})`);
         } catch (error) {
             console.error('❌ Erro ao notificar amizade:', error);
+        }
+    });
+
+    // 🔥 NOVO: Evento para encerrar sala virtual quando transmissão termina
+    socket.on('end_virtual_room', async (data: { streamId: string }) => {
+        try {
+            const { streamId } = data;
+            
+            if (!streamId) {
+                console.warn('⚠️ end_virtual_room: streamId não fornecido');
+                return;
+            }
+
+            // Encontrar sala virtual pelo streamId
+            const virtualRoom = virtualIPManager.getRoomByStreamId(streamId);
+            if (virtualRoom) {
+                console.log(`🏁 Encerrando sala virtual ${virtualRoom.roomCode} para stream ${streamId}`);
+                
+                // Notificar todos os participantes sobre encerramento
+                io.to(streamId).emit('virtual_room_ended', {
+                    streamId,
+                    roomCode: virtualRoom.roomCode,
+                    message: 'Transmissão encerrada'
+                });
+
+                // Encerrar sala virtual
+                virtualIPManager.endRoom(virtualRoom.roomId);
+            }
+        } catch (error) {
+            console.error('❌ Erro ao encerrar sala virtual:', error);
         }
     });
 

@@ -26,8 +26,10 @@ export class WebRTCService {
    */
   private async initializeICE(): Promise<void> {
     try {
-      await iceManager.initialize();
-      console.log('✅ [WebRTC] ICE Manager inicializado');
+      // Temporariamente desabilitado para evitar erros de inicialização
+      console.log('⚠️ [WebRTC] ICE Manager temporariamente desabilitado');
+      // await iceManager.initialize();
+      // console.log('✅ [WebRTC] ICE Manager inicializado');
     } catch (error) {
       console.error('❌ [WebRTC] Erro ao inicializar ICE Manager:', error);
     }

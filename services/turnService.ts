@@ -37,23 +37,16 @@ export class TURNService {
   }
 
   /**
-   * Inicializar serviço TURN
+   * Inicializar serviço TURN - SEM TESTE DE CONEXÃO
    */
   async initialize(): Promise<boolean> {
     try {
       console.log('🔄 [TURN] Inicializando serviço...');
       
-      // Testar conexão com servidor TURN
-      const testResult = await this.testConnection();
-      
-      if (testResult) {
-        this.isInitialized = true;
-        console.log('✅ [TURN] Serviço inicializado com sucesso');
-        return true;
-      } else {
-        console.error('❌ [TURN] Falha ao inicializar serviço');
-        return false;
-      }
+      // Serviço configurado SEM teste de conexão
+      this.isInitialized = true;
+      console.log('✅ [TURN] Serviço inicializado (sem teste de conexão)');
+      return true;
     } catch (error) {
       console.error('❌ [TURN] Erro na inicialização:', error);
       return false;

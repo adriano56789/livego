@@ -53,7 +53,6 @@ const GanhosTab: React.FC<GanhosTabProps> = ({ onConfigure, currentUser, updateU
                 api.calculateWithdrawal(data.available_diamonds)
                     .then((result) => {
                         setCalculation(result);
-                        console.log('[GanhosTab] Cálculo automático carregado:', result);
                     })
                     .catch((error) => {
                         safeError('[GanhosTab] Erro ao calcular saque automático:', error);
@@ -85,6 +84,11 @@ const GanhosTab: React.FC<GanhosTabProps> = ({ onConfigure, currentUser, updateU
             return;
         }
 
+        // ⚠️ NÃO calcular se já tivermos calculation para o mesmo valor
+        if (calculation && calculation.diamonds === amount) {
+            return;
+        }
+
         // Debounce: esperar 500ms antes de calcular
         const timeoutId = setTimeout(() => {
             setIsCalculating(true);
@@ -101,7 +105,7 @@ const GanhosTab: React.FC<GanhosTabProps> = ({ onConfigure, currentUser, updateU
 
         // Limpar timeout se o valor mudar novamente
         return () => clearTimeout(timeoutId);
-    }, [withdrawAmount]);
+    }, [withdrawAmount, calculation]);
 
     const handleMaxClick = () => {
         if (earningsInfo) {
@@ -209,7 +213,7 @@ const GanhosTab: React.FC<GanhosTabProps> = ({ onConfigure, currentUser, updateU
         breakdown: {
             conversion: `${earningsInfo?.available_diamonds ?? 0} diamantes = R$ ${(earningsInfo?.brl_value ?? 0).toFixed(2).replace('.', ',')}`,
             fee: `Taxa da plataforma (20%): R$ ${earningsInfo?.brl_value ? (earningsInfo.brl_value * 0.20).toFixed(2).replace('.', ',') : '0,00'}`,
-            final: `Valor a receber: R$ ${earningsInfo?.brl_value ? (earningsInfo.brl_value * 0.80).toFixed(2).replace('.', ',') : '0,00'}`
+            final: `Valor a receber: R$ ${earningsInfo?.brl_value ? (earningsInfo.brl_value * 0.80).toFixed(2).replace('.', ',') : '0,00'}`,
         }
     };
     
@@ -219,6 +223,14 @@ const GanhosTab: React.FC<GanhosTabProps> = ({ onConfigure, currentUser, updateU
         displayData.platform_fee_brl = calculation.platform_fee_brl;
         displayData.net_brl = calculation.net_brl;
         displayData.breakdown = calculation.breakdown;
+        
+        // Debug temporário para verificar valores do backend
+        console.log('[DEBUG] Backend calculation:', {
+            diamonds: calculation.diamonds,
+            gross_brl: calculation.gross_brl,
+            platform_fee_brl: calculation.platform_fee_brl,
+            net_brl: calculation.net_brl
+        });
     }
     
     // Verificar se está carregando para mostrar valores corretos

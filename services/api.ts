@@ -620,9 +620,9 @@ export const api = {
     getCompleteUserData: (userId: string) => callApi<User>('GET', `/api/users/${userId}`),
 
     calculateWithdrawal: (amount: number) => {
-        // Log seguro - mostra valor para debug, mas sem dados sensíveis
-        safeLog('[API] calculateWithdrawal called with amount: ' + amount);
-        safeLog('[API] Calculating withdrawal for amount: ' + amount + ' diamonds');
+        // ⚠️ REMOVIDO: Logs duplicados que causam confusão
+        // safeLog('[API] calculateWithdrawal called with amount: ' + amount);
+        // safeLog('[API] Calculating withdrawal for amount: ' + amount + ' diamonds');
         return callApi<{ diamonds: number; gross_brl: number; platform_fee_brl: number; net_brl: number; breakdown: { conversion: string; fee: string; final: string; } }>('POST', '/api/wallet/earnings/calculate', { amount });
     },
 

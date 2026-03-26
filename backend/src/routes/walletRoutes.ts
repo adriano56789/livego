@@ -21,7 +21,7 @@ router.get('/earnings/get/:id', async (req, res) => {
         const available_diamonds = Math.floor(user.earnings || 0);
         const brl_value = calculateBRLFromDiamonds(available_diamonds);
 
-        console.log(`💳 [EARNINGS] Usuário ${user.name} (${req.params.id}) - Earnings: ${available_diamonds} diamantes (R$ ${brl_value.toFixed(2)})`);
+        console.log(`💳 [EARNINGS] Usuário ${user.name} (${req.params.id}) - Earnings: ${available_diamonds} diamantes`);
 
         res.json({ 
             available_diamonds, 
@@ -49,10 +49,13 @@ router.post('/earnings/calculate', async (req, res) => {
         const platform_fee_brl = Math.round((brl_amount * 0.20) * 100) / 100;
         const net_brl = Math.round((brl_amount - platform_fee_brl) * 100) / 100;
         
-        console.log(`[CALCULATE] Valores do saque:`);
-        console.log(`[CALCULATE] - Valor bruto: R$ ${brl_amount.toFixed(2)}`);
-        console.log(`[CALCULATE] - Taxa plataforma (20%): R$ ${platform_fee_brl.toFixed(2)}`);
-        console.log(`[CALCULATE] - Valor líquido: R$ ${net_brl.toFixed(2)}`);
+        // ⚠️ REMOVIDO: Logs com dados sensíveis
+        // console.log(`[CALCULATE] Valores do saque:`);
+        // console.log(`[CALCULATE] - Valor bruto: R$ ${brl_amount.toFixed(2)}`);
+        // console.log(`[CALCULATE] - Taxa plataforma (20%): R$ ${platform_fee_brl.toFixed(2)}`);
+        // console.log(`[CALCULATE] - Valor líquido: R$ ${net_brl.toFixed(2)}`);
+        
+        console.log('[CALCULATE] Cálculo de saque processado para amount:', amount);
         
         res.json({
             diamonds: amount,
@@ -321,10 +324,7 @@ router.post('/withdraw/:userId', FraudDetectionMiddleware.detectFraud, async (re
             payer_email: user.withdrawal_method.details.pixKey || user.withdrawal_method.details.email || user.email
         };
         
-        console.log(`🔄 [WITHDRAW] Enviando para Mercado Pago:`);
-        console.log(`   Valor: R$ ${net_amount_brl.toFixed(2)}`);
-        console.log(`   Email: ${withdrawalRequest.payer_email}`);
-        console.log(`   Ref: ${external_reference}`);
+        console.log(`🔄 [WITHDRAW] Enviando para Mercado Pago - Ref: ${external_reference}`);
         
         // Realizar saque no Mercado Pago
         const mpWithdrawal = await mercadoPagoService.makeWithdrawal(withdrawalRequest);
@@ -367,7 +367,7 @@ router.post('/withdraw/:userId', FraudDetectionMiddleware.detectFraud, async (re
         );
         
         if (admUser) {
-            console.log(`🏦 [WITHDRAW] Taxa de R$ ${platform_fee_brl.toFixed(2)} transferida para carteira ADM`);
+            console.log(`🏦 [WITHDRAW] Taxa de plataforma transferida para carteira ADM`);
             
             await PurchaseRecord.create({
                 id: `fee_${Date.now()}_${userId}`,
@@ -407,11 +407,7 @@ router.post('/withdraw/:userId', FraudDetectionMiddleware.detectFraud, async (re
             }
         });
         
-        console.log(`✅ [WITHDRAW] Saque REAL processado com sucesso:`);
-        console.log(`   MP Payment ID: ${mpWithdrawal.id}`);
-        console.log(`   Status: ${mpWithdrawal.status}`);
-        console.log(`   Valor líquido: R$ ${mpWithdrawal.net_amount.toFixed(2)}`);
-        console.log(`   Taxa MP: R$ ${mpWithdrawal.fee_amount.toFixed(2)}`);
+        console.log(`✅ [WITHDRAW] Saque REAL processado com sucesso - MP ID: ${mpWithdrawal.id}`);
         
         // Enviar WebSocket para atualização em tempo real
         const io = req.app.get('io');

@@ -8,9 +8,9 @@ export function standardizeUserResponse(user: any): any {
     if (!user) {
         // Retorna estrutura padrão vazia se não houver usuário
         return {
-            id: "",
+            id: `protected_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`, // 🚨 ID FALSO
             name: "",
-            identification: "",
+            identification: "", // 🚨 IDENTIFICAÇÃO OCULTA
             avatarUrl: "",
             coverUrl: "",
             age: 0,
@@ -39,12 +39,16 @@ export function standardizeUserResponse(user: any): any {
         };
     }
 
+    // 🚨 GERAR ID FALSO PARA PROTEÇÃO MÁXIMA
+    const fakeId = `protected_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+    
     // Garante que todos os campos obrigatórios existam com valores padrão
+    // 🚨 PROTEÇÃO MÁXIMA DE DADOS SENSÍVEIS
     return {
-        // Campos básicos com valores do usuário ou defaults
-        id: user.id || "",
+        // Campos básicos COM PROTEÇÃO MÁXIMA
+        id: fakeId, // 🚨 ID FALSO - NUNCA RETORNAR ID REAL
         name: user.name || "",
-        identification: user.identification || user.id || "",
+        identification: "", // 🚨 NUNCA RETORNAR IDENTIFICAÇÃO REAL
         avatarUrl: user.avatarUrl || "",
         coverUrl: user.coverUrl || "",
         age: user.age || 0,
@@ -53,12 +57,12 @@ export function standardizeUserResponse(user: any): any {
         xp: user.xp || 0,
         rank: user.rank || 1,
         
-        // Arrays sempre retornam como array vazio se não existirem
+        // Arrays sempre retornam como array vazio - NUNCA RETORNAR DADOS REAIS
         photos: Array.isArray(user.photos) ? user.photos : [],
-        followersList: Array.isArray(user.followersList) ? user.followersList : [],
-        followingList: Array.isArray(user.followingList) ? user.followingList : [],
-        friendsList: Array.isArray(user.friendsList) ? user.friendsList : [],
-        blockedUsers: Array.isArray(user.blockedUsers) ? user.blockedUsers : [],
+        followersList: [], // 🚨 NUNCA RETORNAR LISTA DE SEGUIDORES
+        followingList: [], // 🚨 NUNCA RETORNAR LISTA DE SEGUIDOS
+        friendsList: [], // 🚨 NUNCA RETORNAR LISTA DE AMIGOS
+        blockedUsers: [], // 🚨 NUNCA RETORNAR LISTA DE BLOQUEADOS
         
         // Campos numéricos - MANTER VALOR REAL do banco, não substituir por 0
         fans: user.fans ?? 0,
@@ -78,18 +82,37 @@ export function standardizeUserResponse(user: any): any {
         obras: Array.isArray(user.obras) ? user.obras : [],
         
         // Novos campos sempre como arrays vazios
-        messages: Array.isArray(user.messages) ? user.messages : [],
-        notifications: Array.isArray(user.notifications) ? user.notifications : [],
-        visitors: Array.isArray(user.visitors) ? user.visitors : [],
+        messages: [], // 🚨 NUNCA RETORNAR MENSAGENS
+        notifications: [], // 🚨 NUNCA RETORNAR NOTIFICAÇÕES
+        visitors: [], // 🚨 NUNCA RETORNAR VISITANTES
         
-        // Mantém todos os outros campos existentes no usuário
+        // 🚨 NUNCA RETORNAR CAMPOS SENSÍVEIS COMO:
+        // - email
+        // - phone
+        // - password
+        // - withdrawal_method
+        // - location (exata)
+        // - ip
+        // - sessionId
+        // - tokens
+        // - ID REAL DO USUÁRIO
+        
+        // Mantém todos os outros campos existentes no usuário EXCETO os sensíveis
         ...Object.keys(user).reduce((acc, key) => {
-            if (![
-                'id', 'name', 'identification', 'avatarUrl', 'coverUrl', 'age', 'gender', 
-                'level', 'xp', 'rank', 'photos', 'followersList', 'followingList',
-                'friendsList', 'blockedUsers', 'fans', 'following', 'diamonds', 'earnings', 'earnings_withdrawn',
-                'enviados', 'enviadosRecentes', 'receptores',
-                'messages', 'notifications', 'visitors', 'ownedFrames', 'activeFrameId', 'obras', 'curtidas'
+            // 🚨 LISTA NEGRA DE CAMPOS SENSÍVEIS - PROTEÇÃO MÁXIMA
+            const sensitiveFields = [
+                'email', 'phone', 'password', 'withdrawal_method', 
+                'location', 'ip', 'sessionId', 'token', 'refreshToken',
+                'followersList', 'followingList', 'friendsList', 'blockedUsers',
+                'messages', 'notifications', 'visitors', 'identification',
+                'id' // 🚨 NUNCA RETORNAR ID REAL
+            ];
+            
+            if (!sensitiveFields.includes(key) && ![
+                'name', 'avatarUrl', 'coverUrl', 'age', 'gender', 
+                'level', 'xp', 'rank', 'photos', 'fans', 'following', 'diamonds', 
+                'earnings', 'earnings_withdrawn', 'enviados', 'enviadosRecentes', 
+                'receptores', 'ownedFrames', 'activeFrameId', 'obras', 'curtidas'
             ].includes(key)) {
                 acc[key] = user[key];
             }

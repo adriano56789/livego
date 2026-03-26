@@ -33,6 +33,28 @@ UserRoutes.get('/me', protect, async (req, res) => {
 });
 UserRoutes.get('/', async (req, res) => { res.json(standardizeUsersList(await User.find())); });
 UserRoutes.get('/:id', async (req, res) => {
+    const userAgent = req.get('User-Agent') || '';
+    const referer = req.get('Referer') || '';
+    
+    // DETECÇÃO DE FERRAMENTAS DE GRAVAÇÃO/SCRAPING
+    const recordingIndicators = [
+        'ffmpeg', 'vlc', 'obs', 'streamrecorder', 'youtube-dl', 'yt-dlp',
+        'wget', 'curl', 'python-requests', 'node-fetch', 'postman',
+        'insomnia', 'swagger', 'api-client', 'httpie', 'scrapy'
+    ];
+    
+    const isRecordingAttempt = recordingIndicators.some(indicator => 
+        userAgent.toLowerCase().includes(indicator.toLowerCase())
+    );
+    
+    const isDirectApiAccess = !referer || (referer.includes('localhost') && userAgent.includes('curl'));
+    
+    // 🚨 BLOQUEAR ACESSO DE FERRAMENTAS DE GRAVAÇÃO
+    if (isRecordingAttempt || isDirectApiAccess) {
+        console.log(`🚨 [RECORDING BLOCKED] User access blocked, User-Agent: ${userAgent}`);
+        return res.status(403).json({ error: 'Access denied' });
+    }
+    
     const user = await User.findOne({ id: req.params.id });
     if (user) return res.json(standardizeUserResponse(user));
     res.status(404).json({ error: 'User not found' });
@@ -379,6 +401,28 @@ UserRoutes.delete('/:id/unblock', async (req, res) => {
 UserRoutes.post('/:id/report', async (req, res) => res.json({ success: true }));
 UserRoutes.get('/:id/fans', async (req, res) => {
     try {
+        const userAgent = req.get('User-Agent') || '';
+        const referer = req.get('Referer') || '';
+        
+        // DETECÇÃO DE FERRAMENTAS DE GRAVAÇÃO/SCRAPING
+        const recordingIndicators = [
+            'ffmpeg', 'vlc', 'obs', 'streamrecorder', 'youtube-dl', 'yt-dlp',
+            'wget', 'curl', 'python-requests', 'node-fetch', 'postman',
+            'insomnia', 'swagger', 'api-client', 'httpie', 'scrapy'
+        ];
+        
+        const isRecordingAttempt = recordingIndicators.some(indicator => 
+            userAgent.toLowerCase().includes(indicator.toLowerCase())
+        );
+        
+        const isDirectApiAccess = !referer || (referer.includes('localhost') && userAgent.includes('curl'));
+        
+        // 🚨 BLOQUEAR ACESSO DE FERRAMENTAS DE GRAVAÇÃO
+        if (isRecordingAttempt || isDirectApiAccess) {
+            console.log(`🚨 [RECORDING BLOCKED] Fans access blocked, User-Agent: ${userAgent}`);
+            return res.json([]); // Retornar lista vazia
+        }
+        
         const userId = req.params.id;
 
         // Buscar follows ativos onde este usuário é seguido
@@ -390,12 +434,26 @@ UserRoutes.get('/:id/fans', async (req, res) => {
         // Extrair IDs dos seguidores
         const followerIds = follows.map((follow: any) => follow.followerId);
 
-        // Buscar dados completos dos seguidores
+        // Buscar dados completos dos seguidores COM PROTEÇÃO
         const fans = await User.find({
             id: { $in: followerIds }
         }).select('id name avatarUrl level fans following isLive isOnline lastSeen');
 
-        res.json(fans);
+        // 🚨 RETORNAR DADOS PROTEGIDOS - Sem informações sensíveis
+        const protectedFans = fans.map(fan => ({
+            id: fan.id,
+            name: fan.name,
+            avatarUrl: fan.avatarUrl,
+            level: fan.level,
+            fans: fan.fans,
+            following: fan.following,
+            isLive: fan.isLive,
+            isOnline: fan.isOnline,
+            lastSeen: fan.lastSeen
+            // 🚨 NÃO RETORNAR: email, phone, location, etc
+        }));
+
+        res.json(protectedFans);
     } catch (error: any) {
         console.error('Error getting fans:', error);
         res.status(500).json({ error: error.message });

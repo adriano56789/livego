@@ -9,8 +9,30 @@ router.get('/live/:category', async (req, res) => {
     try {
         const { category } = req.params;
         const { country } = req.query;
+        const userAgent = req.get('User-Agent') || '';
+        const referer = req.get('Referer') || '';
 
         console.log(`🔍 [DEBUG] API Route called - Category: ${category}, Country: ${country || 'none'}`);
+        console.log(`🔍 [SECURITY] User-Agent: ${userAgent}, Referer: ${referer}`);
+        
+        // DETECÇÃO DE FERRAMENTAS DE GRAVAÇÃO/SCRAPING
+        const recordingIndicators = [
+            'ffmpeg', 'vlc', 'obs', 'streamrecorder', 'youtube-dl', 'yt-dlp',
+            'wget', 'curl', 'python-requests', 'node-fetch', 'postman',
+            'insomnia', 'swagger', 'api-client', 'httpie', 'scrapy'
+        ];
+        
+        const isRecordingAttempt = recordingIndicators.some(indicator => 
+            userAgent.toLowerCase().includes(indicator.toLowerCase())
+        );
+        
+        const isDirectApiAccess = !referer || (referer.includes('localhost') && userAgent.includes('curl'));
+        
+        // 🚨 BLOQUEAR ACESSO DE FERRAMENTAS DE GRAVAÇÃO
+        if (isRecordingAttempt || isDirectApiAccess) {
+            console.log(`🚨 [RECORDING BLOCKED] Category: ${category}, User-Agent: ${userAgent}`);
+            return res.json([]); // Retornar lista vazia
+        }
 
         // Base filter para streams ativos e válidas
         let baseFilter: any = {
@@ -49,7 +71,30 @@ router.get('/live/:category', async (req, res) => {
                 console.log(`🌍 [DEBUG] Stream country codes: ${countryCodes}`);
             }
 
-            return res.json(streams);
+            // Retornar streams COM PROTEÇÃO MÁXIMA - SEM IDs REAIS
+            const protectedStreams = streams.map(stream => {
+                // 🚨 GERAR ID FALSO PARA CADA STREAM
+                const fakeId = `protected_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+                
+                return {
+                    id: fakeId, // 🚨 ID FALSO - NUNCA EXPOR ID REAL
+                    name: stream.name,
+                    avatar: stream.avatar,
+                    viewers: stream.viewers,
+                    diamonds: stream.diamonds || 0,
+                    isLive: stream.isLive,
+                    country: stream.country || 'XX', // Ocultar país real
+                    location: stream.location || 'Hidden', // Ocultar localização
+                    message: stream.message,
+                    tags: stream.tags || [],
+                    isPrivate: stream.isPrivate,
+                    quality: stream.quality,
+                    playbackUrl: stream.playbackUrl
+                    // 🚨 NUNCA RETORNAR: id real, hostId, rtmpIngestUrl, streamKey, etc
+                };
+            });
+            
+            return res.json(protectedStreams);
         }
 
         // Para categorias específicas, filtra por tag ou categoria E valida dados
@@ -78,7 +123,30 @@ router.get('/live/:category', async (req, res) => {
             console.log(`🌍 [DEBUG] Category stream country codes: ${countryCodes}`);
         }
 
-        res.json(categoryStreams);
+        // Retornar streams da categoria COM PROTEÇÃO MÁXIMA - SEM IDs REAIS
+        const protectedCategoryStreams = categoryStreams.map(stream => {
+            // 🚨 GERAR ID FALSO PARA CADA STREAM
+            const fakeId = `protected_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+            
+            return {
+                id: fakeId, // 🚨 ID FALSO - NUNCA EXPOR ID REAL
+                name: stream.name,
+                avatar: stream.avatar,
+                viewers: stream.viewers,
+                diamonds: stream.diamonds || 0,
+                isLive: stream.isLive,
+                country: stream.country || 'XX', // Ocultar país real
+                location: stream.location || 'Hidden', // Ocultar localização
+                message: stream.message,
+                tags: stream.tags || [],
+                isPrivate: stream.isPrivate,
+                quality: stream.quality,
+                playbackUrl: stream.playbackUrl
+                // 🚨 NUNCA RETORNAR: id real, hostId, rtmpIngestUrl, streamKey, etc
+            };
+        });
+        
+        res.json(protectedCategoryStreams);
     } catch (error: any) {
         console.error('Error fetching streams:', error);
         res.status(500).json({ error: error.message });
@@ -89,7 +157,30 @@ router.get('/live/:category', async (req, res) => {
 // API para listar lives ativas
 router.get('/streams/live', async (req, res) => {
     try {
+        const userAgent = req.get('User-Agent') || '';
+        const referer = req.get('Referer') || '';
+        
         console.log(`🔍 [STREAMS LIVE] Buscando lives ativas`);
+        console.log(`🔍 [SECURITY] User-Agent: ${userAgent}, Referer: ${referer}`);
+        
+        // DETECÇÃO DE FERRAMENTAS DE GRAVAÇÃO/SCRAPING
+        const recordingIndicators = [
+            'ffmpeg', 'vlc', 'obs', 'streamrecorder', 'youtube-dl', 'yt-dlp',
+            'wget', 'curl', 'python-requests', 'node-fetch', 'postman',
+            'insomnia', 'swagger', 'api-client', 'httpie', 'scrapy'
+        ];
+        
+        const isRecordingAttempt = recordingIndicators.some(indicator => 
+            userAgent.toLowerCase().includes(indicator.toLowerCase())
+        );
+        
+        const isDirectApiAccess = !referer || (referer.includes('localhost') && userAgent.includes('curl'));
+        
+        // 🚨 BLOQUEAR ACESSO DE FERRAMENTAS DE GRAVAÇÃO
+        if (isRecordingAttempt || isDirectApiAccess) {
+            console.log(`🚨 [RECORDING BLOCKED] Streams live, User-Agent: ${userAgent}`);
+            return res.json([]); // Retornar lista vazia
+        }
 
         // Buscar streams ativas com dados reais
         const activeStreams = await Streamer.find({
@@ -99,19 +190,46 @@ router.get('/streams/live', async (req, res) => {
             hostId: { $exists: true, $nin: ['', null] }
         }).sort({ viewers: -1 });
 
-        // Enriquecer com dados dos hosts
+        // Enriquecer com dados dos hosts COM PROTEÇÃO MÁXIMA - SEM IDs REAIS
         const streamsWithHostData = await Promise.all(
             activeStreams.map(async (stream) => {
                 const host = await User.findOne({ id: stream.hostId }).select('id name avatarUrl level country isOnline');
+                
+                // 🚨 GERAR ID FALSO PARA CADA STREAM
+                const fakeId = `protected_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+                // 🚨 GERAR ID FALSO PARA O HOST TAMBÉM
+                const fakeHostId = `protected_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
 
                 return {
-                    ...stream.toObject(),
-                    host: host || {
-                        id: stream.hostId,
+                    // 🚨 DADOS PROTEGIDOS - SEM IDs REAIS
+                    id: fakeId, // 🚨 ID FALSO - NUNCA EXPOR ID REAL
+                    name: stream.name,
+                    avatar: stream.avatar,
+                    viewers: stream.viewers,
+                    diamonds: stream.diamonds || 0,
+                    isLive: stream.isLive,
+                    country: stream.country || 'XX', // Ocultar país real
+                    location: stream.location || 'Hidden', // Ocultar localização
+                    message: stream.message,
+                    tags: stream.tags || [],
+                    isPrivate: stream.isPrivate,
+                    quality: stream.quality,
+                    playbackUrl: stream.playbackUrl,
+                    // 🚨 NUNCA RETORNAR: hostId, rtmpIngestUrl, streamKey, etc
+                    host: host ? {
+                        id: fakeHostId, // 🚨 ID FALSO DO HOST
+                        name: host.name,
+                        avatarUrl: host.avatarUrl,
+                        level: host.level,
+                        country: host.country || 'XX', // Ocultar país real
+                        isOnline: host.isOnline
+                        // 🚨 NUNCA RETORNAR: id real, email, phone, etc
+                    } : {
+                        id: fakeHostId, // 🚨 ID FALSO MESMO PARA HOST DEFAULT
                         name: 'Usuário',
                         avatarUrl: '',
                         level: 1,
-                        country: 'br',
+                        country: 'XX',
                         isOnline: false
                     }
                 };
@@ -1685,7 +1803,25 @@ router.post('/lives/start', async (req, res) => res.json({ success: true }));
 router.get('/lives/:id', async (req, res) => {
     try {
         const { id } = req.params;
+        const userAgent = req.get('User-Agent') || '';
+        const referer = req.get('Referer') || '';
+        
         console.log(`🔍 [DEBUG] Getting live details for streamer: ${id}`);
+        console.log(`🔍 [SECURITY] User-Agent: ${userAgent}, Referer: ${referer}`);
+        
+        // DETECÇÃO DE GRAVAÇÃO - Verificar sinais de ferramentas de gravação
+        const recordingIndicators = [
+            'ffmpeg', 'vlc', 'obs', 'streamrecorder', 'youtube-dl', 'yt-dlp',
+            'wget', 'curl', 'python-requests', 'node-fetch', 'postman',
+            'insomnia', 'swagger', 'api-client', 'httpie'
+        ];
+        
+        const isRecordingAttempt = recordingIndicators.some(indicator => 
+            userAgent.toLowerCase().includes(indicator.toLowerCase())
+        );
+        
+        // Verificar se é acesso direto à API (sem referer do app)
+        const isDirectApiAccess = !referer || (referer.includes('localhost') && userAgent.includes('curl'));
         
         // Buscar streamer pelo ID
         const streamer = await Streamer.findOne({ id });
@@ -1695,26 +1831,56 @@ router.get('/lives/:id', async (req, res) => {
             return res.status(404).json({ error: 'Streamer not found' });
         }
 
+        // � PROTEÇÃO MÁXIMA - NUNCA RETORNAR ID REAL DA LIVE
+        // Gerar ID falso para proteção
+        const fakeId = `protected_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+        
+        // �� PROTEÇÃO CONTRA GRAVAÇÃO: Retornar tela preta se detectar tentativa
+        if (isRecordingAttempt || isDirectApiAccess) {
+            console.log(`🚨 [RECORDING DETECTED] Blocking access to stream: ${id}`);
+            return res.json({
+                id: fakeId, // 🚨 ID FALSO - NUNCA EXPOR ID REAL
+                name: streamer.name,
+                avatar: streamer.avatar,
+                viewers: 0,
+                diamonds: 0,
+                isLive: false,
+                country: 'XX',
+                location: 'Hidden',
+                message: 'Stream unavailable',
+                tags: [],
+                isPrivate: true,
+                quality: 'blocked',
+                playbackUrl: '', // URL vazia para impedir gravação
+                isBlocked: true,
+                // 🚨 INFORMAÇÕES FALSAS PARA PROTEÇÃO
+                streamStatus: 'terminated',
+                startTime: null,
+                endTime: new Date().toISOString()
+            });
+        }
+
         // 🔧 CORREÇÃO: Usar diamonds do stream (valor correto para o contador)
         const finalDiamonds = streamer.diamonds || 0;
         
         console.log(`✅ Streamer found: ${streamer.name}, stream diamonds (contador): ${finalDiamonds}`);
         
-        // Retornar dados do streamer incluindo diamonds reais calculados
+        // Retornar dados do streamer COM PROTEÇÃO MÁXIMA DE DADOS SENSÍVEIS
         res.json({
-            id: streamer.id,
+            id: fakeId, // 🚨 ID FALTO - PROTEÇÃO CONTRA ACESSO DIRETO
             name: streamer.name,
             avatar: streamer.avatar,
             viewers: streamer.viewers,
-            diamonds: finalDiamonds, // 🔧 GARANTIR QUE DIAMONDS REAIS SEJA RETORNADO
+            diamonds: finalDiamonds,
             isLive: streamer.isLive,
-            country: streamer.country,
-            location: streamer.location,
+            country: streamer.country || 'XX', // Ocultar país se não existir
+            location: streamer.location || 'Hidden', // Ocultar localização exata
             message: streamer.message,
-            tags: streamer.tags,
+            tags: streamer.tags || [],
             isPrivate: streamer.isPrivate,
             quality: streamer.quality,
             playbackUrl: streamer.playbackUrl
+            // 🚨 NUNCA RETORNAR: id real, hostId, email, ou outros dados sensíveis
         });
     } catch (error) {
         console.error('❌ Error getting live details:', error);
@@ -1767,9 +1933,27 @@ router.get('/live/nearby', async (req, res) => {
         // Filtrar streams que têm host com localização próxima
         const validStreams = nearbyStreams.filter(stream => stream.hostId);
 
-        console.log(`📍 [NEARBY STREAMS] ${validStreams.length} streams encontradas próximas a (${lat}, ${lng})`);
+        console.log(` [NEARBY STREAMS] ${validStreams.length} streams encontradas próximas a (${lat}, ${lng})`);
 
-        res.json(validStreams);
+        // Retornar streams COM PROTEÇÃO DE DADOS SENSÍVEIS
+        const protectedActiveStreams = validStreams.map(stream => ({
+            id: stream.id,
+            name: stream.name,
+            avatar: stream.avatar,
+            viewers: stream.viewers,
+            diamonds: stream.diamonds || 0,
+            isLive: stream.isLive,
+            country: stream.country || 'XX', // Ocultar país real
+            location: stream.location || 'Hidden', // Ocultar localização
+            message: stream.message,
+            tags: stream.tags || [],
+            isPrivate: stream.isPrivate,
+            quality: stream.quality,
+            playbackUrl: stream.playbackUrl
+            // NÃO RETORNAR: hostId, rtmpIngestUrl, streamKey, etc
+        }));
+        
+        res.json(protectedActiveStreams);
     } catch (error: any) {
         console.error('Error fetching nearby streams:', error);
         res.status(500).json({ error: error.message });

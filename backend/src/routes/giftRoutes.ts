@@ -3,11 +3,108 @@ import { User, Gift, GiftTransaction, Streamer, Followers } from '../models';
 
 const router = express.Router();
 
+// 🚀 SISTEMA DE FILA PARA TRATAMENTO DE CONCORRÊNCIA
+interface QueuedGift {
+    id: string;
+    fromUserId: string;
+    toUserId: string;
+    giftId: string;
+    quantity: number;
+    streamId: string;
+    timestamp: number;
+    resolve: (value: any) => void;
+    reject: (error: any) => void;
+}
+
+class GiftQueue {
+    private queue: QueuedGift[] = [];
+    private processing = false;
+    private readonly MAX_CONCURRENT = 5; // Processar até 5 presentes simultaneamente
+    private currentProcessing = 0;
+
+    async add(gift: Omit<QueuedGift, 'id' | 'timestamp' | 'resolve' | 'reject'>): Promise<any> {
+        return new Promise((resolve, reject) => {
+            const queuedGift: QueuedGift = {
+                ...gift,
+                id: `gift_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
+                timestamp: Date.now(),
+                resolve,
+                reject
+            };
+
+            this.queue.push(queuedGift);
+            this.processQueue();
+        });
+    }
+
+    private async processQueue() {
+        if (this.processing || this.currentProcessing >= this.MAX_CONCURRENT) {
+            return;
+        }
+
+        this.processing = true;
+
+        while (this.queue.length > 0 && this.currentProcessing < this.MAX_CONCURRENT) {
+            const gift = this.queue.shift();
+            if (gift) {
+                this.currentProcessing++;
+                this.processGift(gift)
+                    .then(gift.resolve)
+                    .catch(gift.reject)
+                    .finally(() => {
+                        this.currentProcessing--;
+                        this.processQueue(); // Continuar processando
+                    });
+            }
+        }
+
+        this.processing = false;
+    }
+
+    private async processGift(gift: QueuedGift): Promise<any> {
+        // Lógica de processamento do presente será implementada aqui
+        // Por enquanto, vamos apenas simular o processamento
+        console.log(`🔄 [QUEUE] Processando presente ${gift.id} da fila...`);
+        return gift;
+    }
+}
+
+const giftQueue = new GiftQueue();
+
 // Enviar presente
 router.post('/send', async (req: any, res) => {
     try {
         const { fromUserId, toUserId, giftId, quantity = 1, streamId } = req.body;
         const io = req.app.get('io');
+        
+        // Adicionar à fila de processamento
+        const result = await giftQueue.add({
+            fromUserId,
+            toUserId,
+            giftId,
+            quantity,
+            streamId
+        });
+        
+        // Processar o presente
+        await processGiftSend(result.fromUserId, result.toUserId, result.giftId, result.quantity, result.streamId, io);
+        
+        res.json({ 
+            success: true, 
+            message: 'Presente enviado com sucesso',
+            queuedAt: result.timestamp
+        });
+        
+    } catch (error: any) {
+        console.error('❌ Erro ao enviar presente:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Função principal de processamento de presente
+async function processGiftSend(fromUserId: string, toUserId: string, giftId: string, quantity: number, streamId: string, io: any) {
+    try {
+        console.log(`🎁 [PROCESSING] Iniciando processamento: ${fromUserId} -> ${toUserId} (${quantity}x ${giftId})`);
         
         // Buscar usuários
         const fromUser = await User.findOne({ id: fromUserId });
@@ -15,7 +112,7 @@ router.post('/send', async (req: any, res) => {
         const gift = await Gift.findOne({ id: giftId });
         
         if (!fromUser || !toUser || !gift) {
-            return res.status(404).json({ error: 'Usuário ou presente não encontrado' });
+            throw new Error('Usuário ou presente não encontrado');
         }
         
         // Calcular valor total
@@ -24,7 +121,7 @@ router.post('/send', async (req: any, res) => {
         
         // Verificar saldo de diamantes
         if (fromUser.diamonds < totalCost) {
-            return res.status(400).json({ error: 'Saldo insuficiente' });
+            throw new Error('Saldo insuficiente');
         }
         
         // 🔧 MELHOR PRÁTICA: Atualizar saldos com $inc (atômico)
@@ -134,48 +231,54 @@ router.post('/send', async (req: any, res) => {
             }
         );
         
-        // Enviar notificações via WebSocket
-        // 🚀 VERIFICAR SE O PRESENTE LIBERA ACESSO À SALA PRIVADA
-        if (streamId && streamId !== 'unknown') {
-            const streamer = await Streamer.findOne({ id: streamId });
-            
-            if (streamer && streamer.privateGiftId && streamer.privateGiftId === giftId) {
-                console.log(`🔑 [PRIVATE ROOM] Presente correto enviado! GiftId: ${giftId} - Streamer: ${streamer.hostId}`);
-                
-                // Enviar convite para sala privada via WebSocket
-                if (io) {
-                    io.to(`user_${toUserId}`).emit('private_room_invite', {
-                        fromUserId: fromUserId,
-                        fromUserName: fromUser.name,
-                        fromUserAvatar: fromUser.avatarUrl,
-                        streamId: streamId,
-                        giftId: giftId,
-                        giftName: gift.name,
-                        giftIcon: gift.icon,
-                        message: `${fromUser.name} enviou ${gift.name} e ganhou acesso à sala privada!`,
-                        timestamp: new Date().toISOString()
-                    });
-                    
-                    // Notificar o usuário que enviou o presente
-                    io.to(`user_${fromUserId}`).emit('private_room_access_granted', {
-                        streamId: streamId,
-                        streamerName: toUser.name,
-                        giftName: gift.name,
-                        message: `Você ganhou acesso à sala privada de ${toUser.name}!`,
-                        timestamp: new Date().toISOString()
-                    });
-                    
-                    console.log(` Convite enviado para ${fromUserId} e notificação para ${toUserId}`);
-                }
-            } else if (streamer && streamer.privateGiftId) {
-                console.log(` Presente incorreto. Enviado: ${giftId}, Necessário: ${streamer.privateGiftId}`);
-            }
-        }
-        
-        // Enviar notificações via WebSocket
+        // 🚀 SISTEMA DE BROADCAST EM TEMPO REAL - PRESENTES NA LIVE
         if (io) {
-            // 🔄 ATUALIZAÇÃO DO MODAL DE CONVITE
+            // 1. Broadcast principal para todos na sala da live (prioridade máxima)
             if (streamId && streamId !== 'unknown') {
+                // Evento principal: presente recebido na live
+                io.to(streamId).emit('live_gift_received', {
+                    fromUser: {
+                        id: fromUserId,
+                        name: fromUser.name,
+                        avatarUrl: fromUser.avatarUrl,
+                        level: fromUser.level || 1
+                    },
+                    toUser: {
+                        id: toUserId,
+                        name: toUser.name,
+                        avatarUrl: toUser.avatarUrl
+                    },
+                    gift: {
+                        id: gift.id,
+                        name: gift.name,
+                        icon: gift.icon,
+                        price: giftPrice,
+                        rarity: gift.rarity || 'common',
+                        animation: gift.animation || null
+                    },
+                    quantity: quantity,
+                    totalValue: totalCost,
+                    streamId: streamId,
+                    timestamp: new Date().toISOString(),
+                    eventId: `gift_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`
+                });
+                
+                console.log(`📡 [LIVE BROADCAST] Presente broadcastado para ${streamId}: ${fromUser.name} -> ${toUser.name} (${quantity}x ${gift.name})`);
+                
+                // 2. Atualizar contador de diamantes da live
+                const updatedStream = await Streamer.findOne({ id: streamId });
+                const totalStreamDiamonds = updatedStream?.diamonds || 0;
+                
+                io.to(streamId).emit('live_coins_updated', {
+                    streamId: streamId,
+                    coins: totalCost,
+                    totalCoins: totalStreamDiamonds,
+                    timestamp: new Date().toISOString(),
+                    fromUser: fromUser.name,
+                    giftName: gift.name
+                });
+                
+                // 3. Atualizar modal de presentes da live
                 io.to(streamId).emit('gift_sent_to_stream', {
                     streamId,
                     gift: {
@@ -190,9 +293,9 @@ router.post('/send', async (req: any, res) => {
                     },
                     timestamp: new Date().toISOString()
                 });
-                console.log(`📡 [WEBSOCKET] Modal de convite atualizado para stream ${streamId}`);
             }
             
+            // 4. Notificação pessoal para o destinatário
             io.to(`user_${toUserId}`).emit('gift_received', {
                 from: {
                     id: fromUser.id,
@@ -211,53 +314,22 @@ router.post('/send', async (req: any, res) => {
                 timestamp: new Date().toISOString()
             });
             
-            // Enviar notificação de presente recebido
-            io.to(`user_${toUserId}`).emit('notification', {
-                id: `notif_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            // 5. Atualização global de earnings
+            io.emit('earnings_updated', {
                 userId: toUserId,
-                type: 'gift_received',
-                message: `${fromUser.name} enviou ${gift.name} para você!`,
-                data: {
-                    fromUserId,
-                    fromUserName: fromUser.name,
-                    giftName: gift.name,
-                    giftIcon: gift.icon,
-                    streamId
-                },
+                diamonds: totalCost,
+                totalEarnings: toUser.earnings + totalCost,
                 timestamp: new Date().toISOString(),
-                read: false
+                source: (!streamId || streamId === 'unknown') ? 'direct_gift' : 'live_gift',
+                fromUser: fromUser.name,
+                giftName: gift.name,
+                streamId: streamId
             });
             
-            // Atualizar contador de não lidas
-            io.to(`user_${toUserId}`).emit('unread_notification', {
-                userId: toUserId,
-                count: 1,
-                timestamp: new Date().toISOString()
-            });
-            
-            // Se estiver em live, atualizar presentes recebidos na stream
-            if (streamId) {
-                io.to(`stream_${streamId}`).emit('gift_sent_in_stream', {
-                    fromUserId,
-                    fromUserName: fromUser.name,
-                    toUserId,
-                    toUserName: toUser.name,
-                    gift: {
-                        id: gift.id,
-                        name: gift.name,
-                        icon: gift.icon,
-                        price: giftPrice
-                    },
-                    quantity: quantity,
-                    totalValue: totalCost,
-                    timestamp: new Date().toISOString()
-                });
-            }
-            
-            // Atualizar diamantes em tempo real
+            // 6. Atualização de diamantes do remetente
             io.emit('diamonds_updated', {
                 userId: fromUserId,
-                diamonds: fromUser.diamonds,
+                diamonds: fromUser.diamonds - totalCost,
                 change: -totalCost,
                 timestamp: new Date().toISOString()
             });
@@ -265,9 +337,8 @@ router.post('/send', async (req: any, res) => {
         
         console.log(`🎁 Presente enviado: ${fromUser.name} -> ${toUser.name} (${quantity}x ${gift.name} = ${totalCost} diamantes)`);
         
-        res.json({ 
-            success: true, 
-            message: 'Presente enviado com sucesso',
+        return {
+            success: true,
             fromUser: { id: fromUser.id, diamonds: fromUser.diamonds },
             toUser: { id: toUser.id, earnings: toUser.earnings },
             transaction: {
@@ -275,13 +346,13 @@ router.post('/send', async (req: any, res) => {
                 totalCost,
                 diamonds: totalCost
             }
-        });
+        };
         
     } catch (error: any) {
-        console.error('❌ Erro ao enviar presente:', error);
-        res.status(500).json({ error: error.message });
+        console.error('❌ Erro ao processar presente:', error);
+        throw error;
     }
-});
+}
 
 // Listar presentes enviados em uma live específica
 router.get('/stream/:streamId', async (req, res) => {

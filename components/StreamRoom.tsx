@@ -12,6 +12,7 @@ import BeautyEffectsPanel from './live/BeautyEffectsPanel';
 import ResolutionPanel from './live/ResolutionPanel';
 import GiftModal from './live/GiftModal';
 import GiftAnimationOverlay, { GiftPayload } from './live/GiftAnimationOverlay';
+import GiftQueueManager from './live/GiftQueueManager';
 import { useTranslation } from '../i18n';
 import { api } from '../services/api';
 import UserActionModal from './UserActionModal';
@@ -137,6 +138,7 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
     const nextGiftId = useRef(0);
     const [fullscreenGiftQueue, setFullscreenGiftQueue] = useState<GiftPayload[]>([]);
     const [currentFullscreenGift, setCurrentFullscreenGift] = useState<GiftPayload | null>(null);
+    const [giftQueue, setGiftQueue] = useState<GiftPayload[]>([]); // Nova fila para GiftQueueManager
 
     const isBroadcaster = streamer.hostId === currentUser.id;
 
@@ -386,50 +388,43 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
                     age: 18,
                     location: 'Brasil',
                     distance: 'desconhecida',
-                    fans: 0,
-                    following: 0,
-                    receptores: 0,
-                    enviados: 0,
-                    topFansAvatars: [],
-                    isLive: false,
-                    diamonds: 0,
-                    earnings: 0,
-                    earnings_withdrawn: 0,
-                    bio: '',
-                    obras: [],
-                    curtidas: [],
-                    ownedFrames: [],
-                    activeFrameId: null,
-                    frameExpiration: null,
                 },
-                toUser: {
-                    id: streamerUser?.id || streamer.id,
-                    name: streamerUser?.name || streamer.name
+                toUser: { 
+                    id: data.toUser.id, 
+                    name: data.toUser.name 
                 },
                 gift: {
+                    id: data.gift.id,
                     name: data.gift.name,
                     icon: data.gift.icon,
                     price: data.gift.price,
-                    category: 'Popular' as const
+                    rarity: data.gift.rarity || 'common',
+                    animation: data.gift.animation
                 },
-                quantity: data.quantity || 1,
+                quantity: data.quantity,
                 roomId: streamer.id
             };
 
-            if (payload.fromUser.id === currentUser.id) return; // Ignore self-sent
-
-            if (liveSession) {
-                updateLiveSession({ coins: (liveSession.coins || 0) + ((payload.gift.price || 0) * payload.quantity) });
-            }
-
+            // Adicionar à fila de animação (nova fila para GiftQueueManager)
+            setGiftQueue(prev => [...prev, payload]);
+            
+            // Adicionar mensagem de presente ao chat
             postGiftChatMessage(payload);
+            
+            // Adicionar à fila de animação em tela cheia (mantida para fullscreen)
             setFullscreenGiftQueue(prev => [...prev, payload]);
+            
+            console.log(`🎁 [LIVE GIFT] Recebido em tempo real: ${data.fromUser?.name} -> ${data.toUser?.name} (${data.quantity}x ${data.gift?.name})`);
         };
+        
+        // Escutar o novo evento de presente em tempo real
+        socketService.on('live_gift_received', handleNewGift);
         socketService.on('gift_received', handleNewGift);
 
         return () => {
             socketService.off('receive_message', handleNewMessage);
             socketService.off('gift_received', handleNewGift);
+            socketService.off('live_gift_received', handleNewGift);
         };
     }, [streamer.id, updateLiveSession, currentUser.id, t, onOpenFriendRequests, liveSession, refreshStreamRoomData]);
 
@@ -803,13 +798,15 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
 
             {/* 2. Gift Animation Layers */}
             <div className="absolute top-24 left-3 z-30 pointer-events-none flex flex-col-reverse items-start">
-                {bannerGifts.map((payload) => (
-                    <GiftAnimationOverlay
-                        key={payload.id}
-                        giftPayload={payload}
-                        onAnimationEnd={handleBannerAnimationEnd}
-                    />
-                ))}
+                <GiftQueueManager
+                    gifts={giftQueue}
+                    onAnimationEnd={(id) => {
+                        // Remover da fila quando a animação terminar
+                        setGiftQueue(prev => prev.filter(g => g.id !== id));
+                    }}
+                    maxConcurrent={3}
+                    maxQueueSize={50}
+                />
             </div>
 
             <FullScreenGiftAnimation

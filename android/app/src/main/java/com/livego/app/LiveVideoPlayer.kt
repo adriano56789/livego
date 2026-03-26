@@ -39,7 +39,6 @@ class LiveVideoPlayer {
             
             // Cache otimizado para streaming
             settings.cacheMode = WebSettings.LOAD_DEFAULT
-            settings.setAppCacheEnabled(true)
             
             // User agent identificado como LiveGo App
             val userAgent = settings.userAgentString

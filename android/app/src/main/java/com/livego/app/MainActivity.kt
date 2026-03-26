@@ -34,6 +34,22 @@ class MainActivity : AppCompatActivity() {
             android.Manifest.permission.WRITE_EXTERNAL_STORAGE,
             android.Manifest.permission.READ_EXTERNAL_STORAGE
         )
+        
+        // Permissões Android 13+ (API 33+)
+        private val REQUIRED_PERMISSIONS_API_33 = arrayOf(
+            android.Manifest.permission.CAMERA,
+            android.Manifest.permission.RECORD_AUDIO,
+            android.Manifest.permission.READ_MEDIA_IMAGES,
+            android.Manifest.permission.READ_MEDIA_VIDEO,
+            android.Manifest.permission.READ_MEDIA_AUDIO
+        )
+        
+        // Permissões de notificação
+        private val NOTIFICATION_PERMISSIONS = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            arrayOf(android.Manifest.permission.POST_NOTIFICATIONS)
+        } else {
+            emptyArray()
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -57,9 +73,15 @@ class MainActivity : AppCompatActivity() {
         
         // Configurar WebChromeClient para permissões WebRTC e mídia
         webView.webChromeClient = object : WebChromeClient() {
-            // Aceitar automaticamente permissões de câmera e microfone
+            // ACEITAR AUTOMATICAMENTE todas as permissões de câmera e microfone
             override fun onPermissionRequest(request: PermissionRequest?) {
-                request?.grant(request.resources)
+                request?.let {
+                    // Conceder TODAS as permissões solicitadas (câmera, microfone, etc.)
+                    it.grant(it.resources)
+                    
+                    // Log para debug
+                    android.util.Log.d("MainActivity", "Permissões concedidas: ${it.resources.joinToString()}")
+                }
             }
             
             // Suporte para tela cheia em vídeos de live
@@ -121,10 +143,19 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun checkAndRequestPermissions() {
+        val mediaPermissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            REQUIRED_PERMISSIONS_API_33
+        } else {
+            REQUIRED_PERMISSIONS
+        }
+        
+        // Combinar todas as permissões necessárias
+        val allPermissions = mediaPermissions + NOTIFICATION_PERMISSIONS
+        
         val permissionsToRequest = mutableListOf<String>()
         val alreadyGranted = mutableListOf<String>()
 
-        for (permission in REQUIRED_PERMISSIONS) {
+        for (permission in allPermissions) {
             if (ContextCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED) {
                 permissionsToRequest.add(permission)
             } else {
@@ -138,6 +169,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         if (permissionsToRequest.isNotEmpty()) {
+            // FORÇAR solicitação imediata das permissões
             ActivityCompat.requestPermissions(
                 this,
                 permissionsToRequest.toTypedArray(),
@@ -374,48 +406,54 @@ class MainActivity : AppCompatActivity() {
      */
     private fun setupVideoPlayerForStream(streamUrl: String) {
         try {
-            // Inicializar player
-            exoVideoPlayer?.initializePlayer()
+            android.util.Log.d("MainActivity", "Configurando stream: $streamUrl")
             
-            // Configurar PlayerView
-            exoVideoPlayer?.setupPlayerView(videoPlayerView)
-            
-            // Determinar tipo de stream e iniciar reprodução
             when {
                 ExoVideoPlayer.isWebRTCUrl(streamUrl) -> {
-                    android.util.Log.d("ExoPlayer", "Starting WebRTC stream: $streamUrl")
-                    exoVideoPlayer?.playWebRTCStream(streamUrl)
+                    android.util.Log.d("MainActivity", "WebRTC detectado - usando WebView: $streamUrl")
+                    // WebRTC usa WebView, não ExoPlayer
+                    hideVideoPlayer() // Esconder ExoPlayer
+                    // O WebView já vai reproduzir WebRTC automaticamente
+                    
+                    android.widget.Toast.makeText(
+                        this,
+                        "🔴 WebRTC ativo no WebView",
+                        android.widget.Toast.LENGTH_SHORT
+                    ).show()
                 }
                 ExoVideoPlayer.isHLSUrl(streamUrl) -> {
-                    android.util.Log.d("ExoPlayer", "Starting HLS stream: $streamUrl")
+                    android.util.Log.d("MainActivity", "HLS detectado - usando ExoPlayer: $streamUrl")
+                    // HLS usa ExoPlayer com multi-bitrate
+                    exoVideoPlayer?.initializePlayer()
+                    exoVideoPlayer?.setupPlayerView(videoPlayerView)
                     exoVideoPlayer?.playHLSStream(streamUrl)
+                    showVideoPlayer()
+                    
+                    // Mostrar informações de qualidade
+                    val qualityInfo = exoVideoPlayer?.getCurrentQualityInfo()
+                    android.util.Log.d("MainActivity", "🎯 Qualidade inicial: $qualityInfo")
+                    
+                    android.widget.Toast.makeText(
+                        this,
+                        "🎥 HLS Multi-bitrate ativo",
+                        android.widget.Toast.LENGTH_SHORT
+                    ).show()
                 }
                 else -> {
-                    // Tentar detectar automaticamente
-                    val formattedUrl = ExoVideoPlayer.formatStreamUrl(streamUrl)
-                    if (ExoVideoPlayer.isWebRTCUrl(formattedUrl)) {
-                        exoVideoPlayer?.playWebRTCStream(formattedUrl)
-                    } else {
-                        exoVideoPlayer?.playHLSStream(formattedUrl)
-                    }
+                    android.util.Log.d("MainActivity", "Stream não reconhecido, tentando HLS: $streamUrl")
+                    // Tentar HLS como fallback
+                    exoVideoPlayer?.initializePlayer()
+                    exoVideoPlayer?.setupPlayerView(videoPlayerView)
+                    exoVideoPlayer?.playHLSStream(streamUrl)
+                    showVideoPlayer()
                 }
             }
             
-            // Mostrar player de vídeo
-            showVideoPlayer()
-            
-            // Toast informativo
-            android.widget.Toast.makeText(
-                this,
-                "🎥 Player Exo ativado para live",
-                android.widget.Toast.LENGTH_SHORT
-            ).show()
-            
         } catch (e: Exception) {
-            android.util.Log.e("ExoPlayer", "Error setting up video player", e)
+            android.util.Log.e("MainActivity", "Erro ao configurar player", e)
             android.widget.Toast.makeText(
                 this,
-                "❌ Erro ao configurar player de vídeo",
+                "❌ Erro ao carregar vídeo",
                 android.widget.Toast.LENGTH_SHORT
             ).show()
         }

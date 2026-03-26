@@ -13,7 +13,7 @@ class WebRTCConfig {
     companion object {
         /**
          * Configura o WebView para suporte completo a WebRTC
-         */
+         */        
         fun configureWebViewForWebRTC(webView: WebView) {
             val settings = webView.settings
             
@@ -28,21 +28,29 @@ class WebRTCConfig {
             settings.allowFileAccessFromFileURLs = true
             settings.allowUniversalAccessFromFileURLs = true
             
-            // Mídia sem interação do usuário
+            // Mídia sem interação do usuário - ESSENCIAL para autoplay
             settings.mediaPlaybackRequiresUserGesture = false
+            settings.allowFileAccess = true
+            
+            // Hardware acceleration para vídeo - CRÍTICO para performance
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+                webView.setLayerType(android.view.View.LAYER_TYPE_HARDWARE, null)
+            }
+            
+            // WebRTC específico
+            settings.setGeolocationEnabled(false)
             
             // Mixed content para compatibilidade HTTP/HTTPS
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                 settings.mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
             }
             
-            // Cache desabilitado para sempre buscar do servidor
-            settings.cacheMode = WebSettings.LOAD_NO_CACHE
-            settings.setAppCacheEnabled(false)
+            // Cache otimizado para streaming
+            settings.cacheMode = WebSettings.LOAD_DEFAULT
             
             // User agent customizado para identificar o app
             val userAgent = settings.userAgentString
-            settings.userAgentString = "$userAgent LiveGoApp/Android"
+            settings.userAgentString = "$userAgent LiveGoApp/Android-WebRTC"
             
             // Zoom habilitado
             settings.setSupportZoom(true)

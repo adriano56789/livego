@@ -43,7 +43,6 @@
             android:layout_height="match_parent"
             android:scaleType="fitCenter"
             app:use_controller="true"
-            app:controller_auto_show="false"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"

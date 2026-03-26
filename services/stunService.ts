@@ -49,7 +49,7 @@ export class STUNService {
       console.error('❌ [STUN] Erro na inicialização:', error);
       return false;
     }
-  }
+  }           
 
   /**
    * Testar conexão com servidor STUN

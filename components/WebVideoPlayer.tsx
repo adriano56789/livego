@@ -124,15 +124,40 @@ const WebVideoPlayer: React.FC<WebVideoPlayerProps> = ({
           manifestLoadingTimeOut: 10000,
           manifestLoadingMaxRetry: 6,
           manifestLoadingRetryDelay: 1000,
+          // Configurações adaptativas
+          abrEwmaFastLive: 3.0,
+          abrEwmaSlowLive: 9.0,
+          abrEwmaDefaultEstimate: 500000,
+          abrEwmaDefaultEstimateMax: 5000000,
+          abrBandWidthFactor: 0.95,
+          abrBandWidthUpFactor: 0.7,
+          abrMaxWithRealBitrate: false,
+          maxBufferSize: 60 * 1000 * 1000,
+          maxBufferHole: 0.5,
         });
 
         hlsRef.current = hls;
 
-        hls.loadSource(hlsUrl);
+        // Tentar usar multi-bitrate primeiro, fallback para single bitrate
+        const multiBitrateUrl = getMultiBitrateHLSUrl();
+        const singleBitrateUrl = getHLSUrl();
+        
+        console.log('🎯 URLs de streaming:');
+        console.log('  Multi-bitrate:', multiBitrateUrl);
+        console.log('  Single-bitrate:', singleBitrateUrl);
+        
+        // Tentar carregar multi-bitrate primeiro
+        hls.loadSource(multiBitrateUrl);
         hls.attachMedia(videoEl);
 
-        hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        hls.on(Hls.Events.MANIFEST_PARSED, (event, data) => {
           console.log('✅ Manifest HLS carregado');
+          console.log('📊 Qualidades disponíveis:', data.levels?.map((level: any) => ({
+            height: level.height,
+            bitrate: level.bitrate,
+            name: `${level.height}p (${Math.round(level.bitrate / 1000)}kbps)`
+          })));
+          
           videoEl.play().catch(err => {
             console.warn('⚠️ Auto-play bloqueado, tentando com muted:', err);
             videoEl.muted = true;
@@ -146,13 +171,42 @@ const WebVideoPlayer: React.FC<WebVideoPlayerProps> = ({
           });
         });
 
+        // Monitorar mudanças de qualidade adaptativa
+        hls.on(Hls.Events.LEVEL_SWITCHED, (event, data) => {
+          const currentLevel = hls.levels[data.level];
+          console.log('🔄 Qualidade alterada para:', {
+            level: data.level,
+            height: currentLevel?.height,
+            bitrate: currentLevel?.bitrate,
+            resolution: `${currentLevel?.height}p`,
+            kbps: Math.round((currentLevel?.bitrate || 0) / 1000)
+          });
+        });
+
+        // Monitorar buffer e adaptação
+        hls.on(Hls.Events.BUFFER_CREATED, (event, data) => {
+          console.log('📦 Buffer criado:', data);
+        });
+
+        hls.on(Hls.Events.BUFFER_APPENDED, (event, data) => {
+          if (Math.random() < 0.1) { // Log apenas 10% das vezes para não poluir
+            console.log('📦 Buffer append:', data);
+          }
+        });
+
         hls.on(Hls.Events.ERROR, (event, data) => {
           console.error('❌ HLS Error:', data);
           if (data.fatal) {
             switch (data.type) {
               case Hls.ErrorTypes.NETWORK_ERROR:
                 console.log('🔄 Tentando recuperar de erro de rede...');
-                hls.startLoad();
+                // Se falhou multi-bitrate, tentar single-bitrate
+                if (hls.url === multiBitrateUrl) {
+                  console.log('🔄 Multi-bitrate falhou, tentando single-bitrate...');
+                  hls.loadSource(singleBitrateUrl);
+                } else {
+                  hls.startLoad();
+                }
                 break;
               case Hls.ErrorTypes.MEDIA_ERROR:
                 console.log('🔄 Tentando recuperar de erro de mídia...');
@@ -169,10 +223,18 @@ const WebVideoPlayer: React.FC<WebVideoPlayerProps> = ({
         });
 
       } else if (videoEl.canPlayType('application/vnd.apple.mpegurl')) {
-        // Safari nativo
-        console.log('📺 Usando HLS nativo (Safari)');
-        videoEl.src = hlsUrl;
-        videoEl.play();
+        // Safari nativo - tentar multi-bitrate primeiro
+        console.log('📺 Tentando HLS nativo com multi-bitrate');
+        try {
+          videoEl.src = getMultiBitrateHLSUrl();
+          await videoEl.play();
+          console.log('✅ HLS nativo multi-bitrate funcionando');
+        } catch (multiError) {
+          console.warn('⚠️ HLS nativo multi-bitrate falhou, tentando single-bitrate:', multiError);
+          videoEl.src = getHLSUrl();
+          await videoEl.play();
+          console.log('✅ HLS nativo single-bitrate funcionando');
+        }
       } else {
         throw new Error('HLS não suportado neste navegador/WebView');
       }
@@ -212,8 +274,14 @@ const WebVideoPlayer: React.FC<WebVideoPlayerProps> = ({
       
       // Construir URL HLS baseada no ambiente
       const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-      const baseUrl = isLocal ? 'http://localhost:8000/live' : 'https://livego.store:8000/live';
+      const baseUrl = isLocal ? 'http://localhost:8080/live' : 'https://livego.store:8080/live';
       return `${baseUrl}/${streamer.id}.m3u8`;
+    };
+
+    const getMultiBitrateHLSUrl = (): string => {
+      // Para multi-bitrate, usar o master playlist
+      const baseUrl = getHLSUrl().replace('.m3u8', '');
+      return `${baseUrl}/master.m3u8`;
     };
 
     setupVideo();

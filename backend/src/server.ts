@@ -47,7 +47,7 @@ import { initializeDatabase } from './scripts/initDatabase'; // NOVO - Inicializ
 import { quickAutomationCheck } from './scripts/verifyAutomation'; // NOVO - Verificação automática
 import { withdrawalCronJob } from './scripts/withdrawalCronJob'; // NOVO - Cron job de saques
 
-dotenv.config({ path: '.env.production' });
+dotenv.config();
 
 const app = express();
 app.set('etag', false); // Desabilitar ETag para sempre retornar 200 em vez de 304

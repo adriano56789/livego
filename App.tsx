@@ -1453,6 +1453,8 @@ const AppContent: React.FC = () => {
 
       socketService.off('card_removed');
 
+      socketService.off('srs_server_restarted');
+
     };
 
   }, [currentUser, activeStream]);

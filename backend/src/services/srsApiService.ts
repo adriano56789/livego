@@ -8,11 +8,46 @@ import axios from 'axios';
 class SrsApiService {
     private baseUrl: string;
     private authToken?: string;
+    private currentServerId: string | null = null;
 
     constructor() {
         // Usar IP público para produção, IP local apenas para desenvolvimento
         this.baseUrl = process.env.SRS_API_URL || 'http://72.60.249.175:1985';
         this.authToken = process.env.SRS_API_TOKEN;
+    }
+
+    /**
+     * Verifica se o serverId mudou (SRS reiniciado)
+     * @param newServerId Novo serverId da resposta da API
+     * @returns true se o serverId mudou (servidor reiniciado)
+     */
+    private checkServerRestart(newServerId: string): boolean {
+        if (!this.currentServerId) {
+            this.currentServerId = newServerId;
+            return false;
+        }
+        
+        if (this.currentServerId !== newServerId) {
+            console.warn(`[SRS API] Servidor reiniciado detectado! Anterior: ${this.currentServerId}, Novo: ${newServerId}`);
+            this.currentServerId = newServerId;
+            return true;
+        }
+        
+        return false;
+    }
+
+    /**
+     * Obtém o serverId atual
+     */
+    getCurrentServerId(): string | null {
+        return this.currentServerId;
+    }
+
+    /**
+     * Força atualização do serverId (para testes)
+     */
+    resetServerId(): void {
+        this.currentServerId = null;
     }
 
     /**
@@ -26,10 +61,13 @@ class SrsApiService {
                 timeout: 5000
             });
             
+            const serverRestarted = this.checkServerRestart(response.data.server);
+            
             return {
                 success: true,
                 data: response.data,
-                server: response.data.server
+                server: response.data.server,
+                serverRestarted
             };
         } catch (error: any) {
             console.error('[SRS API] Erro ao obter sumários:', error.message);
@@ -84,10 +122,13 @@ class SrsApiService {
                 timeout: 5000
             });
             
+            const serverRestarted = this.checkServerRestart(response.data.server);
+            
             return {
                 success: true,
                 data: response.data.streams,
                 server: response.data.server,
+                serverRestarted,
                 total: response.data.streams?.length || 0
             };
         } catch (error: any) {
@@ -143,10 +184,13 @@ class SrsApiService {
                 timeout: 5000
             });
             
+            const serverRestarted = this.checkServerRestart(response.data.server);
+            
             return {
                 success: true,
                 data: response.data.clients,
                 server: response.data.server,
+                serverRestarted,
                 total: response.data.clients?.length || 0
             };
         } catch (error: any) {
@@ -234,12 +278,15 @@ class SrsApiService {
                 }
             );
             
+            const serverRestarted = this.checkServerRestart(response.data.server);
+            
             // WHIP specification usa status 201
             return {
                 success: response.status === 201,
                 data: response.data,
                 status: response.status,
-                server: response.data.server
+                server: response.data.server,
+                serverRestarted
             };
         } catch (error: any) {
             console.error(`[SRS API] Erro no WebRTC publish ${app}/${stream}:`, error.message);
@@ -275,12 +322,15 @@ class SrsApiService {
                 }
             );
             
+            const serverRestarted = this.checkServerRestart(response.data.server);
+            
             // WHEP specification usa status 201
             return {
                 success: response.status === 201,
                 data: response.data,
                 status: response.status,
-                server: response.data.server
+                server: response.data.server,
+                serverRestarted
             };
         } catch (error: any) {
             console.error(`[SRS API] Erro no WebRTC play ${app}/${stream}:`, error.message);

@@ -52,27 +52,37 @@ router.post('/publish', async (req, res) => {
         
         console.log(`[WebRTC] WHIP Publish - User: ${userId}, URL: ${whipUrl}`);
 
-        // Enviar SDP offer para SRS
-        const response = await axios.post(whipUrl, sdp, {
-            headers: {
-                'Content-Type': 'application/sdp'
-            },
-            timeout: 10000
-        });
-
-        // WHIP specification usa status 201
-        if (response.status === 201) {
-            const srsAnswer = response.data;
+        // Enviar SDP offer para SRS via SrsApiService
+        const srsService = SrsApiService;
+        const response = await srsService.publishWebRTC('live', userId, sdp);
+        
+        if (response.success && response.serverRestarted) {
+            console.warn('[WebRTC] Servidor SRS reiniciado detectado! Invalidando dados...');
             
+            // Emitir evento global para todos os clientes invalidarem dados
+            const { getIO } = await import('../server');
+            const io = getIO();
+            
+            io.emit('srs_server_restarted', {
+                serverId: response.server,
+                message: 'Servidor SRS reiniciado - dados inconsistentes',
+                timestamp: new Date().toISOString()
+            });
+            
+            console.log('[WebRTC] Evento srs_server_restarted emitido para todos os clientes');
+        }
+
+        if (response.success) {
             // Retornar SDP answer do SRS para o cliente
             return res.json({
                 code: 0,
-                sdp: srsAnswer,
+                sdp: response.data,
                 streamUrl: `webrtc://72.60.249.175:8000/live/${userId}`,
-                userId: userId
+                userId: userId,
+                server: response.server
             });
         } else {
-            throw new Error(`Status inesperado: ${response.status}`);
+            throw new Error(`Falha no WebRTC: ${response.error}`);
         }
 
     } catch (error: any) {
@@ -129,27 +139,37 @@ router.post('/play', async (req, res) => {
         
         console.log(`[WebRTC] WHEP Play - Stream: ${streamId}, Viewer: ${tokenUserId}, URL: ${whepUrl}`);
 
-        // Enviar SDP offer para SRS
-        const response = await axios.post(whepUrl, sdp, {
-            headers: {
-                'Content-Type': 'application/sdp'
-            },
-            timeout: 10000
-        });
-
-        // WHEP specification usa status 201
-        if (response.status === 201) {
-            const srsAnswer = response.data;
+        // Enviar SDP offer para SRS via SrsApiService
+        const srsService = SrsApiService;
+        const response = await srsService.playWebRTC('live', streamId, sdp);
+        
+        if (response.success && response.serverRestarted) {
+            console.warn('[WebRTC] Servidor SRS reiniciado detectado! Invalidando dados...');
             
+            // Emitir evento global para todos os clientes invalidarem dados
+            const { getIO } = await import('../server');
+            const io = getIO();
+            
+            io.emit('srs_server_restarted', {
+                serverId: response.server,
+                message: 'Servidor SRS reiniciado - dados inconsistentes',
+                timestamp: new Date().toISOString()
+            });
+            
+            console.log('[WebRTC] Evento srs_server_restarted emitido para todos os clientes');
+        }
+
+        if (response.success) {
             // Retornar SDP answer do SRS para o cliente
             return res.json({
                 code: 0,
-                sdp: srsAnswer,
+                sdp: response.data,
                 streamUrl: `webrtc://72.60.249.175:8000/live/${streamId}`,
-                streamId: streamId
+                streamId: streamId,
+                server: response.server
             });
         } else {
-            throw new Error(`Status inesperado: ${response.status}`);
+            throw new Error(`Falha no WebRTC: ${response.error}`);
         }
 
     } catch (error: any) {

@@ -169,6 +169,11 @@ class SocketService {
         this.on('card_removed', callback);
     }
 
+    // Evento para quando o servidor SRS reinicia
+    onSrsServerRestarted(callback: (data: { serverId: string; message: string; timestamp: string }) => void) {
+        this.on('srs_server_restarted', callback);
+    }
+
     on(event: string, callback: Function) {
         if (!this.listeners.has(event)) {
             this.listeners.set(event, []);

@@ -69,41 +69,52 @@ const WebViewStreamPlayer: React.FC<WebViewStreamPlayerProps> = ({
         throw new Error('Câmera não suportada neste WebView');
       }
 
-      // Solicitar permissão e capturar mídia
-      const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-          facingMode: 'user'
-        },
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true
-        }
-      });
-
-      // Exibir preview local
-      videoEl.srcObject = mediaStream;
-      
-      // Iniciar WebRTC para envio
+      // 🎥 CORREÇÃO: Sempre tentar capturar a câmera ao entrar ao vivo
       try {
-        const { webRTCService } = await import('../services/webrtcService.js');
-        const webrtcUrl = getWebRTCUrl();
-        console.log('🔗 WebRTC URL:', webrtcUrl);
+        console.log('📷 Solicitando acesso à câmera e microfone...');
         
-        // Passar o mediaStream para o WebRTC
-        await webRTCService.startPublish(webrtcUrl, streamer.streamKey || streamer.id);
-        setIsConnected(true);
-        console.log('✅ WebRTC publishing iniciado com mediaStream');
-      } catch (webrtcError) {
-        console.warn('⚠️ WebRTC falhou, usando apenas preview local:', webrtcError);
-        // Continuar com preview local mesmo sem WebRTC
-      }
+        // Solicitar permissão e capturar mídia
+        const mediaStream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+            facingMode: 'user'
+          },
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true
+          }
+        });
 
-      await videoEl.play();
-      setIsLoading(false);
-      onVideoReady?.();
+        console.log('✅ Câmera capturada com sucesso:', mediaStream.getVideoTracks().length, 'tracks');
+
+        // Exibir preview local
+        videoEl.srcObject = mediaStream;
+        
+        // Iniciar WebRTC para envio
+        try {
+          const { webRTCService } = await import('../services/webrtcService.js');
+          const webrtcUrl = getWebRTCUrl();
+          console.log('🔗 WebRTC URL:', webrtcUrl);
+          
+          // Passar o mediaStream para o WebRTC
+          await webRTCService.startPublish(webrtcUrl, streamer.streamKey || streamer.id, mediaStream);
+          setIsConnected(true);
+          console.log('✅ WebRTC publishing iniciado com mediaStream');
+        } catch (webrtcError) {
+          console.warn('⚠️ WebRTC falhou, usando apenas preview local:', webrtcError);
+          // Continuar com preview local mesmo sem WebRTC
+        }
+
+        await videoEl.play();
+        setIsLoading(false);
+        onVideoReady?.();
+        
+      } catch (mediaError) {
+        console.error('❌ Erro ao capturar mídia:', mediaError);
+        throw new Error(`Falha ao acessar câmera: ${mediaError instanceof Error ? mediaError.message : 'Erro desconhecido'}`);
+      }
     };
 
     const setupViewerStream = async (videoEl: HTMLVideoElement) => {

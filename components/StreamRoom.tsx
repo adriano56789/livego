@@ -801,9 +801,15 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
 
     // Obter URL da stream para o WebViewStreamPlayer
     const getStreamUrl = () => {
-        // Retornar HLS direto do SRS
+        // 🎥 CORREÇÃO: Para broadcaster, não passar URL de visualização
+        // O WebViewStreamPlayer vai capturar a câmera e fazer WebRTC
+        if (isBroadcaster) {
+            return undefined; // Deixar o WebViewStreamPlayer configurar a câmera
+        }
+        
+        // Para viewers, retornar HLS do SRS
         const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-        const baseUrl = isLocal ? 'http://localhost:8000/live' : 'https://livego.store:8000/live';
+        const baseUrl = isLocal ? 'http://localhost:8080/live' : 'https://livego.store:8080/live';
         return `${baseUrl}/${streamer.id}.m3u8`;
     };
 

@@ -58,32 +58,37 @@ export class WebRTCService {
 
   // --- PUBLISH FLOW ---
 
-  public async startPublish(streamId: string, streamKey: string, retryCount = 3): Promise<MediaStream> {
-    this.currentStreamId = streamId;
+  public async startPublish(streamUrl: string, streamKey: string, mediaStream?: MediaStream, retryCount: number = 3): Promise<MediaStream> {
+    this.currentStreamId = streamKey;
     
     // Construir URL baseada no ambiente
     const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
     const webrtcBase = import.meta.env?.VITE_SRS_WEBRTC_URL || 
       (isLocal ? 'webrtc://localhost:8000/live' : 'webrtc://72.60.249.175:8000/live');
     
-    if (streamId.startsWith('webrtc://')) {
-      this.currentStreamUrl = streamId;
+    if (streamUrl.startsWith('webrtc://')) {
+      this.currentStreamUrl = streamUrl;
     } else {
-      this.currentStreamUrl = `${webrtcBase}/${streamId}`;
+      this.currentStreamUrl = `${webrtcBase}/${streamKey}`;
     }
     this.state = 'connecting';
     
     try {
-      // 1. Capturar mídia local
-      if (!this.localStream) {
-          try {
-              this.localStream = await navigator.mediaDevices.getUserMedia({
-                video: { width: 1280, height: 720, frameRate: 30 },
-                audio: true
-              });
-          } catch (e) {
-              throw new Error('Falha na captura de mídia');
-          }
+      // Usar mediaStream fornecido ou capturar novo
+      if (!this.localStream && !mediaStream) {
+        try {
+          console.log('Capturando nova mídia local...');
+          this.localStream = await navigator.mediaDevices.getUserMedia({
+            video: { width: 1280, height: 720, frameRate: 30 },
+            audio: true
+          });
+        } catch (e) {
+          throw new Error('Falha na captura de mídia');
+        }
+      } else if (mediaStream) {
+        // USAR MEDIA STREAM FORNECIDO (do WebViewStreamPlayer)
+        this.localStream = mediaStream;
+        console.log('Usando mediaStream fornecido:', mediaStream.getVideoTracks().length, 'tracks');
       }
 
       // 2. Inicializar PeerConnection com nosso ICE
@@ -152,7 +157,7 @@ export class WebRTCService {
     } catch (error) {
       if (retryCount > 0) {
           await new Promise(r => setTimeout(r, 2000));
-          return this.startPublish(streamId, streamKey, retryCount - 1);
+          return this.startPublish(streamUrl, streamKey, mediaStream, retryCount - 1);
       }
       this.state = 'failed';
       this.stop();

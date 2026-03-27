@@ -1736,8 +1736,29 @@ router.post('/streams/rtc/v1/publish', validateStreamKey, async (req, res) => {
         console.log(`[WHIP DEBUG] Stream validated:`, {
             streamId: stream.id,
             hostId: stream.hostId,
-            streamKey: stream.streamKey
+            streamKey: stream.streamKey,
+            currentIsLive: stream.isLive,
+            currentStatus: stream.streamStatus
         });
+
+        // 🚀 CRÍTICO: Marcar stream como ativa ao publicar via WebRTC
+        if (!stream.isLive || stream.streamStatus !== 'active') {
+            console.log(`[WHIP PUBLISH] Atualizando status da stream ${stream.id} para isLive: true`);
+            await Streamer.findOneAndUpdate(
+                { id: stream.id },
+                {
+                    $set: {
+                        isLive: true,
+                        streamStatus: 'active',
+                        startTime: stream.startTime || new Date().toISOString(),
+                        updatedAt: new Date()
+                    }
+                },
+                { new: true }
+            );
+            
+            console.log(`✅ [WHIP PUBLISH] Stream ${stream.id} marcada como ativa no banco de dados`);
+        }
 
         // Usar API SRS seguindo padrão WHIP
         const srsApiUrl = process.env.SRS_API_URL || 'http://192.168.131.2:1985';

@@ -26,9 +26,9 @@ export class TURNService {
 
   constructor(config?: Partial<TURNConfig>) {
     this.config = {
-      url: import.meta.env?.VITE_TURN_URL || 'turn:openrelay.metered.ca:80',
-      username: import.meta.env?.VITE_TURN_USER || 'openrelayproject',
-      credential: import.meta.env?.VITE_TURN_PASS || 'openrelayproject',
+      url: import.meta.env?.VITE_TURN_URL || 'turn:numb.viagenie.ca:3478',
+      username: import.meta.env?.VITE_TURN_USER || 'livego',
+      credential: import.meta.env?.VITE_TURN_PASS || 'livego123',
       timeout: 10000,
       retryAttempts: 3,
       protocol: 'udp',

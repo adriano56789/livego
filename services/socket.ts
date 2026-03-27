@@ -174,6 +174,28 @@ class SocketService {
         this.on('srs_server_restarted', callback);
     }
 
+    // 🚀 Eventos do SRS Callback - Status da transmissão
+    onStreamStarted(callback: (data: { streamId: string; stream: any; source: string; data: any }) => void) {
+        this.on('stream_started', callback);
+    }
+
+    onStreamEndedFromSRS(callback: (data: { streamId: string; stream: any; source: string; data: any }) => void) {
+        this.on('stream_ended', callback);
+    }
+
+    onStreamStatusUpdated(callback: (data: { streamId: string; isLive: boolean; streamStatus: string }) => void) {
+        this.on('stream_status_updated', callback);
+    }
+
+    // Eventos legados do SRS
+    onSrsStreamPublished(callback: (data: { stream: string; client_id: string; data: any }) => void) {
+        this.on('srs_stream_published', callback);
+    }
+
+    onSrsStreamUnpublished(callback: (data: { stream: string; client_id: string; data: any }) => void) {
+        this.on('srs_stream_unpublished', callback);
+    }
+
     on(event: string, callback: Function) {
         if (!this.listeners.has(event)) {
             this.listeners.set(event, []);

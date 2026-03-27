@@ -179,25 +179,41 @@ class SRSService {
   }
 
   /**
-   * Get stream statistics from SRS
+   * Get stream statistics from SRS via backend API
+   * Usa backend que tem tratamento robusto quando SRS está offline
    */
   public async getStreamStats(streamId: string) {
     try {
-      const response = await fetch(`${this.getApiUrl()}/api/v1/streams/${streamId}`);
+      // Usar API backend que já tem tratamento de erro robusto
+      const response = await fetch(`/api/srs/streams/${streamId}/stats`);
       
       if (!response.ok) {
-        throw new Error(`SRS API Error: ${response.status} ${response.statusText}`);
+        // Se backend retornar erro, SRS pode estar offline
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Backend API Error: ${response.status}`);
       }
 
       const data = await response.json();
-      return data;
+      
+      if (data.success) {
+        return data.data; // Dados reais do SRS via backend
+      } else {
+        // Backend reportou erro do SRS
+        throw new Error(data.error || 'Erro ao obter estatísticas do SRS');
+      }
 
     } catch (error) {
+      console.error('[SRS Service] Erro ao obter estatísticas:', error);
+      
+      // Retornar objeto com erro claro em vez de dados fake
       return {
+        error: true,
+        message: error instanceof Error ? error.message : 'Falha ao conectar com SRS',
         id: streamId,
         clients: 0,
         kbps: { recv_30s: 0, send_30s: 0 },
-        create: new Date().toISOString()
+        create: new Date().toISOString(),
+        offline: true
       };
     }
   }

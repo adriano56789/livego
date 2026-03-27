@@ -5,9 +5,9 @@ import SrsApiService from '../services/srsApiService';
 
 const router = express.Router();
 
-// Configuração do SRS
-const SRS_BASE_URL = process.env.SRS_API_URL || 'http://72.60.249.175:1985';
-const SRS_WEBRTC_URL = process.env.SRS_WEBRTC_URL || 'http://72.60.249.175:1985';
+// Configuração do SRS usando variáveis de ambiente
+const SRS_BASE_URL = process.env.SRS_API_URL || 'http://localhost:1985';
+const SRS_WEBRTC_URL = process.env.SRS_WEBRTC_URL || 'webrtc://localhost:8000/live';
 
 /**
  * WebRTC Publish - WHIP (WebRTC-HTTP Ingestion Protocol)
@@ -39,7 +39,10 @@ router.post('/publish', async (req, res) => {
 
         // Validar token e obter usuário autenticado
         const tokenUserId = getUserIdFromToken(req);
+        console.log(`[WebRTC] Token userId: ${tokenUserId}, Request userId: ${userId}`);
+        
         if (!tokenUserId || tokenUserId !== userId) {
+            console.log(`[WebRTC] Autenticação falhou: token=${tokenUserId}, userId=${userId}`);
             return res.status(401).json({
                 code: 401,
                 message: 'Não autorizado'
@@ -48,7 +51,7 @@ router.post('/publish', async (req, res) => {
 
         // Construir URL WHIP seguindo padrão SRS
         // POST /rtc/v1/whip/?app=live&stream={userId_real}
-        const whipUrl = `${SRS_WEBRTC_URL}/rtc/v1/whip/?app=live&stream=${userId}`;
+        const whipUrl = `${SRS_BASE_URL}/rtc/v1/whip/?app=live&stream=${userId}`;
         
         console.log(`[WebRTC] WHIP Publish - User: ${userId}, URL: ${whipUrl}`);
 
@@ -77,7 +80,7 @@ router.post('/publish', async (req, res) => {
             return res.json({
                 code: 0,
                 sdp: response.data,
-                streamUrl: `webrtc://72.60.249.175:8000/live/${userId}`,
+                streamUrl: `webrtc://localhost:8000/live/${userId}`,
                 userId: userId,
                 server: response.server
             });

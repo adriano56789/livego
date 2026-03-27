@@ -52,12 +52,15 @@ const WebViewStreamPlayer: React.FC<WebViewStreamPlayerProps> = ({
 
     const setupStream = async () => {
       try {
+        console.log('🎬 Inicializando player de vídeo automaticamente...');
+        
         if (isBroadcaster) {
           // Dono da live: SEMPRE capturar câmera imediatamente
-          console.log(' Dono da live detectado - iniciando câmera imediatamente...');
+          console.log('📹 Dono da live detectado - iniciando câmera imediatamente...');
           await setupBroadcasterStream(videoEl);
         } else {
-          // Viewer: assistir transmissão HLS
+          // Viewer: assistir transmissão HLS automaticamente
+          console.log('👥 Viewer detectado - iniciando transmissão HLS...');
           await setupViewerStream(videoEl);
         }
       } catch (err) {
@@ -103,31 +106,62 @@ const WebViewStreamPlayer: React.FC<WebViewStreamPlayerProps> = ({
           }
         };
 
-        // Solicitar permissão e capturar mídia
-        const mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
+        // SOLICITAR PERMISSÃO E CAPTURAR MÍDIA COM DIAGNÓSTICO
+        console.log('🎥 Diagnóstico: Verificando permissões...');
+        
+        // Verificar permissões antes de solicitar
+        const permissions = await navigator.permissions.query({ name: 'camera' as PermissionName });
+        console.log('📹 Status permissão câmera:', permissions.state);
+        
+        const audioPermissions = await navigator.permissions.query({ name: 'microphone' as PermissionName });
+        console.log('🎤 Status permissão microfone:', audioPermissions.state);
 
-        // Removido log sensível com informações da mídia
+        // Solicitar acesso à câmera
+        console.log('📷 Chamando getUserMedia...');
+        const mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
+        console.log('✅ getUserMedia sucesso! Tracks:', mediaStream.getTracks().length);
 
         // Verificar se os tracks estão ativos
         const videoTrack = mediaStream.getVideoTracks()[0];
         const audioTrack = mediaStream.getAudioTracks()[0];
         
+        console.log('📹 Video track:', videoTrack ? {
+          enabled: videoTrack.enabled,
+          muted: videoTrack.muted,
+          readyState: videoTrack.readyState,
+          settings: videoTrack.getSettings()
+        } : 'NÃO ENCONTRADO');
+        
+        console.log('🎤 Audio track:', audioTrack ? {
+          enabled: audioTrack.enabled,
+          muted: audioTrack.muted,
+          readyState: audioTrack.readyState,
+          settings: audioTrack.getSettings()
+        } : 'NÃO ENCONTRADO');
+        
         if (!videoTrack || !videoTrack.enabled) {
           throw new Error('Câmera não disponível ou foi bloqueada');
         }
 
-        // Exibir preview local IMEDIATAMENTE (sem esperar por nada)
+        // EXIBIR PREVIEW LOCAL IMEDIATAMENTE (sem esperar por nada)
+        console.log('🖼️ Configurando preview local...');
         videoEl.srcObject = mediaStream;
         videoEl.muted = true; // Sempre mutado para broadcaster (evitar eco)
         
-        // Forçar o vídeo a aparecer imediatamente
-        videoEl.play().catch(err => {
+        // FORÇAR O VÍDEO A APARECER IMEDIATAMENTE
+        videoEl.play().then(() => {
+          console.log('✅ Vídeo local iniciado com sucesso');
+        }).catch(err => {
           console.warn('⚠️ Autoplay bloqueado, mas vídeo está configurado:', err);
+          // NÃO lançar erro - continuar com o fluxo
         });
         
         // 🚀 BROADCASTER: Vídeo está funcionando localmente imediatamente
         setIsLoading(false);
+        setIsWebRTCActive(true); // Marcar que WebRTC está ativo localmente
         onVideoReady?.();
+        
+        console.log('🎯 Preview local ativo - usuário já vê sua câmera');
         
         // Guardar referência para cleanup
         mediaStreamRef.current = mediaStream;
@@ -138,7 +172,7 @@ const WebViewStreamPlayer: React.FC<WebViewStreamPlayerProps> = ({
         
         // 1. Tentar WebRTC WHIP primeiro (melhor qualidade)
         try {
-          console.log(' Tentando WebRTC WHIP (melhor qualidade)...');
+          console.log('🌐 Iniciando WebRTC WHIP (melhor qualidade)...');
           const { webRTCService } = await import('../services/webrtcService.js');
           
           // Usar userId real para WHIP (padrão SRS: app=live&stream={userId})
@@ -147,31 +181,61 @@ const WebViewStreamPlayer: React.FC<WebViewStreamPlayerProps> = ({
             throw new Error('ID do usuário não encontrado');
           }
           
-          console.log(` Iniciando WebRTC WHIP para userId: ${userId}`);
+          console.log(`📡 Iniciando WebRTC WHIP para userId: ${userId}`);
+          console.log('🌐 Diagnóstico WebRTC - Iniciando publicação...');
+          
+          // MONITORAR ESTADO WebRTC
+          const startTime = Date.now();
           
           await webRTCService.startPublish(userId, mediaStream);
+          
+          const endTime = Date.now();
+          console.log(`✅ WebRTC WHIP funcionou em ${endTime - startTime}ms`);
+          console.log('🌐 Diagnóstico WebRTC - Publicação bem-sucedida');
+          
           streamingSuccess = true;
           setIsConnected(true);
-          console.log(' WebRTC WHIP funcionando - transmissão ativa para espectadores');
+          console.log('🎯 WebRTC WHIP funcionando - transmissão ativa para espectadores');
         } catch (webrtcError) {
-          console.warn(' WebRTC falhou, ativando modo de compatibilidade:', webrtcError);
+          console.error(`❌ WebRTC falhou:`, webrtcError);
+          console.log('🌐 Diagnóstico WebRTC - Falha na publicação');
+          
+          // DIAGNÓSTICO DETALHADO DO ERRO
+          if (webrtcError instanceof Error) {
+            console.log('🔍 Tipo de erro:', webrtcError.name);
+            console.log('🔍 Mensagem:', webrtcError.message);
+            
+            if (webrtcError.message.includes('getUserMedia')) {
+              console.log('❌ Problema: Permissão de câmera/microfone');
+            } else if (webrtcError.message.includes('network') || webrtcError.message.includes('ICE')) {
+              console.log('❌ Problema: Conexão de rede/firewall/NAT');
+            } else if (webrtcError.message.includes('timeout')) {
+              console.log('❌ Problema: Timeout na conexão');
+            } else if (webrtcError.message.includes('401') || webrtcError.message.includes('403')) {
+              console.log('❌ Problema: Autenticação');
+            } else if (webrtcError.message.includes('500')) {
+              console.log('❌ Problema: Erro no servidor SRS');
+            }
+          }
+          
           fallbackUsed = true;
           setIsCompatibilityMode(true);
           
           // 2. Fallback: Garantir que HLS funcione para espectadores
           // Mesmo que WebRTC falhe, vamos garantir que o stream esteja disponível via HLS
           try {
-            console.log(' Ativando fallback HLS para espectadores...');
+            console.log('🔄 Ativando fallback HLS para espectadores...');
             await activateHLSFallback(streamer.streamKey || streamer.id);
             streamingSuccess = true;
             setIsConnected(true);
-            // Fallback HLS ativado - espectadores devem conseguir assistir via HLS
+            console.log('✅ Fallback HLS ativado - espectadores devem conseguir assistir via HLS');
           } catch (fallbackError) {
-            console.error(' Fallback HLS falhou:', fallbackError);
+            console.error('❌ Fallback HLS falhou:', fallbackError);
             
             // 3. Último recurso: Apenas preview local com aviso claro
             // Usando apenas preview local - espectadores não verão
             setIsConnected(true); // Conectado localmente apenas
+            console.log('⚠️ Apenas preview local ativo - espectadores não verão a transmissão');
           }
         }
 

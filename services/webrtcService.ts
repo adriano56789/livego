@@ -12,9 +12,18 @@ export class WebRTCService {
   private currentStreamUrl: string | null = null;
   private currentStreamId: string | null = null;
 
-  // Configuração ICE usando o gerenciador unificado
+  // Configuração ICE para desenvolvimento local
   private getIceConfig(): RTCConfiguration {
-    return iceManager.getICEConfig();
+    // Para desenvolvimento local, usar STUN público sem candidato específico
+    return {
+      iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' },
+        { urls: 'stun:stun2.l.google.com:19302' }
+      ],
+      iceTransportPolicy: 'all',
+      bundlePolicy: 'max-bundle'
+    };
   }
 
   constructor() {
@@ -121,8 +130,11 @@ export class WebRTCService {
       const finalOfferSdp = this.pc.localDescription?.sdp;
       if (!finalOfferSdp) throw new Error('Falha ao gerar SDP offer');
 
-      // 5. Enviar para backend usando WHIP (userId real)
+      // 5. Enviar para backend usando WHIP (formato SRS: app=live&stream={userId})
+      console.log(`📡 Enviando WebRTC WHIP para backend: userId=${userId}`);
       const response = await api.publishWebRTC(userId, finalOfferSdp);
+      
+      console.log('📡 Resposta WebRTC WHIP:', response);
       
       if (response && response.code === 0 && response.sdp) {
           if (!this.pc) throw new Error('Conexão fechada durante negociação');
@@ -136,6 +148,11 @@ export class WebRTCService {
           
           this.state = 'connected';
           this.startStatsMonitoring();
+          
+          // Aguardar SRS registrar o stream (delay para evitar race condition)
+          console.log('✅ WebRTC conectado - Aguardando SRS registrar stream...');
+          await new Promise(r => setTimeout(r, 2000));
+          console.log('✅ Stream deve estar ativo no SRS agora');
       } else {
           throw new Error('Falha no handshake WHIP');
       }
@@ -282,7 +299,23 @@ export class WebRTCService {
         this.remoteStream.getTracks().forEach(track => track.stop());
         this.remoteStream = null;
     }
-    this.cleanupPeerConnection();
+    if (this.pc) {
+        this.pc.close();
+        this.pc = null;
+    }
+  }
+
+  // Verificar se stream está ativo no SRS
+  public async isStreamActive(userId: string): Promise<boolean> {
+    try {
+      const response = await fetch('/api/srs/streams');
+      const data = await response.json();
+      const streams = data.data || [];
+      return streams.some((stream: any) => stream.name === userId);
+    } catch (error) {
+      console.error('Erro ao verificar stream ativo:', error);
+      return false;
+    }
   }
 }
 

@@ -135,7 +135,6 @@ export const useSRSStreams = (refreshInterval: number = 5000): UseSRSStreamsRetu
       if (rawStreams.length === 0) {
         setStreams([]);
         setLastUpdate(new Date().toISOString());
-        console.log('[SRS Streams] Nenhum stream ativo no SRS');
         return;
       }
 
@@ -225,7 +224,7 @@ export const useSRSStreams = (refreshInterval: number = 5000): UseSRSStreamsRetu
  * Hook para obter apenas streams de usuários seguidos
  */
 export const useFollowingStreams = (followingList: string[] = []): SRSStreamMapped[] => {
-  const { streams } = useSRSStreams(8000); // Atualiza a cada 8s
+  const { streams } = useSRSStreams(45000); // Atualiza a cada 45s para dar tempo ao WebRTC
   
   return streams.filter(stream => 
     stream.user && followingList.includes(stream.user.identification)
@@ -236,7 +235,7 @@ export const useFollowingStreams = (followingList: string[] = []): SRSStreamMapp
  * Hook para obter streams populares (baseado em fans e diamantes)
  */
 export const usePopularStreams = (limit: number = 20): SRSStreamMapped[] => {
-  const { streams } = useSRSStreams(15000); // Atualiza a cada 15s
+  const { streams } = useSRSStreams(45000); // Atualiza a cada 45s para dar tempo ao WebRTC
   
   return streams
     .filter(stream => stream.user && (stream.user.fans > 0 || stream.user.diamonds > 0))

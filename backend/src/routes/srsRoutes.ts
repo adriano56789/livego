@@ -12,33 +12,59 @@ const router = express.Router();
 /**
  * GET /api/srs/status
  * Verifica se o SRS está online e acessível
+ * Retorna status detalhado para tratamento no frontend
  */
 router.get('/status', async (req, res) => {
     try {
         const result = await srsApiService.checkConnection();
         
         if (result.success) {
+            // SRS online - retornar informações reais
             res.json({
                 success: true,
                 online: true,
                 version: result.version,
                 server: result.server,
-                timestamp: new Date().toISOString()
+                timestamp: new Date().toISOString(),
+                apiEndpoint: srsApiService.getBaseUrl(),
+                message: 'SRS está online e acessível'
             });
         } else {
-            res.status(503).json({
+            // SRS offline - retornar erro detalhado
+            const statusCode = result.code === 500 || result.code === 503 ? 503 : 500;
+            
+            res.status(statusCode).json({
                 success: false,
                 online: false,
                 error: result.error,
-                timestamp: new Date().toISOString()
+                code: result.code,
+                apiEndpoint: srsApiService.getBaseUrl(),
+                timestamp: new Date().toISOString(),
+                message: 'SRS não está acessível - verifique se o servidor está rodando',
+                suggestions: [
+                    'Verifique se o SRS está rodando no endpoint configurado',
+                    'Confirme se o firewall não está bloqueando a conexão',
+                    'Verifique se a URL do SRS_API_URL está correta no .env'
+                ]
             });
         }
     } catch (error: any) {
-        console.error('[SRS ROUTES] Erro ao verificar status:', error);
-        res.status(500).json({
+        console.error('[SRS ROUTES] Erro crítico ao verificar status:', error);
+        
+        // Erro de conexão ou timeout
+        res.status(503).json({
             success: false,
-            error: 'Erro interno ao verificar status do SRS',
-            timestamp: new Date().toISOString()
+            online: false,
+            error: error.message || 'Erro de conexão com SRS',
+            code: 503,
+            apiEndpoint: srsApiService.getBaseUrl(),
+            timestamp: new Date().toISOString(),
+            message: 'Falha crítica na conexão com SRS',
+            suggestions: [
+                'SRS pode estar offline',
+                'Problemas de rede',
+                'Endpoint configurado incorretamente'
+            ]
         });
     }
 });
@@ -46,31 +72,48 @@ router.get('/status', async (req, res) => {
 /**
  * GET /api/srs/summaries
  * Obtém estatísticas completas do sistema SRS
+ * Retorna erro detalhado quando SRS está offline
  */
 router.get('/summaries', async (req, res) => {
     try {
         const result = await srsApiService.getSummaries();
         
         if (result.success) {
+            // Dados reais do SRS
             res.json({
                 success: true,
                 data: result.data,
                 server: result.server,
-                timestamp: new Date().toISOString()
+                serverRestarted: result.serverRestarted || false,
+                timestamp: new Date().toISOString(),
+                source: 'SRS Official API /api/v1/summaries'
             });
         } else {
-            res.status(result.code || 500).json({
+            // SRS offline ou erro
+            const statusCode = result.code || 500;
+            
+            res.status(statusCode).json({
                 success: false,
                 error: result.error,
-                timestamp: new Date().toISOString()
+                code: result.code,
+                apiEndpoint: srsApiService.getBaseUrl(),
+                timestamp: new Date().toISOString(),
+                message: statusCode === 503 ? 
+                    'SRS não está acessível no momento' : 
+                    'Erro ao obter estatísticas do SRS'
             });
         }
     } catch (error: any) {
         console.error('[SRS ROUTES] Erro ao obter sumários:', error);
-        res.status(500).json({
+        
+        // Erro de conexão
+        res.status(503).json({
             success: false,
-            error: 'Erro interno ao obter estatísticas do SRS',
-            timestamp: new Date().toISOString()
+            error: error.message || 'Falha na conexão com SRS',
+            code: 503,
+            apiEndpoint: srsApiService.getBaseUrl(),
+            timestamp: new Date().toISOString(),
+            message: 'Não foi possível conectar ao SRS para obter estatísticas'
         });
     }
 });
@@ -78,93 +121,270 @@ router.get('/summaries', async (req, res) => {
 /**
  * POST /api/srs/callback
  * Endpoint para receber callbacks do SRS (on_publish, on_play, etc.)
+ * Segue especificação oficial: https://ossrs.io/lts/en-us/docs/v6/doc/http-callback#response
+ * 
+ * Resposta obrigatória: HTTP 200 + code: 0 (sucesso) ou code != 0 (rejeitar)
+ * Se response não for 200 ou code != 0, SRS desconecta o cliente
  */
 router.post('/callback', async (req, res) => {
     try {
+        const callbackData = req.body;
+        const action = callbackData.action;
+        
         console.log('[SRS CALLBACK] Evento recebido:', {
-            action: req.body.action,
-            client_id: req.body.client_id,
-            stream: req.body.stream,
-            param: req.body.param,
-            code: req.body.code,
+            action,
+            client_id: callbackData.client_id,
+            stream: callbackData.stream,
+            param: callbackData.param,
+            code: callbackData.code,
             ip: req.ip,
             timestamp: new Date().toISOString()
         });
 
-        // Processar diferentes tipos de eventos
-        switch (req.body.action) {
+        let responseCode = 0; // 0 = permitir, != 0 = rejeitar
+        let responseMessage = 'OK';
+
+        // Processar diferentes tipos de eventos com validação
+        switch (action) {
             case 'on_publish':
-                console.log('[SRS CALLBACK] Stream publicado:', req.body.stream);
-                // Notificar WebSocket sobre novo stream
-                const socketService = require('../services/socket');
-                const socket = socketService.getSocket();
-                if (socket) {
-                    socket.emit('srs_stream_published', {
-                        stream: req.body.stream,
-                        client_id: req.body.client_id,
-                        data: req.body
-                    });
+                // Validar stream publicado
+                if (!callbackData.stream || !callbackData.client_id) {
+                    responseCode = 1;
+                    responseMessage = 'Stream ou client_id inválido';
+                    console.error('[SRS CALLBACK] on_publish inválido:', callbackData);
+                } else {
+                    console.log(`[SRS CALLBACK] Stream publicado: ${callbackData.stream}`);
+                    
+                    // 🚀 CRÍTICO: Marcar stream como ativa no banco de dados
+                    try {
+                        const { Streamer } = require('../models');
+                        const streamId = callbackData.stream; // O stream name do SRS
+                        
+                        // Extrair streamId do formato live/streamId
+                        const cleanStreamId = streamId.includes('/') ? streamId.split('/').pop() : streamId;
+                        
+                        console.log(`[SRS CALLBACK] Atualizando stream ${cleanStreamId} para isLive: true (via SRS on_publish)`);
+                        
+                        const updatedStream = await Streamer.findOneAndUpdate(
+                            { id: cleanStreamId },
+                            {
+                                $set: {
+                                    isLive: true,
+                                    streamStatus: 'active',
+                                    startTime: new Date().toISOString(),
+                                    updatedAt: new Date(),
+                                    // 🚀 Registrar que SRS confirmou a publicação
+                                    srsPublished: true,
+                                    srsClientId: callbackData.client_id,
+                                    srsPublishIp: req.ip
+                                }
+                            },
+                            { new: true }
+                        );
+                        
+                        if (updatedStream) {
+                            console.log(`✅ [SRS CALLBACK] Stream ${cleanStreamId} marcada como ativa via SRS callback`);
+                            
+                            // Notificar WebSocket sobre stream ativa
+                            try {
+                                const socketService = require('../services/socket');
+                                const socket = socketService.getSocket();
+                                if (socket) {
+                                    socket.emit('stream_started', {
+                                        streamId: cleanStreamId,
+                                        stream: updatedStream,
+                                        source: 'srs_callback',
+                                        data: callbackData
+                                    });
+                                    
+                                    // Entrar na sala da stream para atualizações em tempo real
+                                    socket.to(`stream_${cleanStreamId}`).emit('stream_status_updated', {
+                                        isLive: true,
+                                        streamStatus: 'active',
+                                        streamId: cleanStreamId
+                                    });
+                                }
+                            } catch (wsError) {
+                                console.warn('[SRS CALLBACK] Erro ao notificar WebSocket:', wsError);
+                            }
+                        } else {
+                            console.warn(`⚠️ [SRS CALLBACK] Stream ${cleanStreamId} não encontrada no banco`);
+                        }
+                    } catch (dbError) {
+                        console.error('[SRS CALLBACK] Erro ao atualizar banco:', dbError);
+                    }
+                    
+                    // Notificar WebSocket sobre novo stream (legado)
+                    try {
+                        const socketService = require('../services/socket');
+                        const socket = socketService.getSocket();
+                        if (socket) {
+                            socket.emit('srs_stream_published', {
+                                stream: callbackData.stream,
+                                client_id: callbackData.client_id,
+                                data: callbackData
+                            });
+                        }
+                    } catch (wsError) {
+                        console.warn('[SRS CALLBACK] Erro ao notificar WebSocket:', wsError);
+                    }
                 }
                 break;
 
             case 'on_play':
-                console.log('[SRS CALLBACK] Stream sendo assistido:', req.body.stream);
-                // Notificar WebSocket sobre viewer
-                const socketService2 = require('../services/socket');
-                const socket2 = socketService2.getSocket();
-                if (socket2) {
-                    socket2.emit('srs_stream_played', {
-                        stream: req.body.stream,
-                        client_id: req.body.client_id,
-                        data: req.body
-                    });
+                // Validar início de playback
+                if (!callbackData.stream || !callbackData.client_id) {
+                    responseCode = 1;
+                    responseMessage = 'Stream ou client_id inválido';
+                    console.error('[SRS CALLBACK] on_play inválido:', callbackData);
+                } else {
+                    console.log(`[SRS CALLBACK] Stream sendo assistido: ${callbackData.stream}`);
+                    
+                    // Notificar WebSocket sobre viewer
+                    try {
+                        const socketService = require('../services/socket');
+                        const socket = socketService.getSocket();
+                        if (socket) {
+                            socket.emit('srs_stream_played', {
+                                stream: callbackData.stream,
+                                client_id: callbackData.client_id,
+                                data: callbackData
+                            });
+                        }
+                    } catch (wsError) {
+                        console.warn('[SRS CALLBACK] Erro ao notificar WebSocket:', wsError);
+                    }
                 }
                 break;
 
             case 'on_unpublish':
-                console.log('[SRS CALLBACK] Stream parado:', req.body.stream);
-                const socketService3 = require('../services/socket');
-                const socket3 = socketService3.getSocket();
-                if (socket3) {
-                    socket3.emit('srs_stream_unpublished', {
-                        stream: req.body.stream,
-                        client_id: req.body.client_id,
-                        data: req.body
-                    });
+                // Stream parou de publicar
+                console.log(`[SRS CALLBACK] Stream parado: ${callbackData.stream}`);
+                
+                // 🚀 CRÍTICO: Marcar stream como inativa no banco de dados
+                try {
+                    const { Streamer } = require('../models');
+                    const streamId = callbackData.stream; // O stream name do SRS
+                    
+                    // Extrair streamId do formato live/streamId
+                    const cleanStreamId = streamId.includes('/') ? streamId.split('/').pop() : streamId;
+                    
+                    console.log(`[SRS CALLBACK] Atualizando stream ${cleanStreamId} para isLive: false (via SRS on_unpublish)`);
+                    
+                    const updatedStream = await Streamer.findOneAndUpdate(
+                        { id: cleanStreamId },
+                        {
+                            $set: {
+                                isLive: false,
+                                streamStatus: 'inactive',
+                                endTime: new Date().toISOString(),
+                                updatedAt: new Date(),
+                                // 🚀 Registrar que SRS confirmou o unpublish
+                                srsPublished: false,
+                                srsUnpublishTime: new Date().toISOString()
+                            }
+                        },
+                        { new: true }
+                    );
+                    
+                    if (updatedStream) {
+                        console.log(`✅ [SRS CALLBACK] Stream ${cleanStreamId} marcada como inativa via SRS callback`);
+                        
+                        // Notificar WebSocket sobre stream inativa
+                        try {
+                            const socketService = require('../services/socket');
+                            const socket = socketService.getSocket();
+                            if (socket) {
+                                socket.emit('stream_ended', {
+                                    streamId: cleanStreamId,
+                                    stream: updatedStream,
+                                    source: 'srs_callback',
+                                    data: callbackData
+                                });
+                                
+                                // Notificar sala da stream sobre mudança de status
+                                socket.to(`stream_${cleanStreamId}`).emit('stream_status_updated', {
+                                    isLive: false,
+                                    streamStatus: 'inactive',
+                                    streamId: cleanStreamId
+                                });
+                            }
+                        } catch (wsError) {
+                            console.warn('[SRS CALLBACK] Erro ao notificar WebSocket:', wsError);
+                        }
+                    } else {
+                        console.warn(`⚠️ [SRS CALLBACK] Stream ${cleanStreamId} não encontrada no banco`);
+                    }
+                } catch (dbError) {
+                    console.error('[SRS CALLBACK] Erro ao atualizar banco:', dbError);
+                }
+                
+                try {
+                    const socketService = require('../services/socket');
+                    const socket = socketService.getSocket();
+                    if (socket) {
+                        socket.emit('srs_stream_unpublished', {
+                            stream: callbackData.stream,
+                            client_id: callbackData.client_id,
+                            data: callbackData
+                        });
+                    }
+                } catch (wsError) {
+                    console.warn('[SRS CALLBACK] Erro ao notificar WebSocket:', wsError);
                 }
                 break;
 
             case 'on_stop':
-                console.log('[SRS CALLBACK] Stream parado:', req.body.stream);
-                const socketService4 = require('../services/socket');
-                const socket4 = socketService4.getSocket();
-                if (socket4) {
-                    socket4.emit('srs_stream_stopped', {
-                        stream: req.body.stream,
-                        client_id: req.body.client_id,
-                        data: req.body
-                    });
+                // Viewer parou de assistir
+                console.log(`[SRS CALLBACK] Viewer parou: ${callbackData.stream}`);
+                try {
+                    const socketService = require('../services/socket');
+                    const socket = socketService.getSocket();
+                    if (socket) {
+                        socket.emit('srs_stream_stopped', {
+                            stream: callbackData.stream,
+                            client_id: callbackData.client_id,
+                            data: callbackData
+                        });
+                    }
+                } catch (wsError) {
+                    console.warn('[SRS CALLBACK] Erro ao notificar WebSocket:', wsError);
                 }
                 break;
 
+            case 'on_dvr':
+                // DVR file created
+                console.log(`[SRS CALLBACK] DVR criado: ${callbackData.file}`);
+                break;
+
+            case 'on_hls':
+                // HLS file created
+                console.log(`[SRS CALLBACK] HLS criado: ${callbackData.file}`);
+                break;
+
             default:
-                console.log('[SRS CALLBACK] Evento não tratado:', req.body.action);
+                console.warn(`[SRS CALLBACK] Evento não tratado: ${action}`);
+                // Eventos desconhecidos são permitidos por padrão
                 break;
         }
 
         // Responder conforme especificação SRS
+        // HTTP 200 + code: 0 = sucesso
+        // HTTP 200 + code != 0 = rejeitar cliente
         res.status(200).json({
-            code: 0,
-            msg: 'OK',
-            timestamp: new Date().toISOString()
+            code: responseCode,
+            msg: responseMessage
         });
 
+        console.log(`[SRS CALLBACK] Resposta enviada: code=${responseCode}, msg="${responseMessage}"`);
+
     } catch (error: any) {
-        console.error('[SRS ROUTES] Erro ao processar callback:', error);
-        res.status(500).json({
+        console.error('[SRS CALLBACK] Erro crítico ao processar callback:', error);
+        
+        // Em caso de erro interno, rejeitar o cliente para manter segurança
+        res.status(200).json({
             code: 1,
-            msg: 'Internal Server Error',
-            timestamp: new Date().toISOString()
+            msg: 'Internal Server Error'
         });
     }
 });
@@ -175,6 +395,7 @@ router.post('/callback', async (req, res) => {
  * Query params: start, count
  * 
  * Retorna dados brutos do SRS para processamento no frontend
+ * Trata offline/erro 500 corretamente
  */
 router.get('/streams', async (req, res) => {
     try {
@@ -185,11 +406,13 @@ router.get('/streams', async (req, res) => {
         const result = await srsApiService.getStreams(start, count);
         
         if (result.success) {
+            // Dados reais do SRS
             res.json({
                 success: true,
                 data: result.data,
                 total: result.total,
                 server: result.server,
+                serverRestarted: result.serverRestarted || false,
                 pagination: {
                     start,
                     count,
@@ -199,22 +422,40 @@ router.get('/streams', async (req, res) => {
                 info: {
                     source: 'SRS Official API /api/v1/streams',
                     description: 'Dados brutos do SRS - processamento no frontend',
-                    mapping: 'stream.name = userId (mapeado no cliente)'
+                    mapping: 'stream.name = userId (mapeado no cliente)',
+                    note: 'Nenhum dado fake - tudo vem diretamente do SRS'
                 }
             });
         } else {
-            res.status(result.code || 500).json({
+            // SRS offline ou erro
+            const statusCode = result.code || 500;
+            
+            res.status(statusCode).json({
                 success: false,
                 error: result.error,
-                timestamp: new Date().toISOString()
+                code: result.code,
+                apiEndpoint: srsApiService.getBaseUrl(),
+                timestamp: new Date().toISOString(),
+                message: statusCode === 503 ? 
+                    'SRS não está acessível para obter streams' : 
+                    'Erro ao buscar streams do SRS',
+                data: [], // Array vazio em vez de null
+                total: 0
             });
         }
     } catch (error: any) {
         console.error('[SRS ROUTES] Erro ao buscar streams do SRS:', error);
-        res.status(500).json({
+        
+        // Erro de conexão
+        res.status(503).json({
             success: false,
-            error: 'Erro ao acessar API do SRS',
-            timestamp: new Date().toISOString()
+            error: error.message || 'Falha na conexão com SRS',
+            code: 503,
+            apiEndpoint: srsApiService.getBaseUrl(),
+            timestamp: new Date().toISOString(),
+            message: 'Não foi possível conectar ao SRS para obter streams',
+            data: [],
+            total: 0
         });
     }
 });
@@ -291,6 +532,7 @@ router.get('/streams/:id/stats', async (req, res) => {
  * GET /api/srs/clients
  * Lista todos os clientes conectados ao SRS
  * Query params: start, count
+ * Retorna dados reais ou erro quando SRS offline
  */
 router.get('/clients', async (req, res) => {
     try {
@@ -300,31 +542,51 @@ router.get('/clients', async (req, res) => {
         const result = await srsApiService.getClients(start, count);
         
         if (result.success) {
+            // Dados reais dos clientes conectados
             res.json({
                 success: true,
                 data: result.data,
                 total: result.total,
                 server: result.server,
+                serverRestarted: result.serverRestarted || false,
                 pagination: {
                     start,
                     count,
                     total: result.total
                 },
-                timestamp: new Date().toISOString()
+                timestamp: new Date().toISOString(),
+                source: 'SRS Official API /api/v1/clients'
             });
         } else {
-            res.status(result.code || 500).json({
+            // SRS offline ou erro
+            const statusCode = result.code || 500;
+            
+            res.status(statusCode).json({
                 success: false,
                 error: result.error,
-                timestamp: new Date().toISOString()
+                code: result.code,
+                apiEndpoint: srsApiService.getBaseUrl(),
+                timestamp: new Date().toISOString(),
+                message: statusCode === 503 ? 
+                    'SRS não está acessível para obter clientes' : 
+                    'Erro ao listar clientes do SRS',
+                data: [], // Array vazio
+                total: 0
             });
         }
     } catch (error: any) {
         console.error('[SRS ROUTES] Erro ao listar clientes:', error);
-        res.status(500).json({
+        
+        // Erro de conexão
+        res.status(503).json({
             success: false,
-            error: 'Erro interno ao listar clientes do SRS',
-            timestamp: new Date().toISOString()
+            error: error.message || 'Falha na conexão com SRS',
+            code: 503,
+            apiEndpoint: srsApiService.getBaseUrl(),
+            timestamp: new Date().toISOString(),
+            message: 'Não foi possível conectar ao SRS para listar clientes',
+            data: [],
+            total: 0
         });
     }
 });

@@ -80,10 +80,14 @@ export class ICEManagerService {
     // Adicionar servidores STUN
     servers.push(this.stunService.getIceServer());
     
-    // Adicionar fallback STUN público (Google)
-    servers.push({
-      urls: 'stun:stun.l.google.com:19302'
-    });
+    // Adicionar múltiplos STUNs do Google para redundância
+    servers.push(
+      { urls: 'stun:stun.l.google.com:19302' },
+      { urls: 'stun:stun1.l.google.com:19302' },
+      { urls: 'stun:stun2.l.google.com:19302' },
+      { urls: 'stun:stun3.l.google.com:19302' },
+      { urls: 'stun:stun4.l.google.com:19302' }
+    );
     
     // Adicionar servidores TURN se disponível
     if (this.turnService.isReady()) {

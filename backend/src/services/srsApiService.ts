@@ -11,8 +11,8 @@ class SrsApiService {
     private currentServerId: string | null = null;
 
     constructor() {
-        // Usar IP público para produção, IP local apenas para desenvolvimento
-        this.baseUrl = process.env.SRS_API_URL || 'http://72.60.249.175:1985';
+        // Usar variável de ambiente para desenvolvimento/produção
+        this.baseUrl = process.env.SRS_API_URL || 'http://localhost:1985';
         this.authToken = process.env.SRS_API_TOKEN;
     }
 
@@ -26,13 +26,13 @@ class SrsApiService {
             this.currentServerId = newServerId;
             return false;
         }
-        
+
         if (this.currentServerId !== newServerId) {
             console.warn(`[SRS API] Servidor reiniciado detectado! Anterior: ${this.currentServerId}, Novo: ${newServerId}`);
             this.currentServerId = newServerId;
             return true;
         }
-        
+
         return false;
     }
 
@@ -41,6 +41,13 @@ class SrsApiService {
      */
     getCurrentServerId(): string | null {
         return this.currentServerId;
+    }
+
+    /**
+     * Obtém a URL base configurada para o SRS
+     */
+    getBaseUrl(): string {
+        return this.baseUrl;
     }
 
     /**
@@ -60,9 +67,9 @@ class SrsApiService {
                 headers: this.getHeaders(),
                 timeout: 5000
             });
-            
+
             const serverRestarted = this.checkServerRestart(response.data.server);
-            
+
             return {
                 success: true,
                 data: response.data,
@@ -89,7 +96,7 @@ class SrsApiService {
                 headers: this.getHeaders(),
                 timeout: 5000
             });
-            
+
             return {
                 success: true,
                 data: response.data.vhosts,
@@ -117,13 +124,15 @@ class SrsApiService {
                 count: count.toString()
             });
 
+            console.log(`[SRS API] Buscando streams: ${this.baseUrl}/api/v1/streams?${params}`);
             const response = await axios.get(`${this.baseUrl}/api/v1/streams?${params}`, {
                 headers: this.getHeaders(),
                 timeout: 5000
             });
-            
+            console.log(`[SRS API] Resposta sucesso:`, response.status, response.data);
+
             const serverRestarted = this.checkServerRestart(response.data.server);
-            
+
             return {
                 success: true,
                 data: response.data.streams,
@@ -133,6 +142,7 @@ class SrsApiService {
             };
         } catch (error: any) {
             console.error('[SRS API] Erro ao obter streams:', error.message);
+            console.error('[SRS API] Detalhes do erro:', error.response?.status, error.response?.data);
             return {
                 success: false,
                 error: error.response?.data || error.message,
@@ -151,7 +161,7 @@ class SrsApiService {
                 headers: this.getHeaders(),
                 timeout: 5000
             });
-            
+
             return {
                 success: true,
                 data: response.data,
@@ -183,9 +193,9 @@ class SrsApiService {
                 headers: this.getHeaders(),
                 timeout: 5000
             });
-            
+
             const serverRestarted = this.checkServerRestart(response.data.server);
-            
+
             return {
                 success: true,
                 data: response.data.clients,
@@ -213,7 +223,7 @@ class SrsApiService {
                 headers: this.getHeaders(),
                 timeout: 5000
             });
-            
+
             return {
                 success: true,
                 data: response.data,
@@ -239,7 +249,7 @@ class SrsApiService {
                 headers: this.getHeaders(),
                 timeout: 5000
             });
-            
+
             return {
                 success: true,
                 data: response.data,
@@ -277,9 +287,9 @@ class SrsApiService {
                     timeout: 10000
                 }
             );
-            
+
             const serverRestarted = this.checkServerRestart(response.data.server);
-            
+
             // WHIP specification usa status 201
             return {
                 success: response.status === 201,
@@ -321,9 +331,9 @@ class SrsApiService {
                     timeout: 10000
                 }
             );
-            
+
             const serverRestarted = this.checkServerRestart(response.data.server);
-            
+
             // WHEP specification usa status 201
             return {
                 success: response.status === 201,
@@ -353,7 +363,7 @@ class SrsApiService {
                 headers: this.getHeaders(),
                 timeout: 3000
             });
-            
+
             return {
                 success: true,
                 data: response.data,
@@ -388,8 +398,8 @@ class SrsApiService {
                 return streamsResult;
             }
 
-            const stream = streamsResult.data.find((s: any) => 
-                s.name === streamName || 
+            const stream = streamsResult.data.find((s: any) =>
+                s.name === streamName ||
                 s.url?.includes(streamName) ||
                 s.stream === streamName
             );
@@ -432,9 +442,9 @@ class SrsApiService {
             const clients = await this.getClients(0, 50);
 
             // Filtrar clientes conectados a este stream
-            const streamClients = clients.success ? 
-                clients.data.filter((client: any) => 
-                    client.stream === streamId || 
+            const streamClients = clients.success ?
+                clients.data.filter((client: any) =>
+                    client.stream === streamId ||
                     client.url?.includes(streamId)
                 ) : [];
 

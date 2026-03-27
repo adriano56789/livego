@@ -509,17 +509,70 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
             
             console.log(`🎁 [LIVE GIFT] Recebido em tempo real: ${data.fromUser?.name} -> ${data.toUser?.name} (${data.quantity}x ${data.gift?.name})`);
         };
+
+        // 🚀 Eventos de status da stream via SRS Callback
+        const handleStreamStarted = (data: { streamId: string; stream: any; source: string; data: any }) => {
+            console.log(`🚀 [STREAM STATUS] Stream iniciada via SRS: ${data.streamId}`, data);
+            
+            if (data.streamId === streamer.id) {
+                // Atualizar status local da stream
+                onStreamUpdate({
+                    isLive: true,
+                    streamStatus: 'active'
+                });
+                
+                console.log(`✅ [STREAM STATUS] Stream ${data.streamId} marcada como ativa no frontend`);
+            }
+        };
+
+        const handleStreamEnded = (data: { streamId: string; stream: any; source: string; data: any }) => {
+            console.log(`🛑 [STREAM STATUS] Stream encerrada via SRS: ${data.streamId}`, data);
+            
+            if (data.streamId === streamer.id) {
+                // Atualizar status local da stream
+                onStreamUpdate({
+                    isLive: false,
+                    streamStatus: 'inactive'
+                });
+                
+                console.log(`✅ [STREAM STATUS] Stream ${data.streamId} marcada como inativa no frontend`);
+            }
+        };
+
+        const handleStreamStatusUpdated = (data: { streamId: string; isLive: boolean; streamStatus: string }) => {
+            console.log(`🔄 [STREAM STATUS] Status atualizado via SRS: ${data.streamId} -> isLive: ${data.isLive}, status: ${data.streamStatus}`);
+            
+            if (data.streamId === streamer.id) {
+                // Atualizar status local da stream
+                onStreamUpdate({
+                    isLive: data.isLive,
+                    streamStatus: data.streamStatus
+                });
+                
+                console.log(`✅ [STREAM STATUS] Stream ${data.streamId} atualizada no frontend: isLive=${data.isLive}`);
+            }
+        };
         
         // Escutar o novo evento de presente em tempo real
         socketService.on('live_gift_received', handleNewGift);
         socketService.on('gift_received', handleNewGift);
 
+        // 🚀 Escutar eventos de status da stream via SRS Callback
+        socketService.on('stream_started', handleStreamStarted);
+        socketService.onStreamEndedFromSRS(handleStreamEnded);
+        socketService.on('stream_status_updated', handleStreamStatusUpdated);
+
         return () => {
             socketService.off('receive_message', handleNewMessage);
             socketService.off('gift_received', handleNewGift);
             socketService.off('live_gift_received', handleNewGift);
+            
+            // Remover listeners de status da stream
+            socketService.off('stream_started', handleStreamStarted);
+            socketService.off('stream_ended', handleStreamEnded);
+            socketService.off('stream_status_updated', handleStreamStatusUpdated);
         };
-    }, [streamer.id, updateLiveSession, currentUser.id, t, onOpenFriendRequests, liveSession, refreshStreamRoomData]);
+    }, [streamer.id, onStreamUpdate, updateLiveSession, currentUser.id, t, onOpenFriendRequests, liveSession, refreshStreamRoomData]);
 
     const handleSendMessage = (e: React.MouseEvent | React.KeyboardEvent) => {
         e.stopPropagation();
@@ -870,8 +923,8 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
         // Se o usuário é o dono da transmissão (isBroadcaster=true)
         // SEMPRE mostrar a câmera dele, mesmo em outro dispositivo
         if (isBroadcaster) {
-            console.log('🎥 Dono da live - mostrando própria câmera (WebRTC)');
-            return undefined; // WebViewStreamPlayer vai capturar a câmera local
+            // Dono da live sempre vê sua câmera local
+            return undefined;
         }
         
         // 👥 Para viewers (não donos): mostrar transmissão ou capa de fundo

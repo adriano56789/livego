@@ -897,6 +897,19 @@ export const api = {
 
     getStreamInfo: (streamId: string) => callApi<SRSStreamInfo>('GET', `/api/v1/streams/${streamId}`),
 
+    // --- SRS Streams API ---
+    // Lista todos os streams ativos com dados completos dos usuários
+    getSRSStreams: (start: number = 0, count: number = 50) => callApi<any>('GET', `/api/srs/streams?start=${start}&count=${count}`),
+    
+    // Obtém detalhes de um stream específico do SRS
+    getSRSStream: (streamId: string) => callApi<any>('GET', `/api/srs/streams/${streamId}`),
+    
+    // Verifica status do SRS
+    getSRSStatus: () => callApi<any>('GET', '/api/srs/status'),
+    
+    // Obtém estatísticas do SRS
+    getSRSSummaries: () => callApi<any>('GET', '/api/srs/summaries'),
+
 
 
     // --- PK & Interaction ---

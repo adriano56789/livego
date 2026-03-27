@@ -46,6 +46,7 @@ import virtualIPRoutes from './routes/virtualIPRoutes'; // NOVO - Sistema de IP 
 import likesRoutes from './routes/likesRoutes'; // NOVO - Sistema de Likes
 import srsRoutes from './routes/srsRoutes'; // NOVO - API HTTP do SRS
 import webrtcRoutes from './routes/webrtcRoutes'; // NOVO - WebRTC WHIP/WHEP
+import mapRoutes from './routes/mapRoutes'; // NOVO - API de Mapeamento SRS ↔ Banco
 import UserStatusManager from './middleware/UserStatusManager';
 import { blockBase64Middleware } from './middleware/blockBase64';
 import { initializeDatabase } from './scripts/initDatabase'; // NOVO - Inicialização automática
@@ -165,6 +166,7 @@ app.use('/api/virtual-ip', virtualIPRoutes); // NOVO - Sistema de IP Virtual
 app.use('/api/virtual-room', virtualIPRoutes); // NOVO - Sistema de Salas Virtuais
 app.use('/api/srs', srsRoutes); // NOVO - API HTTP do SRS
 app.use('/api/webrtc', webrtcRoutes); // NOVO - WebRTC WHIP/WHEP
+app.use('/api/map', mapRoutes); // NOVO - API de Mapeamento SRS ↔ Banco
 // Disponibilizar io para as rotas
 app.set('io', io);
 

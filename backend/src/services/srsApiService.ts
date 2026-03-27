@@ -468,9 +468,14 @@ class SrsApiService {
             'Accept': 'application/json'
         };
 
-        // Adicionar autenticação se configurada
+        // Adicionar autenticação HTTP Basic conforme documentação SRS
         if (this.authToken) {
-            headers['Authorization'] = `Bearer ${this.authToken}`;
+            // Se tiver token específico, usar Authorization header
+            headers['Authorization'] = `Basic ${this.authToken}`;
+        } else {
+            // Usar credenciais padrão admin:admin em Base64
+            const credentials = Buffer.from('admin:admin').toString('base64');
+            headers['Authorization'] = `Basic ${credentials}`;
         }
 
         return headers;

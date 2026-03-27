@@ -104,6 +104,8 @@ import MainScreen from './components/MainScreen';
 
 import ProfileScreen from './components/ProfileScreen';
 
+import { useSRSStreams, SRSStreamMapped } from './hooks/useSRSStreams';
+
 import MessagesScreen from './components/MessagesScreen';
 
 import ChatScreenWithWebSocket from './components/ChatScreenWithWebSocket';
@@ -481,6 +483,67 @@ const AppContent: React.FC = () => {
   const [streamers, setStreamers] = useState<Streamer[]>([]);
 
   const [isLoadingStreamers, setIsLoadingStreamers] = useState(false);
+
+  // Hook para streams em tempo real do SRS
+  const { streams: srsStreams, loading: loadingSRS, error: srsError } = useSRSStreams(5000); // Atualiza a cada 5s
+
+  // Converter dados do SRS para formato Streamer
+  const convertSRSToStreamer = (srsStream: SRSStreamMapped): Streamer => {
+    if (!srsStream.user) {
+      // Stream sem usuário mapeado - criar Streamer básico
+      return {
+        id: srsStream.stream,
+        hostId: srsStream.stream,
+        name: `Usuário ${srsStream.stream}`,
+        avatar: '',
+        location: '',
+        time: new Date().toISOString(),
+        message: '',
+        tags: [],
+        viewers: 0,
+        isPrivate: false,
+        quality: 'auto',
+        diamonds: 0,
+        streamKey: srsStream.stream,
+        playbackUrl: `webrtc://72.60.249.175:8000/live/${srsStream.stream}`,
+        isLive: srsStream.alive && srsStream.active
+      };
+    }
+
+    return {
+      id: srsStream.user.identification,
+      hostId: srsStream.user.identification,
+      name: srsStream.user.name,
+      avatar: srsStream.user.avatarUrl,
+      location: srsStream.user.country || '',
+      time: new Date().toISOString(),
+      message: srsStream.user.bio || '',
+      tags: [],
+      viewers: 0,
+      isPrivate: srsStream.user.privateStreamSettings?.privateInvite || false,
+      quality: 'auto',
+      diamonds: srsStream.user.diamonds,
+      streamKey: srsStream.stream,
+      playbackUrl: `webrtc://72.60.249.175:8000/live/${srsStream.stream}`,
+      isLive: srsStream.alive && srsStream.active
+    };
+  };
+
+  // Atualizar streamers quando dados do SRS mudarem
+  useEffect(() => {
+    if (srsStreams.length > 0) {
+      const convertedStreamers = srsStreams.map(convertSRSToStreamer);
+      setStreamers(convertedStreamers);
+      setIsLoadingStreamers(false);
+      
+      console.log(`[App] Atualizados ${convertedStreamers.length} streamers via SRS API`);
+    } else if (srsError) {
+      console.warn('[App] Erro na API SRS, usando fallback:', srsError);
+      setIsLoadingStreamers(false);
+    } else {
+      setIsLoadingStreamers(loadingSRS);
+    }
+  }, [srsStreams, loadingSRS, srsError]);
 
   const [countries, setCountries] = useState<Country[]>([]);
 

@@ -30,6 +30,7 @@ const WebViewStreamPlayer: React.FC<WebViewStreamPlayerProps> = ({
   const [isConnected, setIsConnected] = useState(false);
   const [latency, setLatency] = useState<number | null>(null);
   const [isCompatibilityMode, setIsCompatibilityMode] = useState(false);
+  const [isWebRTCActive, setIsWebRTCActive] = useState(false);
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const hlsInstanceRef = useRef<Hls | null>(null);
 
@@ -274,116 +275,36 @@ const WebViewStreamPlayer: React.FC<WebViewStreamPlayerProps> = ({
     const setupViewerStream = async (videoEl: HTMLVideoElement) => {
       console.log(' Configurando viewer para WebView...');
       
-      const hlsUrl = getHLSUrl();
-        // Removido log sensível com URL HLS
-      
-      if (!hlsUrl) {
-        throw new Error('URL de streaming não encontrada');
-      }
-
-      // Estratégia de compatibilidade total para todos os navegadores
+      // Estratégia: WHEP (WebRTC) primeiro para baixa latência, depois HLS fallback
       let playbackSuccess = false;
+      let webrtcUsed = false;
 
-      // 1. HLS.js para Chrome, Firefox, Edge (não-iOS)
+      // 1. TENTAR WEBRTC WHEP PRIMEIRO (baixa latência)
       try {
-        if (Hls.isSupported()) {
-          console.log(' Usando HLS.js (Chrome/Firefox/Edge)');
-          
-          const hls = new Hls({
-            debug: false,
-            enableWorker: true,
-            lowLatencyMode: false, // Desabilitar para melhor compatibilidade
-            maxBufferLength: 30,
-            maxMaxBufferLength: 600,
-            // Configurações robustas para compatibilidade
-            maxFragLookUpTolerance: 0.25,
-            liveSyncDurationCount: 3,
-            liveMaxLatencyDurationCount: Infinity,
-            preferManagedMediaSource: true,
-          });
-          
-          // Guardar referência para cleanup e medição de latência
-          hlsInstanceRef.current = hls;
-
-          hls.loadSource(hlsUrl);
-          hls.attachMedia(videoEl);
-
-          await new Promise((resolve, reject) => {
-            const timeout = setTimeout(() => {
-              hls.destroy();
-              reject(new Error('Timeout HLS.js'));
-            }, 15000); // 15s timeout
-
-            hls.on(Hls.Events.MANIFEST_PARSED, () => {
-              clearTimeout(timeout);
-              
-              // Iniciar medição de latência HLS
-              startLatencyMeasurement(hls);
-              
-              resolve(true);
-            });
-            
-            hls.on(Hls.Events.ERROR, (event, data) => {
-              console.warn(' HLS.js Error:', data);
-              if (data.fatal) {
-                clearTimeout(timeout);
-                hls.destroy();
-                reject(new Error('HLS.js fatal error'));
-              }
-            });
-          });
-
-          await videoEl.play();
-          playbackSuccess = true;
-          setIsConnected(true);
-          // HLS.js funcionando
+        console.log('🚀 Tentando WebRTC WHEP (baixa latência)...');
+        
+        const { webRTCService } = await import('../services/webrtcService.js');
+        
+        // Usar userId real do streamer para WHEP (consistente com WHIP)
+        const streamId = streamer?.id;
+        if (!streamId) {
+          throw new Error('ID do streamer não encontrado para WHEP');
         }
-      } catch (hlsError) {
-        console.warn(' HLS.js falhou:', hlsError);
-      }
-
-      // 2. HLS nativo para Safari, iOS, Chrome Mobile
-      if (!playbackSuccess && videoEl.canPlayType('application/vnd.apple.mpegurl')) {
-        try {
-          console.log(' Usando HLS nativo (Safari/iOS)');
-          videoEl.src = hlsUrl;
+        
+        console.log(`📡 Iniciando WebRTC WHEP para streamId: ${streamId}`);
+        
+        // Iniciar playback WebRTC via WHEP
+        const remoteStream = await webRTCService.startPlay(streamId);
+        
+        if (remoteStream) {
+          // Exibir stream WebRTC recebido
+          videoEl.srcObject = remoteStream;
+          videoEl.muted = false; // Viewer precisa ouvir
           
-          // Aguardar o vídeo estar pronto
+          // Aguardar vídeo estar pronto
           await new Promise((resolve, reject) => {
             const timeout = setTimeout(() => {
-              reject(new Error('Timeout HLS nativo'));
-            }, 15000);
-
-            videoEl.addEventListener('loadeddata', () => {
-              clearTimeout(timeout);
-              resolve(true);
-            }, { once: true });
-
-            videoEl.addEventListener('error', () => {
-              clearTimeout(timeout);
-              reject(new Error('Erro carregando HLS nativo'));
-            }, { once: true });
-          });
-
-          await videoEl.play();
-          playbackSuccess = true;
-          setIsConnected(true);
-          // HLS nativo funcionando
-        } catch (nativeError) {
-          console.warn(' HLS nativo falhou:', nativeError);
-        }
-      }
-
-      // 3. Fallback para MP4 direto se disponível (última opção)
-      if (!playbackSuccess) {
-        try {
-          console.log(' Tentando fallback MP4 (último recurso)');
-          const mp4Url = hlsUrl.replace('.m3u8', '.mp4');
-          videoEl.src = mp4Url;
-          
-          await new Promise((resolve, reject) => {
-            const timeout = setTimeout(() => {
-              reject(new Error('Timeout MP4'));
+              reject(new Error('Timeout WebRTC WHEP'));
             }, 10000);
 
             videoEl.addEventListener('loadeddata', () => {
@@ -393,16 +314,153 @@ const WebViewStreamPlayer: React.FC<WebViewStreamPlayerProps> = ({
 
             videoEl.addEventListener('error', () => {
               clearTimeout(timeout);
-              reject(new Error('Erro carregando MP4'));
+              reject(new Error('Erro ao carregar WebRTC WHEP'));
             }, { once: true });
           });
 
           await videoEl.play();
           playbackSuccess = true;
+          webrtcUsed = true;
+          setIsWebRTCActive(true);
           setIsConnected(true);
-          // MP4 fallback funcionando (último recurso)
-        } catch (mp4Error) {
-          console.warn(' MP4 fallback falhou:', mp4Error);
+          console.log('✅ WebRTC WHEP funcionando - baixa latência ativa');
+        }
+      } catch (webrtcError) {
+        console.warn('⚠️ WebRTC WHEP falhou, usando HLS fallback:', webrtcError);
+        // Limpar objeto em caso de falha
+        videoEl.srcObject = null;
+      }
+
+      // 2. FALLBACK HLS SE WEBRTC FALHAR
+      if (!playbackSuccess) {
+        const hlsUrl = getHLSUrl();
+        
+        if (!hlsUrl) {
+          throw new Error('URL de streaming não encontrada');
+        }
+
+        console.log('🔄 Usando HLS fallback (compatibilidade)...');
+
+        // HLS.js para Chrome, Firefox, Edge (não-iOS)
+        try {
+          if (Hls.isSupported()) {
+            console.log(' Usando HLS.js (Chrome/Firefox/Edge)');
+            
+            const hls = new Hls({
+              debug: false,
+              enableWorker: true,
+              lowLatencyMode: false, // Desabilitar para melhor compatibilidade
+              maxBufferLength: 30,
+              maxMaxBufferLength: 600,
+              // Configurações robustas para compatibilidade
+              maxFragLookUpTolerance: 0.25,
+              liveSyncDurationCount: 3,
+              liveMaxLatencyDurationCount: Infinity,
+              preferManagedMediaSource: true,
+            });
+            
+            // Guardar referência para cleanup e medição de latência
+            hlsInstanceRef.current = hls;
+
+            hls.loadSource(hlsUrl);
+            hls.attachMedia(videoEl);
+
+            await new Promise((resolve, reject) => {
+              const timeout = setTimeout(() => {
+                hls.destroy();
+                reject(new Error('Timeout HLS.js'));
+              }, 15000); // 15s timeout
+
+              hls.on(Hls.Events.MANIFEST_PARSED, () => {
+                clearTimeout(timeout);
+                
+                // Iniciar medição de latência HLS
+                startLatencyMeasurement(hls);
+                
+                resolve(true);
+              });
+              
+              hls.on(Hls.Events.ERROR, (event, data) => {
+                console.warn(' HLS.js Error:', data);
+                if (data.fatal) {
+                  clearTimeout(timeout);
+                  hls.destroy();
+                  reject(new Error('HLS.js fatal error'));
+                }
+              });
+            });
+
+            await videoEl.play();
+            playbackSuccess = true;
+            setIsConnected(true);
+            console.log('✅ HLS.js funcionando');
+          }
+        } catch (hlsError) {
+          console.warn(' HLS.js falhou:', hlsError);
+        }
+
+        // HLS nativo para Safari, iOS, Chrome Mobile
+        if (!playbackSuccess && videoEl.canPlayType('application/vnd.apple.mpegurl')) {
+          try {
+            console.log(' Usando HLS nativo (Safari/iOS)');
+            videoEl.src = hlsUrl;
+            
+            // Aguardar o vídeo estar pronto
+            await new Promise((resolve, reject) => {
+              const timeout = setTimeout(() => {
+                reject(new Error('Timeout HLS nativo'));
+              }, 15000);
+
+              videoEl.addEventListener('loadeddata', () => {
+                clearTimeout(timeout);
+                resolve(true);
+              }, { once: true });
+
+              videoEl.addEventListener('error', () => {
+                clearTimeout(timeout);
+                reject(new Error('Erro carregando HLS nativo'));
+              }, { once: true });
+            });
+
+            await videoEl.play();
+            playbackSuccess = true;
+            setIsConnected(true);
+            console.log('✅ HLS nativo funcionando');
+          } catch (nativeError) {
+            console.warn(' HLS nativo falhou:', nativeError);
+          }
+        }
+
+        // Fallback para MP4 direto se disponível (última opção)
+        if (!playbackSuccess) {
+          try {
+            console.log(' Tentando fallback MP4 (último recurso)');
+            const mp4Url = hlsUrl.replace('.m3u8', '.mp4');
+            videoEl.src = mp4Url;
+            
+            await new Promise((resolve, reject) => {
+              const timeout = setTimeout(() => {
+                reject(new Error('Timeout MP4'));
+              }, 10000);
+
+              videoEl.addEventListener('loadeddata', () => {
+                clearTimeout(timeout);
+                resolve(true);
+              }, { once: true });
+
+              videoEl.addEventListener('error', () => {
+                clearTimeout(timeout);
+                reject(new Error('Erro carregando MP4'));
+              }, { once: true });
+            });
+
+            await videoEl.play();
+            playbackSuccess = true;
+            setIsConnected(true);
+            console.log('✅ MP4 fallback funcionando');
+          } catch (mp4Error) {
+            console.warn(' MP4 fallback falhou:', mp4Error);
+          }
         }
       }
 
@@ -412,6 +470,13 @@ const WebViewStreamPlayer: React.FC<WebViewStreamPlayerProps> = ({
 
       setIsLoading(false);
       onVideoReady?.();
+
+      // Informar sobre tipo de conexão
+      if (webrtcUsed) {
+        console.log('🎯 Viewer conectado via WebRTC WHEP (baixa latência)');
+      } else {
+        console.log('📺 Viewer conectado via HLS (compatibilidade)');
+      }
     };
 
     // FUNÇÃO DE MEDIÇÃO DE LATÊNCIA HLS
@@ -549,6 +614,7 @@ const WebViewStreamPlayer: React.FC<WebViewStreamPlayerProps> = ({
       // 6. Limpar estados
       setLatency(null);
       setIsCompatibilityMode(false);
+      setIsWebRTCActive(false);
     };
   }, [streamer, currentUser, isBroadcaster, onVideoReady, onVideoError]);
 
@@ -637,7 +703,7 @@ const WebViewStreamPlayer: React.FC<WebViewStreamPlayerProps> = ({
       {!isBroadcaster && isConnected && (
         <div className="absolute top-3 right-3 bg-green-600 text-white px-3 py-1.5 rounded-full text-xs font-semibold shadow-lg">
           <div className="w-2 h-2 bg-white rounded-full mr-2 inline-block"></div>
-          ASSISTINDO
+          {isWebRTCActive ? 'BAIXA LATÊNCIA' : 'ASSISTINDO'}
         </div>
       )}
       

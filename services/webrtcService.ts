@@ -12,14 +12,28 @@ export class WebRTCService {
   private currentStreamUrl: string | null = null;
   private currentStreamId: string | null = null;
 
-  // Configuração ICE para desenvolvimento local
+  // Configuração ICE robusta com ICE Manager
   private getIceConfig(): RTCConfiguration {
-    // Para desenvolvimento local, usar STUN público sem candidato específico
+    // Usar ICE Manager para configuração completa
+    if (iceManager.isReady()) {
+      const iceConfig = iceManager.getICEConfig();
+      console.log('🧊 [WebRTC] Usando ICE Manager config:', iceConfig);
+      return iceConfig;
+    }
+    
+    // Fallback para configuração básica
+    console.log('🧊 [WebRTC] Usando fallback ICE config');
     return {
       iceServers: [
         { urls: 'stun:stun.l.google.com:19302' },
         { urls: 'stun:stun1.l.google.com:19302' },
-        { urls: 'stun:stun2.l.google.com:19302' }
+        { urls: 'stun:stun2.l.google.com:19302' },
+        // TURN server para conexões restritas
+        {
+          urls: 'turn:numb.viagenie.ca:3478',
+          username: 'livego',
+          credential: 'livego123'
+        }
       ],
       iceTransportPolicy: 'all',
       bundlePolicy: 'max-bundle'
@@ -35,11 +49,20 @@ export class WebRTCService {
    */
   private async initializeICE(): Promise<void> {
     try {
-      // ICE Manager temporariamente desabilitado para evitar erros de inicialização
-      // await iceManager.initialize();
-      // console.log('✅ [WebRTC] ICE Manager inicializado');
+      console.log('🧊 [WebRTC] Inicializando ICE Manager...');
+      const success = await iceManager.initialize();
+      
+      if (success) {
+        console.log('✅ [WebRTC] ICE Manager inicializado com sucesso');
+        
+        // Testar conexões para diagnóstico
+        const testResults = await iceManager.testConnections();
+        console.log('📊 [WebRTC] Testes ICE:', testResults);
+      } else {
+        console.warn('⚠️ [WebRTC] ICE Manager falhou, usando fallback');
+      }
     } catch (error) {
-      // Silenciado para não poluir console
+      console.warn('⚠️ [WebRTC] Erro ao inicializar ICE Manager:', error);
     }
   }
 
@@ -100,6 +123,32 @@ export class WebRTCService {
 
       // Debug ICE State
       this.pc.oniceconnectionstatechange = () => {
+        const state = this.pc?.iceConnectionState;
+        console.log(`🧊 [WebRTC] ICE Connection State: ${state}`);
+        
+        if (state === 'connected') {
+          console.log('✅ [WebRTC] ICE conectado com sucesso!');
+        } else if (state === 'failed') {
+          console.error('❌ [WebRTC] ICE falhou - verificando candidatos...');
+          if (this.pc?.localDescription) {
+            console.log('📋 [WebRTC] SDP local:', this.pc.localDescription.sdp);
+          }
+        }
+      };
+
+      // Debug ICE Gathering
+      this.pc.onicegatheringstatechange = () => {
+        const state = this.pc?.iceGatheringState;
+        console.log(`🧊 [WebRTC] ICE Gathering State: ${state}`);
+      };
+
+      // Debug ICE Candidates
+      this.pc.onicecandidate = (event) => {
+        if (event.candidate) {
+          console.log(`🧊 [WebRTC] ICE Candidate:`, event.candidate.candidate);
+        } else {
+          console.log('🧊 [WebRTC] ICE Gathering completo');
+        }
       };
 
       // 3. Adicionar tracks

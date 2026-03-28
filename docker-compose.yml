@@ -20,13 +20,7 @@ services:
       - livego-network
 
   srs-server:
-    build:
-      context: .
-      dockerfile: Dockerfile.srs
-      args:
-        CONFARGS: ""
-        MAKEARGS: "-j4"
-        INSTALLDEPENDS: "YES"
+    image: ossrs/srs:5
     container_name: srs-server
     restart: unless-stopped
     ports:
@@ -50,28 +44,6 @@ services:
       - coturn-server
     networks:
       - livego-network
-
-  backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    container_name: livego-backend
-    restart: unless-stopped
-    ports:
-      - "3000:3000/tcp"
-    environment:
-      - NODE_ENV=development
-      - SRS_API_URL=http://srs-server:1985
-      - SRS_RTMP_URL=rtmp://localhost:1935/live
-      - SRS_HTTP_URL=http://localhost:8080
-      - SRS_WEBRTC_URL=http://localhost:9000
-    depends_on:
-      - srs-server
-    networks:
-      - livego-network
-    volumes:
-      - ./backend:/app
-      - /app/node_modules
 
 networks:
   livego-network:

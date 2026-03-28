@@ -107,12 +107,17 @@ export class ICEManagerService {
   private getOptimalTransportPolicy(): 'all' | 'relay' {
     const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
     
-    // Mobile geralmente precisa de relay
-    if (isMobile) {
+    // Verificar se TURN está disponível
+    const hasTurn = this.turnService.isReady();
+    
+    // Se for mobile E tiver TURN disponível, usar relay
+    if (isMobile && hasTurn) {
+      console.log('📱 [ICE] Mobile com TURN disponível - usando relay policy');
       return 'relay';
     }
     
-    // Desktop pode usar todos os transportes
+    // Para desktop ou mobile sem TURN, usar todos os transportes
+    console.log(`💻 [ICE] ${isMobile ? 'Mobile sem TURN' : 'Desktop'} - usando all policy`);
     return 'all';
   }
 

@@ -129,7 +129,7 @@ export default function PKBattleScreen({
 
     const [isSendingGift, setIsSendingGift] = useState(false);
         
-    const isBroadcaster = streamer.hostId === currentUser.id;
+    const isBroadcaster = streamer.hostId === currentUser.id || streamer.hostId === currentUser.identification;
 
     const handleOpenUserActions = (chatUser: ChatMessageType) => {
         if (!isBroadcaster || !chatUser.user) return;

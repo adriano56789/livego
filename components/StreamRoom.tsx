@@ -144,7 +144,7 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
     const [currentFullscreenGift, setCurrentFullscreenGift] = useState<GiftPayload | null>(null);
     const [giftQueue, setGiftQueue] = useState<GiftPayload[]>([]); // Nova fila para GiftQueueManager
 
-    const isBroadcaster = streamer.hostId === currentUser.id;
+    const isBroadcaster = streamer.hostId === currentUser.id || streamer.hostId === currentUser.identification;
 
     const isFollowed = useMemo(() => followingUsers.some(u => u.id === streamer.hostId), [followingUsers, streamer.hostId]);
 

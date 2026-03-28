@@ -2664,7 +2664,7 @@ const logLiveEvent = (type: string, data: any) => {
 
     // Se for o próprio usuário, buscar dados frescos do servidor
 
-    if (user.id === currentUser?.id) {
+    if (user.id === currentUser?.id || user.identification === currentUser?.identification) {
 
       try {
 
@@ -2688,7 +2688,8 @@ const logLiveEvent = (type: string, data: any) => {
 
     const fullUserFromState = allUsers.find(u => u.id === user.id);
 
-    const userToView = user.id === currentUser?.id ? currentUser : (fullUserFromState || user);
+    const isMe = user.id === currentUser?.id || (user.identification && user.identification === currentUser?.identification);
+    const userToView = isMe ? currentUser : (fullUserFromState || user);
 
     setViewingProfile(userToView);
 
@@ -3502,7 +3503,7 @@ const logLiveEvent = (type: string, data: any) => {
 
       {isEndStreamSummaryOpen && streamSummaryData && <EndStreamSummaryScreen data={streamSummaryData} onClose={() => { setIsEndStreamSummaryOpen(false); setStreamSummaryData(null); }} />}
 
-      {viewingProfile && <UserProfileScreen user={viewingProfile} isCurrentUser={viewingProfile.id === currentUser?.id} onBack={() => setViewingProfile(null)} onEdit={handleEditProfile} onOpenTopFans={() => { setViewingProfile(null); handleOpenListScreen('topFans'); }} onOpenFollowing={() => { setViewingProfile(null); handleOpenListScreen('following'); }} onOpenFans={() => { setViewingProfile(null); handleOpenListScreen('fans'); }} onFollow={handleFollowUser} onStartChat={setChattingWith} onBlockUser={handleBlockUser} onReportUser={handleReportUser} onOpenPhotoViewer={(photos, index) => setPhotoViewerData({ photos, initialIndex: index })} lastPhotoLikeUpdate={lastPhotoLikeUpdate} onPhotoLiked={() => setLastPhotoLikeUpdate(Date.now())} onPhotoRemoved={(u) => { updateUserEverywhere(u); setViewingProfile(u); }} />}
+      {viewingProfile && <UserProfileScreen user={viewingProfile} isCurrentUser={viewingProfile.id === currentUser?.id || (viewingProfile.identification && viewingProfile.identification === currentUser?.identification)} onBack={() => setViewingProfile(null)} onEdit={handleEditProfile} onOpenTopFans={() => { setViewingProfile(null); handleOpenListScreen('topFans'); }} onOpenFollowing={() => { setViewingProfile(null); handleOpenListScreen('following'); }} onOpenFans={() => { setViewingProfile(null); handleOpenListScreen('fans'); }} onFollow={handleFollowUser} onStartChat={setChattingWith} onBlockUser={handleBlockUser} onReportUser={handleReportUser} onOpenPhotoViewer={(photos, index) => setPhotoViewerData({ photos, initialIndex: index })} lastPhotoLikeUpdate={lastPhotoLikeUpdate} onPhotoLiked={() => setLastPhotoLikeUpdate(Date.now())} onPhotoRemoved={(u) => { updateUserEverywhere(u); setViewingProfile(u); }} />}
 
       {isEditingProfile && <EditProfileScreen user={currentUser} onBack={() => setIsEditingProfile(false)} onSave={handleSaveProfile} />}
 

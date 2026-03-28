@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { User, FeedPhoto } from '../types';
-import { BackIcon, BrazilFlagIcon, MaleIcon, FemaleIcon, RankIcon, MoreVerticalIcon, PencilIcon, ChevronRightIcon, CopyIcon, PlayIcon, HeartIcon, DetailsIcon, VIPBadgeIcon, ShieldIcon, LiveIndicatorIcon } from './icons';
-import BlockReportModal from './BlockReportModal';
-import { useTranslation } from '../i18n';
-import { api } from '../services/api';
-import { LoadingSpinner } from './Loading';
+import { User, FeedPhoto } from './types';
+import { BackIcon, BrazilFlagIcon, MaleIcon, FemaleIcon, RankIcon, MoreVerticalIcon, PencilIcon, ChevronRightIcon, CopyIcon, PlayIcon, HeartIcon, DetailsIcon, VIPBadgeIcon, ShieldIcon, LiveIndicatorIcon } from './components/icons';
+import BlockReportModal from './components/BlockReportModal';
+import { useTranslation } from './i18n';
+import { api } from './services/api';
+import { LoadingSpinner } from './components/Loading';
 import { avatarFrames, getRemainingDays, getFrameGlowClass } from './utils/chatUtils';
 
 interface UserProfileScreenProps {
@@ -69,6 +69,9 @@ const BroadcasterProfileScreen: React.FC<UserProfileScreenProps> = ({ user, isCu
     const [isLoadingLikes, setIsLoadingLikes] = useState(false);
     const [obras, setObras] = useState<FeedPhoto[]>([]);
     const [isLoadingObras, setIsLoadingObras] = useState(false);
+
+    // Verifica se o usuário logado é o dono da transmissão
+    const isOwner = isCurrentUser; // Se isCurrentUser é true, significa que é o dono
 
     useEffect(() => {
         let isMounted = true;
@@ -212,7 +215,7 @@ const BroadcasterProfileScreen: React.FC<UserProfileScreenProps> = ({ user, isCu
                             <BackIcon className="w-5 h-5" />
                         </button>
                         <div className="flex items-center space-x-2">
-                            {isCurrentUser && (
+                            {isOwner && (
                                <button onClick={onEdit} className="w-8 h-8 bg-black/30 rounded-full flex items-center justify-center">
                                    <PencilIcon className="w-5 h-5" />
                                </button>

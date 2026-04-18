@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret_key_change_me_in_prod';
+const JWT_SECRET = process.env.JWT_SECRET || 'livego-secret-key';
 
 export interface AuthRequest extends Request {
     user?: { id: string, _id: string }; // Custom property to hold user info

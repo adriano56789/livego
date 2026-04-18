@@ -215,7 +215,7 @@ const callApi = async <T = any>(method: Method, url: string, data?: any, customH
         if (error.response?.status === 401) {
             // Token expirado ou inválido
             clearAuthToken();
-            window.location.href = '/login';
+            window.dispatchEvent(new CustomEvent('auth:logout'));
         }
         
         throw error;

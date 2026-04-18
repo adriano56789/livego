@@ -88,12 +88,12 @@ router.get('/gifts/validate/:userId', async (req, res) => {
         }
         
         // Calcular valores reais baseados nas transações
-        const sentTransactions = await GiftTransaction.find({ fromUserId: userId });
-        const receivedTransactions = await GiftTransaction.find({ toUserId: userId });
+        const sentTransactions = await (GiftTransaction.find({ fromUserId: userId }) as any);
+        const receivedTransactions = await (GiftTransaction.find({ toUserId: userId }) as any);
         
         // Somar totais reais
-        const realEnviados = sentTransactions.reduce((sum, transaction) => sum + (transaction.totalValue || 0), 0);
-        const realReceptores = receivedTransactions.reduce((sum, transaction) => sum + (transaction.totalValue || 0), 0);
+        const realEnviados = sentTransactions.reduce((sum: number, transaction: any) => sum + (transaction.totalValue || 0), 0);
+        const realReceptores = receivedTransactions.reduce((sum: number, transaction: any) => sum + (transaction.totalValue || 0), 0);
         
         // Valores atuais no perfil
         const currentEnviados = user.enviados || 0;
@@ -129,12 +129,12 @@ router.get('/gifts/validate/:userId', async (req, res) => {
                 received: receivedTransactions.length
             },
             details: {
-                sentTransactions: sentTransactions.map(t => ({
+                sentTransactions: sentTransactions.map((t: any) => ({
                     giftName: t.giftName,
                     totalValue: t.totalValue,
                     createdAt: t.createdAt
                 })),
-                receivedTransactions: receivedTransactions.map(t => ({
+                receivedTransactions: receivedTransactions.map((t: any) => ({
                     giftName: t.giftName,
                     totalValue: t.totalValue,
                     createdAt: t.createdAt
@@ -162,11 +162,11 @@ router.post('/gifts/sync/:userId', async (req, res) => {
         }
         
         // Calcular valores reais
-        const sentTransactions = await GiftTransaction.find({ fromUserId: userId });
-        const receivedTransactions = await GiftTransaction.find({ toUserId: userId });
+        const sentTransactions = await GiftTransaction.find({ fromUserId: userId }).exec();
+        const receivedTransactions = await GiftTransaction.find({ toUserId: userId }).exec();
         
-        const realEnviados = sentTransactions.reduce((sum, transaction) => sum + (transaction.totalValue || 0), 0);
-        const realReceptores = receivedTransactions.reduce((sum, transaction) => sum + (transaction.totalValue || 0), 0);
+        const realEnviados = sentTransactions.reduce((sum: number, transaction: any) => sum + (transaction.totalValue || 0), 0);
+        const realReceptores = receivedTransactions.reduce((sum: number, transaction: any) => sum + (transaction.totalValue || 0), 0);
         
         // Atualizar contadores
         const oldEnviados = user.enviados || 0;
@@ -221,11 +221,11 @@ router.post('/gifts/sync-all', async (req, res) => {
         for (const user of users) {
             try {
                 // Calcular valores reais
-                const sentTransactions = await GiftTransaction.find({ fromUserId: user.id });
-                const receivedTransactions = await GiftTransaction.find({ toUserId: user.id });
+                const sentTransactions = await GiftTransaction.find({ fromUserId: user.id }).exec();
+                const receivedTransactions = await GiftTransaction.find({ toUserId: user.id }).exec();
                 
-                const realEnviados = sentTransactions.reduce((sum, transaction) => sum + (transaction.totalValue || 0), 0);
-                const realReceptores = receivedTransactions.reduce((sum, transaction) => sum + (transaction.totalValue || 0), 0);
+                const realEnviados = sentTransactions.reduce((sum: number, transaction: any) => sum + (transaction.totalValue || 0), 0);
+                const realReceptores = receivedTransactions.reduce((sum: number, transaction: any) => sum + (transaction.totalValue || 0), 0);
                 
                 const oldEnviados = user.enviados || 0;
                 const oldReceptores = user.receptores || 0;

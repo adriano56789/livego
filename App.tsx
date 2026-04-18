@@ -514,9 +514,17 @@ const AppContent: React.FC = () => {
 
       try {
 
-        // Verificar se há token antes de tentar restaurar sessão
-        const { getAuthToken } = await import('./services/api');
-        const token = getAuthToken();
+        // Tentar restaurar token da sessionStorage (persiste entre reloads da mesma aba)
+        const { getAuthToken, setAuthToken } = await import('./services/api');
+        let token = getAuthToken();
+        
+        if (!token) {
+          const storedToken = sessionStorage.getItem('authToken');
+          if (storedToken) {
+            setAuthToken(storedToken);
+            token = storedToken;
+          }
+        }
         
         if (!token) {
           // Não há token, não tentar restaurar sessão
@@ -532,6 +540,7 @@ const AppContent: React.FC = () => {
         if (user) {
 
           setCurrentUser(user);
+          (window as any).currentUser = user;
 
           setIsAuthenticated(true);
 
@@ -540,6 +549,7 @@ const AppContent: React.FC = () => {
           setIsAuthenticated(false);
 
           setCurrentUser(null);
+          sessionStorage.removeItem('authToken');
 
         }
 
@@ -550,6 +560,7 @@ const AppContent: React.FC = () => {
         setIsAuthenticated(false);
 
         setCurrentUser(null);
+        sessionStorage.removeItem('authToken');
 
       } finally {
 
@@ -973,6 +984,9 @@ const AppContent: React.FC = () => {
 
     clearAuthToken();
 
+    // Limpar token persistido
+    sessionStorage.removeItem('authToken');
+
 
 
     // Limpar estado - não usar localStorage
@@ -1000,6 +1014,20 @@ const AppContent: React.FC = () => {
     await handleLogout();
 
   };
+
+
+
+  // Listener para evento de logout (por exemplo, quando o token expira na API)
+  useEffect(() => {
+    const onAuthLogout = () => {
+      handleLogout();
+    };
+
+    window.addEventListener('auth:logout', onAuthLogout);
+    return () => {
+      window.removeEventListener('auth:logout', onAuthLogout);
+    };
+  }, []);
 
 
 
@@ -2017,7 +2045,7 @@ const logLiveEvent = (type: string, data: any) => {
 
 
 
-  const handleLogin = async (user: User, token: string) => {
+  const handleLoginOriginal = async (user: User, token: string) => {
 
     setIsLoadingCurrentUser(true);
 
@@ -3099,11 +3127,26 @@ const logLiveEvent = (type: string, data: any) => {
 
 
 
+  // Função de login - chamada pelo LoginScreen após autenticação bem-sucedida
+  const handleLogin = useCallback(async (user: User, token: string) => {
+    const { setAuthToken } = await import('./services/api');
+    setAuthToken(token);
+    // Persistir token na sessionStorage para sobreviver reloads da mesma aba
+    sessionStorage.setItem('authToken', token);
+    // Sincronizar com window para acesso da API
+    (window as any).currentUser = user;
+    setCurrentUser(user);
+    setIsAuthenticated(true);
+  }, []);
 
+
+
+  // Mostrar loading enquanto restaura sessão
+  if (isLoadingCurrentUser) return <div className="h-full w-full bg-black flex items-center justify-center"><LoadingSpinner /></div>;
 
   if (!isAuthenticated) return <LoginScreen onLogin={handleLogin} />;
 
-  if (isLoadingCurrentUser || !currentUser) return <div className="h-full w-full bg-black flex items-center justify-center"><LoadingSpinner /></div>;
+  if (!currentUser) return <div className="h-full w-full bg-black flex items-center justify-center"><LoadingSpinner /></div>;
 
 
 

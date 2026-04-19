@@ -53,7 +53,6 @@ const getSoundUrl = (giftName: string): string => {
 };
 
 const FullScreenGiftAnimation: React.FC<{ payload: GiftPayload | null; onEnd: () => void; }> = ({ payload, onEnd }) => {
-    const videoRef = useRef<HTMLVideoElement>(null);
     const animationTimeoutRef = useRef<number | null>(null);
 
     // Efeito para iniciar som e timer de encerramento
@@ -83,21 +82,12 @@ const FullScreenGiftAnimation: React.FC<{ payload: GiftPayload | null; onEnd: ()
             // Ignorar completamente erros de áudio
         }
 
-        // Determinar duração
+        // Determinar duração baseado na animação CSS
+        const animationClass = getAnimationClass(gift);
         let duration = 3500; // Padrão
-
-        if (gift.videoUrl) {
-            const video = videoRef.current;
-            if (video) {
-                video.currentTime = 0;
-                video.play().catch(() => onEnd());
-            }
-            // Fallback safety timer para vídeo
-            duration = 8000;
-        } else {
-            // Ajustar duração baseado na animação CSS
-            const animationClass = getAnimationClass(gift);
-            if (animationClass.includes('iate') || animationClass.includes('cavalo')) duration = 6000;
+        
+        if (animationClass.includes('iate') || animationClass.includes('cavalo')) {
+            duration = 6000;
         }
 
         animationTimeoutRef.current = window.setTimeout(() => {
@@ -107,15 +97,10 @@ const FullScreenGiftAnimation: React.FC<{ payload: GiftPayload | null; onEnd: ()
         return cleanup;
     }, [payload, onEnd]);
 
-    const handleVideoEnd = () => {
-        // Pequeno delay após vídeo terminar para suavizar a saída
-        setTimeout(() => onEnd(), 300);
-    };
-
     if (!payload || !payload.gift) return null;
     
     const { gift } = payload;
-    const animationClass = gift.videoUrl ? '' : getAnimationClass(gift);
+    const animationClass = getAnimationClass(gift);
     
     // CHAVE CRÍTICA: Combinação de ID e timestamp força o React a remontar o DOM completamente.
     // Isso garante que o Canvas inicie do zero e as animações CSS reiniciem.
@@ -130,21 +115,8 @@ const FullScreenGiftAnimation: React.FC<{ payload: GiftPayload | null; onEnd: ()
             {/* 1. Canvas de Partículas (Sempre renderizado para brilho) */}
             <GiftEffectCanvas key={`canvas-${uniqueKey}`} gift={gift} />
 
-            {/* 2. Conteúdo Central (Vídeo ou Ícone Animado) */}
-            {gift.videoUrl ? (
-                <video
-                    ref={videoRef}
-                    key={`video-${uniqueKey}`}
-                    src={gift.videoUrl}
-                    autoPlay
-                    muted={false} 
-                    playsInline
-                    onEnded={handleVideoEnd}
-                    onError={handleVideoEnd}
-                    className="max-w-full max-h-full object-contain relative z-10"
-                    style={{ filter: 'drop-shadow(0 0 20px rgba(0,0,0,0.8))' }}
-                />
-            ) : (
+            {/* 2. Conteúdo Central (Apenas Ícone Animado - SEM VÍDEO) */}
+            {
                 <div className="flex flex-col items-center justify-center relative z-10">
                     {/* Glow de fundo para destacar o ícone */}
                     <div className="absolute inset-0 bg-white/20 blur-3xl rounded-full scale-150 animate-pulse"></div>
@@ -169,7 +141,7 @@ const FullScreenGiftAnimation: React.FC<{ payload: GiftPayload | null; onEnd: ()
                         </span>
                     </div>
                 </div>
-            )}
+            }
             
             {/* CSS Global para Animação Padrão */}
             <style>{`

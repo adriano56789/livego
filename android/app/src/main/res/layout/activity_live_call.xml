@@ -1,0 +1,235 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout 
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/black"
+    tools:context=".videocall.LiveCallActivity">
+
+    <!-- Container principal para o vídeo LiveKit -->
+    <FrameLayout
+        android:id="@+id/videoContainer"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <!-- Layout para chamada recebida -->
+    <LinearLayout
+        android:id="@+id/layoutIncomingCall"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@drawable/gradient_call_background"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:padding="32dp"
+        android:visibility="gone">
+
+        <!-- Avatar do chamador -->
+        <ImageView
+            android:id="@+id/imgCallerAvatar"
+            android:layout_width="120dp"
+            android:layout_height="120dp"
+            android:layout_marginBottom="24dp"
+            android:background="@drawable/circle_white_background"
+            android:padding="4dp"
+            android:src="@drawable/ic_person_large"
+            android:tint="@color/primary" />
+
+        <!-- Nome do chamador -->
+        <TextView
+            android:id="@+id/txtGuestName"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:text="Chamada recebida"
+            android:textColor="@color/white"
+            android:textSize="24sp"
+            android:textStyle="bold" />
+
+        <!-- Status da chamada -->
+        <TextView
+            android:id="@+id/txtCallStatus"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="48dp"
+            android:text="Recebendo chamada..."
+            android:textColor="@color/white"
+            android:textSize="16sp" />
+
+        <!-- Botões de aceitar/recusar -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:orientation="horizontal">
+
+            <ImageButton
+                android:id="@+id/btnDeclineCall"
+                android:layout_width="64dp"
+                android:layout_height="64dp"
+                android:layout_marginEnd="32dp"
+                android:background="@drawable/circle_red_background"
+                android:src="@drawable/ic_call_decline"
+                android:tint="@color/white" />
+
+            <ImageButton
+                android:id="@+id/btnAcceptCall"
+                android:layout_width="64dp"
+                android:layout_height="64dp"
+                android:background="@drawable/circle_green_background"
+                android:src="@drawable/ic_call_accept"
+                android:tint="@color/white" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <!-- Layout para chamada sendo feita -->
+    <LinearLayout
+        android:id="@+id/layoutOutgoingCall"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@drawable/gradient_call_background"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:padding="32dp"
+        android:visibility="gone">
+
+        <!-- Avatar do destinatário -->
+        <ImageView
+            android:id="@+id/imgTargetAvatar"
+            android:layout_width="120dp"
+            android:layout_height="120dp"
+            android:layout_marginBottom="24dp"
+            android:background="@drawable/circle_white_background"
+            android:padding="4dp"
+            android:src="@drawable/ic_person_large"
+            android:tint="@color/primary" />
+
+        <!-- Status da chamada -->
+        <TextView
+            android:id="@+id/txtCallStatus"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:text="Chamando..."
+            android:textColor="@color/white"
+            android:textSize="24sp"
+            android:textStyle="bold" />
+
+        <!-- Nome do destinatário -->
+        <TextView
+            android:id="@+id/txtGuestName"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Conectando..."
+            android:textColor="@color/white"
+            android:textSize="16sp" />
+
+        <!-- Loading indicator -->
+        <ProgressBar
+            android:id="@+id/progressBar"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_marginTop="32dp"
+            android:indeterminateTint="@color/white" />
+
+    </LinearLayout>
+
+    <!-- Layout para controles da chamada ativa -->
+    <LinearLayout
+        android:id="@+id/layoutCallControls"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:background="@drawable/gradient_bottom_transparent"
+        android:gravity="center"
+        android:orientation="horizontal"
+        android:padding="24dp"
+        android:visibility="gone">
+
+        <!-- Botão finalizar chamada -->
+        <ImageButton
+            android:id="@+id/btnEndCall"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:layout_margin="8dp"
+            android:background="@drawable/circle_red_background"
+            android:src="@drawable/ic_call_end"
+            android:tint="@color/white" />
+
+        <!-- Botão alternar vídeo -->
+        <ImageButton
+            android:id="@+id/btnToggleVideo"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:layout_margin="8dp"
+            android:background="@drawable/circle_transparent_white_border"
+            android:src="@drawable/ic_video_on"
+            android:tint="@color/white" />
+
+        <!-- Botão alternar áudio -->
+        <ImageButton
+            android:id="@+id/btnToggleAudio"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:layout_margin="8dp"
+            android:background="@drawable/circle_transparent_white_border"
+            android:src="@drawable/ic_mic_on"
+            android:tint="@color/white" />
+
+        <!-- Botão trocar câmera -->
+        <ImageButton
+            android:id="@+id/btnSwitchCamera"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:layout_margin="8dp"
+            android:background="@drawable/circle_transparent_white_border"
+            android:src="@drawable/ic_switch_camera"
+            android:tint="@color/white" />
+
+        <!-- Botão mais opções -->
+        <ImageButton
+            android:id="@+id/btnMoreOptions"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:layout_margin="8dp"
+            android:background="@drawable/circle_transparent_white_border"
+            android:src="@drawable/ic_more"
+            android:tint="@color/white" />
+
+    </LinearLayout>
+
+    <!-- Informações da chamada (canto superior) -->
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|start"
+        android:layout_margin="16dp"
+        android:background="@drawable/rounded_background_transparent"
+        android:orientation="vertical"
+        android:padding="12dp">
+
+        <!-- Timer da chamada -->
+        <TextView
+            android:id="@+id/txtCallTimer"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="00:00"
+            android:textColor="@color/white"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+
+        <!-- Qualidade da conexão -->
+        <TextView
+            android:id="@+id/txtConnectionQuality"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Conectando..."
+            android:textColor="@color/live_green"
+            android:textSize="12sp" />
+
+    </LinearLayout>
+
+</FrameLayout>

@@ -25,6 +25,7 @@ import AvatarWithFrame from './ui/AvatarWithFrame';
 import { beautyWebRTCIntegration } from '../services/BeautyWebRTCIntegration';
 import LiveVideoPlayer from './LiveVideoPlayer';
 import WebViewStreamPlayer from './WebViewStreamPlayer';
+import LiveCallInvitation from '../src/components/LiveCallInvitation';
 
 interface ChatMessageType {
     id: number;
@@ -1196,10 +1197,101 @@ const StreamRoom: React.FC<StreamRoomProps> = ({ streamer, onRequestEndStream, o
                 onMakeModerator={handleMakeModerator}
                 onKick={handleKickUser}
             />
+
+            {/* Integrar chamada de vídeo na sala de transmissão existente */}
+            {isBroadcaster && (
+                <LiveCallInvitation 
+                    streamId={streamer.id}
+                    isHost={true}
+                    onGuestJoined={(guest) => {
+                        console.log('Convidado entrou na live:', guest);
+                        
+                        // 1. Adicionar guest à lista de online users
+                        const guestUser = {
+                            id: guest.guestId,
+                            name: guest.guestName || guest.guestId,
+                            avatarUrl: guest.avatarUrl || '', // Usar avatarUrl do guest se disponível
+                            identification: guest.guestId,
+                            level: guest.level || 1,
+                            diamonds: guest.diamonds || 0,
+                            fans: guest.fans || 0,
+                            following: guest.following || 0,
+                            isOnline: true,
+                            isVIP: guest.isVIP || false,
+                            isAvatarProtected: guest.isAvatarProtected || false
+                        };
+                        
+                        // 2. Notificar todos na sala via WebSocket
+                        socketService.getSocket()?.emit('guest_joined', {
+                            streamId: streamer.id,
+                            guest: guestUser
+                        });
+                        
+                        // 3. Atualizar contagem de viewers
+                        if (liveSession) {
+                            updateLiveSession({
+                                viewers: (liveSession.viewers || 0) + 1
+                            });
+                        }
+                        
+                        // 4. Adicionar mensagem de entrada no chat
+                        const entryMessage = {
+                            id: Date.now(),
+                            type: 'entry' as const,
+                            fullUser: guestUser,
+                            age: 0,
+                            gender: 'not_specified' as const,
+                            level: 1,
+                            avatar: guestUser.avatarUrl,
+                            isModerator: false
+                        };
+                        
+                        // Adicionar à lista de mensagens
+                        setMessages(prev => [...prev, entryMessage]);
+                        
+                        // 5. Mostrar toast de notificação
+                        addToast('info', `${guest.guestName || guest.guestId} entrou na live!`);
+                        
+                        // 6. Log para analytics
+                        logLiveEvent('guest_joined', {
+                            guestId: guest.guestId,
+                            guestName: guest.guestName,
+                            streamId: streamer.id,
+                            timestamp: new Date().toISOString()
+                        });
+                    }}
+                    onGuestLeft={() => {
+                        console.log('Convidado saiu da live');
+                        
+                        // 1. Notificar todos na sala via WebSocket
+                        socketService.getSocket()?.emit('guest_left', {
+                            streamId: streamer.id,
+                            timestamp: new Date().toISOString()
+                        });
+                        
+                        // 2. Atualizar contagem de viewers
+                        if (liveSession && liveSession.viewers > 0) {
+                            updateLiveSession({
+                                viewers: liveSession.viewers - 1
+                            });
+                        }
+                        
+                        // 3. Mostrar toast de notificação
+                        addToast('info', 'Convidado saiu da live');
+                        
+                        // 4. Log para analytics
+                        logLiveEvent('guest_left', {
+                            streamId: streamer.id,
+                            timestamp: new Date().toISOString()
+                        });
+                        
+                        // 5. Limpar qualquer estado relacionado ao guest
+                        // (isso será feito pelos componentes individuais)
+                    }}
+                />
+            )}
         </div>
     );
-}
+};
 
 export default StreamRoom;
-
-

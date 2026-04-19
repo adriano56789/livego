@@ -53,6 +53,21 @@
             </intent-filter>
         </activity>
         
+        <activity
+            android:name=".streaming.StreamingActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.Livenza.NoActionBar"
+            android:configChanges="orientation|screenSize|keyboardHidden" />
+        
+        <activity
+            android:name=".videocall.LiveCallActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.Livenza.NoActionBar"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:launchMode="singleTop" />
+        
         <!-- Serviço de notificações para foreground -->
         <service
             android:name=".LiveNotificationService"

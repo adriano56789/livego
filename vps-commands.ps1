@@ -5,7 +5,6 @@
 
 $VPS_IP = "72.60.249.175"
 $VPS_USER = "root"
-$VPS_PASS = "kdW3k&Fr'+9u62uD"
 
 Write-Host "=== CONECTANDO À VPS E EXECUTANDO COMANDOS ===" -ForegroundColor Green
 

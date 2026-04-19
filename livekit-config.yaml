@@ -1,72 +1,45 @@
-# LiveKit Configuration File
-# Configuração para WebRTC com STUN/TURN integrado (Produção)
+# ============================================
+# LiveKit Server - Self-Hosted Configuration
+# LiveGo - Produção VPS (72.60.249.175)
+# ============================================
 
-# Configuração do servidor
+# Porta principal WebSocket (clientes conectam aqui)
 port: 7880
-http_port: 7881
 
-# Configuração de chaves (API Key + Secret) - Valores fortes para produção
+# API Keys para autenticação de tokens
 keys:
-  - key: LKDEV4K8X9Y2Z5W7Q1R3T6U8I0OP2A4S6D8F0G2H4J6K8L0M2N4P6Q8R0T2V4X6Z8
-    secret: SKLIVEGO2024SECUREPRODUCTIONKEY9F8E7D6C5B4A3Z2Y1X0W9V8U7T6S5R4Q3P2O1N0M9L8K7J6H5G4F3D2S1A0
+  LGK_d8d1c9c7ea47c4b754717542217a0d57: VXqZemGMtMohfwhhW7ZlVO-ss-CWTkBqr3nsAtUGcFEqlZ1-zQH7OUkd3_x3GLyJ
 
-# Configuração de ICE servers para WebRTC
-# STUN servers gratuitos (suficiente para começar)
-ice_servers:
-  - urls: 
-      - stun:stun.l.google.com:19302
-      - stun:stun1.l.google.com:19302
-      - stun:stun2.l.google.com:19302
-  # TURN server (adicionar depois se necessário)
-  # - urls: 
-  #     - turn:72.60.249.175:3478
-  #   username: livego
-  #   credential: adriano123
-
-# Configuração de logging
-log_level: info
-
-# Configuração de WebRTC - 144p @ 10FPS (baixo consumo)
+# Configuração WebRTC (STUN/TURN embutido)
 rtc:
-  # Configuração de codecs
-  codecs:
-    video:
-      - vp8
-    audio:
-      - opus
-  
-  # Configuração de bandwidth - 144p @ 10FPS
-  bandwidth:
-    video:
-      min: 64000   # 64kbps (144p @ 10FPS)
-      max: 150000  # 150kbps máximo
-    audio:
-      min: 24000   # 24kbps
-      max: 40000   # 40kbps máximo
-  
-  # Configuração de resolução e framerate
-  layers:
-    - width: 256
-      height: 144
-      framerate: 10
-      bitrate: 64000
+  # Range de portas UDP para media WebRTC
+  port_range_start: 50000
+  port_range_end: 60000
+  # IP externo da VPS — OBRIGATÓRIO para funcionar fora de localhost
+  node_ip: 72.60.249.175
+  # Usar IP externo automaticamente
+  use_external_ip: true
+  # STUN servers para NAT traversal
+  stun_servers:
+    - stun:stun.l.google.com:19302
+    - stun:stun1.l.google.com:19302
+  # Codecs suportados
+  enable_loopback_candidate: false
 
-# Configuração de segurança - Produção
-security:
-  # Desativar conexões anônimas (produção)
-  allow_anonymous: false
-  
-  # Configuração de CORS - Apenas domínios reais
-  cors:
-    allowed_origins:
-      - https://livego.store
-      - https://www.livego.store
+# TURN Server embutido no LiveKit (substitui coturn separado)
+turn:
+  enabled: true
+  domain: livego.store
+  tls_port: 5349
+  udp_port: 3478
 
-# Configuração de room defaults
+# Configuração de rooms
 room:
-  # Limite de participantes por sala
-  max_participants: 100
-  
-  # Configuração de gravação (se necessário)
-  # enabled: true
-  # redaction: true
+  # Tempo máximo sem participantes antes de destruir a room (segundos)
+  empty_timeout: 300
+  max_participants: 500
+
+# Logging
+logging:
+  level: info
+  pion_level: warn

@@ -1652,164 +1652,19 @@ router.post('/streams/:id/gift', async (req, res) => {
 const SRS_API_URL = process.env.SRS_API_URL || 'http://72.60.249.175:1985';
 
 // 🚀 ENDPOINT DE FALLBACK HLS QUANDO WEBRTC FALHA
-router.post('/streams/fallback-activate', async (req, res) => {
-    try {
-        const { streamKey, reason, timestamp } = req.body;
-        
-        if (!streamKey) {
-            return res.status(400).json({ 
-                success: false, 
-                error: 'StreamKey é obrigatório' 
-            });
-        }
-        
-        console.log(`🔄 [FALLBACK] Ativando fallback HLS para stream: ${streamKey}`);
-        console.log(`🔄 [FALLBACK] Motivo: ${reason}`);
-        console.log(`🔄 [FALLBACK] Timestamp: ${timestamp}`);
-        
-        // Buscar stream no banco
-        const Streamer = require('../models/Streamer').Streamer;
-        const stream = await Streamer.findOne({ 
-            $or: [
-                { id: streamKey },
-                { streamKey: streamKey }
-            ]
-        });
-        
-        if (!stream) {
-            return res.status(404).json({ 
-                success: false, 
-                error: 'Stream não encontrada' 
-            });
-        }
-        
-        // 🎯 ESTRATÉGIA: Garantir que HLS esteja ativo via SRS
-        // Mesmo que WebRTC falhe, vamos garantir que o stream HLS funcione
-        
-        // 1. Verificar se stream está marcada como ativa
-        if (!stream.isLive) {
-            console.log(`🔄 [FALLBACK] Ativando stream ${streamKey} como isLive=true`);
-            await Streamer.updateOne(
-                { _id: stream._id },
-                { 
-                    $set: { 
-                        isLive: true,
-                        streamStatus: 'active',
-                        fallbackActivated: true,
-                        fallbackReason: reason,
-                        fallbackTimestamp: timestamp
-                    }
-                }
-            );
-        }
-        
-        // 2. Garantir URLs de playback HLS
-        const srsHttpUrl = process.env.SRS_HTTP_URL || 'http://localhost:8080';
-        const hlsUrl = `${srsHttpUrl}/live/${streamKey}.m3u8`;
-        const flvUrl = `${srsHttpUrl}/live/${streamKey}.flv`;
-        
-        console.log(`🔄 [FALLBACK] URLs HLS geradas:`);
-        console.log(`🔄 [FALLBACK] HLS: ${hlsUrl}`);
-        console.log(`🔄 [FALLBACK] FLV: ${flvUrl}`);
-        
-        // 3. Opcional: Notificar SRS sobre o stream (se necessário)
-        // Isso depende da configuração do SRS
-        
-        // 4. Registrar evento de fallback para analytics
-        console.log(`🔄 [FALLBACK] Evento registrado: WebRTC falhou, HLS ativado`);
-        
-        res.json({ 
-            success: true, 
-            message: 'Fallback HLS ativado com sucesso',
-            data: {
-                streamKey,
-                hlsUrl,
-                flvUrl,
-                fallbackActivated: true,
-                reason
-            }
-        });
-        
-    } catch (error) {
-        console.error('❌ [FALLBACK] Erro ao ativar fallback HLS:', error);
-        res.status(500).json({ 
-            success: false, 
-            error: 'Erro interno ao ativar fallback' 
-        });
-    }
-});
+// DESATIVADO TEMPORARIAMENTE PARA MIGRAÇÃO LIVEKIT
+// Rota removida - código preservado para referência futura
 
-import { validateStreamKey } from '../middleware/streamAuth';
+// import { validateStreamKey } from '../middleware/streamAuth';
 
-router.post('/streams/rtc/v1/publish', validateStreamKey, async (req, res) => {
-    try {
-        const { streamUrl, sdp } = req.body;
-        const stream = req.stream; // Stream validada pelo middleware
+// DESATIVADAS TEMPORARIAMENTE PARA MIGRAÇÃO LIVEKIT
+// Rotas WebRTC removidas - código preservado para referência futura
 
-        console.log(`[PUBLISH] ${stream.hostId} publishing to ${streamUrl}`);
-        console.log(`[PUBLISH DEBUG] Stream validated:`, {
-            streamId: stream.id,
-            hostId: stream.hostId,
-            streamKey: stream.streamKey
-        });
+// Rotas WebRTC removidas - código preservado para referência futura
 
-        const response = await fetch(`${SRS_API_URL}/rtc/v1/publish/`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ api: `${SRS_API_URL}/rtc/v1/publish/`, streamurl: streamUrl, sdp })
-        });
+// Rotas WebRTC removidas - código preservado para referência futura
 
-        const data = await response.json();
-
-        // Debug SRS response
-        console.log(`[PUBLISH] SRS Response:`, {
-            code: data.code,
-            hasSdp: !!data.sdp,
-            candidates: data.sdp?.match(/a=candidate:.*/g)?.length || 0,
-            success: data.code === 0
-        });
-
-        res.json(data);
-    } catch (err: any) {
-        console.error('[PUBLISH Error]', err);
-        res.status(500).json({ code: 500, error: err.message });
-    }
-});
-
-router.post('/streams/rtc/v1/play', async (req, res) => {
-    try {
-        const { streamUrl, sdp } = req.body;
-        console.log(`[SRS Proxy] Playing from ${streamUrl}`);
-
-        const response = await fetch(`${SRS_API_URL}/rtc/v1/play/`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ api: `${SRS_API_URL}/rtc/v1/play/`, streamurl: streamUrl, sdp })
-        });
-
-        const data = await response.json();
-        res.json(data);
-    } catch (err: any) {
-        console.error('[SRS Play Error]', err);
-        res.status(500).json({ code: 500, error: err.message });
-    }
-});
-
-router.delete('/streams/rtc/v1/stop', async (req, res) => {
-    // Note: SRS typically manages stop via stream disconnects or specific API calls. For now we acknowledge.
-    res.json({ code: 0, sdp: '', sessionid: '' });
-});
-
-router.get('/v1/streams/:id', async (req, res) => {
-    try {
-        const response = await fetch(`${SRS_API_URL}/api/v1/streams`);
-        const data = await response.json() as { streams?: any[] };
-        const stream = data.streams?.find((s: any) => s.name === req.params.id) || { id: req.params.id, clients: 0, kbps: { recv_30s: 0, send_30s: 0 }, create: '' };
-        res.json(stream);
-    } catch (err: any) {
-        res.json({ id: req.params.id, clients: 0, kbps: { recv_30s: 0, send_30s: 0 }, create: '' });
-    }
-});
+// Rotas WebRTC removidas - código preservado para referência futura
 
 // PUT /api/streams/:id/quality - Atualizar qualidade do stream
 router.put('/streams/:id/quality', async (req, res) => {

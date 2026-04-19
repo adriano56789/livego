@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout 
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="24dp"
+    android:background="@drawable/rounded_background_transparent">
+
+    <!-- Título do diálogo -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Convidar Usuário para a Live"
+        android:textColor="@color/white"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:gravity="center"
+        android:layout_marginBottom="20dp" />
+
+    <!-- Campo ID do Usuário -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="ID do Usuário"
+        android:textColor="@color/gray_300"
+        android:textSize="14sp"
+        android:layout_marginBottom="8dp" />
+
+    <EditText
+        android:id="@+id/etGuestId"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:hint="Digite o ID real do usuário"
+        android:textColorHint="@color/gray_400"
+        android:textColor="@color/white"
+        android:background="@drawable/rounded_background_transparent"
+        android:padding="12dp"
+        android:textSize="16sp"
+        android:singleLine="true"
+        android:inputType="text"
+        android:layout_marginBottom="16dp" />
+
+    <!-- Campo Nome do Usuário -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Nome do Usuário (opcional)"
+        android:textColor="@color/gray_300"
+        android:textSize="14sp"
+        android:layout_marginBottom="8dp" />
+
+    <EditText
+        android:id="@+id/etGuestName"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:hint="Nome do convidado"
+        android:textColorHint="@color/gray_400"
+        android:textColor="@color/white"
+        android:background="@drawable/rounded_background_transparent"
+        android:padding="12dp"
+        android:textSize="16sp"
+        android:singleLine="true"
+        android:inputType="text"
+        android:layout_marginBottom="24dp" />
+
+    <!-- Botões -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="end">
+
+        <Button
+            android:id="@+id/btnCancel"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_weight="1"
+            android:text="Cancelar"
+            android:textColor="@color/white"
+            android:background="@drawable/button_secondary"
+            android:textSize="16sp"
+            android:layout_marginEnd="8dp"
+            android:textAllCaps="false" />
+
+        <Button
+            android:id="@+id/btnInvite"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_weight="1"
+            android:text="Convidar"
+            android:textColor="@color/white"
+            android:background="@drawable/button_primary"
+            android:textSize="16sp"
+            android:textAllCaps="false" />
+
+    </LinearLayout>
+
+</LinearLayout>

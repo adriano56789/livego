@@ -49,6 +49,9 @@ dependencies {
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
     implementation 'androidx.webkit:webkit:1.8.0'
     
+    // LiveKit SDK para WebRTC e streaming
+    implementation 'io.livekit:livekit-android:1.2.0'
+    
     // Media3 ExoPlayer for video streaming
     implementation 'androidx.media3:media3-exoplayer:1.2.1'
     implementation 'androidx.media3:media3-exoplayer-dash:1.2.1'
@@ -59,6 +62,21 @@ dependencies {
     implementation 'androidx.media3:media3-datasource-okhttp:1.2.1'
     implementation 'androidx.media3:media3-decoder:1.2.1'
     implementation 'androidx.media3:media3-extractor:1.2.1'
+    
+    // Retrofit para comunicação com backend
+    implementation 'com.squareup.retrofit2:retrofit:2.9.0'
+    implementation 'com.squareup.retrofit2:converter-gson:2.9.0'
+    implementation 'com.squareup.okhttp3:logging-interceptor:4.11.0'
+    
+    // Coroutines para operações assíncronas
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'
+    
+    // Permissions
+    implementation 'pub.devrel:easypermissions:3.0.0'
+    
+    // Lifecycle components
+    implementation 'androidx.lifecycle:lifecycle-viewmodel-ktx:2.7.0'
+    implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.7.0'
     
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'

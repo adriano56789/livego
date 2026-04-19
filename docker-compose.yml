@@ -1,22 +1,44 @@
 services:
+  # ============================================
+  # LiveKit Server — WebRTC completo (STUN/TURN embutido)
+  # ============================================
   livekit-server:
     image: livekit/livekit-server:latest
     container_name: livekit-server
     restart: unless-stopped
     ports:
-      - "7880:7880/tcp"
-      - "7881:7881/tcp"
-      - "7882:7882/udp"
+      - "7880:7880/tcp"           # WebSocket principal (clientes conectam aqui)
+      - "7881:7881/tcp"           # HTTP API interno
+      - "3478:3478/udp"           # TURN UDP (embutido)
+      - "5349:5349/tcp"           # TURN TLS (embutido)
+      - "50000-60000:50000-60000/udp"  # WebRTC media ports
     volumes:
       - ./livekit-config.yaml:/etc/livekit/livekit.yaml
-    command: --config /etc/livekit/livekit.yaml
+      - ./recordings:/var/lib/livekit/recordings
+    command: --config /etc/livekit/livekit.yaml --node-ip 72.60.249.175
+    networks:
+      - livego-network
+
+  # ============================================
+  # SRS Server — RTMP ingest + HLS/FLV playback
+  # (Mantido separado para streaming público)
+  # ============================================
+  srs-server:
+    image: ossrs/srs:5
+    container_name: srs-server
+    restart: unless-stopped
+    ports:
+      - "1935:1935/tcp"   # RTMP ingest
+      - "1985:1985/tcp"   # SRS API
+      - "8080:8080/tcp"   # HTTP-FLV/HLS playback
+    volumes:
+      - ./srs.conf:/usr/local/srs/conf/srs.conf
     networks:
       - livego-network
 
 networks:
-  livego-network: 
+  livego-network:
     driver: bridge
 
 volumes:
-  srs-config:
-  srs-logs:
+  recordings:

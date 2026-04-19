@@ -20,10 +20,11 @@ export interface IStreamer extends Document {
     srtIngestUrl?: string;
     streamKey?: string;
     playbackUrl?: string;
-    webrtcUrl?: string;
+    // Campos WebRTC removidos para migração LiveKit
+    // webrtcUrl?: string;
     roomId?: string;
-    displayName?: string;
-    realUserId?: string;
+    // displayName?: string;
+    // realUserId?: string;
     isLive?: boolean;
     startTime?: string;
     endTime?: string;
@@ -62,10 +63,11 @@ const StreamerSchema = new Schema<IStreamer>({
     srtIngestUrl: { type: String, default: '' },
     streamKey: { type: String, default: '' },
     playbackUrl: { type: String, default: '' },
-    webrtcUrl: { type: String, default: '' },
+    // Campos WebRTC removidos para migração LiveKit
+    // webrtcUrl: { type: String, default: '' },
     roomId: { type: String, default: '' },
-    displayName: { type: String, default: '' },
-    realUserId: { type: String, default: '' },
+    // displayName: { type: String, default: '' },
+    // realUserId: { type: String, default: '' },
     isLive: { type: Boolean, default: false },
     startTime: { type: String, default: '' },
     endTime: { type: String, default: '' },

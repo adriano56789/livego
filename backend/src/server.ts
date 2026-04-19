@@ -44,6 +44,8 @@ import userStatusRoutes from './routes/userStatusRoutes';
 import levelRoutes from './routes/levelRoutes'; // NOVO - Sistema de Nível
 import virtualIPRoutes from './routes/virtualIPRoutes'; // NOVO - Sistema de IP Virtual
 import likesRoutes from './routes/likesRoutes'; // NOVO - Sistema de Likes
+import livekitRoutes from './routes/livekitRoutes'; // LiveKit - WebRTC completo (token generation)
+import callInvitationRoutes from './routes/callInvitationRoutes'; // NOVO - Sistema de convites de chamada na live
 import UserStatusManager from './middleware/UserStatusManager';
 import { blockBase64Middleware } from './middleware/blockBase64';
 import { initializeDatabase } from './scripts/initDatabase'; // NOVO - Inicialização automática
@@ -161,6 +163,8 @@ app.use('/api/level', levelRoutes); // NOVO - Sistema de Nível
 app.use('/api', userStatusRoutes); // Rotas de status online do usuário
 app.use('/api/virtual-ip', virtualIPRoutes); // NOVO - Sistema de IP Virtual
 app.use('/api/virtual-room', virtualIPRoutes); // NOVO - Sistema de Salas Virtuais
+app.use('/api/livekit', livekitRoutes); // LiveKit - WebRTC + STUN + TURN (token generation)
+app.use('/api/call-invitation', callInvitationRoutes); // NOVO - Sistema de convites de chamada na live
 // Disponibilizar io para as rotas
 app.set('io', io);
 
